@@ -1,0 +1,50 @@
+task:
+  name: "Erdős Minimum Overlap Problem"
+  description: |
+    Find a step function h: [0, 2] → [0, 1] that minimizes the maximum overlap integral:
+
+      C₅ = min_h max_k ∫ h(x)(1 - h(x+k)) dx
+
+    subject to:
+      1. h(x) ∈ [0, 1] for all x
+      2. ∫₀² h(x) dx = 1
+
+    Your goal is to find a step function h that achieves the lowest C₅ value.
+
+    The program file `initial_program.py` must define a `run()` function that returns
+    (h_values, c5_bound, n_points) where h_values is a numpy array of shape (n_points,).
+
+    The baseline uses JAX/optax gradient descent with Adam optimizer. Consider:
+    - Different optimization algorithms (L-BFGS-B, scipy optimizers, evolutionary strategies)
+    - Better initialization strategies
+    - Higher resolution (more intervals)
+    - Multi-phase optimization (coarse then fine)
+    - Analytical insights about the optimal h structure
+    - Hybrid approaches combining gradient-based and non-gradient methods
+    - Binary/step function approximations with careful regularization
+  files:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 1100s. If your solution takes longer, it scores as a timeout — reduce complexity or n_points.
+    - More n_points gives finer discretization but slower eval. Balance accuracy vs speed.
+    - The evaluator verifies: h ∈ [0,1], ∫h = 1, and recomputes C₅ independently
+    - numpy is always available; jax/optax are available if installed
+    - scipy.optimize is available and has powerful constrained optimizers
+    - Focus on mathematical structure: the optimal h is likely piecewise constant
+    - The correlation is computed via np.correlate(h, 1-h, mode="full") * dx
+    - You will get a score based on the C₅ value you achieve; closer to 1 means closer to the SOTA solution and the goal is to surpass 1!
+
+grader:
+  timeout: 1100
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 1
+  runtime: claude_code
+  model: opus
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./erdos_project/repo"

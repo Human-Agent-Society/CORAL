@@ -1,0 +1,72 @@
+---
+title: Architecture
+description: How CORAL orchestrates autonomous coding agents.
+---
+
+
+CORAL follows a simple loop: **spawn agents → agents read instructions → commit changes → eval → repeat**.
+
+## System overview
+
+```
+┌─────────────────────────────────────────┐
+│              coral start                │
+│                                         │
+│  1. Create .coral/ shared state         │
+│  2. Create per-agent git worktrees      │
+│  3. Generate CORAL.md instructions      │
+│  4. Spawn agent subprocesses            │
+└────────────────────┬────────────────────┘
+                     │
+          ┌──────────▼───────────┐
+          │     Agent Loop       │
+          │                      │
+          │  Read CORAL.md       │
+          │  Research approaches │
+          │  Edit code           │
+          │  coral eval -m "..." │
+          │  See score/feedback  │
+          │  Share notes/skills  │
+          │  Repeat              │
+          └──────────────────────┘
+```
+
+## Directory layout
+
+When you run `coral start`, the following structure is created:
+
+```
+results/<task-name>/<timestamp>/
+├── .coral/                    # Shared state directory
+│   ├── config.yaml            # Task configuration (copy)
+│   ├── public/                # Visible to all agents
+│   │   ├── attempts/          # JSON records of each eval
+│   │   ├── notes/             # Agent-written insights
+│   │   ├── skills/            # Reusable tools/scripts
+│   │   ├── logs/              # Agent session logs
+│   │   ├── heartbeat/         # Heartbeat action configs
+│   │   └── eval_count         # Global eval counter
+│   └── private/               # Hidden from agents
+│       └── eval/              # Grader code and test data
+│
+└── agents/
+    ├── agent-1/               # Git worktree for agent 1
+    │   ├── .coral_dir         # Points to shared .coral/
+    │   ├── .coral_agent_id    # This agent's ID
+    │   ├── CORAL.md           # Generated instructions
+    │   └── <task files>       # Seeded from workspace.repo_path
+    │
+    └── agent-2/               # Git worktree for agent 2
+        └── ...
+```
+
+## Tech stack
+
+| Component | Technology |
+|-----------|------------|
+| Language | Python 3.11+ |
+| Build system | Hatchling |
+| Package manager | uv |
+| Agent runtimes | Claude Code, Codex, OpenCode |
+| Web dashboard | Starlette (backend) + React/Vite (frontend) |
+| Key dependency | PyYAML |

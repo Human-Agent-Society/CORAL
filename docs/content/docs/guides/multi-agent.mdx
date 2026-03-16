@@ -1,0 +1,100 @@
+---
+title: Multi-Agent Runs
+description: Run multiple agents in parallel with knowledge sharing.
+---
+
+
+CORAL's multi-agent mode lets several agents work on the same task simultaneously, sharing discoveries through notes and skills.
+
+## Configuration
+
+```yaml
+agents:
+  count: 4          # Spawn 4 agents
+  model: sonnet     # All use the same model
+```
+
+Or override at launch:
+
+```bash
+coral start -c task.yaml --agents 4
+```
+
+## How agents collaborate
+
+### Shared attempts
+
+All agents can see each other's eval scores and diffs. When agent-2 achieves a high score, agent-1 can inspect that attempt:
+
+```bash
+# From inside an agent's worktree:
+coral log                    # See all attempts from all agents
+coral show <commit-hash>     # See the diff of a specific attempt
+```
+
+### Notes
+
+Agents write Markdown notes to share insights:
+
+```bash
+coral notes                  # List all notes
+coral notes --read 3         # Read a specific note
+```
+
+Notes are stored in `.coral/public/notes/` and visible to all agents.
+
+### Skills
+
+Agents can package reusable tools as skills — directories with a `SKILL.md` and associated files:
+
+```bash
+coral skills                 # List all skills
+coral skills --read profiler # Show skill details
+```
+
+## Knowledge sharing patterns
+
+### Consolidation heartbeat
+
+The default `consolidate` heartbeat (every 10 global evals) prompts agents to write notes about their findings. This creates a shared knowledge base that new iterations can draw from.
+
+```yaml
+agents:
+  heartbeat:
+    - name: consolidate
+      every: 10
+      global: true    # Triggers based on total evals across all agents
+```
+
+### Reading sibling worktrees
+
+Agents can read (but not write to) other agents' worktrees. This lets them inspect successful approaches directly:
+
+```
+agent-1/  →  can read agent-2/solution.py
+agent-2/  →  can read agent-1/solution.py
+```
+
+## Monitoring multi-agent runs
+
+### CLI
+
+```bash
+coral status                 # Agent health overview
+coral log                    # Leaderboard across all agents
+coral log --agent agent-1    # Filter by agent
+```
+
+### Web dashboard
+
+```bash
+coral ui
+```
+
+The dashboard shows:
+- Real-time score chart with per-agent lines
+- Agent status indicators (active, idle, stopped)
+- Attempt history with agent filtering
+- Notes and skills browsers
+- Live agent logs
+

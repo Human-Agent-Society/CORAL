@@ -1,0 +1,30 @@
+{
+  "name": "coral-docs",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "fumadocs-mdx && next build",
+    "postinstall": "fumadocs-mdx",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@types/mdx": "^2.0.13",
+    "fumadocs-core": "^15.0.0",
+    "fumadocs-mdx": "^11.0.0",
+    "fumadocs-ui": "^15.0.0",
+    "next": "^15.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.5.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}

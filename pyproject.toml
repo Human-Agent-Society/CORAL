@@ -1,0 +1,92 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "coral"
+version = "0.2.0"
+description = "Orchestration system for autonomous coding agents"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "CORAL Team" }
+]
+keywords = [
+    "ai",
+    "agents",
+    "autonomous",
+    "orchestration",
+    "evaluation",
+    "llm"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.5.0",
+    "mypy>=1.10.0",
+]
+swebench = [
+    "swebench>=2.0.0",
+    "datasets>=2.0.0",
+    "docker>=7.0.0",
+]
+terminalbench = [
+    "datasets>=2.0.0",
+    "docker>=7.0.0",
+    "harbor>=0.1.22; python_version >= '3.12'",
+]
+erdos = [
+    "numpy>=1.24.0",
+    "jax>=0.4.0",
+    "optax>=0.2.0",
+]
+ui = [
+    "starlette>=0.40.0",
+    "uvicorn[standard]>=0.30.0",
+    "pyyaml>=6.0",
+]
+all = [
+    "coral[dev,swebench,terminalbench,erdos,ui]",
+]
+
+[project.scripts]
+coral = "coral.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yanyh528/CORAL"
+Repository = "https://github.com/yanyh528/CORAL"
+
+[tool.hatch.build.targets.wheel]
+packages = ["coral"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

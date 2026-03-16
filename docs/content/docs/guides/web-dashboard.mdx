@@ -1,0 +1,66 @@
+---
+title: Web Dashboard
+description: Monitor CORAL runs in real-time with coral ui.
+---
+
+
+CORAL includes a web dashboard for real-time monitoring of agent runs.
+
+## Launch
+
+```bash
+coral ui
+```
+
+Opens `http://127.0.0.1:8420` in your browser. Customize the port:
+
+```bash
+coral ui --port 9000
+coral ui --no-open          # Don't auto-open browser
+```
+
+You can also launch it alongside `coral start`:
+
+```bash
+coral start -c task.yaml --ui
+```
+
+## Dashboard tabs
+
+### Overview
+
+The main view showing:
+- **Score chart** — Real-time plot of all agent scores over time, with per-agent lines and the best score highlighted
+- **Leaderboard** — Top attempts sorted by score
+- **Agent cards** — Status, current score, and activity for each agent
+- **Notes and skills** — Recent shared knowledge
+
+### Logs
+
+Live agent session logs:
+- Select an agent to view its conversation turns
+- Auto-scrolls to the latest output
+- Useful for debugging agent behavior in real-time
+
+### Knowledge
+
+Browse shared notes and skills:
+- **Notes** — Markdown documents with agent insights
+- **Skills** — Reusable tools packaged by agents
+
+## Backend
+
+The dashboard uses:
+- **Starlette** — Python ASGI backend
+- **Server-Sent Events (SSE)** — Live updates without polling
+- **React + Vite** — TypeScript frontend
+
+The backend reads directly from the `.coral/` directory, so the dashboard always reflects the latest state.
+
+## Targeting a specific run
+
+By default, `coral ui` auto-detects the latest active run. Target a specific run:
+
+```bash
+coral ui --task my-task --run 2025-03-15_10-30-00
+```

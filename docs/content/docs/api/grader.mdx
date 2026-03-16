@@ -1,0 +1,123 @@
+---
+title: Grader API
+description: GraderInterface protocol, BaseGrader, and TaskGrader.
+---
+
+
+CORAL's grading system has three layers: a protocol, an abstract base class, and the recommended task grader.
+
+## GraderInterface
+
+Module: `coral.grader.protocol`
+
+The protocol that all graders must satisfy:
+
+```python
+from typing import Protocol, runtime_checkable
+from coral.types import ScoreBundle, Task
+
+@runtime_checkable
+class GraderInterface(Protocol):
+    async def grade(
+        self,
+        codebase_path: str,
+        tasks: list[Task],
+        **kwargs,
+    ) -> ScoreBundle: ...
+```
+
+Any object with a matching `grade()` method satisfies the protocol.
+
+## BaseGrader
+
+Module: `coral.grader.base`
+
+Abstract base class with helper methods. Use this if you need full control over scoring.
+
+```python
+from coral.grader.base import BaseGrader
+from coral.types import Task, ScoreBundle
+
+class MyGrader(BaseGrader):
+    async def grade(self, codebase_path: str, tasks: list[Task]) -> ScoreBundle:
+        score = self._make_score(0.85, explanation="Good result")
+        return self._make_bundle(score, aggregated=0.85)
+```
+
+### Constructor
+
+```python
+BaseGrader(name: str, description: str = "", is_public: bool = True, **kwargs)
+```
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `grade(codebase_path, tasks)` | Abstract — implement this |
+| `grade_sync(codebase_path, tasks)` | Synchronous wrapper for `grade()` |
+| `_make_score(value, explanation, metadata)` | Create a `Score` with this grader's name |
+| `_make_bundle(score, aggregated)` | Create a `ScoreBundle` with this grader's settings |
+
+## TaskGrader (recommended)
+
+Module: `coral.grader.task_grader`
+
+The standard way to write graders. Simpler API with built-in helpers.
+
+```python
+from coral.grader import TaskGrader
+from coral.types import ScoreBundle
+
+class Grader(TaskGrader):
+    def evaluate(self) -> float | ScoreBundle:
+        result = self.run_program("solution.py")
+        return float(result.stdout.strip())
+```
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `evaluate()` | Abstract — implement this. Return `float` or `ScoreBundle` |
+| `run_program(filename, *args, timeout=300)` | Run a file from the agent's codebase |
+| `read_eval(relative_path)` | Read a file from `eval/` (private directory) |
+| `read_eval_path(relative_path)` | Get absolute path to an eval file |
+| `score(value, explanation)` | Return a single-score bundle |
+| `fail(explanation)` | Return a failed evaluation (null score) |
+| `bundle(value, explanation)` | Create a ScoreBundle directly |
+
+### Attributes
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `codebase_path` | `str` | Absolute path to agent's worktree (set by framework) |
+| `private_dir` | `str` | Absolute path to `.coral/private/` (set by framework) |
+| `args` | `dict` | Extra arguments from `grader.args` in config |
+
+### Return types
+
+`evaluate()` can return:
+- **`float`** — automatically wrapped in a ScoreBundle
+- **`ScoreBundle`** — returned as-is (use `self.score()` or `self.fail()`)
+
+## FunctionGrader
+
+Module: `coral.grader.builtin.function_grader`
+
+Wraps any callable as a grader. Configured via `task.yaml`:
+
+```yaml
+grader:
+  type: function
+  module: eval.grader
+  args:
+    func_name: grade
+```
+
+The module must define a function matching:
+
+```python
+def grade(codebase_path: str, tasks: list) -> float | bool | Score:
+    ...
+```

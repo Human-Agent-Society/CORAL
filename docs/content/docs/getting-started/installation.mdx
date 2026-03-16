@@ -1,0 +1,65 @@
+---
+title: Installation
+description: Install CORAL and its dependencies.
+---
+
+
+## Prerequisites
+
+- **Python 3.11+**
+- **uv** — fast Python package manager ([install uv](https://docs.astral.sh/uv/getting-started/installation/))
+- **git** — for worktree management
+- **tmux** — recommended for session management (CORAL auto-wraps in tmux by default)
+
+You'll also need at least one supported agent runtime:
+- **Claude Code** (default) — requires an Anthropic API key
+- **Codex** — OpenAI's coding agent
+- **OpenCode** — open-source alternative
+
+## Install from source
+
+```bash
+git clone https://github.com/yanyh528/CORAL.git
+cd CORAL
+```
+
+### Basic install
+
+```bash
+uv sync
+```
+
+### With development tools
+
+```bash
+uv sync --extra dev        # pytest, ruff, mypy
+```
+
+### Everything
+
+```bash
+uv sync --all-extras       # All optional dependencies
+```
+
+## Verify installation
+
+```bash
+coral --version
+```
+
+You should see something like `coral 0.2.0`.
+
+## Optional dependencies
+
+Some grader types require additional packages:
+
+| Feature | Install |
+|---------|---------|
+| SWE-bench grading | `uv sync --extra swebench` |
+| TerminalBench | `uv sync --extra terminalbench` |
+| Erdős problems | `uv sync --extra erdos` |
+| Web dashboard | `uv sync --extra ui` |
+
+## Next steps
+
+Once installed, head to the [Quick Start](/getting-started/quickstart) to run your first task.

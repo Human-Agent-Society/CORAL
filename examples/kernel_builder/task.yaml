@@ -1,0 +1,58 @@
+task:
+  name: "Kernel Builder"
+  description: |
+    Optimize a VLIW SIMD kernel for a tree traversal algorithm on a simulated machine.
+
+    The machine has the following engines and slot limits per cycle:
+    - alu: 12 scalar operations
+    - valu: 6 vector operations (VLEN=8, processes 8 elements at once)
+    - load: 2 memory reads
+    - store: 2 memory writes
+    - flow: 1 control flow operation
+
+    Your `kernel_builder.py` must define a KernelBuilder class with a `build_kernel()`
+    method that builds an optimized program (list of VLIW instructions) implementing
+    the tree traversal algorithm.
+
+    The algorithm: for each element in a batch, traverse a binary tree for multiple
+    rounds. At each node, XOR the value with the node value, hash it, then go left
+    or right based on parity. The kernel must produce identical output to the reference.
+
+    Performance:
+    - Baseline (naive scalar): ~147,734 cycles
+    - Best known: ~1,363 cycles (108x speedup)
+
+    Key optimization opportunities:
+    1. VLIW: Pack multiple operations per cycle (up to 12 ALU, 6 VALU, 2 load, 2 store)
+    2. SIMD: Use vector operations (VLEN=8) to process 8 elements at once
+    3. Loop unrolling: Reduce loop overhead
+    4. Memory access patterns: Use vload/vstore for contiguous access
+    5. Instruction scheduling: Avoid dependencies, maximize ILP
+  files:
+    - "kernel_builder.py"
+  seed:
+    - "kernel_builder.py"
+  tips: |
+    - Eval timeout is 120s. The kernel itself should run in under a second.
+    - Correctness is mandatory — incorrect output scores 0.
+    - Score is linearly interpolated: 0.0 at baseline (147,734 cycles), 1.0 at best known (1,363 cycles).
+    - The simulator is frozen — you cannot modify it, only optimize how you build instructions.
+    - Focus on VLIW packing: fill all engine slots each cycle.
+    - Use SIMD (valu) operations to process 8 batch elements at once.
+    - The hash function has 6 stages with 3 ops each — look for ILP within and across stages.
+    - Fully unroll loops when possible to eliminate flow control overhead.
+    - Minimize data dependencies between consecutive instructions.
+
+grader:
+  timeout: 120
+  direction: minimize
+  args:
+    program_file: "kernel_builder.py"
+
+agents:
+  count: 4
+  model: claude-opus-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/kernel_builder/seed"

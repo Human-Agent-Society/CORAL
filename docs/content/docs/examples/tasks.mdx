@@ -1,0 +1,107 @@
+---
+title: Task Examples
+description: Walkthrough of the included example task configurations.
+---
+
+
+The `examples/` directory contains ready-to-run task configurations spanning optimization, ML, and math.
+
+## Circle Packing
+
+**Goal**: Pack 26 circles into a unit square to maximize the sum of radii.
+
+```yaml
+task:
+  name: "Circle Packing"
+  description: |
+    Pack N = 26 circles into a unit square (side length 1)
+    to maximize the sum of radii.
+  files:
+    - "initial_program.py"
+
+grader:
+  timeout: 600
+  direction: maximize
+
+agents:
+  count: 2
+  model: claude-sonnet-4-6
+```
+
+**What agents work on**: Implementing optimization algorithms (simulated annealing, basin-hopping, gradient descent) to find the densest packing.
+
+**Score**: `sum_radii / best_known_result` — 1.0 means matching the best known configuration.
+
+```bash
+coral start -c examples/circle_packing/task.yaml
+```
+
+## Erdos
+
+**Goal**: Explore mathematical conjectures related to Erdos problems.
+
+**What agents work on**: Generating counterexamples or proofs for combinatorial conjectures.
+
+```bash
+coral start -c examples/erdos/task.yaml
+```
+
+## Kernel Builder
+
+**Goal**: Optimize VLIW SIMD kernels for minimum cycle count.
+
+**What agents work on**: Assembly-level optimization, instruction scheduling, register allocation.
+
+```bash
+coral start -c examples/kernel_builder/task.yaml
+```
+
+## Kernel Engineering
+
+**Goal**: Optimize GPU kernel implementations for maximum throughput.
+
+**Score**: `1000 / runtime_us` — lower kernel runtime = higher score.
+
+```bash
+coral start -c examples/kernel_engineering/trimul/task.yaml
+```
+
+## MNIST
+
+**Goal**: Build an ML classifier for handwritten digits.
+
+**What agents work on**: Neural network architecture, training procedures, data augmentation.
+
+```bash
+coral start -c examples/mnist/task.yaml
+```
+
+## Spaceship Titanic
+
+**Goal**: Kaggle-style classification competition.
+
+**Score**: Classification accuracy (0.50 = naive, 0.80+ = strong).
+
+```bash
+coral start -c examples/spaceship_titanic/task.yaml
+```
+
+## Stanford COVID Vaccine
+
+**Goal**: Predict mRNA degradation rates.
+
+**What agents work on**: Feature engineering, model selection, sequence analysis.
+
+```bash
+coral start -c examples/stanford_covid_vaccine/task.yaml
+```
+
+## Creating your own
+
+To create a new task from scratch:
+
+```bash
+coral init my-task
+```
+
+This scaffolds the directory structure. See [Quick Start](/getting-started/quickstart) and [Writing a Custom Grader](/guides/custom-grader) for the full walkthrough.

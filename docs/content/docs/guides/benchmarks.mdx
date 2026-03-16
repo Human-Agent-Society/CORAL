@@ -1,0 +1,45 @@
+---
+title: Benchmarks
+description: Running CORAL on standard coding benchmarks.
+---
+
+
+CORAL can be used to run agents on standardized benchmarks. This guide covers setup and execution.
+
+## Available benchmark examples
+
+The `examples/` directory includes task configurations for several benchmarks:
+
+| Task | Description |
+|------|-------------|
+| `circle_packing` | Geometric optimization — pack circles in a unit square |
+| `erdos` | Math conjecture exploration |
+| `kernel_builder` | VLIW SIMD kernel optimization |
+| `kernel_engineering` | GPU kernel optimization |
+| `mnist` | ML classification |
+| `spaceship_titanic` | Kaggle competition (classification) |
+| `stanford_covid_vaccine` | mRNA degradation prediction |
+
+## Running a benchmark
+
+```bash
+# Example: circle packing optimization
+coral start -c examples/circle_packing/task.yaml
+
+# With more agents
+coral start -c examples/circle_packing/task.yaml --agents 4
+
+# With web dashboard
+coral start -c examples/circle_packing/task.yaml --ui
+```
+
+## Writing benchmark graders
+
+Benchmark graders follow the same `TaskGrader` pattern. For example, the circle packing grader:
+
+1. Runs the agent's `initial_program.py`
+2. Verifies constraints (circles within bounds, no overlaps)
+3. Computes `sum_radii / best_known_result` as the score
+
+See [Writing a Custom Grader](/guides/custom-grader) for the full guide.
+

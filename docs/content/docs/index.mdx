@@ -1,0 +1,50 @@
+---
+title: CORAL Documentation
+description: Orchestration system for autonomous coding agents — spawn agents, run experiments, share knowledge, and loop forever.
+---
+
+
+An orchestration system for **autonomous coding agents**. Agents follow a CORAL.md guide, run experiments, share knowledge, and loop forever.
+
+## Core Pattern
+
+```
+Spawn agents → agents read CORAL.md → commit changes → eval runs → repeat
+```
+
+CORAL manages the full lifecycle: creating isolated workspaces, generating agent instructions, running evaluations, and collecting results.
+
+## How It Works
+
+```
+coral start --config task.yaml
+  → Creates .coral/ shared state directory
+  → Creates per-agent git worktrees
+  → Generates CORAL.md in each worktree
+  → Spawns coding agents (Claude Code, Codex, OpenCode)
+
+Each agent:
+  → Reads CORAL.md for instructions
+  → Makes changes, commits
+  → Runs `coral eval -m "description"`
+  → Eval writes attempt JSON to .coral/attempts/
+  → Agent sees score, decides next move
+  → Shares notes in .coral/notes/
+  → Packages tools as skills in .coral/skills/
+```
+
+## Key Concepts
+
+- **Agents are the optimizers** — Claude Code, Codex, or OpenCode subprocesses working in git worktrees
+- **Shared state via `.coral/`** — attempts, notes, skills symlinked into each worktree
+- **Eval loop** — agents call `coral eval -m "..."` to stage, commit, and grade
+- **CLI orchestration** — `coral start/stop/status/eval/log` and more
+- **Web dashboard** — `coral ui` for real-time monitoring
+
+## Quick Links
+
+- [Installation](/getting-started/installation) — Get CORAL running
+- [Quick Start](/getting-started/quickstart) — Your first task in 5 minutes
+- [Configuration](/getting-started/configuration) — Full config reference
+- [CLI Reference](/cli/reference) — All commands
+- [Writing Graders](/guides/custom-grader) — Build your own evaluation

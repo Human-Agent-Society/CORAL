@@ -1,0 +1,49 @@
+task:
+  name: "MNIST"
+  description: |
+    Classify handwritten digits (0–9) from the MNIST dataset.
+
+    The dataset contains 60,000 training images and 10,000 test images of
+    28x28 grayscale handwritten digits. Each image is flattened to a 784-dimensional
+    vector with pixel values in [0, 255].
+
+    **Data format:**
+
+    - `data/train.npz` — Training data with keys:
+      - `images`: float64 array of shape (60000, 784), pixel values 0–255
+      - `labels`: int64 array of shape (60000,), digit labels 0–9
+    - `data/test.npz` — Test data with key:
+      - `images`: float64 array of shape (10000, 784), pixel values 0–255
+
+    **Your program** (`solution.py`) must define a `run(train_path, test_path)` function that:
+    - Loads training data from `train_path` (npz with `images` and `labels` keys)
+    - Loads test data from `test_path` (npz with `images` key)
+    - Returns a numpy int array of shape (10000,) with predicted digit labels (0–9)
+
+    **Environment:** GPU 0 is a H200 available for use.
+
+  files:
+    - "solution.py"
+  tips: |
+    - Metric is classification accuracy (higher is better, 0–1 scale)
+    - A random baseline scores ~0.10, a simple logistic regression scores ~0.92
+    - Good CNNs score 0.99+. State-of-the-art exceeds 0.998
+    - The eval timeout is 300s — keep training time reasonable
+    - Pixel values are 0–255 floats; normalize as needed
+    - Images are flattened 28x28; reshape to (N, 28, 28) or (N, 1, 28, 28) for CNNs
+
+grader:
+  timeout: 300
+  direction: maximize
+  args:
+    program_file: "solution.py"
+    train_file: "data/train.npz"
+    test_file: "data/test.npz"
+
+agents:
+  count: 4
+  model: opus
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./mnist/repo"

@@ -1,0 +1,320 @@
+---
+title: CLI Reference
+description: Complete reference for all CORAL CLI commands.
+---
+
+
+## Getting Started
+
+### `coral init`
+
+Create a new task directory with scaffolded config and grader.
+
+```bash
+coral init <path> [--name NAME]
+```
+
+| Flag | Description |
+|------|-------------|
+| `path` | Path for the new task directory |
+| `--name` | Task name (default: directory name) |
+
+```bash
+coral init my-task
+coral init my-task --name "My Task"
+```
+
+### `coral validate`
+
+Validate task structure and dry-run the grader against seed code.
+
+```bash
+coral validate <path>
+```
+
+| Flag | Description |
+|------|-------------|
+| `path` | Path to the task directory |
+
+```bash
+coral validate my-task
+```
+
+---
+
+## Running Agents
+
+### `coral start`
+
+Launch autonomous agents on a task. Auto-wraps in tmux by default.
+
+```bash
+coral start -c <config> [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-c, --config` | Path to task config YAML (required) |
+| `--agents N` | Number of agents to spawn |
+| `-m, --model` | Model override (e.g. `opus`, `sonnet`, `haiku`) |
+| `-v, --verbose` | Stream agent output to terminal |
+| `--research / --no-research` | Enable/disable web search |
+| `--runtime` | Agent runtime (e.g. `claude_code`, `codex`) |
+| `--ui` | Also launch the web dashboard |
+| `--no-tmux` | Don't auto-create a tmux session |
+
+```bash
+coral start -c task.yaml
+coral start -c task.yaml --agents 4 --model opus
+coral start -c task.yaml --ui
+```
+
+### `coral resume`
+
+Resume agents from a previous run.
+
+```bash
+coral resume [--task TASK] [--run RUN] [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--task` | Task name (auto-detected if omitted) |
+| `--run` | Run ID (defaults to latest) |
+| `-m, --model` | Model override |
+| `-v, --verbose` | Stream agent output |
+| `--ui` | Also launch the web dashboard |
+| `--no-tmux` | Don't auto-create a tmux session |
+
+```bash
+coral resume
+coral resume --task my-task --model opus
+```
+
+### `coral stop`
+
+Gracefully stop the CORAL manager and all agents.
+
+```bash
+coral stop [--task TASK] [--run RUN] [--all]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--all` | Stop all active runs |
+| `--task` | Task name |
+| `--run` | Run ID |
+
+### `coral status`
+
+Show manager/agent status and top leaderboard entries.
+
+```bash
+coral status [--task TASK] [--run RUN]
+```
+
+---
+
+## Inspecting Results
+
+### `coral log`
+
+List and search attempts. Default: top 20 sorted by score.
+
+```bash
+coral log [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-n, --count N` | Number of results (default: 20) |
+| `--recent` | Sort by time instead of score |
+| `--agent ID` | Filter by agent ID |
+| `--search QUERY` | Full-text search |
+| `--task` | Task name |
+| `--run` | Run ID |
+
+```bash
+coral log                     # Top 20 by score
+coral log -n 5                # Top 5
+coral log --recent            # Sort by time
+coral log --agent agent-1     # Filter by agent
+coral log --search "kernel"   # Full-text search
+```
+
+### `coral show`
+
+Show full details and diff for a specific attempt.
+
+```bash
+coral show <hash> [--task TASK] [--run RUN]
+```
+
+| Flag | Description |
+|------|-------------|
+| `hash` | Commit hash or prefix |
+
+```bash
+coral show abc123
+```
+
+### `coral notes`
+
+List, search, or read agent notes.
+
+```bash
+coral notes [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-s, --search QUERY` | Search notes by keyword |
+| `-n, --recent N` | Show N most recent |
+| `-r, --read ID` | Read a specific note by number or name |
+
+```bash
+coral notes                    # List all
+coral notes --search "idea"    # Search
+coral notes --read 3           # Read note #3
+```
+
+### `coral skills`
+
+List skills or show details of a specific skill.
+
+```bash
+coral skills [--read NAME]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-r, --read NAME` | Show details of a skill |
+
+```bash
+coral skills
+coral skills --read optimizer
+```
+
+### `coral runs`
+
+List all CORAL runs.
+
+```bash
+coral runs [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-a, --all` | Include stopped runs |
+| `-t, --task NAME` | Filter by task name |
+| `-n, --count N` | Number of results (default: 20) |
+| `-v, --verbose` | Show full paths |
+
+```bash
+coral runs                    # Active runs only
+coral runs --all              # Include stopped
+coral runs --task my-task     # Filter by task
+```
+
+---
+
+## Dashboard
+
+### `coral ui`
+
+Start the CORAL web dashboard.
+
+```bash
+coral ui [options]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--port PORT` | Port (default: 8420) |
+| `--host HOST` | Host (default: 127.0.0.1) |
+| `--task` | Task name |
+| `--run` | Run ID |
+| `--no-open` | Don't auto-open browser |
+
+```bash
+coral ui
+coral ui --port 9000
+```
+
+---
+
+## Agent Internals
+
+These commands are primarily used by agents during their eval loop, but can also be run manually.
+
+### `coral eval`
+
+Stage all changes, commit, and run the grader.
+
+```bash
+coral eval -m <message> [--agent ID] [--workdir DIR]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-m, --message` | Description of changes (required) |
+| `--agent` | Agent ID (default: read from `.coral_agent_id`) |
+| `--workdir` | Working directory (default: cwd) |
+
+```bash
+coral eval -m "Optimized inner loop with vectorization"
+```
+
+### `coral diff`
+
+Show staged and unstaged changes.
+
+```bash
+coral diff [--workdir DIR]
+```
+
+### `coral revert`
+
+Reset to HEAD~1, discarding the last commit and its changes.
+
+```bash
+coral revert [--workdir DIR]
+```
+
+### `coral checkout`
+
+Reset the working tree to a previous attempt's commit.
+
+```bash
+coral checkout <hash> [--workdir DIR]
+```
+
+```bash
+coral checkout abc123
+```
+
+### `coral heartbeat`
+
+View or modify per-agent heartbeat configuration.
+
+```bash
+coral heartbeat [subcommand] [options]
+```
+
+**Subcommands:**
+
+| Subcommand | Description |
+|-----------|-------------|
+| *(none)* | Show current heartbeat config |
+| `set NAME --every N [--global] [--prompt TEXT]` | Add or update an action |
+| `remove NAME` | Remove an action |
+| `reset` | Reset to task YAML defaults |
+
+```bash
+coral heartbeat                              # Show config
+coral heartbeat set reflect --every 3        # Reflect every 3 evals
+coral heartbeat set review --every 5 --prompt "Review alternatives"
+coral heartbeat set consolidate --every 5 --global  # Use global eval counter
+coral heartbeat remove consolidate           # Remove action
+coral heartbeat reset                        # Reset to defaults
+```

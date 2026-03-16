@@ -1,0 +1,106 @@
+---
+title: Configuration API
+description: CoralConfig and related dataclasses.
+---
+
+
+Module: `coral.config`
+
+The configuration system uses Python dataclasses loaded from YAML.
+
+## CoralConfig
+
+Top-level configuration object.
+
+```python
+from coral.config import CoralConfig
+
+config = CoralConfig.from_yaml("task.yaml")
+```
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `task` | `TaskConfig` | Task definition |
+| `grader` | `GraderConfig` | Grader settings |
+| `agents` | `AgentConfig` | Agent spawning config |
+| `sharing` | `SharingConfig` | Shared state toggles |
+| `workspace` | `WorkspaceConfig` | Workspace layout |
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `from_yaml(path)` | Load config from a YAML file |
+| `from_dict(data)` | Create config from a dictionary |
+| `to_dict()` | Serialize to dictionary |
+| `to_yaml(path)` | Write to a YAML file |
+
+## TaskConfig
+
+```python
+@dataclass
+class TaskConfig:
+    name: str              # Task identifier
+    description: str       # What agents should do
+    files: list[str]       # Key files to focus on
+    tips: str              # Additional hints for agents
+    seed: list[str]        # Files/dirs copied into workspace
+```
+
+## GraderConfig
+
+```python
+@dataclass
+class GraderConfig:
+    type: str              # Grader type (empty = auto-discover)
+    module: str            # Python module path
+    timeout: int           # Eval timeout in seconds (default: 300)
+    args: dict[str, Any]   # Extra grader arguments
+    private: list[str]     # Files hidden from agents
+    direction: str         # "maximize" or "minimize"
+```
+
+## AgentConfig
+
+```python
+@dataclass
+class AgentConfig:
+    count: int             # Number of agents (default: 1)
+    runtime: str           # "claude_code", "codex", "opencode"
+    model: str             # Model name or ID (default: "sonnet")
+    max_turns: int         # Max conversation turns (default: 200)
+    timeout: int           # Session timeout in seconds (default: 3600)
+    research: bool         # Enable web search (default: True)
+    heartbeat: list[HeartbeatActionConfig]  # Periodic actions
+```
+
+## HeartbeatActionConfig
+
+```python
+@dataclass
+class HeartbeatActionConfig:
+    name: str              # Action name (e.g. "reflect")
+    every: int             # Trigger every N evals
+    is_global: bool        # Use global eval count (default: False)
+```
+
+## SharingConfig
+
+```python
+@dataclass
+class SharingConfig:
+    attempts: bool         # Share attempt scores (default: True)
+    notes: bool            # Enable shared notes (default: True)
+    skills: bool           # Enable shared skills (default: True)
+```
+
+## WorkspaceConfig
+
+```python
+@dataclass
+class WorkspaceConfig:
+    results_dir: str       # Where to store results (default: "./results")
+    repo_path: str         # Git repository root (default: ".")
+```

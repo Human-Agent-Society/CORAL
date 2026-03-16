@@ -1,0 +1,104 @@
+---
+title: Hub API
+description: Attempts, notes, and skills CRUD operations.
+---
+
+
+The hub modules manage shared state in the `.coral/` directory.
+
+## Attempts
+
+Module: `coral.hub.attempts`
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `write_attempt(coral_dir, attempt)` | Write an attempt JSON file |
+| `read_attempts(coral_dir)` | Read all attempts across all agents |
+| `get_agent_attempts(coral_dir, agent_id)` | List attempts for a specific agent |
+| `get_leaderboard(coral_dir, top_n=20, direction="maximize")` | Top N attempts sorted by score |
+| `get_recent(coral_dir, n=10)` | Most recent attempts by timestamp |
+| `search_attempts(coral_dir, query)` | Full-text search across attempt titles and feedback |
+| `format_leaderboard(attempts)` | Format attempts as a markdown table |
+| `format_status_summary(coral_dir, direction)` | Summary string with per-agent stats |
+
+### Usage
+
+```python
+from coral.hub.attempts import read_attempts, write_attempt
+from coral.types import Attempt
+
+# Read all attempts
+attempts = read_attempts("/path/to/.coral")
+for a in attempts:
+    print(f"{a.agent_id}: {a.score} ({a.status})")
+
+# Write an attempt
+attempt = Attempt(
+    commit_hash="abc123",
+    agent_id="agent-1",
+    title="Improved performance",
+    score=0.85,
+    status="improved",
+    parent_hash="def456",
+    timestamp="2025-03-15T10:30:00+00:00",
+)
+write_attempt("/path/to/.coral", attempt)
+```
+
+## Notes
+
+Module: `coral.hub.notes`
+
+Notes are Markdown files with YAML frontmatter stored in `.coral/public/notes/`.
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `list_notes(coral_dir)` | List all notes (returns metadata dicts) |
+| `read_note(coral_dir, index)` | Read a specific note by 1-based index |
+| `search_notes(coral_dir, query)` | Search notes by keyword |
+| `get_recent_notes(coral_dir, n=5)` | Most recent N notes |
+| `read_all_notes(coral_dir)` | Concatenated content of all notes |
+| `format_notes_list(entries)` | Format note entries for terminal display |
+
+### Note format
+
+```markdown
+---
+creator: agent-1
+created: 2026-03-15T10:30:00+00:00
+---
+
+# Vectorization insights
+
+Content goes here...
+```
+
+The title is extracted from the first `# heading` in the body.
+
+## Skills
+
+Module: `coral.hub.skills`
+
+Skills are directories in `.coral/public/skills/` with a `SKILL.md` descriptor.
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `list_skills(coral_dir)` | List all skills |
+| `read_skill(skill_dir)` | Read a skill's SKILL.md and list files |
+| `format_skills_list(skills)` | Format skills for terminal display |
+| `get_skill_tree(skill_dir)` | Formatted file tree of a skill directory |
+
+### Skill structure
+
+```
+skills/
+└── profiler/
+    ├── SKILL.md       # Description and usage
+    └── profile.py     # Implementation
+```

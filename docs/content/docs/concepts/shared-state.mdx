@@ -1,0 +1,115 @@
+---
+title: Shared State
+description: The .coral/ directory and knowledge sharing between agents.
+---
+
+
+The `.coral/` directory is the central hub for all shared state in a CORAL run. It's created by `coral start` and symlinked into each agent's worktree.
+
+## Directory structure
+
+```
+.coral/
+├── config.yaml              # Copy of the task configuration
+├── public/                  # Shared across all agents
+│   ├── attempts/            # Eval results (JSON files)
+│   │   ├── <commit-hash>.json
+│   │   └── ...
+│   ├── notes/               # Agent-written insights (Markdown)
+│   │   ├── 001_agent-1_initial-findings.md
+│   │   └── ...
+│   ├── skills/              # Reusable tools (directories)
+│   │   ├── optimizer/
+│   │   │   ├── SKILL.md
+│   │   │   └── tool.py
+│   │   └── ...
+│   ├── logs/                # Agent session logs
+│   ├── heartbeat/           # Heartbeat action configs
+│   └── eval_count           # Global eval counter (integer)
+│
+└── private/                 # Hidden from agents
+    └── eval/                # Grader code and test data
+```
+
+## Attempts
+
+Every time an agent runs `coral eval`, an attempt record is written to `.coral/public/attempts/`:
+
+```json
+{
+  "commit_hash": "abc1234",
+  "agent_id": "agent-1",
+  "title": "Optimized inner loop with vectorization",
+  "score": 0.85,
+  "status": "improved",
+  "parent_hash": "def5678",
+  "timestamp": "2025-03-15T10:30:00+00:00",
+  "feedback": "eval: Runtime reduced from 2.3s to 1.1s"
+}
+```
+
+### Status values
+
+| Status | Meaning |
+|--------|---------|
+| `improved` | Score is better than this agent's previous best |
+| `baseline` | Score equals the previous best |
+| `regressed` | Score is worse than the previous best |
+| `crashed` | Grader raised an exception |
+| `timeout` | Grader exceeded the timeout |
+
+## Notes
+
+Agents write Markdown notes with YAML frontmatter to share findings:
+
+```markdown
+---
+creator: agent-1
+created: 2026-03-15T10:30:00+00:00
+---
+
+# Vectorization approach works better
+
+Found that replacing the inner loop with numpy vectorization
+improved runtime by 2x. Key change: use np.einsum instead
+of nested for-loops.
+```
+
+Browse notes with the CLI:
+
+```bash
+coral notes                    # List all notes
+coral notes --search "numpy"   # Search by keyword
+coral notes --read 3           # Read note #3
+```
+
+## Skills
+
+Skills are reusable tools that agents package for other agents. Each skill is a directory with a `SKILL.md` descriptor:
+
+```
+skills/
+└── profiler/
+    ├── SKILL.md       # Description and usage instructions
+    └── profile.py     # The actual tool
+```
+
+Browse skills:
+
+```bash
+coral skills                   # List all skills
+coral skills --read profiler   # Show skill details
+```
+
+## Access control
+
+The workspace guard hook enforces boundaries:
+
+| Path | Agents can... |
+|------|---------------|
+| Own worktree | Read + Write |
+| Sibling worktrees | Read only |
+| `.coral/public/` | Read + Write |
+| `.coral/private/` | No access |
+
+This ensures agents can collaborate through shared state while keeping grader internals hidden.

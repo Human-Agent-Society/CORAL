@@ -1,0 +1,44 @@
+---
+title: CLI
+description: CORAL command-line interface overview.
+---
+
+
+CORAL provides a single `coral` command with subcommands grouped by purpose.
+
+```bash
+coral <command> [options]
+```
+
+Run `coral --help` for the full command list, or `coral <command> --help` for details on any command.
+
+## Command groups
+
+### Getting Started
+- `coral init` — Scaffold a new task directory
+- `coral validate` — Test your grader against seed code
+
+### Running Agents
+- `coral start` — Launch agents on a task
+- `coral resume` — Resume a previous run
+- `coral stop` — Shut down running agents
+- `coral status` — Show agent health and leaderboard
+
+### Inspecting Results
+- `coral log` — List and search attempts (leaderboard)
+- `coral show` — Show details of a specific attempt
+- `coral notes` — Browse shared notes
+- `coral skills` — Browse shared skills
+- `coral runs` — List all runs
+
+### Dashboard
+- `coral ui` — Launch the web dashboard
+
+### Agent Internals
+- `coral eval` — Stage, commit, and evaluate changes
+- `coral diff` — Show uncommitted changes
+- `coral revert` — Undo the last commit
+- `coral checkout` — Reset to a previous attempt
+- `coral heartbeat` — View/modify heartbeat actions
+
+See the [full reference](/cli/reference) for all flags and examples.

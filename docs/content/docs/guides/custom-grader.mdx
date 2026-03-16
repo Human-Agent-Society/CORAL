@@ -1,0 +1,152 @@
+---
+title: Writing a Custom Grader
+description: Build evaluation logic for your CORAL tasks.
+---
+
+
+Graders evaluate agent submissions and return scores. CORAL provides `TaskGrader` as the standard base class for writing graders.
+
+## Basic grader
+
+Create `eval/grader.py` in your task directory:
+
+```python
+from coral.grader import TaskGrader
+from coral.types import ScoreBundle
+
+class Grader(TaskGrader):
+    def evaluate(self) -> float | ScoreBundle:
+        # Return a numeric score (higher is better by default)
+        result = self.run_program("solution.py")
+        return float(result.stdout.strip())
+```
+
+That's it. CORAL auto-discovers `eval/grader.py` and looks for a `Grader` class.
+
+## TaskGrader helpers
+
+`TaskGrader` provides several helper methods:
+
+### `run_program(filename, *args, timeout=300)`
+
+Run a file from the agent's codebase:
+
+```python
+result = self.run_program("solution.py", "--input", "data.csv")
+print(result.stdout)    # captured stdout
+print(result.stderr)    # captured stderr
+print(result.returncode)  # exit code
+```
+
+### `read_eval(relative_path)`
+
+Read a file from the private `eval/` directory (hidden from agents):
+
+```python
+expected = self.read_eval("expected_output.txt")
+```
+
+### `read_eval_path(relative_path)`
+
+Get the absolute path to an eval file:
+
+```python
+data_path = self.read_eval_path("test_data.csv")
+```
+
+### `score(value, explanation="")`
+
+Return a scored result with optional feedback:
+
+```python
+return self.score(0.85, "Runtime: 1.2s (target: < 1.0s)")
+```
+
+### `fail(explanation="")`
+
+Return a failed evaluation (null score):
+
+```python
+if result.returncode != 0:
+    return self.fail(f"Program crashed: {result.stderr[:200]}")
+```
+
+## Available context
+
+Inside `evaluate()`, you have access to:
+
+| Attribute | Description |
+|-----------|-------------|
+| `self.codebase_path` | Absolute path to the agent's worktree |
+| `self.private_dir` | Absolute path to `.coral/private/` |
+| `self.args` | Dict of extra arguments from `grader.args` in config |
+
+## Handling errors
+
+Handle errors to provide clear feedback:
+
+```python
+class Grader(TaskGrader):
+    def evaluate(self) -> float | ScoreBundle:
+        result = self.run_program("solution.py")
+
+        if result.returncode != 0:
+            return self.fail(f"Crashed: {result.stderr[:300]}")
+
+        try:
+            output = float(result.stdout.strip())
+        except ValueError:
+            return self.fail(f"Invalid output: {result.stdout[:100]}")
+
+        if output < 0:
+            return self.fail(f"Score must be non-negative, got {output}")
+
+        return self.score(output, f"Score: {output:.4f}")
+```
+
+## Score direction
+
+By default, higher scores are better. For tasks where lower is better:
+
+```yaml
+grader:
+  direction: minimize
+```
+
+## Private files
+
+Files listed in `grader.private` are copied to `.coral/private/` and hidden from agents. Use this for test data, expected outputs, or reference implementations:
+
+```yaml
+grader:
+  private:
+    - "eval/test_cases.json"
+    - "eval/reference_output.txt"
+```
+
+Access them in your grader:
+
+```python
+test_data = self.read_eval("test_cases.json")
+```
+
+## Grader timeout
+
+Configure how long evals can run:
+
+```yaml
+grader:
+  timeout: 600   # 10 minutes
+```
+
+If the grader exceeds this timeout, the process is killed and the attempt is recorded as `timeout`.
+
+## Validating your grader
+
+Always test before launching agents:
+
+```bash
+coral validate my-task
+```
+
+This runs the grader against your seed code and shows the score. Fix any issues before running `coral start`.

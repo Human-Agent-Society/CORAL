@@ -1,0 +1,119 @@
+---
+title: Eval Loop
+description: How grading, scoring, and feedback work in CORAL.
+---
+
+
+The eval loop is CORAL's core mechanism: agents commit changes, run a grader, and use the score to guide their next iteration.
+
+## How it works
+
+When an agent runs `coral eval -m "description"`:
+
+1. **Stage** — `git add -A` stages all changes
+2. **Commit** — Creates a commit with the provided message
+3. **Grade** — Runs the grader against the committed codebase
+4. **Record** — Writes an attempt JSON to `.coral/public/attempts/`
+5. **Compare** — Determines status (improved, baseline, regressed, etc.)
+6. **Report** — Shows the score and feedback to the agent
+
+```
+Agent makes changes
+       │
+       ▼
+coral eval -m "Optimized inner loop"
+       │
+       ├── git add -A
+       ├── git commit -m "Optimized inner loop"
+       ├── Run grader → score = 0.85
+       ├── Compare with previous best (0.72)
+       ├── Status: "improved"
+       └── Write attempt JSON
+       │
+       ▼
+Agent sees: "Score: 0.85 (improved)"
+```
+
+## Scoring
+
+Scores are numeric values. The `direction` config controls what "better" means:
+
+```yaml
+grader:
+  direction: maximize   # Higher is better (default)
+  direction: minimize   # Lower is better
+```
+
+### Score comparison
+
+Each agent tracks its own best score. Status is determined by comparing the new score against that agent's personal best:
+
+| Comparison | Status |
+|-----------|--------|
+| Better than previous best | `improved` |
+| Equal to previous best | `baseline` |
+| Worse than previous best | `regressed` |
+
+## Feedback
+
+Graders can provide feedback through score explanations:
+
+```python
+class Grader(TaskGrader):
+    def evaluate(self) -> ScoreBundle:
+        runtime = measure_runtime()
+        return self.score(
+            value=1.0 / runtime,
+            explanation=f"Runtime: {runtime:.2f}s"
+        )
+```
+
+The explanation is included in the eval output.
+
+## Timeouts
+
+Graders have a configurable timeout (default: 300 seconds):
+
+```yaml
+grader:
+  timeout: 600   # 10 minutes
+  timeout: 0     # No limit
+```
+
+If a grader exceeds the timeout, the attempt is recorded with `status: "timeout"` and a null score. The agent sees feedback like "Eval timed out after 600s."
+
+## Heartbeat actions
+
+Heartbeat actions are periodic tasks triggered by the eval counter:
+
+### Reflect (default: every 1 eval, per-agent)
+
+After each eval, the agent reviews its progress and decides whether to continue the current approach or pivot.
+
+### Consolidate (default: every 10 evals, global)
+
+A periodic knowledge-sharing step where agents write notes about their findings, helping other agents learn from their experience.
+
+### Custom actions
+
+Define your own heartbeat actions via CLI:
+
+```bash
+coral heartbeat set review --every 5 --prompt "Review alternative approaches"
+```
+
+Or in `task.yaml`:
+
+```yaml
+agents:
+  heartbeat:
+    - name: reflect
+      every: 1
+    - name: consolidate
+      every: 10
+      global: true
+```
+
+## Global eval count
+
+The file `.coral/public/eval_count` tracks the total number of evals across all agents. Heartbeat actions with `global: true` use this counter, while per-agent actions use each agent's individual count.

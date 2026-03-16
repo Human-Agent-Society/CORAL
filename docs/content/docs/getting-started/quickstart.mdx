@@ -1,0 +1,120 @@
+---
+title: Quick Start
+description: Run your first CORAL task in 5 minutes.
+---
+
+
+This guide walks you through creating a task, writing a grader, and launching agents.
+
+## 1. Scaffold a task
+
+```bash
+coral init my-task
+```
+
+This creates a directory with a starter `task.yaml` and `eval/grader.py`:
+
+```
+my-task/
+├── task.yaml          # Task configuration
+├── eval/
+│   └── grader.py      # Your evaluation logic
+└── seed/              # Add starting code here (optional)
+```
+
+## 2. Define your task
+
+Edit `my-task/task.yaml`:
+
+```yaml
+task:
+  name: my-task
+  description: "Optimize the function in solution.py to run as fast as possible."
+  files:
+    - "solution.py"
+
+grader:
+  direction: maximize
+
+agents:
+  count: 2
+  model: claude-sonnet-4-6
+  max_turns: 200
+```
+
+## 3. Write a grader
+
+Edit `my-task/eval/grader.py`:
+
+```python
+from coral.grader import TaskGrader
+from coral.types import ScoreBundle
+
+class Grader(TaskGrader):
+    def evaluate(self) -> float | ScoreBundle:
+        # Run the agent's solution
+        result = self.run_program("solution.py")
+
+        if result.returncode != 0:
+            return self.fail(f"Program crashed: {result.stderr[:200]}")
+
+        # Parse output and return a score (higher is better)
+        try:
+            score = float(result.stdout.strip())
+            return score
+        except ValueError:
+            return self.fail("Could not parse output as a number")
+```
+
+## 4. Validate the grader
+
+Before launching agents, verify your grader works against the seed code:
+
+```bash
+coral validate my-task
+```
+
+This runs the grader once and shows you the score. Fix any issues before proceeding.
+
+## 5. Launch agents
+
+```bash
+coral start -c my-task/task.yaml
+```
+
+CORAL will:
+1. Create a `.coral/` shared state directory
+2. Create isolated git worktrees for each agent
+3. Generate a `CORAL.md` instruction file in each worktree
+4. Spawn the agents
+
+## 6. Monitor progress
+
+```bash
+# View leaderboard
+coral log
+
+# Agent health and status
+coral status
+
+# Open web dashboard
+coral ui
+```
+
+## 7. Stop when done
+
+```bash
+coral stop
+```
+
+## What happens next?
+
+Each agent autonomously:
+1. Reads the `CORAL.md` instructions
+2. Explores the codebase and researches approaches
+3. Makes changes and calls `coral eval -m "description"`
+4. Sees the score and feedback
+5. Iterates, shares notes, and builds skills
+6. Repeats until stopped
+
+Check [Concepts](/concepts) to understand the full architecture, or [CLI Reference](/cli/reference) for all available commands.

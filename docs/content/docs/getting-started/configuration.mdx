@@ -1,0 +1,134 @@
+---
+title: Configuration
+description: Full reference for task.yaml configuration.
+---
+
+
+Every CORAL task is defined by a `task.yaml` file. This page documents all available options.
+
+## Full example
+
+```yaml
+task:
+  name: "my-task"
+  description: "Optimize solution.py to maximize accuracy."
+  files:
+    - "solution.py"
+    - "utils.py"
+  tips: "numpy and scipy are available. Timeout is 300s."
+  seed:
+    - "solution.py"
+    - "data/"
+
+grader:
+  type: function
+  module: eval.grader
+  timeout: 300
+  direction: maximize
+  private:
+    - "eval/test_data.csv"
+  args:
+    program_file: "solution.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+  max_turns: 200
+  timeout: 3600
+  research: true
+  heartbeat:
+    - name: reflect
+      every: 1
+    - name: consolidate
+      every: 10
+      global: true
+
+sharing:
+  attempts: true
+  notes: true
+  skills: true
+
+workspace:
+  results_dir: "./results"
+  repo_path: "."
+```
+
+## `task` section
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | string | *required* | Task identifier |
+| `description` | string | *required* | What agents should do — included in CORAL.md |
+| `files` | list[string] | `[]` | Key files agents should focus on |
+| `tips` | string | `""` | Additional hints shown to agents |
+| `seed` | list[string] | `[]` | Files/directories copied into each agent's workspace |
+
+## `grader` section
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `type` | string | `""` | Grader type. Leave empty to auto-discover from `eval/grader.py` |
+| `module` | string | `""` | Python module path for custom graders |
+| `timeout` | int | `300` | Eval timeout in seconds (0 = no limit) |
+| `direction` | string | `"maximize"` | `"maximize"` or `"minimize"` — which direction is better |
+| `private` | list[string] | `[]` | Files copied to `.coral/private/` (hidden from agents) |
+| `args` | dict | `{}` | Extra arguments passed to the grader |
+
+### Auto-discovery
+
+When `type` is empty and `module` is empty, CORAL looks for `eval/grader.py` in your task directory and expects a `Grader` class inheriting from `TaskGrader`.
+
+### Built-in grader types
+
+| Type | Description |
+|------|-------------|
+| `function` | Wraps a callable `(codebase_path, tasks) -> Score\|float\|bool` |
+
+## `agents` section
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `count` | int | `1` | Number of agents to spawn |
+| `runtime` | string | `"claude_code"` | Agent runtime: `claude_code`, `codex`, `opencode` |
+| `model` | string | `"sonnet"` | Model to use (e.g. `opus`, `sonnet`, `haiku`, or full model ID) |
+| `max_turns` | int | `200` | Maximum conversation turns per agent |
+| `timeout` | int | `3600` | Agent session timeout in seconds |
+| `research` | bool | `true` | Enable web search in agent workflow |
+| `heartbeat` | list | see below | Periodic actions triggered during eval loop |
+
+### Heartbeat actions
+
+Heartbeat actions run at regular intervals based on eval count:
+
+```yaml
+heartbeat:
+  - name: reflect        # Built-in: agent reviews progress
+    every: 1             # After every eval
+  - name: consolidate    # Built-in: agents share knowledge
+    every: 10
+    global: true         # Uses global eval count (all agents combined)
+```
+
+You can also define custom heartbeat actions with a prompt:
+
+```bash
+coral heartbeat set review --every 5 --prompt "Review your approach and consider alternatives."
+```
+
+## `sharing` section
+
+Controls what shared state is enabled in `.coral/public/`:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `attempts` | bool | `true` | Share attempt scores between agents |
+| `notes` | bool | `true` | Enable shared notes |
+| `skills` | bool | `true` | Enable shared skills |
+
+## `workspace` section
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `results_dir` | string | `"./results"` | Where to store run results |
+| `repo_path` | string | `"."` | Path to the git repository root |

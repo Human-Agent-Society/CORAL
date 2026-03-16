@@ -1,0 +1,152 @@
+---
+title: Types
+description: Core type definitions — Task, Score, ScoreBundle, Attempt.
+---
+
+
+Module: `coral.types`
+
+These dataclasses are the building blocks of CORAL's data model.
+
+## Task
+
+A unit of work for agents to optimize.
+
+```python
+from coral.types import Task
+
+task = Task(
+    id="my-task",
+    name="My Task",
+    description="Optimize solution.py",
+    metadata={"files": ["solution.py"]},
+)
+```
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `str` | Unique identifier |
+| `name` | `str` | Display name |
+| `description` | `str` | What to optimize |
+| `metadata` | `dict[str, Any]` | Additional context |
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `to_dict()` | Serialize to dictionary |
+| `from_dict(data)` | Create from dictionary |
+
+## Score
+
+A single evaluation score.
+
+```python
+from coral.types import Score
+
+score = Score(
+    value=0.85,
+    name="eval",
+    explanation="Runtime: 1.2s",
+)
+```
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `value` | `float \| str \| bool \| None` | The score value |
+| `name` | `str` | Score identifier |
+| `explanation` | `str \| None` | Human-readable feedback |
+| `metadata` | `dict[str, Any]` | Extra data |
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `to_float()` | Convert value to float (handles bool, str mappings) |
+| `to_dict()` | Serialize to dictionary |
+| `from_dict(data)` | Create from dictionary |
+
+### String score mappings
+
+When `value` is a string, `to_float()` maps it:
+
+| String | Float |
+|--------|-------|
+| `"CORRECT"`, `"C"` | 1.0 |
+| `"INCORRECT"`, `"I"` | 0.0 |
+| `"PARTIAL"`, `"P"` | 0.5 |
+| `"NOANSWER"`, `"N"` | 0.0 |
+
+## ScoreBundle
+
+A collection of scores from evaluation.
+
+```python
+from coral.types import Score, ScoreBundle
+
+bundle = ScoreBundle(
+    scores={"eval": Score(value=0.85, name="eval")},
+    aggregated=0.85,
+)
+```
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `scores` | `dict[str, Score]` | Named scores |
+| `aggregated` | `float \| None` | Overall score |
+| `is_public` | `bool` | Whether scores are visible to agents (default: True) |
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `get(name)` | Get a score by name |
+| `get_score_value(name, default=0.0)` | Get float value of a named score |
+| `compute_aggregated(weights=None)` | Compute weighted average of all scores |
+| `to_dict()` | Serialize to dictionary |
+| `from_dict(data)` | Create from dictionary |
+
+## Attempt
+
+Record of a single optimization attempt by an agent.
+
+```python
+from coral.types import Attempt
+
+attempt = Attempt(
+    commit_hash="abc1234",
+    agent_id="agent-1",
+    title="Optimized inner loop",
+    score=0.85,
+    status="improved",
+    parent_hash="def5678",
+    timestamp="2025-03-15T10:30:00+00:00",
+    feedback="Runtime reduced from 2.3s to 1.1s",
+)
+```
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `commit_hash` | `str` | Git commit hash |
+| `agent_id` | `str` | Which agent made this attempt |
+| `title` | `str` | Description from `coral eval -m` |
+| `score` | `float \| None` | Evaluation score (None if crashed/timeout) |
+| `status` | `str` | One of: `improved`, `baseline`, `regressed`, `reverted`, `crashed`, `timeout` |
+| `parent_hash` | `str \| None` | Previous commit hash |
+| `timestamp` | `str` | ISO 8601 timestamp |
+| `feedback` | `str` | Grader feedback |
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `to_dict()` | Serialize to dictionary |
+| `from_dict(data)` | Create from dictionary |

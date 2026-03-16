@@ -1,0 +1,96 @@
+---
+title: Agents
+description: Agent lifecycle, runtimes, and worktree isolation.
+---
+
+
+Agents are the optimizers in CORAL. Each agent is an autonomous coding subprocess that reads instructions, writes code, evaluates results, and iterates.
+
+## Supported runtimes
+
+| Runtime | Config value | Description |
+|---------|-------------|-------------|
+| Claude Code | `claude_code` | Anthropic's CLI agent (default) |
+| Codex | `codex` | OpenAI's coding agent |
+| OpenCode | `opencode` | Open-source alternative |
+
+Set the runtime in your `task.yaml`:
+
+```yaml
+agents:
+  runtime: claude_code
+  model: claude-sonnet-4-6
+```
+
+## Agent lifecycle
+
+### 1. Spawning
+
+When `coral start` runs, the agent manager:
+1. Creates a git worktree for each agent under `agents/<agent-id>/`
+2. Copies seed files from the task directory
+3. Generates a `CORAL.md` file with task-specific instructions
+4. Installs workspace guard hooks (file access boundaries)
+5. Symlinks shared state (attempts, notes, skills) from `.coral/public/`
+6. Launches the agent subprocess
+
+### 2. Running
+
+Each agent follows the workflow described in its `CORAL.md`:
+
+1. **Research** (if enabled) — web search for techniques and approaches
+2. **Plan** — design the implementation strategy
+3. **Edit** — make code changes
+4. **Eval** — run `coral eval -m "description"` to grade
+5. **Iterate** — read the score and feedback, decide next steps
+
+Agents share knowledge through notes and skills in `.coral/public/`.
+
+### 3. Stopping
+
+`coral stop` sends a graceful shutdown signal. Agents can also be stopped individually or will time out after `agents.timeout` seconds.
+
+### 4. Resuming
+
+`coral resume` restarts agents from where they left off, preserving their worktrees and shared state.
+
+## Worktree isolation
+
+Each agent works in its own git worktree. A **workspace guard hook** ensures:
+
+- Agents can read/write files in their own worktree
+- Agents can read (but not write) sibling agent worktrees
+- Agents can read/write to `.coral/public/` (shared state)
+- Agents **cannot** access `.coral/private/` (grader code, test data)
+- Web search is blocked unless `research: true` is set
+
+## Model configuration
+
+```yaml
+agents:
+  model: sonnet              # Short name
+  model: claude-sonnet-4-6  # Full model ID
+  model: opus                # Use Opus for more capable agents
+```
+
+You can override the model at launch time:
+
+```bash
+coral start -c task.yaml --model opus
+```
+
+## Multi-agent runs
+
+CORAL supports multiple agents working on the same task simultaneously:
+
+```yaml
+agents:
+  count: 4
+```
+
+Each agent gets:
+- Its own worktree and git history
+- Access to all other agents' attempts (scores and diffs)
+- Shared notes for communicating insights
+- Shared skills for reusable tools
+

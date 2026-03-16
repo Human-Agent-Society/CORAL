@@ -1,0 +1,87 @@
+task:
+  name: "Stanford COVID Vaccine"
+  description: |
+    Predict degradation rates at each base of an RNA molecule to help design more
+    stable mRNA vaccines for COVID-19. mRNA vaccines have the tendency to spontaneously
+    degrade — a single cut can render the vaccine useless. Without understanding where
+    in the backbone a given RNA is most prone to degradation, current mRNA vaccines must
+    be shipped under intense refrigeration.
+
+    You are given training data from ~2160 RNA sequences experimentally measured by the
+    Eterna community at Stanford. Your model will predict likely degradation rates at
+    each base position of RNA molecules in the test set.
+
+    **Data Format:**
+
+    Data is in JSON lines format (`train.json`, `test.json`).
+
+    **Training columns:**
+    - `id` — An arbitrary identifier for each sample.
+    - `sequence` — (1x107 string) RNA sequence, combination of A, G, U, C.
+    - `structure` — (1x107 string) Secondary structure: `(`, `)`, `.` characters
+      indicating paired or unpaired bases.
+    - `predicted_loop_type` — (1x107 string) Structural context per base:
+      S=Stem, M=Multiloop, I=Internal loop, B=Bulge, H=Hairpin, E=dangling End,
+      X=eXternal loop.
+    - `seq_length` — Integer, length of the sequence (107).
+    - `seq_scored` — Integer, number of positions scored (68).
+    - `signal_to_noise` — Signal-to-noise quality metric.
+    - `SN_filter` — Whether the sample passes signal/noise quality filter.
+    - `reactivity` — (1x68 array) Reactivity values for first 68 bases.
+    - `deg_pH10` — (1x68 array) Degradation without Mg at pH 10.
+    - `deg_Mg_pH10` — (1x68 array) Degradation with Mg at pH 10.
+    - `deg_50C` — (1x68 array) Degradation without Mg at 50°C.
+    - `deg_Mg_50C` — (1x68 array) Degradation with Mg at 50°C.
+    - `*_error_*` — Corresponding experimental error arrays.
+
+    **Test columns:** Same as training but without target columns or error columns.
+
+    **Targets:** You must predict 5 degradation values for each sequence position:
+    `reactivity`, `deg_Mg_pH10`, `deg_pH10`, `deg_Mg_50C`, `deg_50C`.
+    Only 3 are scored: `reactivity`, `deg_Mg_pH10`, `deg_Mg_50C`.
+
+    **Submission format:** CSV with columns:
+    `id_seqpos,reactivity,deg_Mg_pH10,deg_pH10,deg_Mg_50C,deg_50C`
+
+    For each sample `id` in the test set, predict targets for *each* sequence position.
+    If the `seq_length` is 107, submit 107 rows: `{id}_0` through `{id}_106`.
+    Positions beyond `seq_scored` (68) are not scored but still need values.
+
+    **Evaluation:** MCRMSE (Mean Columnwise Root Mean Squared Error) — lower is better.
+    Computed as the mean of per-column RMSE across the 3 scored columns, evaluated only
+    on the first `seq_scored` positions per sequence.
+
+    **Your program** (`solution.py`) must define a `run(train_path, test_path)` function
+    that returns a pandas DataFrame with columns:
+    `id_seqpos, reactivity, deg_Mg_pH10, deg_pH10, deg_Mg_50C, deg_50C`.
+
+    **Environment:** GPU 0 is a H200 available for use.
+
+  files:
+    - "solution.py"
+  tips: |
+    - Metric is MCRMSE (lower is better) over 3 scored columns: reactivity, deg_Mg_pH10, deg_Mg_50C
+    - NOTE: This eval uses an MLEBench re-split (10% of original training data as test), NOT the original Kaggle private test set. Scores are not directly comparable to the Kaggle leaderboard.
+    - Baseline (Ridge regression): ~0.374 MCRMSE. All-zeros prediction: ~0.638 MCRMSE.
+    - The test set contains 240 sequences from the same distribution as training (filtered by SN_filter > 0). Aim for the lowest MCRMSE possible.
+    - The data is JSON lines format — use pd.read_json(path, lines=True) to load
+    - Each sample has seq_length=107 positions but only seq_scored=68 are scored
+    - Winning Kaggle approaches used GRU/LSTM/Transformer models on the sequence + structure features
+    - The eval timeout is 300s — keep training time reasonable
+    - Consider filtering training data by SN_filter > 0 for higher quality samples (1349 of 2160 pass)
+
+grader:
+  timeout: 300
+  direction: minimize
+  args:
+    program_file: "solution.py"
+    train_file: "data/train.json"
+    test_file: "data/test.json"
+
+agents:
+  count: 4
+  model: opus
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./stanford_covid_vaccine/repo"
