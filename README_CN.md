@@ -16,7 +16,7 @@
 </div>
 
 <p align="center">
-<a href="#演示">演示</a> · <a href="#安装">安装</a> · <a href="#使用">使用</a> · <a href="#工作原理">工作原理</a> · <a href="#核心概念">核心概念</a> · <a href="#快速上手">快速上手</a> · <a href="#cli-命令">CLI 命令</a> · <a href="#示例">示例</a> · <a href="#许可证">许可证</a>
+<a href="#演示">演示</a> · <a href="#安装">安装</a> · <a href="#使用">使用</a> · <a href="#工作原理与结构">工作原理</a> · <a href="#快速上手">快速上手</a> · <a href="#cli-命令">CLI 命令</a> · <a href="#示例">示例</a> · <a href="#许可证">许可证</a>
 </p>
 
 ## 演示
@@ -86,8 +86,6 @@ graph TD
 ```
 
 每个 Agent 跑在自己的 git worktree 分支里。共享状态（历史记录、笔记、技能）放在 `.coral/public/`，软链到所有 worktree —— 零开销，实时互通。后台管理器盯着新提交，可以通过心跳机制打断 Agent 并注入指令（比如"回顾一下"、"整理技能"）。
-
-## 核心概念
 
 | 概念 | 说明 |
 |------|------|
@@ -177,27 +175,6 @@ uv run coral stop        # 收工
 | `uv run coral revert` | 撤销上次提交 |
 | `uv run coral checkout <hash>` | 回退到指定记录 |
 | `uv run coral heartbeat` | 查看/修改心跳动作 |
-
-</details>
-
-## 评分系统
-
-<details>
-<summary>展开</summary>
-
-评分器需实现 `GraderInterface` 协议：
-
-```python
-class GraderInterface(Protocol):
-    async def grade(self, codebase_path: str, tasks: list[Task], **kwargs) -> ScoreBundle: ...
-```
-
-内置评分器：
-
-| 评分器 | 用途 |
-|--------|------|
-| **TaskGrader** | 任务评分基类 —— 提供 `run_program`、`read_eval`、`score`、`fail` 等工具方法 |
-| **FunctionGrader** | 把任意 `(codebase_path, tasks) -> Score | float | bool` 函数包成评分器 |
 
 </details>
 

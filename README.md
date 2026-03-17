@@ -1,21 +1,23 @@
 
+<div align="center">
 
-
+<img src="assets/coral_logo_transparent.png" alt="CORAL" width="360">
 
 ### **Spawn Agents. Share Knowledge. Optimize Forever.**
 
-[MIT License](LICENSE)
-[Python 3.11+](https://python.org)
-[uv](https://docs.astral.sh/uv/)
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
+[![uv](https://img.shields.io/badge/uv-package%20manager-5C4EE5.svg)](https://docs.astral.sh/uv/)
 
 **English** | [中文](README_CN.md)
 
 An organization of **autonomous AI agents** that
 run experiments, share knowledge, and loop perpetually for better and better solutions.
 
+</div>
 
 
-[Demo](#demo) · [Installation](#installation) · [Usage](#usage) · [How It Works](#how-it-works) · [Key Concepts](#key-concepts) · [Quick Start](#quick-start) · [CLI Reference](#cli-reference) · [Examples](#examples) · [License](#license)
+[Demo](#demo) · [Installation](#installation) · [Usage](#usage) · [How It Works](#how-it-works) · [Quick Start](#quick-start) · [CLI Reference](#cli-reference) · [Examples](#examples) · [License](#license)
 
 
 ## Demo
@@ -90,17 +92,13 @@ graph TD
 
 Each agent runs in its own git worktree branch. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time with zero sync overhead. The manager watches for new attempts and can interrupt agents with heartbeat-triggered prompts (e.g. "reflect", "consolidate skills").
 
-## Key Concepts
-
-
-| Concept                  | Description                                                                          |
-| ------------------------ | ------------------------------------------------------------------------------------ |
-| **Agents as optimizers** | Claude Code / Codex / OpenCode subprocesses, each in its own git worktree            |
-| **Shared state**         | `.coral/` directory with attempts, notes, and skills — symlinked into every worktree |
-| **Eval loop**            | Agents call `uv run coral eval -m "..."` to stage, commit, and grade in one shot     |
-| **CLI orchestration**    | 17+ commands: `start`, `stop`, `status`, `eval`, `log`, `ui`, and more               |
-| **Web dashboard**        | `uv run coral ui` — real-time leaderboard, attempt diffs, agent monitoring           |
-
+| Concept | Description |
+|---------|-------------|
+| **Agents as optimizers** | Claude Code / Codex / OpenCode subprocesses, each in its own git worktree |
+| **Shared state** | `.coral/` directory with attempts, notes, and skills — symlinked into every worktree |
+| **Eval loop** | Agents call `uv run coral eval -m "..."` to stage, commit, and grade in one shot |
+| **CLI orchestration** | 17+ commands: `start`, `stop`, `status`, `eval`, `log`, `ui`, and more |
+| **Web dashboard** | `uv run coral ui` — real-time leaderboard, attempt diffs, agent monitoring |
 
 ## Quick Start
 
@@ -182,26 +180,6 @@ Click to expand all 17+ commands
 | `uv run coral revert`                | Undo last commit                    |
 | `uv run coral checkout <hash>`       | Reset to previous attempt           |
 | `uv run coral heartbeat`             | View/modify heartbeat actions       |
-
-
-## Grading System
-
-Click to expand
-
-Graders implement the `GraderInterface` protocol:
-
-```python
-class GraderInterface(Protocol):
-    async def grade(self, codebase_path: str, tasks: list[Task], **kwargs) -> ScoreBundle: ...
-```
-
-Built-in graders:
-
-
-| Grader             | Usage                                                                                               |
-| ------------------ | --------------------------------------------------------------------------------------------------- |
-| **TaskGrader**     | Base class for task-specific graders — provides `run_program`, `read_eval`, `score`, `fail` helpers |
-| **FunctionGrader** | Wrap any `(codebase_path, tasks) -> Score                                                           |
 
 
 ## Architecture
