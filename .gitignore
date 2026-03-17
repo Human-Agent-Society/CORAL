@@ -82,3 +82,4 @@ scripts/skillsbench/
 
 # Generated plots
 *.png
+!assets/*.png
