@@ -5,6 +5,6 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: 'CORAL',
     },
-    githubUrl: 'https://github.com/coral-agent/coral',
+    githubUrl: 'https://github.com/Human-Agent-Society/CORAL',
   };
 }
