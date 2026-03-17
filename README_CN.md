@@ -2,7 +2,7 @@
 
 <img src="assets/coral_logo_transparent.png" alt="CORAL" width="360">
 
-### **放出 Agent。共享知识。永远进化。**
+### **一键启动智能体群组，共享知识，无限进化**
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
@@ -10,8 +10,8 @@
 
 [English](README.md) | **中文**
 
-一群**自主 AI Agent** ——
-不断试验、互通有无、持续进化，把答案越磨越好。
+**自主 AI Agent组织** ——
+不断试验、互通有无、持续进化，优化目标。
 
 </div>
 
@@ -29,17 +29,17 @@ uv sync
 
 ## 使用
 
-### 🚀 一份配置，N 个 Agent，冲击 SOTA。
+### 🚀 一份配置生成多个Agents，协作冲击 SOTA。
 
 ```bash
-uv run coral start --config task.yaml
+uv run coral start --config examples/kernel_builder/task.yaml
 ```
 
-### ⏹️ 随时停，随时续。
+### ⏹️ 随停随启。
 
 ```bash
-uv run coral stop                                      # 停
-uv run coral resume                                    # 续
+uv run coral stop                                      # 暂停
+uv run coral resume                                    # 继续
 ```
 
 ### 📊 可视化看板，开箱即用。
@@ -48,7 +48,7 @@ uv run coral resume                                    # 续
 uv run coral ui                                        # 打开 Web 看板
 ```
 
-## 工作原理
+## 工作原理与结构
 
 ```mermaid
 graph TD
