@@ -209,6 +209,10 @@ class AgentManager:
         self._start_time = datetime.now(UTC)
         self.paths = paths
 
+        # Kill any leftover agent processes from a previous run so they
+        # don't hold session locks and block the new agents.
+        self._kill_old_agent_processes()
+
         # Load saved sessions
         saved_sessions = self._load_saved_sessions()
 
@@ -313,7 +317,11 @@ class AgentManager:
         return None
 
     def stop_all(self) -> None:
-        """Gracefully stop all agents."""
+        """Gracefully stop all agents.
+
+        Uses SIGINT first so Claude Code can save sessions for later resume,
+        then falls back to SIGTERM/SIGKILL if needed.
+        """
         if self._stopping:
             return
         self._stopping = True
@@ -322,7 +330,12 @@ class AgentManager:
         # Save session IDs before killing processes
         self._save_sessions()
         for handle in self.handles:
-            handle.stop()
+            # Try graceful interrupt first so sessions can be resumed
+            handle.interrupt()
+        # Force-stop any that didn't exit
+        for handle in self.handles:
+            if handle.alive:
+                handle.stop()
         self._cleanup_pid_file()
         logger.info("All agents stopped.")
 
@@ -562,6 +575,49 @@ class AgentManager:
     def wait_for_completion(self) -> None:
         """Single-agent verbose mode: watch for attempts and deliver feedback via --resume."""
         self.monitor_loop(check_interval=3)
+
+    def _kill_old_agent_processes(self) -> None:
+        """Kill leftover agent processes from a previous run.
+
+        When resuming, old claude processes may still hold session locks,
+        preventing new agents from resuming those sessions.  We send
+        SIGINT first so Claude Code can save the session gracefully,
+        then escalate to SIGKILL if needed.
+        """
+        if not self.paths:
+            return
+        agent_pids_file = self.paths.coral_dir / "public" / "agent.pids"
+        if not agent_pids_file.exists():
+            return
+        import time
+
+        pids = []
+        for line in agent_pids_file.read_text().strip().splitlines():
+            line = line.strip()
+            if line:
+                pids.append(int(line))
+
+        if not pids:
+            return
+
+        # SIGINT first for graceful session save
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGINT)
+                logger.info(f"Sent SIGINT to leftover agent process {pid}")
+            except (ProcessLookupError, PermissionError):
+                pass
+
+        # Wait for graceful exit
+        time.sleep(3)
+
+        # Force kill any survivors
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGKILL)
+                logger.info(f"Force-killed leftover agent process {pid}")
+            except (ProcessLookupError, PermissionError):
+                pass
 
     def _write_pid_file(self) -> None:
         if self.paths:

@@ -23,9 +23,25 @@ from coral.cli._helpers import (
 )
 
 
+def _resolved_python() -> str:
+    """Return the absolute path to the current Python interpreter.
+
+    This ensures tmux sessions use the same (venv) Python even when
+    sys.executable would resolve differently in a non-interactive shell.
+    """
+    return str(Path(sys.executable).resolve())
+
+
+def _tmux_env() -> dict[str, str]:
+    """Build an environment for tmux that allows nested session creation."""
+    env = dict(os.environ)
+    env.pop("TMUX", None)  # Allow creating sessions even if nested
+    return env
+
+
 def _build_coral_command(args: argparse.Namespace) -> list[str]:
     """Reconstruct the coral start command with --no-tmux added."""
-    cmd = [sys.executable, "-m", "coral.cli", "start"]
+    cmd = [_resolved_python(), "-m", "coral.cli", "start"]
     cmd.extend(["--config", str(Path(args.config).resolve())])
     if args.agents:
         cmd.extend(["--agents", str(args.agents)])
@@ -68,6 +84,7 @@ def _start_in_tmux(args: argparse.Namespace) -> None:
         capture_output=True,
         text=True,
         cwd=Path.cwd(),
+        env=_tmux_env(),
     )
     if result.returncode != 0:
         print(f"Error creating tmux session: {result.stderr}", file=sys.stderr)
@@ -100,7 +117,7 @@ def _resume_in_tmux(args: argparse.Namespace, coral_dir: Path) -> None:
         capture_output=True,
     )
 
-    cmd = [sys.executable, "-m", "coral.cli", "resume"]
+    cmd = [_resolved_python(), "-m", "coral.cli", "resume"]
     if args.task:
         cmd.extend(["--task", args.task])
     if args.run:
@@ -119,6 +136,7 @@ def _resume_in_tmux(args: argparse.Namespace, coral_dir: Path) -> None:
         capture_output=True,
         text=True,
         cwd=Path.cwd(),
+        env=_tmux_env(),
     )
     if result.returncode != 0:
         print(f"Error creating tmux session: {result.stderr}", file=sys.stderr)
@@ -205,9 +223,11 @@ def cmd_start(args: argparse.Namespace) -> None:
         )
         if result.returncode == 0:
             session_name = result.stdout.strip()
-            tmux_file = manager.paths.coral_dir / "public" / ".coral_tmux_session"
-            tmux_file.write_text(session_name)
-            # Don't create .coral_tmux_owned — coral didn't create this session
+            # Mark as owned if coral created this tmux session (via _start_in_tmux)
+            coral_owns = session_name.startswith("coral-")
+            save_tmux_session_name(
+                manager.paths.coral_dir / "public", session_name, owned=coral_owns
+            )
 
     if args.ui:
         from coral.cli.ui import start_ui_background
@@ -235,12 +255,13 @@ def cmd_resume(args: argparse.Namespace) -> None:
         getattr(args, "run", None),
     )
 
-    existing_session = find_tmux_session(coral_dir)
-    if existing_session:
-        print(f"Found existing tmux session: {existing_session}")
-        print("Attaching...")
-        os.execvp("tmux", ["tmux", "attach", "-t", existing_session])
-        return
+    if not getattr(args, "no_tmux", False):
+        existing_session = find_tmux_session(coral_dir)
+        if existing_session:
+            print(f"Found existing tmux session: {existing_session}")
+            print("Attaching...")
+            os.execvp("tmux", ["tmux", "attach", "-t", existing_session])
+            return
 
     if not getattr(args, "no_tmux", False) and not in_tmux() and has_tmux():
         _resume_in_tmux(args, coral_dir)
@@ -303,9 +324,11 @@ def cmd_resume(args: argparse.Namespace) -> None:
         )
         if result.returncode == 0:
             session_name = result.stdout.strip()
-            tmux_file = paths.coral_dir / "public" / ".coral_tmux_session"
-            tmux_file.write_text(session_name)
-            # Don't create .coral_tmux_owned — coral didn't create this session
+            # Mark as owned if coral created this tmux session (via _resume_in_tmux)
+            coral_owns = session_name.startswith("coral-")
+            save_tmux_session_name(
+                paths.coral_dir / "public", session_name, owned=coral_owns
+            )
 
     if getattr(args, "ui", False):
         from coral.cli.ui import start_ui_background
