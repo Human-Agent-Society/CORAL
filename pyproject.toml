@@ -68,8 +68,8 @@ all = [
 coral = "coral.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yanyh528/CORAL"
-Repository = "https://github.com/yanyh528/CORAL"
+Homepage = "https://github.com/Human-Agent-Society/CORAL"
+Repository = "https://github.com/Human-Agent-Society/CORAL"
 
 [tool.hatch.build.targets.wheel]
 packages = ["coral"]
