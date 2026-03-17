@@ -151,8 +151,6 @@ uv run coral stop        # 收工
 
 ## CLI 命令
 
-<details>
-<summary>展开全部 17+ 条命令</summary>
 
 | 命令 | 说明 |
 |------|------|
@@ -176,12 +174,9 @@ uv run coral stop        # 收工
 | `uv run coral checkout <hash>` | 回退到指定记录 |
 | `uv run coral heartbeat` | 查看/修改心跳动作 |
 
-</details>
 
 ## 项目结构
 
-<details>
-<summary>展开</summary>
 
 ```
 coral/
@@ -211,7 +206,6 @@ coral/
 └── cli/                 # 5 个模块，17 条命令
 ```
 
-</details>
 
 ## 示例
 
@@ -229,8 +223,6 @@ coral/
 
 ## 开发
 
-<details>
-<summary>展开</summary>
 
 | 组件 | 技术栈 |
 |------|--------|
@@ -253,8 +245,6 @@ uv run pytest tests/ -v
 uv run ruff check .
 uv run ruff format .
 ```
-
-</details>
 
 ## 许可证
 

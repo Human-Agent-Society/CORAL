@@ -232,8 +232,6 @@ Ready-to-run task configurations in `examples/`:
 
 ## Development
 
-Click to expand
-
 
 | Component       | Tech Stack                         |
 | --------------- | ---------------------------------- |
