@@ -16,8 +16,9 @@ run experiments, share knowledge, and loop perpetually for better and better sol
 
 </div>
 
-
-[Demo](#demo) · [Installation](#installation) · [Usage](#usage) · [How It Works](#how-it-works) · [Quick Start](#quick-start) · [CLI Reference](#cli-reference) · [Examples](#examples) · [License](#license)
+<p align="center">
+<a href="#demo">Demo</a> · <a href="#installation">Installation</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
+</p>
 
 
 ## Demo
