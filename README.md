@@ -53,26 +53,36 @@ uv run coral ui                                        # open the web dashboard
 
 ```mermaid
 graph TD
-    A[coral start] --> B[Create .coral/ shared state]
-    B --> C[Create git worktrees]
-    C --> D[Generate CORAL.md per agent]
-    D --> E[Spawn N agents]
+    subgraph Setup["coral start"]
+        A[Create .coral/ shared state] --> B[Clone repo + create per-agent worktrees]
+        B --> C[Symlink .coral/public/ into each worktree]
+        C --> D[Generate CORAL.md per agent]
+        D --> E[Spawn N agents]
+    end
 
-    E --> F{Agent Loop}
-    F --> G[Read CORAL.md]
-    G --> H[Code & Commit]
-    H --> I[coral eval]
-    I --> J[Score & Feedback]
-    J -->|Share notes & skills| F
+    subgraph Loop["Each Agent (autonomous)"]
+        F[Read CORAL.md + leaderboard + notes + skills] --> G[Plan & edit code]
+        G --> H["coral eval -m 'description'"]
+        H --> I["git add → commit → grade → write attempt"]
+        I --> J[Write notes & skills to .coral/public/]
+        J --> F
+    end
 
-    style A fill:#0d9488,color:#fff
-    style F fill:#f59e0b,color:#fff
-    style I fill:#6366f1,color:#fff
+    subgraph Monitor["Manager (background)"]
+        K[Watch .coral/public/attempts/] --> L{Heartbeat action?}
+        L -->|Yes| M[Interrupt + resume agent with prompt]
+        L -->|No| K
+    end
+
+    E --> Loop
+    E --> Monitor
+
+    style Setup fill:#f0fdfa,stroke:#0d9488
+    style Loop fill:#fffbeb,stroke:#f59e0b
+    style Monitor fill:#f5f3ff,stroke:#8b5cf6
 ```
 
-
-
-Each agent works in its own git worktree, shares knowledge through `.coral/`, and loops autonomously — coding, evaluating, and improving until it converges.
+Each agent runs in its own git worktree branch. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time with zero sync overhead. The manager watches for new attempts and can interrupt agents with heartbeat-triggered prompts (e.g. "reflect", "consolidate skills").
 
 ## Key Concepts
 

@@ -52,24 +52,36 @@ uv run coral ui                                        # 打开 Web 仪表盘
 
 ```mermaid
 graph TD
-    A[coral start] --> B[创建 .coral/ 共享状态]
-    B --> C[创建 git worktree]
-    C --> D[为每个智能体生成 CORAL.md]
-    D --> E[启动 N 个智能体]
+    subgraph Setup["coral start"]
+        A[创建 .coral/ 共享状态] --> B[克隆仓库 + 创建 per-agent worktree]
+        B --> C[将 .coral/public/ 符号链接到每个 worktree]
+        C --> D[为每个智能体生成 CORAL.md]
+        D --> E[启动 N 个智能体]
+    end
 
-    E --> F{智能体循环}
-    F --> G[读取 CORAL.md]
-    G --> H[编写代码 & 提交]
-    H --> I[coral eval]
-    I --> J[获得分数 & 反馈]
-    J -->|共享笔记与技能| F
+    subgraph Loop["每个智能体（自主运行）"]
+        F[读取 CORAL.md + 排行榜 + 笔记 + 技能] --> G[规划 & 编辑代码]
+        G --> H["coral eval -m '描述'"]
+        H --> I["git add → commit → 评分 → 写入 attempt"]
+        I --> J[将笔记与技能写入 .coral/public/]
+        J --> F
+    end
 
-    style A fill:#0d9488,color:#fff
-    style F fill:#f59e0b,color:#fff
-    style I fill:#6366f1,color:#fff
+    subgraph Monitor["管理器（后台）"]
+        K[监听 .coral/public/attempts/] --> L{触发心跳动作？}
+        L -->|是| M[中断 + 恢复智能体并附带提示]
+        L -->|否| K
+    end
+
+    E --> Loop
+    E --> Monitor
+
+    style Setup fill:#f0fdfa,stroke:#0d9488
+    style Loop fill:#fffbeb,stroke:#f59e0b
+    style Monitor fill:#f5f3ff,stroke:#8b5cf6
 ```
 
-每个智能体在独立的 git worktree 中工作，通过 `.coral/` 共享知识，自主循环 —— 编码、评估、改进，直到收敛。
+每个智能体运行在独立的 git worktree 分支中。共享状态（尝试记录、笔记、技能）存放在 `.coral/public/`，通过符号链接同步到每个 worktree —— 零同步开销，实时可见。管理器在后台监听新的尝试记录，并可通过心跳机制中断智能体注入提示（如"反思"、"整理技能"）。
 
 ## 核心概念
 
