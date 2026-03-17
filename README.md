@@ -46,7 +46,7 @@ uv run coral stop                                      # stop anytime
 uv run coral resume                                    # pick up where you left off
 ```
 
-### 📊 Visualize Everything.
+### 📊 Visualize Everything While It Runs.
 
 ```bash
 uv run coral ui                                        # open the web dashboard
