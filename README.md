@@ -22,7 +22,9 @@ run experiments, share knowledge, and loop until they converge on the best solut
 ## Demo
 
 <div align="center">
-<video src="https://github.com/Human-Agent-Society/CORAL/raw/main/assets/coral_demo.mp4" controls width="100%"></video>
+
+[![Watch the demo](assets/coral_demo_thumbnail.jpg)](https://github.com/Human-Agent-Society/CORAL/raw/refs/heads/readme/assets/coral_demo.mp4)
+
 </div>
 
 ## Installation
