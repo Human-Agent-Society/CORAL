@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/coral_logo_transparent.jpg" alt="CORAL" width="360">
+<img src="assets/coral_logo_transparent.png" alt="CORAL" width="360">
 
 ### **Spawn Agents. Share Knowledge. Optimize Forever.**
 
