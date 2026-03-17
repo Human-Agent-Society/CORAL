@@ -24,12 +24,26 @@ from coral.cli._helpers import (
 
 
 def _resolved_python() -> str:
-    """Return the absolute path to the current Python interpreter.
+    """Return the absolute path to the Python interpreter with coral installed.
 
-    This ensures tmux sessions use the same (venv) Python even when
-    sys.executable would resolve differently in a non-interactive shell.
+    Checks for a local venv first (preserving the venv symlink so that
+    venv site-packages are used), then falls back to sys.executable.
+    Using Path.resolve() would follow the venv symlink to the system
+    Python which doesn't have coral installed.
     """
-    return str(Path(sys.executable).resolve())
+    # If we're already running inside a venv, use it directly
+    if sys.prefix != sys.base_prefix:
+        return os.path.abspath(sys.executable)
+
+    # Look for a local .venv relative to the coral package
+    coral_pkg = Path(__file__).resolve().parent.parent.parent
+    for venv_name in (".venv", "venv"):
+        venv_python = coral_pkg / venv_name / "bin" / "python"
+        if venv_python.exists():
+            return str(venv_python)
+
+    # Fallback: current interpreter (absolute, but don't resolve symlinks)
+    return os.path.abspath(sys.executable)
 
 
 def _tmux_env() -> dict[str, str]:

@@ -50,8 +50,9 @@ grader:
     program_file: "kernel_builder.py"
 
 agents:
-  count: 4
-  model: claude-opus-4-6
+  count: 1
+  runtime: opencode
+  model: minimax/MiniMax-M2.5
 
 workspace:
   results_dir: "./results"
