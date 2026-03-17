@@ -1,13 +1,8 @@
 <div align="center">
 
-<img src="assets/coral_logo.png" alt="CORAL Logo" width="200">
-
-# CORAL
+<img src="assets/coral_logo_with_words.jpg" alt="CORAL" width="360">
 
 ### **启动智能体，共享知识，永不停歇地优化。**
-
-一套面向**自主编程智能体**的编排系统 ——
-智能体运行实验、共享知识、循环迭代，直到收敛到最优解。
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
@@ -15,30 +10,48 @@
 
 [English](README.md) | **中文**
 
+一个**自主智能体**组织 ——
+运行实验、共享知识、循环迭代，直到收敛到最优解。
+
 </div>
 
----
+<p align="center">
+<a href="#安装">安装</a> · <a href="#使用方式">使用方式</a> · <a href="#工作原理">工作原理</a> · <a href="#核心概念">核心概念</a> · <a href="#快速开始">快速开始</a> · <a href="#cli-命令参考">CLI 命令</a> · <a href="#示例">示例</a> · <a href="#许可证">许可证</a>
+</p>
 
-## 🚀 一份配置，N 个智能体，持续刷新 SOTA。
-
-```bash
-git clone https://github.com/Human-Agent-Society/CORAL.git && cd CORAL && uv sync
-coral start --config task.yaml
-```
-
-## ⏹️ 随时暂停，随时恢复。
+## 安装
 
 ```bash
-coral stop                                             # 随时停止
-coral resume                                           # 从中断处继续
+git clone https://github.com/Human-Agent-Society/CORAL.git
+cd CORAL
+uv sync
 ```
 
----
+## 使用方式
+
+### 🚀 一份配置，N 个智能体，持续刷新 SOTA。
+
+```bash
+uv run coral start --config task.yaml
+```
+
+### ⏹️ 随时暂停，随时恢复。
+
+```bash
+uv run coral stop                                      # 随时停止
+uv run coral resume                                    # 从中断处继续
+```
+
+### 📊 一键可视化。
+
+```bash
+uv run coral ui                                        # 打开 Web 仪表盘
+```
 
 ## 工作原理
 
 ```mermaid
-graph LR
+graph TD
     A[coral start] --> B[创建 .coral/ 共享状态]
     B --> C[创建 git worktree]
     C --> D[为每个智能体生成 CORAL.md]
@@ -58,33 +71,19 @@ graph LR
 
 每个智能体在独立的 git worktree 中工作，通过 `.coral/` 共享知识，自主循环 —— 编码、评估、改进，直到收敛。
 
----
-
 ## 核心概念
 
 | 概念 | 说明 |
 |------|------|
 | **智能体即优化器** | Claude Code / Codex / OpenCode 子进程，各自运行在独立的 git worktree 中 |
 | **共享状态** | `.coral/` 目录包含尝试记录、笔记和技能 —— 通过符号链接同步到每个 worktree |
-| **评估循环** | 智能体调用 `coral eval -m "..."` 一步完成暂存、提交和评分 |
+| **评估循环** | 智能体调用 `uv run coral eval -m "..."` 一步完成暂存、提交和评分 |
 | **CLI 编排** | 17+ 个命令：`start`、`stop`、`status`、`eval`、`log`、`ui` 等 |
-| **Web 仪表盘** | `coral ui` —— 实时排行榜、尝试记录对比、智能体监控 |
-
----
+| **Web 仪表盘** | `uv run coral ui` —— 实时排行榜、尝试记录对比、智能体监控 |
 
 ## 快速开始
 
-### 1. 安装
-
-```bash
-git clone https://github.com/Human-Agent-Society/CORAL.git
-cd CORAL
-uv sync                    # 基础安装
-uv sync --extra dev        # 包含 pytest, ruff, mypy
-uv sync --all-extras       # 安装所有依赖
-```
-
-### 2. 创建任务
+### 1. 创建任务
 
 ```yaml
 # my-task/task.yaml
@@ -102,7 +101,7 @@ agents:
   max_turns: 200
 ```
 
-### 3. 编写评分器
+### 2. 编写评分器
 
 ```python
 # my-task/eval/grader.py
@@ -114,45 +113,49 @@ class Grader(TaskGrader):
         return float(result.stdout.strip())
 ```
 
-### 4. 启动
+### 3. 启动
 
 ```bash
-coral start --config my-task/task.yaml
-coral ui          # 打开 Web 仪表盘
-coral status      # CLI 排行榜
-coral log         # 查看尝试记录
-coral stop        # 停止所有智能体
+uv run coral start --config my-task/task.yaml
+uv run coral ui          # 打开 Web 仪表盘
+uv run coral status      # CLI 排行榜
+uv run coral log         # 查看尝试记录
+uv run coral stop        # 停止所有智能体
 ```
-
----
 
 ## CLI 命令参考
 
+<details>
+<summary>点击展开全部 17+ 个命令</summary>
+
 | 命令 | 说明 |
 |------|------|
-| `coral init <name>` | 初始化新任务 |
-| `coral validate <name>` | 测试评分器 |
-| `coral start -c task.yaml` | 启动智能体 |
-| `coral resume` | 恢复之前的运行 |
-| `coral stop` | 停止所有智能体 |
-| `coral status` | 智能体状态 + 排行榜 |
-| `coral log` | 排行榜（前 20） |
-| `coral log -n 5 --recent` | 最近的尝试记录 |
-| `coral log --search "关键词"` | 搜索尝试记录 |
-| `coral show <hash>` | 尝试详情 + diff |
-| `coral notes` | 浏览共享笔记 |
-| `coral skills` | 浏览共享技能 |
-| `coral runs` | 列出所有运行 |
-| `coral ui` | Web 仪表盘 |
-| `coral eval -m "描述"` | 暂存、提交、评估（智能体调用） |
-| `coral diff` | 查看未提交的变更 |
-| `coral revert` | 撤销上次提交 |
-| `coral checkout <hash>` | 重置到之前的尝试 |
-| `coral heartbeat` | 查看/修改心跳动作 |
+| `uv run coral init <name>` | 初始化新任务 |
+| `uv run coral validate <name>` | 测试评分器 |
+| `uv run coral start -c task.yaml` | 启动智能体 |
+| `uv run coral resume` | 恢复之前的运行 |
+| `uv run coral stop` | 停止所有智能体 |
+| `uv run coral status` | 智能体状态 + 排行榜 |
+| `uv run coral log` | 排行榜（前 20） |
+| `uv run coral log -n 5 --recent` | 最近的尝试记录 |
+| `uv run coral log --search "关键词"` | 搜索尝试记录 |
+| `uv run coral show <hash>` | 尝试详情 + diff |
+| `uv run coral notes` | 浏览共享笔记 |
+| `uv run coral skills` | 浏览共享技能 |
+| `uv run coral runs` | 列出所有运行 |
+| `uv run coral ui` | Web 仪表盘 |
+| `uv run coral eval -m "描述"` | 暂存、提交、评估（智能体调用） |
+| `uv run coral diff` | 查看未提交的变更 |
+| `uv run coral revert` | 撤销上次提交 |
+| `uv run coral checkout <hash>` | 重置到之前的尝试 |
+| `uv run coral heartbeat` | 查看/修改心跳动作 |
 
----
+</details>
 
 ## 评分系统
+
+<details>
+<summary>点击展开</summary>
 
 评分器实现 `GraderInterface` 协议：
 
@@ -168,9 +171,12 @@ class GraderInterface(Protocol):
 | **TaskGrader** | 任务评分器基类 —— 提供 `run_program`、`read_eval`、`score`、`fail` 等辅助方法 |
 | **FunctionGrader** | 将任意 `(codebase_path, tasks) -> Score | float | bool` 可调用对象封装为评分器 |
 
----
+</details>
 
 ## 项目结构
+
+<details>
+<summary>点击展开</summary>
 
 ```
 coral/
@@ -200,7 +206,7 @@ coral/
 └── cli/                 # 5 个模块，17 个命令
 ```
 
----
+</details>
 
 ## 示例
 
@@ -216,9 +222,10 @@ coral/
 | **spaceship_titanic** | 机器学习 | Kaggle 竞赛 |
 | **stanford_covid_vaccine** | 生物/ML | mRNA 降解预测 |
 
----
+## 开发
 
-## 技术栈
+<details>
+<summary>点击展开</summary>
 
 | 组件 | 技术 |
 |------|------|
@@ -229,10 +236,6 @@ coral/
 | Web 前端 | React + TypeScript (Vite) |
 | 核心依赖 | PyYAML |
 | 可选依赖 | swebench, datasets, docker, harbor |
-
----
-
-## 开发
 
 ```bash
 # 安装开发依赖
@@ -246,7 +249,7 @@ uv run ruff check .
 uv run ruff format .
 ```
 
----
+</details>
 
 ## 许可证
 
