@@ -16,8 +16,12 @@
 </div>
 
 <p align="center">
-<a href="#安装">安装</a> · <a href="#使用">使用</a> · <a href="#工作原理">工作原理</a> · <a href="#核心概念">核心概念</a> · <a href="#快速上手">快速上手</a> · <a href="#cli-命令">CLI 命令</a> · <a href="#示例">示例</a> · <a href="#许可证">许可证</a>
+<a href="#演示">演示</a> · <a href="#安装">安装</a> · <a href="#使用">使用</a> · <a href="#工作原理">工作原理</a> · <a href="#核心概念">核心概念</a> · <a href="#快速上手">快速上手</a> · <a href="#cli-命令">CLI 命令</a> · <a href="#示例">示例</a> · <a href="#许可证">许可证</a>
 </p>
+
+## 演示
+
+[https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8](https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8)
 
 ## 安装
 
@@ -97,8 +101,16 @@ graph TD
 
 ### 1. 定义任务
 
+可以先看看 `examples/` 下现有的任务作为参考，然后创建自己的：
+
+```bash
+mkdir -p examples/my-task/{seed,eval}
+```
+
+把初始文件（比如 `solution.py`）放到 `seed/` 目录下，这就是 Agent 的起始代码库。然后在配置里用 `workspace.repo_path` 指向它：
+
 ```yaml
-# my-task/task.yaml
+# examples/my-task/task.yaml
 task:
   name: my-task
   description: "优化 solution.py 中的函数"
@@ -111,12 +123,16 @@ agents:
   count: 2
   model: claude-sonnet-4-20250514
   max_turns: 200
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/my-task/seed"
 ```
 
 ### 2. 写评分器
 
 ```python
-# my-task/eval/grader.py
+# examples/my-task/eval/grader.py
 from coral.grader import TaskGrader
 
 class Grader(TaskGrader):
@@ -128,7 +144,7 @@ class Grader(TaskGrader):
 ### 3. 跑起来
 
 ```bash
-uv run coral start --config my-task/task.yaml
+uv run coral start --config examples/my-task/task.yaml
 uv run coral ui          # 打开 Web 看板
 uv run coral status      # 看排行榜
 uv run coral log         # 翻记录

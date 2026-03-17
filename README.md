@@ -17,6 +17,10 @@ run experiments, share knowledge, and loop perpetually for better and better sol
 
 [Demo](#demo) · [Installation](#installation) · [Usage](#usage) · [How It Works](#how-it-works) · [Key Concepts](#key-concepts) · [Quick Start](#quick-start) · [CLI Reference](#cli-reference) · [Examples](#examples) · [License](#license)
 
+
+## Demo
+
+
 [https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8](https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8)
 
 ## Installation
@@ -102,8 +106,16 @@ Each agent runs in its own git worktree branch. Shared state (attempts, notes, s
 
 ### 1. Create a task
 
+Check out the existing tasks in `examples/` for reference, then create your own:
+
+```bash
+mkdir -p examples/my-task/{seed,eval}
+```
+
+Put any initial files (e.g. `solution.py`) in `seed/` — this is the starting codebase agents will work from. Then point `workspace.repo_path` at it in your config:
+
 ```yaml
-# my-task/task.yaml
+# examples/my-task/task.yaml
 task:
   name: my-task
   description: "Optimize the function in solution.py"
@@ -116,12 +128,16 @@ agents:
   count: 2
   model: claude-sonnet-4-20250514
   max_turns: 200
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/my-task/seed"
 ```
 
 ### 2. Write a grader
 
 ```python
-# my-task/eval/grader.py
+# examples/my-task/eval/grader.py
 from coral.grader import TaskGrader
 
 class Grader(TaskGrader):
@@ -133,7 +149,7 @@ class Grader(TaskGrader):
 ### 3. Launch
 
 ```bash
-uv run coral start --config my-task/task.yaml
+uv run coral start --config examples/my-task/task.yaml
 uv run coral ui          # Open web dashboard
 uv run coral status      # CLI leaderboard
 uv run coral log         # View attempts
