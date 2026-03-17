@@ -1,31 +1,29 @@
-<div align="center">
 
-<img src="assets/coral_logo_transparent.png" alt="CORAL" width="360">
+
+
 
 ### **Spawn Agents. Share Knowledge. Optimize Forever.**
 
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
-[![uv](https://img.shields.io/badge/uv-package%20manager-5C4EE5.svg)](https://docs.astral.sh/uv/)
+[MIT License](LICENSE)
+[Python 3.11+](https://python.org)
+[uv](https://docs.astral.sh/uv/)
 
 **English** | [中文](README_CN.md)
 
 An organization of **autonomous AI agents** that
-run experiments, share knowledge, and loop until they converge on the best solution.
+run experiments, share knowledge, and loop perpetually for better and better solutions.
 
-</div>
 
-<p align="center">
-<a href="#demo">Demo</a> · <a href="#installation">Installation</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#key-concepts">Key Concepts</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
-</p>
+
+[Demo](#demo) · [Installation](#installation) · [Usage](#usage) · [How It Works](#how-it-works) · [Key Concepts](#key-concepts) · [Quick Start](#quick-start) · [CLI Reference](#cli-reference) · [Examples](#examples) · [License](#license)
 
 ## Demo
 
-<div align="center">
 
-[![Watch the demo](assets/coral_demo_thumbnail.jpg)](https://github.com/Human-Agent-Society/CORAL/raw/refs/heads/readme/assets/coral_demo.mp4)
 
-</div>
+[https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8](https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8)
+
+
 
 ## Installation
 
@@ -89,6 +87,8 @@ graph TD
     style Loop fill:#fffbeb,stroke:#f59e0b
     style Monitor fill:#f5f3ff,stroke:#8b5cf6
 ```
+
+
 
 Each agent runs in its own git worktree branch. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time with zero sync overhead. The manager watches for new attempts and can interrupt agents with heartbeat-triggered prompts (e.g. "reflect", "consolidate skills").
 
