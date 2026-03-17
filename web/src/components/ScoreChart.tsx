@@ -79,6 +79,7 @@ interface Props {
   height?: number | string;
   direction?: "maximize" | "minimize";
   expanded?: boolean;
+  animationDuration?: number;
 }
 
 export default function ScoreChart({
@@ -86,6 +87,7 @@ export default function ScoreChart({
   height = 280,
   direction = "maximize",
   expanded = false,
+  animationDuration,
 }: Props) {
   const chartRef = useRef<ChartJS<"line"> | null>(null);
   const [scaleMode, setScaleMode] = useState<ScaleMode>("linear");
@@ -262,6 +264,9 @@ export default function ScoreChart({
   const options: any = {
     responsive: true,
     maintainAspectRatio: false,
+    ...(animationDuration !== undefined && {
+      animation: { duration: animationDuration },
+    }),
     plugins: {
       legend: {
         display: true,

@@ -172,6 +172,13 @@ def cmd_start(args: argparse.Namespace) -> None:
         _start_in_tmux(args)
         return
 
+    if not args.no_tmux and not in_tmux() and not has_tmux():
+        print(
+            "Warning: tmux is not installed. Running in foreground mode.\n"
+            "  Install tmux for background session support: brew install tmux (macOS) / apt install tmux (Linux)\n",
+            file=sys.stderr,
+        )
+
     from coral.agent.manager import AgentManager
     from coral.config import CoralConfig
     from coral.cli.validation import validate_task
@@ -280,6 +287,13 @@ def cmd_resume(args: argparse.Namespace) -> None:
     if not getattr(args, "no_tmux", False) and not in_tmux() and has_tmux():
         _resume_in_tmux(args, coral_dir)
         return
+
+    if not getattr(args, "no_tmux", False) and not in_tmux() and not has_tmux():
+        print(
+            "Warning: tmux is not installed. Running in foreground mode.\n"
+            "  Install tmux for background session support: brew install tmux (macOS) / apt install tmux (Linux)\n",
+            file=sys.stderr,
+        )
 
     pid_file = coral_dir / "public" / "manager.pid"
     if pid_file.exists():

@@ -6,15 +6,16 @@ interface Props {
   rank: number;
   expanded: boolean;
   onToggle: () => void;
+  highlight?: boolean;
 }
 
-export default function AttemptRow({ attempt: a, rank, expanded, onToggle }: Props) {
+export default function AttemptRow({ attempt: a, rank, expanded, onToggle, highlight }: Props) {
   return (
     <>
       <tr
         onClick={onToggle}
         className={`border-b border-border cursor-pointer transition-colors duration-100 ${
-          expanded ? "bg-muted" : "hover:bg-muted/50"
+          expanded ? "bg-muted" : highlight ? "bg-muted/80" : "hover:bg-muted/50"
         }`}
       >
         <td className="py-2.5 px-3 font-mono text-xs text-muted-fg">{rank}</td>

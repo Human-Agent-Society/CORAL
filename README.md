@@ -16,8 +16,14 @@ run experiments, share knowledge, and loop until they converge on the best solut
 </div>
 
 <p align="center">
-<a href="#installation">Installation</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#key-concepts">Key Concepts</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
+<a href="#demo">Demo</a> · <a href="#installation">Installation</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#key-concepts">Key Concepts</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
 </p>
+
+## Demo
+
+<div align="center">
+<video src="https://github.com/Human-Agent-Society/CORAL/raw/main/assets/coral_demo.mp4" controls width="100%"></video>
+</div>
 
 ## Installation
 
