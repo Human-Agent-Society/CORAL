@@ -25,7 +25,7 @@ run experiments, share knowledge, and loop until they converge on the best solut
 git clone https://github.com/Human-Agent-Society/CORAL.git
 cd CORAL
 # install uv from https://github.com/astral-sh/uv
-uv sync
+uv sync                   # (optionally add --extra ui to include dashboard dependencies)
 ```
 
 ## Usage
