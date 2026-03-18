@@ -105,21 +105,79 @@ Each agent runs in its own git worktree branch. Shared state (attempts, notes, s
 
 ## Quick Start
 
-### 1. Create a task
+Let's walk through a complete example: agents compete to solve a **10-city Traveling Salesman Problem**.
 
-Check out the existing tasks in `examples/` for reference, then create your own:
+### 1. Write a seed codebase
+
+The seed is the starting code that agents will iterate on. Create the directory and a naive initial solution:
 
 ```bash
-mkdir -p examples/my-task/{seed,eval}
+mkdir -p examples/tsp/{seed,eval}
 ```
 
-Put any initial files (e.g. `solution.py`) in `seed/` — this is the starting codebase agents will work from. Then point `workspace.repo_path` at it in your config:
+```python
+# examples/tsp/seed/solution.py
+CITIES = [
+    (0.19, 0.44), (0.87, 0.23), (0.52, 0.91), (0.34, 0.12), (0.78, 0.65),
+    (0.08, 0.73), (0.63, 0.38), (0.41, 0.56), (0.95, 0.82), (0.27, 0.05),
+]
+
+# Naive: visit cities in index order (0, 1, 2, ..., 9)
+for i in range(len(CITIES)):
+    print(i)
+```
+
+### 2. Write a grader
+
+Subclass `TaskGrader` and implement `evaluate()`. The base class provides `self.run_program(filename)` which runs a file from the agent's codebase in a subprocess and returns a `CompletedProcess` (with `.stdout`, `.stderr`, `.returncode`):
+
+```python
+# examples/tsp/eval/grader.py
+import math
+from coral.grader import TaskGrader
+
+CITIES = [
+    (0.19, 0.44), (0.87, 0.23), (0.52, 0.91), (0.34, 0.12), (0.78, 0.65),
+    (0.08, 0.73), (0.63, 0.38), (0.41, 0.56), (0.95, 0.82), (0.27, 0.05),
+]
+
+class Grader(TaskGrader):
+    def evaluate(self) -> float:
+        result = self.run_program("solution.py")
+        if result.returncode != 0:
+            return self.fail(result.stderr.strip())
+        try:
+            order = [int(x) for x in result.stdout.strip().split("\n")]
+        except ValueError:
+            return self.fail(f"Expected integers, got: {result.stdout.strip()!r}")
+        if sorted(order) != list(range(len(CITIES))):
+            return self.fail("Tour must visit each city exactly once")
+        dist = sum(
+            math.dist(CITIES[order[i]], CITIES[order[(i + 1) % len(order)]])
+            for i in range(len(order))
+        )
+        return -dist  # shorter tour = higher score
+```
+
+The naive seed tour scores about `-4.98`. Agents will try nearest-neighbor, 2-opt, simulated annealing, etc. to find shorter routes.
+
+### 3. Configure the task
+
+Point the config at your seed codebase and grader:
 
 ```yaml
-# examples/my-task/task.yaml
+# examples/tsp/task.yaml
 task:
-  name: my-task
-  description: "Optimize the function in solution.py"
+  name: tsp
+  description: |
+    Find the shortest round-trip tour through 10 cities. The coordinates
+    of the 10 cities is provided in `solution.py`. DO NOT MODIFY the `CITIES` coordinates!
+
+    solution.py must print 10 integers (0–9) to stdout, one per line,
+    representing the visit order. Each city must appear exactly once.
+    
+    The grader computes the total Euclidean round-trip distance
+    and returns -distance as the score (shorter = higher).
 
 grader:
   type: function
@@ -132,25 +190,13 @@ agents:
 
 workspace:
   results_dir: "./results"
-  repo_path: "./examples/my-task/seed"
+  repo_path: "./examples/tsp/seed"
 ```
 
-### 2. Write a grader
-
-```python
-# examples/my-task/eval/grader.py
-from coral.grader import TaskGrader
-
-class Grader(TaskGrader):
-    def evaluate(self) -> float:
-        result = self.run_program("solution.py")
-        return float(result.stdout.strip())
-```
-
-### 3. Launch
+### 4. Launch
 
 ```bash
-uv run coral start --config examples/my-task/task.yaml
+uv run coral start --config examples/tsp/task.yaml
 uv run coral ui          # Open web dashboard
 uv run coral status      # CLI leaderboard
 uv run coral log         # View attempts

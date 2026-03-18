@@ -97,21 +97,76 @@ graph TD
 
 ## 快速上手
 
-### 1. 定义任务
+以一个完整的例子来演示：多个 Agent 竞争求解 **10 城市旅行商问题（TSP）**。
 
-可以先看看 `examples/` 下现有的任务作为参考，然后创建自己的：
+### 1. 写初始代码
+
+初始代码（seed）是 Agent 迭代优化的起点。创建目录并写一个最简方案：
 
 ```bash
-mkdir -p examples/my-task/{seed,eval}
+mkdir -p examples/tsp/{seed,eval}
 ```
 
-把初始文件（比如 `solution.py`）放到 `seed/` 目录下，这就是 Agent 的起始代码库。然后在配置里用 `workspace.repo_path` 指向它：
+```python
+# examples/tsp/seed/solution.py
+CITIES = [
+    (0.19, 0.44), (0.87, 0.23), (0.52, 0.91), (0.34, 0.12), (0.78, 0.65),
+    (0.08, 0.73), (0.63, 0.38), (0.41, 0.56), (0.95, 0.82), (0.27, 0.05),
+]
+
+# 最简方案：按编号顺序访问 (0, 1, 2, ..., 9)
+for i in range(len(CITIES)):
+    print(i)
+```
+
+### 2. 写评分器
+
+继承 `TaskGrader`，实现 `evaluate()` 方法。基类提供 `self.run_program(filename)`，它会在子进程中运行 Agent 代码库里的文件，返回 `CompletedProcess`（含 `.stdout`、`.stderr`、`.returncode`）：
+
+```python
+# examples/tsp/eval/grader.py
+import math
+from coral.grader import TaskGrader
+
+CITIES = [
+    (0.19, 0.44), (0.87, 0.23), (0.52, 0.91), (0.34, 0.12), (0.78, 0.65),
+    (0.08, 0.73), (0.63, 0.38), (0.41, 0.56), (0.95, 0.82), (0.27, 0.05),
+]
+
+class Grader(TaskGrader):
+    def evaluate(self) -> float:
+        result = self.run_program("solution.py")
+        if result.returncode != 0:
+            return self.fail(result.stderr.strip())
+        try:
+            order = [int(x) for x in result.stdout.strip().split("\n")]
+        except ValueError:
+            return self.fail(f"Expected integers, got: {result.stdout.strip()!r}")
+        if sorted(order) != list(range(len(CITIES))):
+            return self.fail("Tour must visit each city exactly once")
+        dist = sum(
+            math.dist(CITIES[order[i]], CITIES[order[(i + 1) % len(order)]])
+            for i in range(len(order))
+        )
+        return -dist  # 路线越短，得分越高
+```
+
+初始方案按编号顺序访问，得分约 `-4.98`。Agent 会尝试最近邻、2-opt、模拟退火等策略寻找更短路线。
+
+### 3. 配置任务
+
+把配置指向初始代码和评分器：
 
 ```yaml
-# examples/my-task/task.yaml
+# examples/tsp/task.yaml
 task:
-  name: my-task
-  description: "优化 solution.py 中的函数"
+  name: tsp
+  description: |
+    求 10 个城市的最短往返路线。
+
+    solution.py 向 stdout 输出 10 个整数（0–9），每行一个，
+    表示访问顺序，每个城市恰好出现一次。
+    评分器计算往返欧氏距离，返回 -distance 作为得分（越短越高）。
 
 grader:
   type: function
@@ -124,25 +179,13 @@ agents:
 
 workspace:
   results_dir: "./results"
-  repo_path: "./examples/my-task/seed"
+  repo_path: "./examples/tsp/seed"
 ```
 
-### 2. 写评分器
-
-```python
-# examples/my-task/eval/grader.py
-from coral.grader import TaskGrader
-
-class Grader(TaskGrader):
-    def evaluate(self) -> float:
-        result = self.run_program("solution.py")
-        return float(result.stdout.strip())
-```
-
-### 3. 跑起来
+### 4. 跑起来
 
 ```bash
-uv run coral start --config examples/my-task/task.yaml
+uv run coral start --config examples/tsp/task.yaml
 uv run coral ui          # 打开 Web 看板
 uv run coral status      # 看排行榜
 uv run coral log         # 翻记录
