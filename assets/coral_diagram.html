@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORAL — How It Works</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400&display=swap');
+
+:root {
+  --sans: 'DM Sans', -apple-system, sans-serif;
+  --serif: 'Source Serif 4', Georgia, serif;
+  --mono: 'DM Mono', 'SF Mono', Consolas, monospace;
+  /* muted blue — matches blog */
+  --bg: #f3f6fb;
+  --card: #e8edf6;
+  --elevated: #dde4f0;
+  --deep: #d2daea;
+  --border: #bec8d8;
+  --line: #aab4c6;
+  --t1: #18222e;
+  --t2: #26323f;
+  --t3: #415060;
+  --t4: #647585;
+  --t5: #8e9eae;
+  --badge-bg: #18222e;
+  --badge-t: #f3f6fb;
+  --accent: #2a5282;
+  --accent-bg: #dce8f5;
+  --accent-icon: #3a6fa8;
+  --yes-bg: #e8f0e8;
+  --yes-icon: #3a6b3a;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--t2);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px 56px;
+}
+
+.diagram { width: 860px; }
+
+/* ── Section wrappers ── */
+.section-wrap {
+  border: .7px dashed var(--border);
+  border-radius: 16px;
+  padding: 14px 20px 18px;
+  position: relative;
+}
+.has-loopback { padding-right: 52px; }
+
+.section-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--t5);
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+/* ── Step cards ── */
+.step-card {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 9px 13px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+/* Icon badge */
+.step-icon {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 8px;
+  background: var(--elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--t3);
+}
+.step-icon svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Accent icon (coral eval) */
+.step-card.is-accent .step-icon {
+  background: var(--accent-bg);
+  color: var(--accent-icon);
+}
+
+/* Yes icon */
+.step-card.is-yes .step-icon {
+  background: var(--yes-bg);
+  color: var(--yes-icon);
+}
+
+.step-title {
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--t1);
+  letter-spacing: -.15px;
+  line-height: 1.35;
+}
+.step-sub {
+  font-size: 11px;
+  color: var(--t4);
+  margin-top: 2px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+.step-card code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  background: var(--elevated);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--t2);
+}
+.step-card.is-accent code {
+  background: rgba(42,82,130,.12);
+  color: var(--accent);
+}
+
+/* Badge */
+.badge {
+  display: inline-block;
+  background: var(--badge-bg);
+  color: var(--badge-t);
+  font-family: var(--sans);
+  font-size: 8.5px;
+  font-weight: 500;
+  letter-spacing: .05em;
+  padding: 2px 9px;
+  border-radius: 20px;
+}
+
+/* ── Connectors ── */
+.connector { display: flex; justify-content: center; padding: 2px 0; }
+.vline { width: 1px; background: var(--line); }
+.arrow-down-tri {
+  width: 0; height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-top: 5px solid var(--line);
+  margin: 0 auto;
+}
+.connector-col { display: flex; flex-direction: column; align-items: center; }
+.conn-label { font-size: 10.5px; color: var(--t4); text-align: center; padding: 2px 0; }
+
+/* ── Layout ── */
+.bottom-row { display: flex; gap: 14px; align-items: stretch; }
+.col-loop { flex: 3; display: flex; flex-direction: column; }
+.col-monitor { flex: 2; display: flex; flex-direction: column; }
+.col-loop .section-wrap,
+.col-monitor .section-wrap { flex: 1; }
+
+/* ── Decision node ── */
+.decision {
+  background: var(--elevated);
+  border-radius: 8px;
+  padding: 8px 13px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 11px;
+  border: .7px solid var(--border);
+}
+.decision-icon {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 8px;
+  background: var(--deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--t3);
+}
+.decision-icon svg {
+  width: 14px; height: 14px;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
+}
+.decision-text {
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--t1);
+  letter-spacing: -.1px;
+}
+
+/* ── Loop-back SVG overlay ── */
+.loop-svg {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; overflow: visible; z-index: 10;
+}
+.loop-svg path { fill: none; stroke: var(--line); stroke-width: 1; }
+.loop-svg .dashed { stroke-dasharray: 4 3; }
+</style>
+</head>
+<body>
+
+<div class="diagram">
+
+  <!-- ════ SETUP ════ -->
+  <div class="section-wrap">
+    <div class="section-label">Initialization</div>
+
+    <div class="step-card">
+      <div class="step-icon">
+        <!-- folder -->
+        <svg viewBox="0 0 16 16"><path d="M1.5 4.5h4l1.5 1.5H14.5v7.5H1.5V4.5z"/></svg>
+      </div>
+      <div>
+        <div class="step-title">Create <code>.coral/</code> shared state</div>
+        <div class="step-sub">Initializes attempts, notes, &amp; skills directories</div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="connector-col"><div class="vline" style="height:10px"></div><div class="arrow-down-tri"></div></div></div>
+
+    <div class="step-card">
+      <div class="step-icon">
+        <!-- git branch -->
+        <svg viewBox="0 0 16 16"><circle cx="4.5" cy="4" r="1.5"/><circle cx="4.5" cy="12" r="1.5"/><circle cx="11.5" cy="4" r="1.5"/><path d="M4.5 5.5v5M4.5 5.5C4.5 8 11.5 8 11.5 5.5"/></svg>
+      </div>
+      <div>
+        <div class="step-title">Clone repo + create per-agent workspace</div>
+        <div class="step-sub">Each agent gets an isolated workspace</div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="connector-col"><div class="vline" style="height:10px"></div><div class="arrow-down-tri"></div></div></div>
+
+    <div class="step-card">
+      <div class="step-icon">
+        <!-- link -->
+        <svg viewBox="0 0 16 16"><path d="M6.5 9.5a3 3 0 0 0 4.5.5l2-2a3 3 0 0 0-4.5-4.5L7 5"/><path d="M9.5 6.5a3 3 0 0 0-4.5-.5L3 8a3 3 0 0 0 4.5 4.5L9 11"/></svg>
+      </div>
+      <div>
+        <div class="step-title">Symlink <code>.coral/public/</code> into each workspace</div>
+        <div class="step-sub">Shared knowledge is readable and writable by all agents</div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="connector-col"><div class="vline" style="height:10px"></div><div class="arrow-down-tri"></div></div></div>
+
+    <div class="step-card">
+      <div class="step-icon">
+        <!-- file-text -->
+        <svg viewBox="0 0 16 16"><path d="M9.5 1.5H3.5a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V5.5L9.5 1.5z"/><path d="M9.5 1.5V5.5h4M5.5 8.5h5M5.5 11h3.5"/></svg>
+      </div>
+      <div>
+        <div class="step-title">Generate <code>CORAL.md</code> per agent</div>
+        <div class="step-sub">Meta-instructions + task-tailored system prompt</div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="connector-col"><div class="vline" style="height:10px"></div><div class="arrow-down-tri"></div></div></div>
+
+    <div class="step-card">
+      <div class="step-icon">
+        <!-- zap -->
+        <svg viewBox="0 0 16 16"><path d="M9.5 1.5l-5.5 8h5l-1.5 5 6-8h-5l1-5z"/></svg>
+      </div>
+      <div>
+        <div class="step-title">Spawn N agents</div>
+        <div class="step-sub">Run in parallel in isolated workspaces with a shared knowledge space</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ Split connector ════ -->
+  <div style="position:relative;height:32px;">
+    <svg width="100%" height="32" style="overflow:visible;">
+      <line x1="50%" y1="0" x2="50%" y2="10" stroke="var(--line)" stroke-width="1"/>
+      <line x1="33%" y1="10" x2="67%" y2="10" stroke="var(--line)" stroke-width="1"/>
+      <line x1="33%" y1="10" x2="33%" y2="26" stroke="var(--line)" stroke-width="1"/>
+      <line x1="67%" y1="10" x2="67%" y2="26" stroke="var(--line)" stroke-width="1"/>
+    </svg>
+    <div style="position:absolute;bottom:0;left:33%;transform:translateX(-50%);"><div class="arrow-down-tri"></div></div>
+    <div style="position:absolute;bottom:0;left:67%;transform:translateX(-50%);"><div class="arrow-down-tri"></div></div>
+  </div>
+
+  <!-- ════ BOTTOM ROW ════ -->
+  <div class="bottom-row">
+
+    <!-- ── Agent Loop ── -->
+    <div class="col-loop">
+      <div class="section-wrap has-loopback" id="agentWrap">
+        <svg class="loop-svg" id="agentLoopSvg">
+          <defs>
+            <marker id="arrowAuto" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <polygon points="0,0 10,4 0,8" fill="#aab4c6"/>
+            </marker>
+          </defs>
+        </svg>
+        <div class="section-label">Each Agent (conditioned on <code style="font-size:9px;background:var(--elevated);padding:1px 5px;border-radius:3px;letter-spacing:0;text-transform:none;">CORAL.md</code>) — Autonomous Loop</div>
+
+        <div class="step-card" id="agentFirst">
+          <div class="step-icon">
+            <!-- book-open -->
+            <svg viewBox="0 0 16 16"><path d="M2 12.5V3.5a.5.5 0 0 1 .5-.5C4 3 6.5 3.5 8 5c1.5-1.5 4-2 5.5-2a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5C12 13 9.5 12.5 8 14c-1.5-1.5-4-1-5.5-1a.5.5 0 0 1-.5-.5z"/><line x1="8" y1="5" x2="8" y2="14"/></svg>
+          </div>
+          <div>
+            <div class="step-title">Read &amp; analyze leaderboard · notes · skills</div>
+            <div class="step-sub">Full context: codebase + recent &amp; top attempts + scores &amp; feedback + shared learnings</div>
+          </div>
+        </div>
+
+        <div class="connector"><div class="connector-col"><div class="vline" style="height:10px"></div><div class="arrow-down-tri"></div></div></div>
+
+        <div class="step-card">
+          <div class="step-icon">
+            <!-- pencil -->
+            <svg viewBox="0 0 16 16"><path d="M11.5 2.5l2 2-8.5 8.5H3v-2L11.5 2.5z"/><path d="M10 4l2 2"/></svg>
+          </div>
+          <div>
+            <div class="step-title">Plan &amp; edit code</div>
+            <div class="step-sub">Independent strategy in its own isolated workspace</div>
+          </div>
+        </div>
+
+        <div class="connector"><div class="connector-col"><div class="vline" style="height:10px"></div><div class="arrow-down-tri"></div></div></div>
+
+        <div class="step-card is-accent">
+          <div class="step-icon">
+            <!-- terminal -->
+            <svg viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><polyline points="4.5,6.5 7,9 4.5,11.5"/><line x1="8.5" y1="11.5" x2="11.5" y2="11.5"/></svg>
+          </div>
+          <div>
+            <div class="step-title">Eval: <code>coral eval -m "description of the solution"</code></div>
+            <div class="step-sub">Runs grader against current code + logs attempt, score, &amp; feedback</div>
+          </div>
+        </div>
+
+        <div class="connector"><div class="connector-col"><div class="vline" style="height:10px"></div><div class="arrow-down-tri"></div></div></div>
+
+        <div class="step-card" id="agentLast">
+          <div class="step-icon">
+            <!-- send / share -->
+            <svg viewBox="0 0 16 16"><path d="M14 2L9.5 13.5l-2-4.5-4.5-2L14 2z"/><line x1="14" y1="2" x2="7.5" y2="9"/></svg>
+          </div>
+          <div>
+            <div class="step-title">Write notes &amp; skills to <code>.coral/public/</code></div>
+            <div class="step-sub">Discoveries shared with all other running agents</div>
+          </div>
+        </div>
+
+        <div style="height:22px;"></div>
+      </div>
+    </div>
+
+    <!-- ── Manager / Monitor ── -->
+    <div class="col-monitor">
+      <div class="section-wrap has-loopback" id="monitorWrap">
+        <svg class="loop-svg" id="monitorLoopSvg">
+          <defs>
+            <marker id="arrowAuto2" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <polygon points="0,0 10,4 0,8" fill="#aab4c6"/>
+            </marker>
+          </defs>
+        </svg>
+        <div class="section-label">Manager — Background</div>
+
+        <div class="step-card" id="monitorFirst">
+          <div class="step-icon">
+            <!-- eye -->
+            <svg viewBox="0 0 16 16"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>
+          </div>
+          <div>
+            <div class="step-title">Watch <code>.coral/public/attempts/</code></div>
+            <div class="step-sub">Monitors all agent activity in real time</div>
+          </div>
+        </div>
+
+        <div class="connector"><div class="connector-col"><div class="vline" style="height:10px"></div><div class="arrow-down-tri"></div></div></div>
+
+        <div class="decision" id="monitorDiamond">
+          <div class="decision-icon">
+            <!-- activity pulse -->
+            <svg viewBox="0 0 16 16"><polyline points="1,8 4,8 5.5,4.5 8,11.5 9.5,8 12,8"/><line x1="12" y1="8" x2="15" y2="8"/></svg>
+          </div>
+          <div class="decision-text">Heartbeat due?</div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;">
+          <!-- Yes -->
+          <div style="flex:1;text-align:center;">
+            <div class="conn-label" style="margin-bottom:4px;"><span class="badge">YES</span></div>
+            <div class="connector"><div class="connector-col"><div class="vline" style="height:10px;"></div><div class="arrow-down-tri"></div></div></div>
+            <div class="step-card is-yes" style="text-align:left;">
+              <div class="step-icon">
+                <!-- zap small -->
+                <svg viewBox="0 0 16 16"><path d="M9 1.5l-5 7h4.5l-1.5 6 5.5-8H8.5L9 1.5z"/></svg>
+              </div>
+              <div>
+                <div class="step-title" style="font-size:12px;">Take a pause</div>
+                <div class="step-sub">reflection, consolidation, &amp; knowledge sharing</div>
+              </div>
+            </div>
+          </div>
+          <!-- No -->
+          <div style="flex:1;text-align:center;" id="monitorNo">
+            <div class="conn-label" style="margin-bottom:4px;"><span class="badge" style="background:var(--t5);">NO</span></div>
+            <div class="connector"><div class="connector-col"><div class="vline" style="height:10px;"></div><div class="arrow-down-tri"></div></div></div>
+            <div style="font-size:11px;color:var(--t5);font-style:italic;padding:7px 0;" id="monitorNoEnd">↺ back to watching</div>
+          </div>
+        </div>
+
+        <div style="height:22px;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+window.addEventListener('load', function() {
+
+  function rel(el, container) {
+    var e = el.getBoundingClientRect();
+    var c = container.getBoundingClientRect();
+    return {
+      top:    e.top    - c.top,
+      bottom: e.bottom - c.top,
+      left:   e.left   - c.left,
+      right:  e.right  - c.left,
+      midX:  (e.left + e.right)  / 2 - c.left,
+      midY:  (e.top  + e.bottom) / 2 - c.top,
+    };
+  }
+
+  // ── Agent loop-back ──
+  (function(){
+    var wrap  = document.getElementById('agentWrap');
+    var svg   = document.getElementById('agentLoopSvg');
+    var first = rel(document.getElementById('agentFirst'), wrap);
+    var last  = rel(document.getElementById('agentLast'),  wrap);
+    var railX = last.right + 16;
+    var r = 8;
+    var d = [
+      'M', last.midX, last.bottom,
+      'L', last.midX, last.bottom + 8,
+      'Q', last.midX, last.bottom+8+r, last.midX+r, last.bottom+8+r,
+      'L', railX-r,   last.bottom+8+r,
+      'Q', railX,     last.bottom+8+r, railX, last.bottom+8,
+      'L', railX,     first.midY+r,
+      'Q', railX,     first.midY, railX-r, first.midY,
+      'L', first.right+4, first.midY
+    ].join(' ');
+    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('marker-end', 'url(#arrowAuto)');
+    path.classList.add('dashed');
+    svg.appendChild(path);
+  })();
+
+  // ── Monitor No loop-back ──
+  (function(){
+    var wrap  = document.getElementById('monitorWrap');
+    var svg   = document.getElementById('monitorLoopSvg');
+    var first = rel(document.getElementById('monitorFirst'),  wrap);
+    var noEnd = rel(document.getElementById('monitorNoEnd'),  wrap);
+    var railX = first.right + 14;
+    var r = 8;
+    var d = [
+      'M', noEnd.midX, noEnd.bottom,
+      'L', noEnd.midX, noEnd.bottom+6,
+      'Q', noEnd.midX, noEnd.bottom+6+r, noEnd.midX+r, noEnd.bottom+6+r,
+      'L', railX-r,    noEnd.bottom+6+r,
+      'Q', railX,      noEnd.bottom+6+r, railX, noEnd.bottom+6,
+      'L', railX,      first.midY+r,
+      'Q', railX,      first.midY, railX-r, first.midY,
+      'L', first.right+4, first.midY
+    ].join(' ');
+    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('marker-end', 'url(#arrowAuto2)');
+    path.classList.add('dashed');
+    svg.appendChild(path);
+  })();
+
+});
+</script>
+
+</body>
+</html>
