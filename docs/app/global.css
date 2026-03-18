@@ -5,22 +5,22 @@
 /* CORAL design tokens — light-only theme */
 
 @theme {
-  --color-fd-background: #e8eef5;
-  --color-fd-foreground: #1A2B3C;
-  --color-fd-muted: #d0d8e2;
-  --color-fd-muted-foreground: #5a6a7a;
-  --color-fd-popover: #f0f4f8;
-  --color-fd-popover-foreground: #1A2B3C;
-  --color-fd-card: #dfe6ee;
-  --color-fd-card-foreground: #1A2B3C;
-  --color-fd-border: #c0cad6;
-  --color-fd-primary: #1A2B3C;
-  --color-fd-primary-foreground: #e8eef5;
-  --color-fd-secondary: #d0d8e2;
-  --color-fd-secondary-foreground: #1A2B3C;
-  --color-fd-accent: #c0cad680;
-  --color-fd-accent-foreground: #1A2B3C;
-  --color-fd-ring: #8a9aac;
+  --color-fd-background: #f3f6fb;
+  --color-fd-foreground: #18222e;
+  --color-fd-muted: #dde4f0;
+  --color-fd-muted-foreground: #647585;
+  --color-fd-popover: #f8fafd;
+  --color-fd-popover-foreground: #18222e;
+  --color-fd-card: #e8edf6;
+  --color-fd-card-foreground: #18222e;
+  --color-fd-border: #bec8d8;
+  --color-fd-primary: #18222e;
+  --color-fd-primary-foreground: #f3f6fb;
+  --color-fd-secondary: #dde4f0;
+  --color-fd-secondary-foreground: #18222e;
+  --color-fd-accent: #bec8d880;
+  --color-fd-accent-foreground: #18222e;
+  --color-fd-ring: #aab4c6;
 
   /* Typography */
   --font-fd-sans: 'DM Sans', system-ui, sans-serif;
@@ -31,12 +31,12 @@
 h1, h2, h3, h4 {
   font-family: 'Source Serif 4', Georgia, serif;
   letter-spacing: -0.015em;
-  color: #1A2B3C;
+  color: #18222e;
 }
 
 /* Body text color */
 body, p, li, td {
-  color: #2a3848;
+  color: #26323f;
 }
 
 /* Code block font */
@@ -46,7 +46,7 @@ pre, code {
 
 /* Inline code */
 code:not(pre code) {
-  background: #d0d8e2;
+  background: #dde4f0;
 }
 
 /* Use full viewport width so sidebar stays pinned to the left edge
