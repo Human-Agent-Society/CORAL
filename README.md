@@ -74,22 +74,15 @@ agents:
 
 ### Usage
 
-#### Start a run
-
 ```bash
+# start a run
 uv run coral start --config examples/kernel_builder/task.yaml
-```
 
-#### Stop and resume
-
-```bash
+# stop and resume
 uv run coral stop                                      # stop anytime
 uv run coral resume                                    # pick up where you left off
-```
 
-#### Monitor progress
-
-```bash
+# monitor progress
 uv run coral ui                                        # open the web dashboard
 ```
 
@@ -115,11 +108,13 @@ Let's walk through a complete example: agents continually optimize a **100-city 
 
 #### 1. Write a seed codebase
 
-The seed is the starting code that agents will iterate on. Create the directory and a naive initial solution:
+The seed is the starting code that agents will iterate on. Create a working directory:
 
 ```bash
 mkdir -p examples/tsp/{seed,eval}
 ```
+
+Then create a naive initial solution (you can choose to start empty, though it can make the job of the agents harder):
 
 ```python
 # examples/tsp/seed/solution.py
