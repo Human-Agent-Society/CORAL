@@ -1,25 +1,36 @@
 
+<div align="center">
 
-
+<img src="assets/coral_logo_transparent.png" alt="CORAL" width="360">
 
 ### **Spawn Agents. Share Knowledge. Optimize Forever.**
 
-             
+<p>
+  <img src="assets/mit_logo.png" alt="MIT" height="50">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/nus.png" alt="NUS" height="50">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/stanford.png" alt="Stanford" height="50">
+</p>
 
-[MIT License](LICENSE)
-[Python 3.11+](https://python.org)
-[uv](https://docs.astral.sh/uv/)
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
+[![uv](https://img.shields.io/badge/uv-package%20manager-5C4EE5.svg)](https://docs.astral.sh/uv/)
 
 **English** | [中文](README_CN.md)
 
 An organization of **autonomous AI agents** that
 run experiments, share knowledge, and loop perpetually for better and better solutions.
 
+</div>
 
+<p align="center">
+<a href="#demo">Demo</a> · <a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
+</p>
 
-[Demo](#demo) · [Installation](#installation) · [Supported Agents](#supported-agents) · [Usage](#usage) · [How It Works](#how-it-works) · [Quick Start](#quick-start) · [CLI Reference](#cli-reference) · [Examples](#examples) · [License](#license)
 
 ## Demo
+
 
 [https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8](https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8)
 
@@ -36,13 +47,11 @@ uv sync                   # (optionally add --extra ui to include dashboard depe
 
 CORAL works with any coding agent that can run as a subprocess and interact via the terminal. Currently supported:
 
-
-| Agent                                                        | Description                                                           |
-| ------------------------------------------------------------ | --------------------------------------------------------------------- |
-| **[Claude Code](https://github.com/anthropics/claude-code)** | Anthropic's agentic coding tool — the default and most tested runtime |
-| **[Codex](https://github.com/openai/codex)**                 | OpenAI's open-source coding agent                                     |
-| **[OpenCode](https://github.com/opencode-ai/opencode)**      | Open-source terminal-based AI coding agent                            |
-
+| Agent | Description |
+|-------|-------------|
+| [**Claude Code**](https://github.com/anthropics/claude-code) | Anthropic's agentic coding tool — the default and most tested runtime |
+| [**Codex**](https://github.com/openai/codex) | OpenAI's open-source coding agent |
+| [**OpenCode**](https://github.com/opencode-ai/opencode) | Open-source terminal-based AI coding agent |
 
 Set the agent in your task config:
 
@@ -106,25 +115,23 @@ graph TD
     style Monitor fill:#f5f3ff,stroke:#8b5cf6
 ```
 
-
-
-
+<p align="center">
+  <img src="assets/coral_diagram_alphaevolve.svg" alt="CORAL Architecture Diagram" width="800">
+</p>
 
 Each agent runs in its own git worktree branch. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time with zero sync overhead. The manager watches for new attempts and can interrupt agents with heartbeat-triggered prompts (e.g. "reflect", "consolidate skills").
 
-
-| Concept                  | Description                                                                          |
-| ------------------------ | ------------------------------------------------------------------------------------ |
-| **Agents as optimizers** | Claude Code / Codex / OpenCode subprocesses, each in its own git worktree            |
-| **Shared state**         | `.coral/` directory with attempts, notes, and skills — symlinked into every worktree |
-| **Eval loop**            | Agents call `uv run coral eval -m "..."` to stage, commit, and grade in one shot     |
-| **CLI orchestration**    | 17+ commands: `start`, `stop`, `status`, `eval`, `log`, `ui`, and more               |
-| **Web dashboard**        | `uv run coral ui` — real-time leaderboard, attempt diffs, agent monitoring           |
-
+| Concept | Description |
+|---------|-------------|
+| **Agents as optimizers** | Claude Code / Codex / OpenCode subprocesses, each in its own git worktree |
+| **Shared state** | `.coral/` directory with attempts, notes, and skills — symlinked into every worktree |
+| **Eval loop** | Agents call `uv run coral eval -m "..."` to stage, commit, and grade in one shot |
+| **CLI orchestration** | 17+ commands: `start`, `stop`, `status`, `eval`, `log`, `ui`, and more |
+| **Web dashboard** | `uv run coral ui` — real-time leaderboard, attempt diffs, agent monitoring |
 
 ## Quick Start
 
-Let's walk through a complete example: designing an agent organization that continually optimizes a **10-city Traveling Salesman Problem**.
+Let's walk through a complete example: agents compete to solve a **10-city Traveling Salesman Problem**.
 
 ### 1. Write a seed codebase
 
@@ -139,7 +146,7 @@ mkdir -p examples/tsp/{seed,eval}
 CITIES = [
     (0.19, 0.44), (0.87, 0.23), (0.52, 0.91), (0.34, 0.12), (0.78, 0.65),
     (0.08, 0.73), (0.63, 0.38), (0.41, 0.56), (0.95, 0.82), (0.27, 0.05),
-]  # the same cities coordinates as `solution.py`. copied here since the agent cannot read this file.
+]
 
 # Naive: visit cities in index order (0, 1, 2, ..., 9)
 for i in range(len(CITIES)):
@@ -148,7 +155,7 @@ for i in range(len(CITIES)):
 
 ### 2. Write a grader
 
-Subclass `TaskGrader` and implement `evaluate()`. The base class provides two helpers: `self.run_program(filename)` which runs a file from the agent's codebase in a subprocess and returns a `CompletedProcess` (with `.stdout`, `.stderr`, `.returncode`), and `self.fail(reason)` which handles eval failures.
+Subclass `TaskGrader` and implement `evaluate()`. The base class provides two helpers: `self.run_program(filename)` which runs a file from the agent's codebase in a subprocess and returns a `CompletedProcess` (with `.stdout`, `.stderr`, `.returncode`), and `self.fail(reason)` which records the failure and returns `-inf` as the score:
 
 ```python
 # examples/tsp/eval/grader.py
@@ -172,7 +179,7 @@ class Grader(TaskGrader):
             )
             return -dist  # shorter tour = higher score
         except Exception as e:
-            return self.fail(str(e))  # records an eval failure
+            return self.fail(str(e))  # records failure and returns -inf score
 ```
 
 The naive seed tour scores about `-4.98`. Agents will try nearest-neighbor, 2-opt, simulated annealing, etc. to find shorter routes.
