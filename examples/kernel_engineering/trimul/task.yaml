@@ -137,6 +137,7 @@ grader:
 
 agents:
   count: 1
+  runtime: claude_code
   model: opus
   max_turns: 200
   heartbeat:

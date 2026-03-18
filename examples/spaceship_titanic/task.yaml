@@ -81,6 +81,7 @@ grader:
 
 agents:
   count: 4
+  runtime: claude_code
   model: opus
 
 workspace:

@@ -51,8 +51,8 @@ grader:
 
 agents:
   count: 1
-  runtime: opencode
-  model: minimax/MiniMax-M2.5
+  runtime: claude_code
+  model: opus
 
 workspace:
   results_dir: "./results"
