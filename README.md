@@ -11,6 +11,8 @@
   <img src="assets/nus.png" alt="NUS" height="50">
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="assets/stanford.png" alt="Stanford" height="50">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/meta.png" alt="Meta" height="50">
 </p>
 
 [![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://human-agent-society.github.io/CORAL/)
