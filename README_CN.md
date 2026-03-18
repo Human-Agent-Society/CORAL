@@ -31,7 +31,7 @@
 
 [https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8](https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8)
 
-## 安装
+### 安装
 
 ```bash
 git clone https://github.com/Human-Agent-Society/CORAL.git
@@ -40,7 +40,7 @@ cd CORAL
 uv sync                   # （可选：添加 --extra ui 以包含看板依赖）
 ```
 
-## 支持的 Agent
+### 支持的 Agent
 
 CORAL 支持任何可以作为子进程运行并通过终端交互的编程 Agent。目前支持：
 
@@ -67,28 +67,28 @@ agents:
   count: 3
 ```
 
-## 使用
+### 使用
 
-### 🚀 一份配置生成多个 Agent，协作冲击 SOTA。
+#### 🚀 一份配置生成多个 Agent，协作冲击 SOTA。
 
 ```bash
 uv run coral start --config examples/kernel_builder/task.yaml
 ```
 
-### ⏹️ 随停随启。
+#### ⏹️ 随停随启。
 
 ```bash
 uv run coral stop                                      # 暂停
 uv run coral resume                                    # 继续
 ```
 
-### 📊 可视化看板，开箱即用。
+#### 📊 可视化看板，开箱即用。
 
 ```bash
 uv run coral ui                                        # 打开 Web 看板
 ```
 
-## 工作原理与结构
+### 工作原理与结构
 
 ```mermaid
 graph TD
@@ -135,11 +135,11 @@ graph TD
 | **CLI 调度** | 17+ 条命令：`start`、`stop`、`status`、`eval`、`log`、`ui` 等 |
 | **Web 看板** | `uv run coral ui` —— 实时排行榜、diff 对比、Agent 监控 |
 
-## 快速上手
+### 快速上手
 
 以一个完整的例子来演示：多个 Agent 持续优化 **100 城市旅行商问题（TSP）**。
 
-### 1. 写初始代码
+#### 1. 写初始代码
 
 初始代码（seed）是 Agent 迭代优化的起点。创建目录并写一个最简方案：
 
@@ -160,7 +160,7 @@ for i in range(len(CITIES)):
     print(i)
 ```
 
-### 2. 写评分器
+#### 2. 写评分器
 
 继承 `TaskGrader`，实现 `evaluate()` 方法。基类提供两个辅助方法：`self.run_program(filename)` 在子进程中运行 Agent 代码库里的文件，返回 `CompletedProcess`（含 `.stdout`、`.stderr`、`.returncode`）；`self.fail(reason)` 记录失败并返回 `-inf` 作为得分：
 
@@ -191,7 +191,7 @@ class Grader(TaskGrader):
 
 初始方案按编号顺序访问，得分约 `-58.02`。Agent 会尝试最近邻、2-opt、模拟退火等策略寻找更短路线。100 个城市的穷举搜索完全不可行（99! 种排列），因此 Agent 必须发现并运用真正的优化启发式算法。
 
-### 3. 配置任务
+#### 3. 配置任务
 
 把配置指向初始代码和评分器：
 
@@ -222,7 +222,7 @@ workspace:
   repo_path: "./examples/tsp/seed"  # 相对于你的 $PWD
 ```
 
-### 4. 跑起来
+#### 4. 跑起来
 
 ```bash
 uv run coral start --config examples/tsp/task.yaml  # 随后你会在 tmux 会话 `coral-tsp` 中看到 Coral
@@ -232,7 +232,7 @@ uv run coral log         # 翻记录
 uv run coral stop        # 收工
 ```
 
-## CLI 命令
+### CLI 命令
 
 
 | 命令 | 说明 |
@@ -258,7 +258,7 @@ uv run coral stop        # 收工
 | `uv run coral heartbeat` | 查看/修改心跳动作 |
 
 
-## 项目结构
+### 项目结构
 
 
 ```
@@ -290,7 +290,7 @@ coral/
 ```
 
 
-## 示例
+### 示例
 
 `examples/` 下有开箱即用的任务配置：
 
@@ -305,7 +305,7 @@ coral/
 | **stanford_covid_vaccine** | 生物/ML | mRNA 降解预测 |
 
 
-## 开发
+### 开发
 
 ```bash
 # 装开发依赖
@@ -319,6 +319,6 @@ uv run ruff check .
 uv run ruff format .
 ```
 
-## 许可证
+### 许可证
 
 MIT —— 详见 [LICENSE](LICENSE)。

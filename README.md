@@ -36,7 +36,7 @@ Want self-improving AI without the configuration overhead? Try Coral.
 
 [https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8](https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8)
 
-## Installation
+### Installation
 
 ```bash
 git clone https://github.com/Human-Agent-Society/CORAL.git
@@ -45,7 +45,7 @@ cd CORAL
 uv sync                   # (optionally add --extra ui to include dashboard dependencies)
 ```
 
-## Supported Agents
+### Supported Agents
 
 Coral works with any coding agent that can run as a subprocess and interact via the terminal. Currently supported:
 
@@ -72,28 +72,28 @@ agents:
   count: 3  # how many agents you want to spawn. Beware of your budget :)
 ```
 
-## Usage
+### Usage
 
-### Start a run
+#### Start a run
 
 ```bash
 uv run coral start --config examples/kernel_builder/task.yaml
 ```
 
-### Stop and resume
+#### Stop and resume
 
 ```bash
 uv run coral stop                                      # stop anytime
 uv run coral resume                                    # pick up where you left off
 ```
 
-### Monitor progress
+#### Monitor progress
 
 ```bash
 uv run coral ui                                        # open the web dashboard
 ```
 
-## How It Works
+### How It Works
 
 <p align="center">
   <img src="assets/coral_diagram_white_bg.jpg" alt="Coral Architecture Diagram" width="800">
@@ -109,11 +109,11 @@ Each agent runs in its own git worktree branch. Shared state (attempts, notes, s
 | **CLI orchestration** | 17+ commands: `start`, `stop`, `status`, `eval`, `log`, `ui`, and more |
 | **Web dashboard** | `uv run coral ui` — real-time leaderboard, attempt diffs, agent monitoring |
 
-## Quick Start
+### Quick Start
 
 Let's walk through a complete example: agents continually optimize a **100-city Traveling Salesman Problem**.
 
-### 1. Write a seed codebase
+#### 1. Write a seed codebase
 
 The seed is the starting code that agents will iterate on. Create the directory and a naive initial solution:
 
@@ -134,7 +134,7 @@ for i in range(len(CITIES)):
     print(i)
 ```
 
-### 2. Write a grader
+#### 2. Write a grader
 
 Subclass `TaskGrader` and implement `evaluate()`. The base class provides two helpers: `self.run_program(filename)` which runs a file from the agent's codebase in a subprocess and returns a `CompletedProcess` (with `.stdout`, `.stderr`, `.returncode`), and `self.fail(reason)` which records the failure and returns a null score:
 
@@ -165,7 +165,7 @@ class Grader(TaskGrader):
 
 The naive seed tour scores about `-58.02`. Agents will try nearest-neighbor, 2-opt, simulated annealing, etc. to find shorter routes. With 100 cities, exhaustive search is completely infeasible (99! permutations), so agents must discover and apply real optimization heuristics.
 
-### 3. Configure the task
+#### 3. Configure the task
 
 Point the config at your seed codebase and grader:
 
@@ -198,7 +198,7 @@ workspace:
   repo_path: "./examples/tsp/seed"  # relative to your $PWD
 ```
 
-### 4. Launch
+#### 4. Launch
 
 ```bash
 uv run coral start --config examples/tsp/task.yaml  # You should then see Coral in tmux session `coral-tsp`
@@ -208,7 +208,7 @@ uv run coral log         # View attempts
 uv run coral stop        # Stop all agents
 ```
 
-## CLI Reference
+### CLI Reference
 
 <details>
 <summary>Click to expand all 17+ commands</summary>
@@ -238,7 +238,7 @@ uv run coral stop        # Stop all agents
 </details>
 
 
-## Architecture
+### Architecture
 
 <details>
 <summary>Click to expand</summary>
@@ -273,7 +273,7 @@ coral/
 
 </details>
 
-## Examples
+### Examples
 
 Ready-to-run task configurations in `examples/`:
 
@@ -289,7 +289,7 @@ Ready-to-run task configurations in `examples/`:
 | **stanford_covid_vaccine** | Bio/ML       | mRNA degradation prediction                                 |
 
 
-## Development
+### Development
 
 ```bash
 # Install dev dependencies
@@ -303,6 +303,6 @@ uv run ruff check .
 uv run ruff format .
 ```
 
-## License
+### License
 
 MIT — see [LICENSE](LICENSE) for details.
