@@ -71,20 +71,20 @@ agents:
 
 ## Usage
 
-### 🚀 One Config. N Agents. Break the SOTA.
+### Start a run
 
 ```bash
 uv run coral start --config examples/kernel_builder/task.yaml
 ```
 
-### ⏹️ Stop and Resume Anytime.
+### Stop and resume
 
 ```bash
 uv run coral stop                                      # stop anytime
 uv run coral resume                                    # pick up where you left off
 ```
 
-### 📊 Visualize Everything While It Runs.
+### Monitor progress
 
 ```bash
 uv run coral ui                                        # open the web dashboard
