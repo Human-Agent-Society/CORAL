@@ -1,7 +1,7 @@
 
 <div align="center">
 
-<img src="assets/coral_logo_transparent.png" alt="CORAL" width="360">
+<img src="assets/coral_logo_transparent.png" alt="Coral" width="360">
 
 ### **Spawn Agents. Share Knowledge. Optimize Forever.**
 
@@ -44,7 +44,7 @@ uv sync                   # (optionally add --extra ui to include dashboard depe
 
 ## Supported Agents
 
-CORAL works with any coding agent that can run as a subprocess and interact via the terminal. Currently supported:
+Coral works with any coding agent that can run as a subprocess and interact via the terminal. Currently supported:
 
 | Agent | Description |
 |-------|-------------|
@@ -52,13 +52,13 @@ CORAL works with any coding agent that can run as a subprocess and interact via 
 | [**Codex**](https://github.com/openai/codex) | OpenAI's open-source coding agent |
 | [**OpenCode**](https://github.com/opencode-ai/opencode) | Open-source terminal-based AI coding agent |
 
-> **Important:** Before using CORAL, make sure you have fully set up the agent(s) you plan to use:
+> **Important:** Before using Coral, make sure you have fully set up the agent(s) you plan to use:
 >
 > - **Install the Agent:** Follow the official installation instructions for your agent (e.g., Claude Code, Codex, OpenCode). This may involve installing packages, setting up executables, or configuring scripts.
 > - **Authentication:** Login and authenticate your coding agent first to make sure they do not ask for your credentials in CLI mode. Set up any required environment variables, configuration files, or authentication secrets as specified in your agent's documentation.
 > - **Set Permissions:** Configure your agent's permission settings via its config file (e.g., `~/.claude/settings.json` for Claude Code) to control which tools, file paths, or actions it is allowed to perform.
 >
-> *CORAL does not handle agent installation or authentication for you. The infrastructure will fail to function if the underlying agent cannot start or is not properly authenticated.*
+> *Coral does not handle agent installation or authentication for you. The infrastructure will fail to function if the underlying agent cannot start or is not properly authenticated.*
 
 Set the agent in your task config (refer to <a href="#3-configure-the-task">Configure the task</a>):
 
@@ -123,7 +123,7 @@ graph TD
 ```
 
 <p align="center">
-  <img src="assets/coral_diagram_alphaevolve.svg" alt="CORAL Architecture Diagram" width="800">
+  <img src="assets/coral_diagram_alphaevolve.svg" alt="Coral Architecture Diagram" width="800">
 </p>
 
 Each agent runs in its own git worktree branch. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time with zero sync overhead. The manager watches for new attempts and can interrupt agents with heartbeat-triggered prompts (e.g. "reflect", "consolidate skills").
