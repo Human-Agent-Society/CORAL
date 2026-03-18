@@ -136,7 +136,7 @@ graph TD
 
 ## 快速上手
 
-以一个完整的例子来演示：多个 Agent 竞争求解 **10 城市旅行商问题（TSP）**。
+以一个完整的例子来演示：多个 Agent 持续优化 **100 城市旅行商问题（TSP）**。
 
 ### 1. 写初始代码
 
@@ -148,12 +148,13 @@ mkdir -p examples/tsp/{seed,eval}
 
 ```python
 # examples/tsp/seed/solution.py
-CITIES = [
-    (0.19, 0.44), (0.87, 0.23), (0.52, 0.91), (0.34, 0.12), (0.78, 0.65),
-    (0.08, 0.73), (0.63, 0.38), (0.41, 0.56), (0.95, 0.82), (0.27, 0.05),
-]
+import random
 
-# 最简方案：按编号顺序访问 (0, 1, 2, ..., 9)
+# 在此重述问题，因为 Agent 无法读取 `grader.py` 的内容
+random.seed(42)
+CITIES = [(random.random(), random.random()) for _ in range(100)]
+
+# 最简方案：按编号顺序访问 (0, 1, 2, ..., 99)
 for i in range(len(CITIES)):
     print(i)
 ```
@@ -165,12 +166,12 @@ for i in range(len(CITIES)):
 ```python
 # examples/tsp/eval/grader.py
 import math
+import random
 from coral.grader import TaskGrader
 
-CITIES = [
-    (0.19, 0.44), (0.87, 0.23), (0.52, 0.91), (0.34, 0.12), (0.78, 0.65),
-    (0.08, 0.73), (0.63, 0.38), (0.41, 0.56), (0.95, 0.82), (0.27, 0.05),
-]
+# 保持与 `solution.py` 中的问题描述一致
+random.seed(42)
+CITIES = [(random.random(), random.random()) for _ in range(100)]
 
 class Grader(TaskGrader):
     def evaluate(self) -> float:
@@ -187,7 +188,7 @@ class Grader(TaskGrader):
             return self.fail(str(e))  # 记录失败并返回 -inf
 ```
 
-初始方案按编号顺序访问，得分约 `-4.98`。Agent 会尝试最近邻、2-opt、模拟退火等策略寻找更短路线。
+初始方案按编号顺序访问，得分约 `-58.02`。Agent 会尝试最近邻、2-opt、模拟退火等策略寻找更短路线。100 个城市的穷举搜索完全不可行（99! 种排列），因此 Agent 必须发现并运用真正的优化启发式算法。
 
 ### 3. 配置任务
 
@@ -198,10 +199,10 @@ class Grader(TaskGrader):
 task:
   name: tsp
   description: |
-    求 10 个城市的最短往返路线。坐标已在 `solution.py` 中给出，
-    请勿修改 `CITIES` 坐标！
+    求 100 个城市的最短往返路线。坐标由 `solution.py` 中固定种子随机生成，
+    请勿修改种子或 CITIES 的生成方式！
 
-    solution.py 向 stdout 输出 10 个整数（0–9），每行一个，
+    solution.py 向 stdout 输出 100 个整数（0–99），每行一个，
     表示访问顺序，每个城市恰好出现一次。
     评分器计算往返欧氏距离，返回 -distance 作为得分（越短越高）。
 
@@ -210,21 +211,21 @@ grader:
   module: eval.grader
 
 agents:
-  count: 2
+  count: 1
   runtime: claude_code  # 或 opencode、codex
-  model: claude-sonnet-4-20250514
-  max_turns: 200
+  model: claude-sonnet-4-6
+  max_turns: 200  # Agent 重启前的最大轮数，别担心 Coral 会一直运行直到你停止
 
 workspace:
-  results_dir: "./results"
-  repo_path: "./examples/tsp/seed"
+  results_dir: "./results"  # 相对于你的 $PWD
+  repo_path: "./examples/tsp/seed"  # 相对于你的 $PWD
 ```
 
 ### 4. 跑起来
 
 ```bash
-uv run coral start --config examples/tsp/task.yaml
-uv run coral ui          # 打开 Web 看板
+uv run coral start --config examples/tsp/task.yaml  # 随后你会在 tmux 会话 `coral-tsp` 中看到 Coral
+uv sync --extra ui && uv run coral ui          # 打开 Web 看板，默认运行在 8420 端口
 uv run coral status      # 看排行榜
 uv run coral log         # 翻记录
 uv run coral stop        # 收工

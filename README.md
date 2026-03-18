@@ -122,6 +122,7 @@ mkdir -p examples/tsp/{seed,eval}
 # examples/tsp/seed/solution.py
 import random
 
+# Restate the problem here as the agent cannot read the content of `grader.py`
 random.seed(42)
 CITIES = [(random.random(), random.random()) for _ in range(100)]
 
@@ -140,6 +141,7 @@ import math
 import random
 from coral.grader import TaskGrader
 
+# keep consistent with the problem statement in `solution.py`
 random.seed(42)
 CITIES = [(random.random(), random.random()) for _ in range(100)]
 
