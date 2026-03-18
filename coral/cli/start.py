@@ -256,7 +256,7 @@ def cmd_start(args: argparse.Namespace) -> None:
         start_ui_background(manager.paths.coral_dir)
 
     if config.agents.count == 1 and verbose:
-        print("\nAgent running ( to stop)...\n")
+        print("\nAgent running...\n")
         manager.wait_for_completion()
     else:
         print("\nMonitoring agents...")
