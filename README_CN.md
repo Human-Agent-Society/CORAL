@@ -68,6 +68,8 @@ CORAL 支持任何可以作为子进程运行并通过终端交互的编程 Agen
 agents:
   runtime: claude_code   # 或 "codex" 或 "opencode"
   count: 3
+  model: opus  
+
 ```
 
 ### 使用

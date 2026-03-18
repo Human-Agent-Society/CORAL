@@ -70,6 +70,7 @@ Set the agent in your task config (refer to <a href="#3-configure-the-task">Conf
 agents:
   runtime: claude_code   # or "codex" or "opencode"
   count: 3  # how many agents you want to spawn. Beware of your budget :)
+  model: opus   # name of the model you wish to use
 ```
 
 ### Usage
