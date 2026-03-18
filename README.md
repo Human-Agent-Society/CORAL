@@ -89,7 +89,64 @@ graph TD
     style Monitor fill:#f5f3ff,stroke:#8b5cf6
 ```
 
+<div align="center">
 
+<div style="width:920px;max-width:100%;font-family:'Inter',-apple-system,sans-serif;color:#3c4043;text-align:left;">
+
+  <!-- Top: User / Developer -->
+  <div style="background:#f0faf4;border-radius:16px 16px 0 0;padding:28px 40px 24px;text-align:center;">
+    <div style="font-size:18px;font-weight:600;color:#1a1a1a;margin-bottom:20px;">
+      <span style="display:inline-block;width:32px;height:32px;border:2px solid #5f6368;border-radius:50%;text-align:center;line-height:28px;font-size:16px;margin-right:8px;vertical-align:middle;">👤</span> User / Developer
+    </div>
+    <table width="100%"><tr>
+      <td align="center" style="font-size:13px;color:#5f6368;">Task config<br>YAML<br><span style="color:#4285f4;font-size:20px;">↓</span></td>
+      <td align="center" style="font-size:13px;color:#5f6368;">Target<br>repository<br><span style="color:#ea4335;font-size:20px;">↓</span></td>
+      <td align="center" style="font-size:13px;color:#5f6368;">Grader<br>function<br><span style="color:#f9ab00;font-size:20px;">↓</span></td>
+      <td align="center" style="font-size:13px;color:#5f6368;">Agent count<br>&amp; sharing config<br><span style="color:#34a853;font-size:20px;">↓</span></td>
+    </tr></table>
+  </div>
+
+  <!-- Mid: Component boxes -->
+  <div style="background:#eef3fc;padding:28px 40px 8px;">
+    <table width="100%"><tr>
+      <td align="center" width="22%"><div style="border:2px dashed #4285f4;border-radius:12px;padding:16px 8px;background:#fff;"><div style="font-size:32px;">🌿</div><div style="font-size:13px;font-weight:600;color:#4285f4;">Agent<br>Worktrees</div></div></td>
+      <td align="center" width="22%"><div style="border:2px dashed #ea4335;border-radius:12px;padding:16px 8px;background:#fff;"><div style="font-size:32px;">🤖</div><div style="font-size:13px;font-weight:600;color:#ea4335;">Claude Code<br>Agents</div></div></td>
+      <td align="center" width="22%"><div style="border:2px dashed #f9ab00;border-radius:12px;padding:16px 8px;background:#fff;"><div style="font-size:32px;">⚖️</div><div style="font-size:13px;font-weight:600;color:#f9ab00;">Grader</div></div></td>
+      <td align="center" width="22%"><div style="border:2px dashed #34a853;border-radius:12px;padding:16px 8px;background:#fff;"><div style="font-size:32px;">🗄️</div><div style="font-size:13px;font-weight:600;color:#34a853;">.coral/ Hub</div></div></td>
+      <td align="center" width="12%"><span style="font-size:20px;">→</span><br><div style="font-size:32px;">🏆</div><div style="font-size:13px;font-weight:600;color:#1a1a1a;">Best<br>solution</div></td>
+    </tr></table>
+    <table width="100%"><tr>
+      <td align="center" width="22%"><span style="color:#4285f4;font-size:18px;">↕</span></td>
+      <td align="center" width="22%"><span style="color:#ea4335;font-size:18px;">↕</span></td>
+      <td align="center" width="22%"><span style="color:#f9ab00;font-size:18px;">↕</span></td>
+      <td align="center" width="22%"><span style="color:#34a853;font-size:18px;">↕</span></td>
+      <td width="12%"></td>
+    </tr></table>
+  </div>
+
+  <!-- Bottom: Agent Loop pseudocode -->
+  <div style="background:#eef3fc;padding:0 40px 28px;">
+    <div style="border:2px dashed #9aa0a6;border-radius:12px;padding:20px 28px;background:#fff;">
+      <div style="font-size:15px;font-weight:700;color:#1a1a1a;text-align:center;margin-bottom:14px;">Autonomous Agent Loop</div>
+      <code style="font-size:13.5px;line-height:1.75;">
+        coral_md, leaderboard = <span style="color:#34a853;font-weight:500;">hub</span>.read_context()<br>
+        plan = <span style="color:#ea4335;font-weight:500;">agent</span>.think(coral_md, leaderboard)<br>
+        <span style="color:#ea4335;font-weight:500;">agent</span>.edit_code(<span style="color:#4285f4;font-weight:500;">worktree</span>, plan)<br>
+        score, feedback = <span style="color:#f9ab00;font-weight:500;">grader</span>.evaluate(commit)<br>
+        <span style="color:#34a853;font-weight:500;">hub</span>.write(attempt, notes, skills)<br>
+        <span style="color:#9aa0a6;"># repeat forever — agents share knowledge via .coral/</span>
+      </code>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="background:#eef3fc;border-radius:0 0 16px 16px;padding:12px 40px 28px;text-align:center;">
+    <div style="font-size:20px;font-weight:700;color:#1a1a1a;">🪸 CORAL</div>
+  </div>
+
+</div>
+
+</div>
 
 Each agent runs in its own git worktree branch. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time with zero sync overhead. The manager watches for new attempts and can interrupt agents with heartbeat-triggered prompts (e.g. "reflect", "consolidate skills").
 
