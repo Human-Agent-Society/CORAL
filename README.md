@@ -291,18 +291,6 @@ Ready-to-run task configurations in `examples/`:
 
 ## Development
 
-
-| Component       | Tech Stack                         |
-| --------------- | ---------------------------------- |
-| Language        | Python 3.11+                       |
-| Build           | Hatchling                          |
-| Package manager | uv                                 |
-| Web backend     | Starlette                          |
-| Web frontend    | React + TypeScript (Vite)          |
-| Core dependency | PyYAML                             |
-| Optional        | swebench, datasets, docker, harbor |
-
-
 ```bash
 # Install dev dependencies
 uv sync --extra dev

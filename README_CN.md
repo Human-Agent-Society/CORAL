@@ -50,7 +50,8 @@ CORAL 支持任何可以作为子进程运行并通过终端交互的编程 Agen
 | [**Codex**](https://github.com/openai/codex) | OpenAI 的开源编程 Agent |
 | [**OpenCode**](https://github.com/opencode-ai/opencode) | 开源终端 AI 编程 Agent |
 
-> **重要提示：** 在使用 CORAL 之前，请确保已完整配置好你计划使用的 Agent：
+> [!TIP]
+> 在使用 CORAL 之前，请确保已完整配置好你计划使用的 Agent：
 >
 > - **安装 Agent：** 按照对应 Agent 的官方安装说明进行安装（如 Claude Code、Codex、OpenCode），可能涉及安装包、配置可执行文件或脚本。
 > - **身份验证：** 提前登录并完成 Agent 的身份验证，确保其在 CLI 模式下不会弹出凭据请求。按照 Agent 文档配置所需的环境变量、配置文件或认证密钥。
@@ -305,17 +306,6 @@ coral/
 
 
 ## 开发
-
-
-| 组件 | 技术栈 |
-|------|--------|
-| 语言 | Python 3.11+ |
-| 构建 | Hatchling |
-| 包管理 | uv |
-| Web 后端 | Starlette |
-| Web 前端 | React + TypeScript (Vite) |
-| 核心依赖 | PyYAML |
-| 可选依赖 | swebench, datasets, docker, harbor |
 
 ```bash
 # 装开发依赖
