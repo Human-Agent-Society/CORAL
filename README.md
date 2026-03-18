@@ -90,7 +90,7 @@ graph TD
 ```
 
 <p align="center">
-  <img src="assets/coral_diagram_alphaevolve.png" alt="CORAL Architecture Diagram" width="800">
+  <img src="assets/coral_diagram_alphaevolve.svg" alt="CORAL Architecture Diagram" width="800">
 </p>
 
 Each agent runs in its own git worktree branch. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time with zero sync overhead. The manager watches for new attempts and can interrupt agents with heartbeat-triggered prompts (e.g. "reflect", "consolidate skills").
