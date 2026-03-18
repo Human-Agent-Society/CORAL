@@ -92,37 +92,6 @@ uv run coral ui                                        # open the web dashboard
 
 ## How It Works
 
-```mermaid
-graph TD
-    subgraph Setup["coral start"]
-        A[Create .coral/ shared state] --> B[Clone repo + create per-agent worktrees]
-        B --> C[Symlink .coral/public/ into each worktree]
-        C --> D[Generate CORAL.md per agent]
-        D --> E[Spawn N agents]
-    end
-
-    subgraph Loop["Each Agent (autonomous)"]
-        F[Read CORAL.md + leaderboard + notes + skills] --> G[Plan & edit code]
-        G --> H["coral eval -m 'description'"]
-        H --> I["git add → commit → grade → write attempt"]
-        I --> J[Write notes & skills to .coral/public/]
-        J --> F
-    end
-
-    subgraph Monitor["Manager (background)"]
-        K[Watch .coral/public/attempts/] --> L{Heartbeat action?}
-        L -->|Yes| M[Interrupt + resume agent with prompt]
-        L -->|No| K
-    end
-
-    E --> Loop
-    E --> Monitor
-
-    style Setup fill:#f0fdfa,stroke:#0d9488
-    style Loop fill:#fffbeb,stroke:#f59e0b
-    style Monitor fill:#f5f3ff,stroke:#8b5cf6
-```
-
 <p align="center">
   <img src="assets/coral_diagram.png" alt="Coral Architecture Diagram" width="800">
 </p>
@@ -237,8 +206,8 @@ uv run coral stop        # Stop all agents
 
 ## CLI Reference
 
-Click to expand all 17+ commands
-
+<details>
+<summary>Click to expand all 17+ commands</summary>
 
 | Command                              | Description                         |
 | ------------------------------------ | ----------------------------------- |
@@ -262,10 +231,13 @@ Click to expand all 17+ commands
 | `uv run coral checkout <hash>`       | Reset to previous attempt           |
 | `uv run coral heartbeat`             | View/modify heartbeat actions       |
 
+</details>
+
 
 ## Architecture
 
-Click to expand
+<details>
+<summary>Click to expand</summary>
 
 ```
 coral/
@@ -294,6 +266,8 @@ coral/
 ├── web/                 # Starlette + React dashboard
 └── cli/                 # 17 commands across 5 modules
 ```
+
+</details>
 
 ## Examples
 
