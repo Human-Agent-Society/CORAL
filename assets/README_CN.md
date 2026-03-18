@@ -1,23 +1,23 @@
 
 <div align="center">
 
-<img src="assets/coral_logo_transparent.png" alt="CORAL" width="360">
+<img src="../assets/coral_logo_transparent.png" alt="CORAL" width="360">
 
 ### **一键启动智能体群组，共享知识，无限进化**
 
 <p>
-  <img src="assets/mit_logo.png" alt="MIT" height="50">
+  <img src="../assets/mit_logo.png" alt="MIT" height="50">
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="assets/nus.png" alt="NUS" height="50">
+  <img src="../assets/nus.png" alt="NUS" height="50">
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="assets/stanford.png" alt="Stanford" height="50">
+  <img src="../assets/stanford.png" alt="Stanford" height="50">
 </p>
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
 [![uv](https://img.shields.io/badge/uv-package%20manager-5C4EE5.svg)](https://docs.astral.sh/uv/)
 
-[English](README.md) | **中文**
+[English](../README.md) | **中文**
 
 </div>
 
@@ -58,7 +58,7 @@ CORAL 支持任何可以作为子进程运行并通过终端交互的编程 Agen
 >
 > *CORAL 不负责 Agent 的安装或身份验证。如果底层 Agent 无法启动或未正确完成认证，基础设施将无法正常运行。*
 
-在任务配置中指定 Agent：
+在任务配置中指定 Agent（参见 <a href="#3-配置任务">配置任务</a>）：
 
 ```yaml
 agents:
@@ -121,7 +121,7 @@ graph TD
 ```
 
 <p align="center">
-  <img src="assets/coral_diagram_alphaevolve.svg" alt="CORAL Architecture Diagram" width="800">
+  <img src="../assets/coral_diagram_alphaevolve.svg" alt="CORAL Architecture Diagram" width="800">
 </p>
 
 每个 Agent 跑在自己的 git worktree 分支里。共享状态（历史记录、笔记、技能）放在 `.coral/public/`，软链到所有 worktree —— 零开销，实时互通。后台管理器盯着新提交，可以通过心跳机制打断 Agent 并注入指令（比如"回顾一下"、"整理技能"）。

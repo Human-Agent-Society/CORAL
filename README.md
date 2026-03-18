@@ -17,7 +17,7 @@
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
 [![uv](https://img.shields.io/badge/uv-package%20manager-5C4EE5.svg)](https://docs.astral.sh/uv/)
 
-**English** | [中文](README_CN.md)
+**English** | [中文](assets/README_CN.md)
 
 </div>
 
@@ -60,7 +60,7 @@ CORAL works with any coding agent that can run as a subprocess and interact via 
 >
 > *CORAL does not handle agent installation or authentication for you. The infrastructure will fail to function if the underlying agent cannot start or is not properly authenticated.*
 
-Set the agent in your task config:
+Set the agent in your task config (refer to <a href="#3-configure-the-task">Configure the task</a>):
 
 ```yaml
 agents:
