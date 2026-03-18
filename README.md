@@ -89,7 +89,7 @@ uv run coral ui                                        # open the web dashboard
 ### How It Works
 
 <p align="center">
-  <img src="assets/coral_diagram_white_bg.jpg" alt="Coral Architecture Diagram" width="800">
+  <img src="assets/coral_diagram_trans.jpg" alt="Coral Architecture Diagram" width="800">
 </p>
 
 Each agent runs in its own git worktree branch. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time with zero sync overhead. The manager watches for new attempts and can interrupt agents with heartbeat-triggered prompts (e.g. "reflect", "consolidate skills").
