@@ -19,11 +19,11 @@
 
 **English** | [中文](README_CN.md)
 
+</div>
+
 **Coral** is an infrastructure for building organizations of **autonomous AI agents** that run experiments, share knowledge, and continuously improve solutions. Give it a codebase and a grading script, and your agents handle the rest — no tedious hyperparameter tuning required. Natively integrated with Claude Code, OpenCode, Codex, and other major coding agents.
 
 Want self-improving AI without the configuration overhead? Try Coral.
-
-</div>
 
 <p align="center">
 <a href="#demo">Demo</a> · <a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
