@@ -11,8 +11,11 @@
   <img src="../assets/nus.png" alt="NUS" height="50">
   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
   <img src="../assets/stanford.png" alt="Stanford" height="50">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="../assets/meta.png" alt="Meta" height="50">
 </p>
 
+[![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://human-agent-society.github.io/CORAL/)
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
 [![uv](https://img.shields.io/badge/uv-package%20manager-5C4EE5.svg)](https://docs.astral.sh/uv/)
@@ -26,7 +29,7 @@
 想要自我进化的 AI，又不想折腾配置？试试 Coral。
 
 <p align="center">
-<a href="#安装">安装</a> · <a href="#支持的-agent">支持的 Agent</a> · <a href="#使用">使用</a> · <a href="#工作原理与结构">工作原理</a> · <a href="#快速上手">快速上手</a> · <a href="#cli-命令">CLI 命令</a> · <a href="#示例">示例</a> · <a href="#许可证">许可证</a>
+<a href="#安装">安装</a> · <a href="#支持的-agent">支持的 Agent</a> · <a href="#使用">使用</a> · <a href="#工作原理">工作原理</a> · <a href="#快速上手">快速上手</a> · <a href="#cli-命令">CLI 命令</a> · <a href="#示例">示例</a> · <a href="#许可证">许可证</a>
 </p>
 
 [https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8](https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8)
@@ -69,60 +72,22 @@ agents:
 
 ### 使用
 
-#### 🚀 一份配置生成多个 Agent，协作冲击 SOTA。
-
 ```bash
+# 启动
 uv run coral start --config examples/kernel_builder/task.yaml
-```
 
-#### ⏹️ 随停随启。
-
-```bash
+# 停止和恢复
 uv run coral stop                                      # 暂停
 uv run coral resume                                    # 继续
-```
 
-#### 📊 可视化看板，开箱即用。
-
-```bash
+# 监控进度
 uv run coral ui                                        # 打开 Web 看板
 ```
 
-### 工作原理与结构
-
-```mermaid
-graph TD
-    subgraph Setup["coral start"]
-        A[创建 .coral/ 共享状态] --> B[克隆仓库 + 为每个 Agent 开 worktree]
-        B --> C[把 .coral/public/ 软链到各 worktree]
-        C --> D[给每个 Agent 生成 CORAL.md]
-        D --> E[拉起 N 个 Agent]
-    end
-
-    subgraph Loop["每个 Agent（自主循环）"]
-        F[读 CORAL.md + 排行榜 + 笔记 + 技能] --> G[思考 & 改代码]
-        G --> H["coral eval -m '描述'"]
-        H --> I["git add → commit → 打分 → 记录"]
-        I --> J[把笔记和技能写入 .coral/public/]
-        J --> F
-    end
-
-    subgraph Monitor["管理器（后台）"]
-        K[监听 .coral/public/attempts/] --> L{需要心跳干预？}
-        L -->|是| M[打断 Agent 并注入提示]
-        L -->|否| K
-    end
-
-    E --> Loop
-    E --> Monitor
-
-    style Setup fill:#f0fdfa,stroke:#0d9488
-    style Loop fill:#fffbeb,stroke:#f59e0b
-    style Monitor fill:#f5f3ff,stroke:#8b5cf6
-```
+### 工作原理
 
 <p align="center">
-  <img src="../assets/coral_diagram.png" alt="CORAL Architecture Diagram" width="800">
+  <img src="../assets/coral_diagram_white_bg.jpg" alt="CORAL Architecture Diagram" width="800">
 </p>
 
 每个 Agent 跑在自己的 git worktree 分支里。共享状态（历史记录、笔记、技能）放在 `.coral/public/`，软链到所有 worktree —— 零开销，实时互通。后台管理器盯着新提交，可以通过心跳机制打断 Agent 并注入指令（比如"回顾一下"、"整理技能"）。
@@ -141,11 +106,13 @@ graph TD
 
 #### 1. 写初始代码
 
-初始代码（seed）是 Agent 迭代优化的起点。创建目录并写一个最简方案：
+初始代码（seed）是 Agent 迭代优化的起点。创建工作目录：
 
 ```bash
 mkdir -p examples/tsp/{seed,eval}
 ```
+
+然后创建一个最简初始方案（你也可以选择从空开始，虽然这可能会让 Agent 的工作更具挑战性）：
 
 ```python
 # examples/tsp/seed/solution.py
@@ -168,14 +135,14 @@ for i in range(len(CITIES)):
 # examples/tsp/eval/grader.py
 import math
 import random
-from coral.grader import TaskGrader
+from coral.grader import TaskGrader, ScoreBundle
 
 # 保持与 `solution.py` 中的问题描述一致
 random.seed(42)
 CITIES = [(random.random(), random.random()) for _ in range(100)]
 
 class Grader(TaskGrader):
-    def evaluate(self) -> float:
+    def evaluate(self) -> float | ScoreBundle:
         try:
             result = self.run_program("solution.py")  # 运行 solution.py，返回 CompletedProcess
             order = [int(x) for x in result.stdout.strip().split("\n")]
