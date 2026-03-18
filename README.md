@@ -93,7 +93,7 @@ uv run coral ui                                        # open the web dashboard
 ## How It Works
 
 <p align="center">
-  <img src="assets/coral_diagram.png" alt="Coral Architecture Diagram" width="800">
+  <img src="assets/coral_diagram_white_bg.png" alt="Coral Architecture Diagram" width="800">
 </p>
 
 Each agent runs in its own git worktree branch. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time with zero sync overhead. The manager watches for new attempts and can interrupt agents with heartbeat-triggered prompts (e.g. "reflect", "consolidate skills").
@@ -133,20 +133,20 @@ for i in range(len(CITIES)):
 
 ### 2. Write a grader
 
-Subclass `TaskGrader` and implement `evaluate()`. The base class provides two helpers: `self.run_program(filename)` which runs a file from the agent's codebase in a subprocess and returns a `CompletedProcess` (with `.stdout`, `.stderr`, `.returncode`), and `self.fail(reason)` which records the failure and returns `-inf` as the score:
+Subclass `TaskGrader` and implement `evaluate()`. The base class provides two helpers: `self.run_program(filename)` which runs a file from the agent's codebase in a subprocess and returns a `CompletedProcess` (with `.stdout`, `.stderr`, `.returncode`), and `self.fail(reason)` which records the failure and returns a null score:
 
 ```python
 # examples/tsp/eval/grader.py
 import math
 import random
-from coral.grader import TaskGrader
+from coral.grader import TaskGrader, ScoreBundle
 
 # keep consistent with the problem statement in `solution.py`
 random.seed(42)
 CITIES = [(random.random(), random.random()) for _ in range(100)]
 
 class Grader(TaskGrader):
-    def evaluate(self) -> float:
+    def evaluate(self) -> float | ScoreBundle:
         try:
             result = self.run_program("solution.py")  # runs solution.py, returns CompletedProcess
             order = [int(x) for x in result.stdout.strip().split("\n")]
@@ -157,7 +157,7 @@ class Grader(TaskGrader):
             )
             return -dist  # shorter tour = higher score
         except Exception as e:
-            return self.fail(str(e))  # records failure and returns -inf score
+            return self.fail(str(e))  # records failure and returns null score
 ```
 
 The naive seed tour scores about `-58.02`. Agents will try nearest-neighbor, 2-opt, simulated annealing, etc. to find shorter routes. With 100 cities, exhaustive search is completely infeasible (99! permutations), so agents must discover and apply real optimization heuristics.
