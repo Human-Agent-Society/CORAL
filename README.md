@@ -5,6 +5,12 @@
 
 ### **Spawn Agents. Share Knowledge. Optimize Forever.**
 
+<p>
+  <img src="assets/mit_logo.png" alt="MIT" height="50" style="vertical-align: middle; margin: 0 20px;">
+  <img src="assets/nus.png" alt="NUS" height="50" style="vertical-align: middle; margin: 0 20px;">
+  <img src="assets/stanford.png" alt="Stanford" height="50" style="vertical-align: middle; margin: 0 20px;">
+</p>
+
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
 [![uv](https://img.shields.io/badge/uv-package%20manager-5C4EE5.svg)](https://docs.astral.sh/uv/)
@@ -17,7 +23,7 @@ run experiments, share knowledge, and loop perpetually for better and better sol
 </div>
 
 <p align="center">
-<a href="#demo">Demo</a> · <a href="#installation">Installation</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
+<a href="#demo">Demo</a> · <a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
 </p>
 
 
@@ -33,6 +39,24 @@ git clone https://github.com/Human-Agent-Society/CORAL.git
 cd CORAL
 # install uv from https://github.com/astral-sh/uv
 uv sync                   # (optionally add --extra ui to include dashboard dependencies)
+```
+
+## Supported Agents
+
+CORAL works with any coding agent that can run as a subprocess and interact via the terminal. Currently supported:
+
+| Agent | Description |
+|-------|-------------|
+| [**Claude Code**](https://github.com/anthropics/claude-code) | Anthropic's agentic coding tool — the default and most tested runtime |
+| [**Codex**](https://github.com/openai/codex) | OpenAI's open-source coding agent |
+| [**OpenCode**](https://github.com/opencode-ai/opencode) | Open-source terminal-based AI coding agent |
+
+Set the agent in your task config:
+
+```yaml
+agents:
+  runtime: claude_code   # or "codex" or "opencode"
+  count: 3
 ```
 
 ## Usage
