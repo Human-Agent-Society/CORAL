@@ -26,11 +26,9 @@
 Want self-improving AI without the configuration overhead? Try Coral.
 
 <p align="center">
-<a href="#demo">Demo</a> · <a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
+<a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
 </p>
 
-
-## Demo
 
 
 [https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8](https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8)
@@ -54,12 +52,20 @@ CORAL works with any coding agent that can run as a subprocess and interact via 
 | [**Codex**](https://github.com/openai/codex) | OpenAI's open-source coding agent |
 | [**OpenCode**](https://github.com/opencode-ai/opencode) | Open-source terminal-based AI coding agent |
 
+> **Important:** Before using CORAL, make sure you have fully set up the agent(s) you plan to use:
+>
+> - **Install the Agent:** Follow the official installation instructions for your agent (e.g., Claude Code, Codex, OpenCode). This may involve installing packages, setting up executables, or configuring scripts.
+> - **Authentication:** Login and authenticate your coding agent first to make sure they do not ask for your credentials in CLI mode. Set up any required environment variables, configuration files, or authentication secrets as specified in your agent's documentation.
+> - **Set Permissions:** Configure your agent's permission settings via its config file (e.g., `~/.claude/settings.json` for Claude Code) to control which tools, file paths, or actions it is allowed to perform.
+>
+> *CORAL does not handle agent installation or authentication for you. The infrastructure will fail to function if the underlying agent cannot start or is not properly authenticated.*
+
 Set the agent in your task config:
 
 ```yaml
 agents:
   runtime: claude_code   # or "codex" or "opencode"
-  count: 3
+  count: 3  # how many agents you want to spawn. Beware of your budget :)
 ```
 
 ## Usage
@@ -209,6 +215,7 @@ grader:
 
 agents:
   count: 2
+  runtime: claude_code  # or opencode, codex
   model: claude-sonnet-4-20250514
   max_turns: 200
 
