@@ -299,6 +299,4 @@ uv run ruff check .
 uv run ruff format .
 ```
 
-### License
-
-MIT — see [LICENSE](LICENSE) for details.
+This project is released under MIT [LICENSE](LICENSE).

@@ -288,6 +288,5 @@ uv run ruff check .
 uv run ruff format .
 ```
 
-### 许可证
 
-MIT —— 详见 [LICENSE](LICENSE)。
+本项目在MIT[LICENSE](LICENSE)许可下开源。
