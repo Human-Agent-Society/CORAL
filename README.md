@@ -18,7 +18,7 @@
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
 [![uv](https://img.shields.io/badge/uv-package%20manager-5C4EE5.svg)](https://docs.astral.sh/uv/)
 
-**English** | [中文](assets/README_CN.md)
+**English** | [中文](README_CN.md)
 
 </div>
 
@@ -53,7 +53,8 @@ Coral works with any coding agent that can run as a subprocess and interact via 
 | [**Codex**](https://github.com/openai/codex) | OpenAI's open-source coding agent |
 | [**OpenCode**](https://github.com/opencode-ai/opencode) | Open-source terminal-based AI coding agent |
 
-> **Important:** Before using Coral, make sure you have fully set up the agent(s) you plan to use:
+> [!TIP]
+> Before using Coral, make sure you have fully set up the agent(s) you plan to use:
 >
 > - **Install the Agent:** Follow the official installation instructions for your agent (e.g., Claude Code, Codex, OpenCode). This may involve installing packages, setting up executables, or configuring scripts.
 > - **Authentication:** Login and authenticate your coding agent first to make sure they do not ask for your credentials in CLI mode. Set up any required environment variables, configuration files, or authentication secrets as specified in your agent's documentation.
