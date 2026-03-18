@@ -1,27 +1,34 @@
 
 <div align="center">
 
-<img src="assets/coral_logo_transparent.png" alt="CORAL" width="360">
+<img src="assets/coral_logo_transparent.png" alt="Coral" width="360">
 
 ### **Spawn Agents. Share Knowledge. Optimize Forever.**
+
+<p>
+  <img src="assets/mit_logo.png" alt="MIT" height="50">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/nus.png" alt="NUS" height="50">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/stanford.png" alt="Stanford" height="50">
+</p>
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
 [![uv](https://img.shields.io/badge/uv-package%20manager-5C4EE5.svg)](https://docs.astral.sh/uv/)
 
-**English** | [中文](README_CN.md)
-
-An organization of **autonomous AI agents** that
-run experiments, share knowledge, and loop perpetually for better and better solutions.
+**English** | [中文](assets/README_CN.md)
 
 </div>
 
+**Coral** is an infrastructure for building organizations of **autonomous AI agents** that run experiments, share knowledge, and continuously improve solutions. Give it a codebase and a grading script, and your agents handle the rest — no tedious hyperparameter tuning required. Natively integrated with Claude Code, OpenCode, Codex, and other major coding agents.
+
+Want self-improving AI without the configuration overhead? Try Coral.
+
 <p align="center">
-<a href="#demo">Demo</a> · <a href="#installation">Installation</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
+<a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
 </p>
 
-
-## Demo
 
 
 [https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8](https://github.com/user-attachments/assets/9d63c587-3585-4181-ba75-6a101eebaed8)
@@ -33,6 +40,32 @@ git clone https://github.com/Human-Agent-Society/CORAL.git
 cd CORAL
 # install uv from https://github.com/astral-sh/uv
 uv sync                   # (optionally add --extra ui to include dashboard dependencies)
+```
+
+## Supported Agents
+
+Coral works with any coding agent that can run as a subprocess and interact via the terminal. Currently supported:
+
+| Agent | Description |
+|-------|-------------|
+| [**Claude Code**](https://github.com/anthropics/claude-code) | Anthropic's agentic coding tool — the default and most tested runtime |
+| [**Codex**](https://github.com/openai/codex) | OpenAI's open-source coding agent |
+| [**OpenCode**](https://github.com/opencode-ai/opencode) | Open-source terminal-based AI coding agent |
+
+> **Important:** Before using Coral, make sure you have fully set up the agent(s) you plan to use:
+>
+> - **Install the Agent:** Follow the official installation instructions for your agent (e.g., Claude Code, Codex, OpenCode). This may involve installing packages, setting up executables, or configuring scripts.
+> - **Authentication:** Login and authenticate your coding agent first to make sure they do not ask for your credentials in CLI mode. Set up any required environment variables, configuration files, or authentication secrets as specified in your agent's documentation.
+> - **Set Permissions:** Configure your agent's permission settings via its config file (e.g., `~/.claude/settings.json` for Claude Code) to control which tools, file paths, or actions it is allowed to perform.
+>
+> *Coral does not handle agent installation or authentication for you. The infrastructure will fail to function if the underlying agent cannot start or is not properly authenticated.*
+
+Set the agent in your task config (refer to <a href="#3-configure-the-task">Configure the task</a>):
+
+```yaml
+agents:
+  runtime: claude_code   # or "codex" or "opencode"
+  count: 3  # how many agents you want to spawn. Beware of your budget :)
 ```
 
 ## Usage
@@ -90,7 +123,7 @@ graph TD
 ```
 
 <p align="center">
-  <img src="assets/coral_diagram_alphaevolve.svg" alt="CORAL Architecture Diagram" width="800">
+  <img src="assets/coral_diagram_alphaevolve.svg" alt="Coral Architecture Diagram" width="800">
 </p>
 
 Each agent runs in its own git worktree branch. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time with zero sync overhead. The manager watches for new attempts and can interrupt agents with heartbeat-triggered prompts (e.g. "reflect", "consolidate skills").
@@ -129,7 +162,7 @@ for i in range(len(CITIES)):
 
 ### 2. Write a grader
 
-Subclass `TaskGrader` and implement `evaluate()`. The base class provides `self.run_program(filename)` which runs a file from the agent's codebase in a subprocess and returns a `CompletedProcess` (with `.stdout`, `.stderr`, `.returncode`):
+Subclass `TaskGrader` and implement `evaluate()`. The base class provides two helpers: `self.run_program(filename)` which runs a file from the agent's codebase in a subprocess and returns a `CompletedProcess` (with `.stdout`, `.stderr`, `.returncode`), and `self.fail(reason)` which records the failure and returns `-inf` as the score:
 
 ```python
 # examples/tsp/eval/grader.py
@@ -143,20 +176,17 @@ CITIES = [
 
 class Grader(TaskGrader):
     def evaluate(self) -> float:
-        result = self.run_program("solution.py")
-        if result.returncode != 0:
-            return self.fail(result.stderr.strip())
         try:
+            result = self.run_program("solution.py")  # runs solution.py, returns CompletedProcess
             order = [int(x) for x in result.stdout.strip().split("\n")]
-        except ValueError:
-            return self.fail(f"Expected integers, got: {result.stdout.strip()!r}")
-        if sorted(order) != list(range(len(CITIES))):
-            return self.fail("Tour must visit each city exactly once")
-        dist = sum(
-            math.dist(CITIES[order[i]], CITIES[order[(i + 1) % len(order)]])
-            for i in range(len(order))
-        )
-        return -dist  # shorter tour = higher score
+            assert sorted(order) == list(range(len(CITIES)))
+            dist = sum(
+                math.dist(CITIES[order[i]], CITIES[order[(i + 1) % len(order)]])
+                for i in range(len(order))
+            )
+            return -dist  # shorter tour = higher score
+        except Exception as e:
+            return self.fail(str(e))  # records failure and returns -inf score
 ```
 
 The naive seed tour scores about `-4.98`. Agents will try nearest-neighbor, 2-opt, simulated annealing, etc. to find shorter routes.
@@ -185,6 +215,7 @@ grader:
 
 agents:
   count: 2
+  runtime: claude_code  # or opencode, codex
   model: claude-sonnet-4-20250514
   max_turns: 200
 
