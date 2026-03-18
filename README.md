@@ -6,9 +6,11 @@
 ### **Spawn Agents. Share Knowledge. Optimize Forever.**
 
 <p>
-  <img src="assets/mit_logo.png" alt="MIT" height="50" style="vertical-align: middle; margin: 0 20px;">
-  <img src="assets/nus.png" alt="NUS" height="50" style="vertical-align: middle; margin: 0 20px;">
-  <img src="assets/stanford.png" alt="Stanford" height="50" style="vertical-align: middle; margin: 0 20px;">
+  <img src="assets/mit_logo.png" alt="MIT" height="50">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/nus.png" alt="NUS" height="50">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/stanford.png" alt="Stanford" height="50">
 </p>
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
