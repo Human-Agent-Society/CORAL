@@ -256,10 +256,10 @@ def cmd_start(args: argparse.Namespace) -> None:
         start_ui_background(manager.paths.coral_dir)
 
     if config.agents.count == 1 and verbose:
-        print("\nAgent running (Ctrl+C to stop)...\n")
+        print("\nAgent running ( to stop)...\n")
         manager.wait_for_completion()
     else:
-        print("\nMonitoring agents (Ctrl+C to stop)...")
+        print("\nMonitoring agents...")
         manager.monitor_loop()
 
 
@@ -363,7 +363,7 @@ def cmd_resume(args: argparse.Namespace) -> None:
 
         start_ui_background(paths.coral_dir)
 
-    print("\nMonitoring agents (Ctrl+C to stop)...")
+    print("\nMonitoring agents...")
     manager.monitor_loop()
 
 
