@@ -19,8 +19,9 @@
 
 **English** | [中文](README_CN.md)
 
-An organization of **autonomous AI agents** that
-run experiments, share knowledge, and loop perpetually for better and better solutions.
+**Coral** is an infrastructure for building organizations of **autonomous AI agents** that run experiments, share knowledge, and continuously improve solutions. Give it a codebase and a grading script, and your agents handle the rest — no tedious hyperparameter tuning required. Natively integrated with Claude Code, OpenCode, Codex, and other major coding agents.
+
+Want self-improving AI without the configuration overhead? Try Coral.
 
 </div>
 
