@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evolve like Coral: Towards Autonomous Agent Collaboration</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
+
+:root{
+  --sans:'DM Sans',-apple-system,sans-serif;
+  --serif:'Source Serif 4',Georgia,serif;
+  --mono:'DM Mono','SF Mono',Consolas,monospace;
+  --r:14px;--r-sm:10px;--r-pill:20px;
+  --nav-h:52px;--toc-w:180px;
+}
+[data-theme="light"]{
+  --bg:#f3f6fb;--card:#e8edf6;--elevated:#dde4f0;--deep:#d2daea;
+  --code-bg:#1a1e24;--border:#bec8d8;--line:#aab4c6;
+  --t1:#18222e;--t2:#26323f;--t3:#415060;--t4:#647585;--t5:#8e9eae;
+  --code-t:#ced4dc;--badge-bg:#18222e;--badge-t:#f3f6fb;
+  --link:#2a5282;--link-h:#18222e;
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:calc(var(--nav-h) + 24px)}
+body{font-family:var(--sans);background:var(--bg);color:var(--t2);
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;transition:background .2s,color .2s}
+a{color:var(--link);text-decoration:none;transition:color .15s}
+a:hover{color:var(--link-h)}
+::selection{background:var(--badge-bg);color:var(--badge-t)}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:100;height:var(--nav-h);display:flex;
+  align-items:center;justify-content:space-between;padding:0 28px;
+  background:var(--bg);border-bottom:.7px solid var(--border);transition:background .2s,border-color .2s}
+.nav-logo{font-family:var(--sans);font-size:17px;font-weight:700;color:var(--t1);
+  display:flex;align-items:center;letter-spacing:.02em;transition:color .2s}
+.nav-r{display:flex;align-items:center;gap:10px}
+.nav-link{font-size:12.5px;font-weight:500;color:var(--t4);padding:5px 10px;border-radius:var(--r-sm);transition:all .15s}
+.nav-link:hover{color:var(--t2);background:var(--card)}
+.gh-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--r-pill);
+  background:var(--badge-bg);color:var(--badge-t);font-size:11px;font-weight:500;letter-spacing:.02em;transition:opacity .15s}
+.gh-pill:hover{opacity:.85;color:var(--badge-t)}
+.gh-pill svg{flex-shrink:0}
+
+/* HERO */
+.hero-wrap{max-width:900px;margin:0 auto;padding:0 28px}
+.hero{text-align:center;padding:72px 0 40px}
+.hero h1{font-family:var(--serif);font-size:clamp(38px,6.5vw,60px);font-weight:700;
+  color:var(--t1);letter-spacing:-.04em;line-height:1.06;margin-bottom:18px;transition:color .2s}
+.hero-sub{font-size:16px;color:var(--t3);max-width:600px;margin:0 auto 20px;line-height:1.6}
+.hero-date{font-size:12.5px;color:var(--t4);margin-bottom:20px}
+.hero-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:var(--r-pill);
+  font-family:var(--sans);font-size:12.5px;font-weight:500;border:none;cursor:pointer;transition:all .15s}
+.btn-dark{background:var(--badge-bg);color:var(--badge-t)}
+.btn-dark:hover{opacity:.85;color:var(--badge-t)}
+.btn-ghost{background:transparent;border:.7px solid var(--border);color:var(--t2)}
+.btn-ghost:hover{background:var(--card);color:var(--t1)}
+
+/* TLDR */
+.tldr{background:var(--elevated);border-radius:12px;padding:18px 22px;margin:0 0 32px;display:flex;gap:10px;transition:background .2s}
+.tldr-icon{font-size:16px;flex-shrink:0;line-height:1.75}
+.tldr-body{font-size:14px;line-height:1.7}
+.tldr-body strong{color:var(--t1)}
+
+/* LAYOUT */
+.layout{max-width:760px;margin:0 auto;padding:0 28px 80px;position:relative}
+
+/* Sticky left TOC */
+.toc{position:fixed;top:calc(var(--nav-h) + 24px);
+  width:170px;right:calc(50% + 410px);
+  max-height:calc(100vh - var(--nav-h) - 48px);overflow-y:auto;padding:4px 0;
+  opacity:0;transform:translateY(8px);pointer-events:none;
+  transition:opacity .35s ease,transform .35s ease}
+.toc.visible{opacity:1;transform:translateX(0);pointer-events:auto}
+.toc-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--t4);margin-bottom:10px;transition:color .2s}
+.toc a{display:block;font-size:12.5px;color:var(--t4);padding:4px 0 4px 12px;
+  border-left:2px solid transparent;transition:all .15s;line-height:1.45}
+.toc a:hover{color:var(--t2)}
+.toc a.active{color:var(--t1);border-left-color:var(--t1);font-weight:500}
+.toc a.sub{padding-left:24px;font-size:12px}
+
+/* ARTICLE */
+.article{max-width:100%;min-width:0}
+.article h2{font-family:var(--serif);font-size:24px;font-weight:600;color:var(--t1);
+  letter-spacing:-.3px;line-height:1.3;margin:48px 0 14px;padding-top:20px;
+  border-top:.7px solid var(--border);transition:color .2s,border-color .2s}
+.article h2:first-child{margin-top:0;border-top:none;padding-top:0}
+.article h3{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--t1);
+  letter-spacing:-.2px;margin:32px 0 10px;transition:color .2s}
+.article p{margin-bottom:14px}
+.article strong{color:var(--t1);font-weight:600;transition:color .2s}
+.article ul,.article ol{margin:0 0 14px 22px}
+.article li{margin-bottom:5px}
+.article code{font-family:var(--mono);font-size:12.5px;background:var(--card);
+  padding:2px 6px;border-radius:5px;color:var(--t1);transition:all .2s}
+.article a{color:var(--link)}
+.article a:hover{color:var(--link-h);text-decoration:underline}
+.article a.btn{color:unset}
+.article a.btn-dark{color:var(--badge-t)}
+.article a.btn-dark:hover{color:var(--badge-t)}
+.article a.btn-ghost{color:var(--t2)}
+.article a.btn-ghost:hover{color:var(--t1);text-decoration:none}
+.article hr{display:none}
+
+/* Code block */
+.cb{background:var(--code-bg);border-radius:var(--r);margin:16px 0 20px;overflow:hidden}
+.cb-head{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid rgba(255,255,255,.06)}
+.cb-lang{font-family:var(--mono);font-size:11px;color:var(--t4);letter-spacing:.04em}
+.cb-copy{background:none;border:none;font-family:var(--sans);font-size:11px;color:var(--t4);cursor:pointer;padding:2px 8px;border-radius:4px;transition:all .15s}
+.cb-copy:hover{background:rgba(255,255,255,.06);color:var(--t5)}
+.cb pre{padding:14px 18px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.7;color:var(--code-t)}
+.cb .kw{color:#9ec0d0}.cb .str{color:#b5c4a8}.cb .cmt{color:#5c6370;font-style:italic}.cb .fn{color:#d4c5a0}.cb .num{color:#d4a0a0}
+
+/* Figure */
+.fig{margin:24px 0 28px;text-align:center}
+.fig-cap{font-size:12.5px;color:var(--t4);margin-top:10px;line-height:1.55;text-align:center;transition:color .2s}
+.fig-cap strong{color:var(--t3)}
+
+/* Pipeline embed */
+.pipeline-box{margin:24px 0;border-radius:var(--r);overflow:hidden;border:.7px solid var(--border);
+  background:var(--bg);transition:all .2s}
+.p-canvas{width:100%;max-width:940px;margin:0 auto;padding:36px 56px 44px;position:relative}
+.p-canvas .p-anim{opacity:0;transform:translateY(14px);animation:p-reveal 1s cubic-bezier(.23,1,.32,1) forwards}
+@keyframes p-reveal{to{opacity:1;transform:translateY(0)}}
+.p-canvas .p-fade{opacity:0;animation:p-fadeOnly .8s ease forwards}
+@keyframes p-fadeOnly{to{opacity:1}}
+.p-canvas .p-card{background:var(--card);border-radius:14px;padding:12px 16px;text-align:center;transition:background .2s}
+.p-canvas .p-card-title{font-family:var(--serif);font-size:16px;color:var(--t1);letter-spacing:-.3px;display:inline;transition:color .2s}
+.p-canvas .p-card-sub{font-size:11.5px;color:var(--t3);margin-top:3px;transition:color .2s}
+.p-canvas .p-badge{display:inline-block;background:var(--badge-bg);color:var(--badge-t);font-size:9px;font-weight:500;
+  letter-spacing:.05em;padding:3px 10px;border-radius:20px;margin-left:8px;vertical-align:middle;position:relative;top:-1px;transition:all .2s}
+.p-canvas .p-card-body{margin-top:8px;line-height:1.7;font-size:12px;color:var(--t2);transition:color .2s}
+.p-canvas .p-card-body .p-code{font-size:10.5px;color:var(--t4);font-style:italic;transition:color .2s}
+.p-canvas .p-card-detail{font-size:11px;color:var(--t4);margin-top:4px;line-height:1.5;transition:color .2s}
+.p-canvas .p-connector{display:flex;justify-content:center}
+.p-canvas .p-vline{width:1px;background:var(--line);transition:background .2s}
+.p-canvas .p-arrow-down{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid var(--line);margin:0 auto;transition:border-color .2s}
+.p-canvas .p-arrow-up{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:6px solid var(--line);margin:0 auto;transition:border-color .2s}
+.p-canvas .p-pool-wrap{border:.7px dashed var(--border);border-radius:14px;padding:12px 18px 20px;transition:border-color .2s}
+.p-canvas .p-pool-label{font-size:10px;color:var(--t4);letter-spacing:.08em;margin-bottom:12px;text-align:center;transition:color .2s}
+.p-canvas .p-agents-row{display:flex;gap:12px;align-items:stretch}
+.p-canvas .p-agents-row .p-card{flex:1;min-width:0;padding:16px 18px}
+.p-canvas .p-ellipsis{display:flex;align-items:center;font-family:var(--serif);font-size:20px;color:var(--t5);padding:0 2px;flex-shrink:0;transition:color .2s}
+.p-canvas .p-shared-cell{flex:1;text-align:center;padding:14px 0;position:relative;background:var(--deep);transition:background .2s}
+.p-canvas .p-shared-cell.p-has-divider::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:1px;background:var(--line);transition:background .2s}
+.p-canvas .p-shared-cell .p-name{font-family:var(--serif);font-size:15px;color:var(--t1);font-weight:600;transition:color .2s}
+.p-canvas .p-shared-cell .p-sub{font-size:10px;color:var(--t2);margin-top:2px;transition:color .2s}
+.p-canvas .p-top-row{display:flex;gap:12px;justify-content:center;align-items:stretch}
+.p-canvas .p-top-row .p-card{flex:0 1 220px;padding:10px 14px}
+.p-canvas .p-orch-card{background:var(--elevated);border-radius:12px;padding:16px 22px;max-width:480px;margin:0 auto;text-align:center;transition:background .2s}
+.p-canvas .p-orch-title{font-family:var(--serif);font-size:18px;color:var(--t1);letter-spacing:-.2px;font-weight:600;transition:color .2s}
+.p-canvas .p-orch-sub{font-size:12px;color:var(--t3);margin-top:3px;transition:color .2s}
+.p-canvas .p-conn-label{font-size:11.5px;color:var(--t4);text-align:center;transition:color .2s}
+.p-canvas .p-fb-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.p-canvas .p-fb-svg path.p-fb-line{fill:none;stroke:var(--line);stroke-width:.8;stroke-dasharray:6 4;transition:stroke .2s}
+.p-canvas .p-fb-group{opacity:0}
+.p-canvas .p-fb-label{font-family:var(--sans);font-size:12px;fill:var(--t4)}
+
+/* Result highlight */
+.result-hl{background:var(--deep);border-radius:var(--r);padding:24px;text-align:center;margin:20px 0;transition:background .2s}
+.result-val{font-family:var(--serif);font-size:36px;font-weight:700;color:var(--t1);letter-spacing:-.02em;transition:color .2s}
+.result-sub{font-size:13px;color:var(--t3);margin-top:4px;transition:color .2s}
+
+/* Callout */
+.callout{border:.7px dashed var(--border);border-radius:var(--r);padding:14px 18px;margin:20px 0;display:flex;gap:10px;transition:border-color .2s}
+.callout-icon{font-size:15px;flex-shrink:0;line-height:1.75}
+.callout-body{font-size:13.5px;line-height:1.7}
+
+/* Table */
+.article table{width:100%;border-collapse:collapse;margin:16px 0 20px;font-size:13.5px}
+.article th{text-align:left;padding:10px 14px;font-weight:600;font-size:11.5px;color:var(--t1);background:var(--card);border-bottom:.7px solid var(--border);transition:all .2s}
+.article td{padding:10px 14px;border-bottom:.7px solid var(--border);color:var(--t2);transition:all .2s}
+
+/* Badge */
+.badge{display:inline-block;background:var(--badge-bg);color:var(--badge-t);font-size:9px;font-weight:500;
+  letter-spacing:.05em;padding:3px 10px;border-radius:var(--r-pill);vertical-align:middle;position:relative;top:-1px;transition:all .2s}
+
+/* Footer */
+.footer{border-top:.7px solid var(--border);padding:28px;text-align:center;font-size:12px;color:var(--t4);transition:all .2s}
+.footer-links{display:flex;gap:20px;justify-content:center;margin-bottom:8px}
+.footer-links a{color:var(--t2);font-weight:500}
+
+/* Responsive */
+@media(max-width:1100px){
+  .toc{display:none}
+}
+@media(max-width:768px){
+  .hero-wrap{padding:0 16px}
+  .layout{padding:0 16px 56px}
+  .nav{padding:0 16px}.nav-link{display:none}
+  .hero h1{font-size:42px}
+  .hero{padding:48px 0 28px}
+  .hero-sub{font-size:14px}
+  .tldr-body{font-size:13px}
+  .result-hl{padding:18px 14px}
+  .result-val{font-size:28px}
+  .result-sub{font-size:12px}
+  .article h2{font-size:20px;margin:36px 0 12px;padding-top:16px}
+  .article h3{font-size:16px;margin:24px 0 8px}
+  .article{font-size:14px}
+  .cb pre{font-size:11.5px;padding:12px 14px}
+
+  .pipeline-box{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .p-canvas{min-width:640px;padding:24px 20px 32px;transform-origin:top left}
+  .p-canvas .p-top-row .p-card{flex:0 1 180px;padding:8px 10px}
+  .p-canvas .p-card-title{font-size:13px}
+  .p-canvas .p-card-sub{font-size:10px}
+  .p-canvas .p-card-detail{font-size:9.5px}
+  .p-canvas .p-card-body{font-size:10.5px;margin-top:6px}
+  .p-canvas .p-badge{font-size:7.5px;padding:2px 7px}
+  .p-canvas .p-orch-card{padding:12px 16px;max-width:360px}
+  .p-canvas .p-orch-title{font-size:15px}
+  .p-canvas .p-orch-sub{font-size:10.5px}
+  .p-canvas .p-conn-label{font-size:10px}
+  .p-canvas .p-pool-label{font-size:8.5px}
+  .p-canvas .p-agents-row{gap:8px}
+  .p-canvas .p-agents-row .p-card{padding:10px 10px}
+  .p-canvas .p-shared-cell .p-name{font-size:13px}
+  .p-canvas .p-shared-cell .p-sub{font-size:9px}
+  .p-canvas .p-shared-cell{padding:10px 0}
+  .p-canvas .p-fb-svg{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="https://docs.coralxyz.com" class="nav-logo">CORAL</a>
+  <div class="nav-r">
+    <a href="https://docs.coralxyz.com" class="nav-link">Docs</a>
+    <a href="#" class="nav-link" style="color:var(--t1)">Blog</a>
+    <a href="https://github.com/Human-Agent-Society/Coral" class="gh-pill">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero-wrap">
+  <header class="hero">
+    <h1><img src="coral_logo.png" alt="CORAL logo" style="width:80px;height:80px;object-fit:contain;vertical-align:middle;margin-right:12px;position:relative;top:-8px">Evolve like Coral: Towards<br>Autonomous Agent Collaboration</h1>
+    <p class="hero-sub">A system for autonomous coding agents — spawn agents, run experiments, share knowledge, and loop forever.</p>
+    <p class="hero-date">Posted: July 2026</p>
+    <div class="hero-btns">
+      <a href="https://github.com/Human-Agent-Society/Coral" class="btn btn-dark">Code</a>
+      <a href="https://docs.coralxyz.com" class="btn btn-ghost">Documentation</a>
+    </div>
+  </header>
+
+  <!-- TL;DR -->
+  <div class="tldr">
+    <div class="tldr-body">
+      Existing LLM-driven optimization systems like AlphaEvolve/OpenEvolve evolve code blocks through local mutations. <strong>CORAL</strong> takes a fundamentally different approach: each agent is fully autonomous — it reads the entire codebase, reasons over its own history, and collaborates through shared knowledge. The result: <strong>SOTA on Erdős' Minimum Overlap Problem</strong>, <strong>new records on Anthropic's Kernel Builder take-home</strong>, and competitive Kaggle scores — with just a fraction of the compute.
+    </div>
+  </div>
+</div>
+
+<!-- 2-COL: STICKY TOC + ARTICLE -->
+<div class="layout">
+
+  <!-- LEFT STICKY TOC -->
+  <aside class="toc" id="toc">
+    <div class="toc-label">On this page</div>
+    <a href="#system-overview" data-section="system-overview">System Overview</a>
+    <a href="#architecture" data-section="architecture" class="sub">Architecture</a>
+    <a href="#heartbeat" data-section="heartbeat" class="sub">Heartbeat</a>
+    <a href="#experiments" data-section="experiments">Experiments</a>
+    <a href="#kernel" data-section="kernel" class="sub">Kernel Engineering</a>
+    <a href="#erdos" data-section="erdos" class="sub">Erdős Overlap</a>
+    <a href="#kaggle" data-section="kaggle" class="sub">ML Engineering</a>
+    <a href="#multi-agent" data-section="multi-agent">Multi-Agent</a>
+    <a href="#human-agent" data-section="human-agent" class="sub">Human-Agent Society</a>
+    <a href="#citation" data-section="citation">Citation</a>
+  </aside>
+
+  <!-- ARTICLE -->
+  <article class="article">
+
+    <h2 id="system-overview">System Overview</h2>
+    <p>
+      CORAL is an orchestration system that turns autonomous coding agents into persistent optimizers. Rather than single-shot code generation, CORAL sets up a continuous cycle: agents independently explore solutions, evaluate them against a scoring function, and improve — indefinitely and without human intervention.
+    </p>
+
+    <h3 id="architecture">Architecture</h3>
+    <p>CORAL's architecture has four layers:</p>
+    <ol>
+      <li><strong>Task & Evaluation.</strong> A CORAL run begins with two definitions: a Task (what to solve — a codebase, a configuration, and a description) and an Evaluation (how to score — a grader that produces a score and feedback for each attempt). Together, these define the optimization problem.</li>
+      <li><strong>Management Infra.</strong> The management infra manages the full agent lifecycle — spawning agents, monitoring their health, restarting them when they exit, and delivering evaluation feedback. A heartbeat system periodically interrupts agents for forced reflection, consolidating shared information so the whole team benefits from individual discoveries.</li>
+      <li><strong>Agent Pool.</strong> Multiple agents run in parallel, each in its own isolated git worktree. Every agent follows the same workflow loop (research — plan — edit — evaluate — read feedback — repeat) but is free to pursue a different strategy. This parallel exploration searches a much wider solution space than any single agent could.</li>
+      <li><strong>Shared Knowledge.</strong> Agents are isolated in their worktrees but connected through a shared knowledge layer consisting of three components:
+        <ul>
+          <li><strong>Attempts</strong> — a scored log of every experiment, forming a leaderboard.</li>
+          <li><strong>Notes</strong> — cross-agent learning that helps others avoid dead ends and build on discoveries.</li>
+          <li><strong>Skills</strong> — reusable strategies that agents package up for others to apply.</li>
+        </ul>
+      </li>
+    </ol>
+
+    <!-- Pipeline diagram -->
+    <div class="pipeline-box">
+      <div class="p-canvas" id="pCanvas">
+        <svg class="p-fb-svg" id="pFbSvg">
+          <defs><marker id="pFbArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M2 2L8 5L2 8" fill="none" stroke="#b8bdbf" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+          <g class="p-fb-group" id="pFbLeft"><path class="p-fb-line" id="pLeftPath" marker-end="url(#pFbArr)"/><text class="p-fb-label" id="pLeftLabel">agents read</text></g>
+          <g class="p-fb-group" id="pFbRight"><path class="p-fb-line" id="pRightPath" marker-end="url(#pFbArr)"/><text class="p-fb-label" id="pRightLabel">agents write</text></g>
+        </svg>
+
+        <div class="p-top-row p-anim" style="animation-delay:.3s">
+          <div class="p-card"><div class="p-card-title">Task</div><div class="p-card-sub">Codebase · Config · Grader</div><div class="p-card-detail">Defines what to solve and how to score</div></div>
+          <div class="p-card"><div class="p-card-title">Evaluation</div><div class="p-card-sub">coral eval — runs grader on commit</div><div class="p-card-detail">Produces score + feedback per attempt</div></div>
+        </div>
+
+        <div class="p-connector p-fade" style="animation-delay:.9s;margin:4px 0"><div style="display:flex;flex-direction:column;align-items:center"><div class="p-vline" style="height:14px"></div><div class="p-arrow-down"></div></div></div>
+
+        <div class="p-orch-card p-anim" style="animation-delay:1.2s"><div class="p-orch-title">Management Infra</div><div class="p-orch-sub">AgentManager — lifecycle management</div></div>
+
+        <div class="p-fade" style="animation-delay:1.8s;margin:4px 0;position:relative">
+          <div style="display:flex;flex-direction:column;align-items:center">
+            <div class="p-vline" style="height:8px"></div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="p-arrow-down"></div><div class="p-conn-label">spawn · monitor · restart</div></div>
+            <div class="p-vline" style="height:3px"></div>
+            <div style="display:flex;align-items:center;gap:8px"><div class="p-arrow-up"></div><div class="p-conn-label">score + feedback · reflection nudge</div></div>
+            <div class="p-vline" style="height:8px"></div>
+          </div>
+        </div>
+
+        <div class="p-pool-wrap p-fade" id="pPoolWrap" style="animation-delay:2.3s">
+          <div class="p-pool-label">AGENT POOL — ISOLATED GIT WORKTREES</div>
+          <div class="p-agents-row">
+            <div class="p-card p-anim" style="animation-delay:2.6s"><div><span class="p-card-title" style="font-size:15px">agent-1</span><span class="p-badge">ACTIVE</span></div><div class="p-card-body">Read CORAL.md<br>Research — Plan<br>Edit code<br><span class="p-code">coral eval -m "…"</span><br>Read feedback — repeat</div></div>
+            <div class="p-card p-anim" style="animation-delay:3.0s"><div><span class="p-card-title" style="font-size:15px">agent-2</span><span class="p-badge">ACTIVE</span></div><div class="p-card-body">Independent worktree<br>Same workflow loop<br>Different strategy</div></div>
+            <div class="p-ellipsis p-anim" style="animation-delay:3.3s">···</div>
+            <div class="p-card p-anim" style="animation-delay:3.5s"><div><span class="p-card-title" style="font-size:15px">agent-N</span><span class="p-badge">ACTIVE</span></div><div class="p-card-body">Independent worktree<br>Same workflow loop<br>Different strategy</div></div>
+          </div>
+        </div>
+
+        <div class="p-connector p-fade" style="animation-delay:4.2s;margin-top:4px"><div style="display:flex;flex-direction:column;align-items:center"><div class="p-vline" style="height:16px"></div><div class="p-arrow-down"></div></div></div>
+
+        <div id="pSharedWrap" style="max-width:600px;margin:2px auto 0;display:flex;gap:0;border-radius:14px;overflow:hidden">
+          <div id="pSsInsights" class="p-shared-cell" style="opacity:0;flex:1;transform:translateX(-50%);transition:opacity .7s ease,transform .7s cubic-bezier(.23,1,.32,1)"><div class="p-name">Notes</div><div class="p-sub">cross-agent learnings</div></div>
+          <div id="pSsAttempts" class="p-shared-cell" style="opacity:0;flex:1;transition:opacity .8s ease;border-radius:14px"><div class="p-name">Attempts</div><div class="p-sub">score + feedback log</div></div>
+          <div id="pSsSkills" class="p-shared-cell" style="opacity:0;flex:1;transform:translateX(50%);transition:opacity .7s ease,transform .7s cubic-bezier(.23,1,.32,1)"><div class="p-name">Skills</div><div class="p-sub">reusable strategies</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="fig-cap">
+      <strong>Figure 1.</strong> The CORAL orchestration pipeline. Tasks and evaluations feed into the Management Infra, which spawns isolated agents. Shared state (attempts, notes, skills) connects everything through bidirectional feedback loops.
+    </div>
+
+    <p>
+      The power of CORAL is in the cycle. Each iteration produces a scored commit, visible to all agents. Good strategies surface through the leaderboard. Insights propagate through shared notes. Over time, the system converges on strong solutions through a process closer to <strong>collaborative research</strong> than one-shot generation.
+    </p>
+
+    <h3 id="heartbeat">Heartbeat System</h3>
+    <p>
+      As agents continue to run, their workspace slowly becomes messier — like an uncleaned office table after many days of work. The heartbeat system provides periodic reminders for agents to "clean" themselves up: reflecting on their experience, writing notes, and consolidating knowledge into shared skills. This serves as a librarian, providing a centralized place for agents to exchange ideas and know-how, ensuring they can work perpetually without accumulating unnecessary context noise.
+    </p>
+
+    <hr>
+
+    <h2 id="experiments">Experiments</h2>
+    <p>
+      We evaluated CORAL on four tasks spanning complex mathematics, ML engineering, and GPU kernel engineering. Our primary baseline is <strong>OpenEvolve</strong>, the leading open-source implementation of Google DeepMind's AlphaEvolve — an LLM-driven evolutionary system that optimizes code through population-based search.
+    </p>
+    <p>
+      While both CORAL and AlphaEvolve/OpenEvolve have similar outer loops, the mechanisms underneath are fundamentally different. OpenEvolve evolves marked code blocks through LLM-guided mutations, maintaining candidates via MAP-Elites. In CORAL, each agent is fully autonomous: it reads the entire codebase, possesses its own workspace, reasons over its own history of failed attempts, and with multiple agents, learns from and contributes to the discoveries of others.
+    </p>
+    <p>
+      Both systems were given identical seed programs and evaluation functions. No human intervention occurred after launch. All experiments used <strong>Claude Opus 4.6</strong> as the backbone model.
+    </p>
+
+    <!-- Kernel -->
+    <h3 id="kernel">Kernel Engineering: Anthropic's Performance Take-Home</h3>
+    <p>
+      This task involves optimizing a tree traversal algorithm on a simulated VLIW SIMD machine, starting from code that performs at 18,532 cycles. In the 2-hour interview setting, the approximate best human score was 1,790 cycles. The previous best known performance was <strong>1,363 cycles</strong>, achieved by Claude Opus 4.5 with an improved test-time harness.
+    </p>
+
+    <div class="result-hl">
+      <div class="result-val">1,103 cycles</div>
+      <div class="result-sub">19% improvement over previous best (1,363) — multi-agent, 4.5 hours</div>
+    </div>
+
+    <div class="fig">
+      <div style="background:var(--card);border-radius:var(--r);padding:20px;text-align:center;color:var(--t4);font-size:13px;transition:all .2s">[Figure: Kernel Builder convergence — single-agent vs multi-agent]</div>
+    </div>
+    <div class="fig-cap"><strong>Figure 2.</strong> Single-agent CORAL reaches 1,350 cycles in 4.6 hours. Scaling to 4 parallel agents drives the score to 1,103 cycles in the same wall-clock time — a 24% improvement with no additional time cost.</div>
+
+    <p>
+      CORAL broke the previous best known score, with a single agent reaching 1,350 cycles in just 4.6 hours. Interestingly, OpenEvolve with the same backbone model was unable to beat the 1,363 threshold, struggling with a task that demands coordinated, multi-step rewrites rather than local mutations.
+    </p>
+    <p>
+      When scaling to four parallel agents, the multi-agent configuration drove the score down to <strong>1,103 cycles</strong> — a 24% improvement over the single-agent result, with no additional time cost.
+    </p>
+
+    <!-- Erdős -->
+    <h3 id="erdos">Mathematics: Erdős' Minimum Overlap Problem</h3>
+    <p>
+      This is a combinatorial number theory problem where the aim is to find a step function that minimizes the maximum overlap when the integers {1, 2, …, 2n} are split into two sets of size n and their sumsets are considered. Due to its difficulty as an open problem, it is commonly used as a benchmark for agentic systems. The score used is C∞, where lower is better.
+    </p>
+
+    <div class="result-hl">
+      <div class="result-val">C∞ = 0.38078</div>
+      <div class="result-sub">New SOTA for Erdős' Minimum Overlap Problem — surpassing AlphaEvolve's 0.38092</div>
+    </div>
+
+    <div class="fig">
+      <img src="erdos_comparison_v2.png" alt="Erdős Minimum Overlap Problem — CORAL vs OpenEvolve convergence" style="max-width:100%;display:block">
+    </div>
+    <div class="fig-cap"><strong>Figure 3.</strong> CORAL reaches 99% of AlphaEvolve's score in just 34 minutes (vs. 5.2 hours for OpenEvolve). With web-search enabled, near-optimal solutions emerge in as little as 6 minutes.</div>
+
+    <p>
+      CORAL (without web-search) finds a solution with C∞ = 0.38092, matching the best reported AI solution by AlphaEvolve and outperforming OpenEvolve's 0.38111. More importantly, CORAL requires far fewer evaluations and converges much faster.
+    </p>
+    <p>
+      Allowing agents to access web-search further improves both performance and convergence speed, achieving C∞ = <strong>0.38078</strong>. With external knowledge retrieval, CORAL discovers relevant mathematical techniques from the literature and incorporates them during the search process.
+    </p>
+
+    <!-- Kaggle -->
+    <h3 id="kaggle">ML Engineering: Kaggle Spaceship Titanic</h3>
+    <p>
+      To test the more common scenario — a practitioner throwing an agent at a well-understood ML problem — we used Spaceship Titanic from Kaggle. The task is binary classification on tabular passenger data. While categorized as a beginner competition, achieving top leaderboard scores requires systematic feature engineering, model selection, and ensemble techniques.
+    </p>
+    <p>
+      We evaluate on an MLEBench custom split (90/10 from the original training data) with classification accuracy as the metric. The seed program is a Random Forest with basic feature engineering.
+    </p>
+
+    <div class="fig">
+      <div style="background:var(--card);border-radius:var(--r);padding:20px;text-align:center;color:var(--t4);font-size:13px;transition:all .2s">[Figure: Kaggle Spaceship Titanic results]</div>
+    </div>
+    <div class="fig-cap"><strong>Figure 4.</strong> CORAL convergence on the Spaceship Titanic task.</div>
+
+    <hr>
+
+    <h2 id="multi-agent">Multi-Agent Collaboration</h2>
+    <p>
+      The CORAL architecture naturally supports multiple agents that collaborate with each other. Unlike traditional multi-agent harnesses that hardcode workflows, CORAL's autonomous agents run together with respectful privacy. Each agent researches its own ideas, but can peek (not modify) others' workspaces to learn what they're doing.
+    </p>
+
+    <div class="callout">
+      <div class="callout-body">
+        <strong>An emergent behavior we observed:</strong> when an agent makes a breakthrough by submitting a new SOTA, other agents soon follow up to apply the technique to their own methodologies for even better solutions. A virtuous cycle is created where a group of agents evolves significantly faster than a single agent alone.
+      </div>
+    </div>
+
+    <p>
+      We observe that as evolution progresses, agent collaboration becomes increasingly flexible. During the early stage, notes are simple summaries. The interesting phenomenon appears later: when all agents have converged, they naturally work more closely, collectively forming a consensus via shared notes.
+    </p>
+
+    <div class="fig">
+      <div style="background:var(--card);border-radius:var(--r);padding:20px;text-align:center;color:var(--t4);font-size:13px;transition:all .2s">[Figure: Multi-agent collaboration timeline — early vs. late stage notes]</div>
+    </div>
+    <div class="fig-cap"><strong>Figure 5.</strong> Evolution of inter-agent collaboration. Early notes are independent summaries. Later notes show agents analyzing each other's strategies, highlighting discoveries marked "CRITICAL", and forming consensus.</div>
+
+    <p>
+      At stuck regions, an agent actually tried to analyze the difference between the other two agents and highlight the discovery to others (marked with "CRITICAL"). Such behavior demonstrates the potential for agents to naturally evolve into different roles that handle heterogeneous tasks while contributing to a common goal.
+    </p>
+
+    <h3 id="human-agent">Towards a Human-Agent Society</h3>
+    <p>
+      To gain deeper insight into CORAL's continuous evolution, we built a comprehensive web interface that traces every agent action, shared workspace, and evaluation metric in real-time. As we observe this progression, the impulse to intervene often arises — whether to encourage out-of-the-box thinking when agents get stuck or to offer guidance based on our own domain knowledge.
+    </p>
+    <p>
+      Just as the agents frequently surprise us by pushing the boundaries of human capability, we find ourselves wanting to reciprocate with our own feedback. Ultimately, we are moving toward a <strong>collective intelligence</strong> where humans and agents collaborate and co-evolve in distinct but complementary roles to achieve shared goals.
+    </p>
+
+    <hr>
+
+    <h2 id="citation">Citation</h2>
+    <div class="cb">
+      <div class="cb-head"><span class="cb-lang">bibtex</span><button class="cb-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre>@misc{coral2026,
+  title  = {CORAL: Collaborative Orchestration
+            for Recursive Agent Loops},
+  year   = {2026},
+  url    = {https://github.com/Human-Agent-Society/Coral}
+}</pre>
+    </div>
+
+  </article>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <p>CORAL — Collaborative Orchestration for Recursive Agent Loops</p>
+</footer>
+
+<script>
+
+// Copy code
+function copyCode(b){var p=b.closest('.cb').querySelector('pre');
+  navigator.clipboard.writeText(p.textContent).then(function(){
+    b.textContent='Copied!';setTimeout(function(){b.textContent='Copy'},1500)})}
+
+// Pipeline animation
+(function(){
+  var FEEDBACK_START=8500;
+  var looping=false;
+
+  function pBuildPaths(){
+    var canvas=document.getElementById('pCanvas');
+    var pool=document.getElementById('pPoolWrap');
+    var shared=document.getElementById('pSharedWrap');
+    if(!pool||!shared) return;
+    var c=canvas.getBoundingClientRect(),p=pool.getBoundingClientRect(),s=shared.getBoundingClientRect();
+    var pL=p.left-c.left,pR=p.right-c.left,pT=p.top-c.top,pB=p.bottom-c.top;
+    var sL=s.left-c.left,sR=s.right-c.left,sB=s.bottom-c.top,sT=s.top-c.top;
+    var sMidY=sT+(sB-sT)/2;
+    var m=26,xL=pL-m,xR=pR+m,lr=20,rr=20;
+
+    document.getElementById('pLeftPath').setAttribute('d',
+      'M '+(sL-2)+' '+sMidY+' L '+(xL+lr)+' '+sMidY+
+      ' Q '+xL+' '+sMidY+' '+xL+' '+(sMidY-lr)+
+      ' L '+xL+' '+(pT+36+lr)+
+      ' Q '+xL+' '+(pT+36)+' '+(xL+lr)+' '+(pT+36)+
+      ' L '+(pL-1)+' '+(pT+36));
+
+    document.getElementById('pRightPath').setAttribute('d',
+      'M '+(pR+1)+' '+(pB-40)+' L '+(xR-rr)+' '+(pB-40)+
+      ' Q '+xR+' '+(pB-40)+' '+xR+' '+(pB-40+rr)+
+      ' L '+xR+' '+(sMidY-rr)+
+      ' Q '+xR+' '+sMidY+' '+(xR-rr)+' '+sMidY+
+      ' L '+(sR+2)+' '+sMidY);
+
+    ['pLeftPath','pRightPath'].forEach(function(id){
+      var el=document.getElementById(id);var len=el.getTotalLength();
+      el.setAttribute('data-len',len);el.style.strokeDasharray=len;
+      el.style.strokeDashoffset=len;el.style.transition='none';
+    });
+
+    var midYL=(pT+36+sMidY)/2;
+    var ll=document.getElementById('pLeftLabel');
+    ll.setAttribute('x',xL-7);ll.setAttribute('y',midYL+20);
+    ll.setAttribute('text-anchor','middle');
+    ll.setAttribute('transform','rotate(-90 '+(xL-7)+' '+(midYL+20)+')');
+    ll.style.opacity='0';
+
+    var midYR=(pB-40+sMidY)/2;
+    var rl=document.getElementById('pRightLabel');
+    rl.setAttribute('x',xR+7);rl.setAttribute('y',midYR+10);
+    rl.setAttribute('text-anchor','middle');
+    rl.setAttribute('transform','rotate(90 '+(xR+7)+' '+(midYR+10)+')');
+    rl.style.opacity='0';
+  }
+
+  function pDrawPath(id,ms){return new Promise(function(res){
+    var el=document.getElementById(id);el.style.transition='stroke-dashoffset '+ms+'ms ease-in-out';
+    el.style.strokeDashoffset='0';setTimeout(res,ms)})}
+
+  function pShowEl(id){var e=document.getElementById(id);e.style.transition='opacity .6s ease';e.style.opacity='1'}
+  function pDimEl(id){var e=document.getElementById(id);e.style.transition='opacity .4s ease';e.style.opacity='0.25'}
+  function pBrightEl(id){var e=document.getElementById(id);e.style.transition='opacity .4s ease';e.style.opacity='1'}
+
+  function pAnimatePath(id){
+    return new Promise(function(res){
+      var el=document.getElementById(id);
+      var len=parseFloat(el.getAttribute('data-len'));
+      el.style.transition='none';
+      el.style.strokeDasharray=len;
+      el.style.strokeDashoffset=len;
+      void el.getBoundingClientRect();
+      el.style.transition='stroke-dashoffset 1.8s ease-in-out';
+      el.style.strokeDashoffset='0';
+      setTimeout(res,1850);
+    });
+  }
+
+  async function pLoopCycle(){
+    if(!looping) return;
+    pDimEl('pRightLabel');pBrightEl('pLeftLabel');
+    document.getElementById('pRightPath').style.opacity='0.3';
+    document.getElementById('pRightPath').style.transition='opacity .3s ease';
+    document.getElementById('pLeftPath').style.opacity='1';
+    document.getElementById('pLeftPath').style.transition='opacity 0s';
+    await pAnimatePath('pLeftPath');
+    if(!looping) return;
+    await new Promise(function(r){setTimeout(r,400)});
+    if(!looping) return;
+    pDimEl('pLeftLabel');pBrightEl('pRightLabel');
+    document.getElementById('pLeftPath').style.opacity='0.3';
+    document.getElementById('pLeftPath').style.transition='opacity .3s ease';
+    document.getElementById('pRightPath').style.opacity='1';
+    document.getElementById('pRightPath').style.transition='opacity 0s';
+    await pAnimatePath('pRightPath');
+    if(!looping) return;
+    await new Promise(function(r){setTimeout(r,400)});
+    if(!looping) return;
+    pLoopCycle();
+  }
+
+  function pAnimateSharedState(){
+    var att=document.getElementById('pSsAttempts');
+    var ins=document.getElementById('pSsInsights');
+    var ski=document.getElementById('pSsSkills');
+    att.style.opacity='1';
+    setTimeout(function(){
+      att.style.transition='border-radius .5s ease';att.style.borderRadius='0';
+      ins.style.opacity='1';ins.style.transform='translateX(0)';
+      ski.style.opacity='1';ski.style.transform='translateX(0)';
+      setTimeout(function(){att.classList.add('p-has-divider');ski.classList.add('p-has-divider')},700);
+    },1000);
+  }
+
+  async function pRunFeedback(){
+    document.getElementById('pFbLeft').style.opacity='1';
+    document.getElementById('pFbLeft').style.transition='opacity .5s ease';
+    document.getElementById('pFbRight').style.opacity='1';
+    document.getElementById('pFbRight').style.transition='opacity .5s ease';
+    await pDrawPath('pLeftPath',2000);pShowEl('pLeftLabel');
+    await new Promise(function(r){setTimeout(r,500)});
+    await pDrawPath('pRightPath',2000);pShowEl('pRightLabel');
+    await new Promise(function(r){setTimeout(r,800)});
+    looping=true;
+    pLoopCycle();
+  }
+
+  var triggered=false;
+  var obs=new IntersectionObserver(function(entries){
+    if(entries[0].isIntersecting&&!triggered){
+      triggered=true;
+      setTimeout(pBuildPaths,250);
+      setTimeout(pAnimateSharedState,4600);
+      setTimeout(pRunFeedback,FEEDBACK_START);
+    }
+  },{threshold:0.2});
+  var target=document.getElementById('pCanvas');
+  if(target) obs.observe(target);
+})();
+
+// Active TOC tracking
+(function(){
+  var tocEl=document.getElementById('toc');
+  var heroWrap=document.querySelector('.hero-wrap');
+  var links=document.querySelectorAll('.toc a[data-section]');
+  var sections=[];
+  links.forEach(function(l){
+    var el=document.getElementById(l.getAttribute('data-section'));
+    if(el) sections.push({el:el,link:l});
+  });
+
+  function update(){
+    var heroBottom=heroWrap?heroWrap.getBoundingClientRect().bottom:0;
+    if(heroBottom<80){
+      tocEl.classList.add('visible');
+    }else{
+      tocEl.classList.remove('visible');
+    }
+
+    var cur=sections[0];
+    var offset=100;
+    sections.forEach(function(s){
+      if(s.el.getBoundingClientRect().top<=offset) cur=s;
+    });
+    links.forEach(function(l){l.classList.remove('active')});
+    if(cur) cur.link.classList.add('active');
+  }
+  window.addEventListener('scroll',update,{passive:true});
+  update();
+})();
+</script>
+
+</body>
+</html>
