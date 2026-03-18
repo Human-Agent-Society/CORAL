@@ -121,7 +121,7 @@ graph TD
 ```
 
 <p align="center">
-  <img src="../assets/coral_diagram_alphaevolve.svg" alt="CORAL Architecture Diagram" width="800">
+  <img src="../assets/coral_diagram.png" alt="CORAL Architecture Diagram" width="800">
 </p>
 
 每个 Agent 跑在自己的 git worktree 分支里。共享状态（历史记录、笔记、技能）放在 `.coral/public/`，软链到所有 worktree —— 零开销，实时互通。后台管理器盯着新提交，可以通过心跳机制打断 Agent 并注入指令（比如"回顾一下"、"整理技能"）。
