@@ -13,7 +13,8 @@
   <img src="assets/stanford.png" alt="Stanford" height="50">
 </p>
 
-**Ao Qu\*, Yihao Yan\*, Han Zheng\*, Zijian Zhou\*, Shao Yong Ong, Fenglu Hong, Jiacheng Zhu, Bryan Kian Hsiang Low‡, Jinhua Zhao‡, Paul Pu Liang‡**
+**Ao Qu\*, Yihao Yan\*, Han Zheng\*, Zijian Zhou\*, Shao Yong Ong, Fenglu Hong, Jiacheng Zhu**
+**Bryan Kian Hsiang Low‡, Jinhua Zhao‡, Paul Pu Liang‡**
 
 <sub>\* Equal Contribution &nbsp;&nbsp; ‡ Equal Advising</sub>
 
