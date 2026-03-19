@@ -300,12 +300,13 @@ uv run ruff format .
 ⭐ 如果觉得 CORAL 对有帮助的话，欢迎给我们的 GitHub Repo 点个 Star。也可以考虑引用我们：
 
 ```bibtex
-@software{coral2025,
-  title   = {CORAL: Collaborative Orchestration for Autonomous Agent Labs},
-  author  = {{Human-Agent Society}},
-  year    = {2025},
-  url     = {https://github.com/Human-Agent-Society/CORAL},
-  license = {MIT}
+@misc{coral2026,
+  title  = {Evolve Like Coral: Towards Autonomous Multi-Agent Evolution},
+  author = {Qu, Ao and Yan, Yihao and Zheng, Han and Zhou, Zijian and
+            Ong, Shao Yong and Hong, Fenglu and Zhu, Jiacheng and
+            Low, Bryan Kian Hsiang and Zhao, Jinhua and Liang, Paul Pu},
+  year   = {2026},
+  url    = {https://human-agent-society.github.io/CORAL/}
 }
 ```
 
