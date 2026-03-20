@@ -1,0 +1,44 @@
+task:
+  name: "Cloudcast — Multi-Cloud Broadcast Optimization"
+  description: |
+    You are an expert in cloud infrastructure optimization. Evolve the
+    search_algorithm(src, dsts, G, num_partitions) function to minimize overall
+    data transfer cost across multiple clouds.
+
+    Focus on efficiently broadcasting input data to multiple destination nodes by
+    leveraging parallel paths and overlapping transfers across networks. Use the
+    BroadCastTopology class and make_nx_graph function to identify low-cost routes.
+    Prioritize strategies that reduce redundant transfers, balance load across
+    networks, and exploit multi-network topologies to minimize cost.
+
+    Your program file `initial_program.py` must define a `search_algorithm` function:
+
+        def search_algorithm(
+            src: str,            # source cloud region
+            dsts: list[str],     # destination cloud regions
+            G: nx.DiGraph,       # network graph with 'cost' and 'throughput' edge attrs
+            num_partitions: int, # number of data partitions to transfer
+        ) -> BroadCastTopology:
+            ...
+
+    Score: 1 / (1 + total_egress_cost) — lower cost gives higher score.
+    Evaluated across 5 network configs (intra-AWS, intra-Azure, intra-GCP,
+    inter-cloud AGZ, inter-cloud GAZ2).
+
+  files:
+    - "initial_program.py"
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-opus-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/ADRS/cloudcast/seed"

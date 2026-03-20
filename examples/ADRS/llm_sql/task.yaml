@@ -1,0 +1,79 @@
+task:
+  name: "LLM-SQL — Column Reordering for Prefix Caching"
+  description: |
+    You are an expert in data optimization and LLM prompt caching. Your task is to
+    evolve the existing Evolved class to maximize prefix hit count (PHC) for efficient
+    LLM prompt caching.
+
+    Problem Context:
+    - You are given a pandas DataFrame with text data in rows and columns
+    - The goal is to reorder columns to maximize prefix reuse when processing rows sequentially
+    - Prefix reuse occurs when consecutive rows have matching values in the same column positions
+    - This reduces LLM computation costs by reusing cached prefixes
+
+    Objective:
+    - Dual objective: (1) maximize prefix reuse across consecutive rows and (2) minimize runtime
+    - Combined score: 0.95 * average_hit_rate + 0.05 * (12 - min(12, average_runtime)) / 12
+
+    Formally:
+    - For a given column ordering C, PHC(C) = sum over all rows r of hit(C, r)
+    - hit(C, r) = sum of len(df[r][C[f]])^2 for all f in prefix where df[r][C[f]] == df[r-1][C[f]];
+      zero if mismatch starts at the first field.
+    - Runtime is measured as wall-clock seconds to compute the reordered DataFrame from the input.
+    - Combined score: 0.95 * average_hit_rate + 0.05 * (12 - min(12, average_runtime)) / 12
+
+    Required API (DO NOT CHANGE):
+    - Keep the Evolved class structure and the reorder method signature:
+
+        class Evolved(Algorithm):
+            def reorder(
+                self,
+                df: pd.DataFrame,
+                early_stop: int = 0,
+                row_stop: int = None,
+                col_stop: int = None,
+                col_merge: List[List[str]] = [],
+                one_way_dep: List[Tuple[str, str]] = [],
+                distinct_value_threshold: float = 0.8,
+                parallel: bool = True,
+            ) -> Tuple[pd.DataFrame, List[List[str]]]:
+
+    - You can modify internal implementation but must preserve class structure and method signatures
+    - The reorder method must return a tuple of (reordered_dataframe, column_orderings)
+
+    Algorithm Design Guidelines:
+    - For each row, determine the optimal column order based on matches with the previous row
+    - Consider column statistics (unique values, string lengths) for ordering
+    - Focus on columns with high value frequency and long strings
+    - Handle missing values and mixed data types appropriately
+    - Optimize the existing recursive approach or replace it with more efficient vectorized methods
+    - Consider prefix-aware greedy approaches that condition on the current matched prefix
+
+    Constraints:
+    - Do not add/remove rows or columns
+    - You must have different column orderings for different rows to maximize prefix hit rate
+    - Return a DataFrame with the same shape as input
+    - Use exact string matching for prefix calculations
+    - Keep memory usage reasonable for large datasets
+    - Preserve all existing method signatures and class structure
+    - The algorithm will be called with the same parameters as the original Evolved
+
+    Simply return the optimized Evolved class, do not provide explanations.
+
+  files:
+    - "initial_program.py"
+
+grader:
+  timeout: 360
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-opus-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/ADRS/llm_sql/seed"

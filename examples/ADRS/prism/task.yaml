@@ -1,0 +1,47 @@
+task:
+  name: "Prism — LLM Model Placement on GPU Cluster"
+  description: |
+    You are an expert for model placement on GPUs. Improve the compute_model_placement
+    function that assigns LLM models to available GPUs.
+
+    The algorithm must MINIMIZE the maximum KVPR (KV cache pressure) across all GPUs
+    while ensuring all models fit within GPU memory (80 GB per GPU).
+
+    KVPR for a GPU = sum(model.req_rate / model.slo for model in models_on_gpu)
+                     / (GPU_MEM_SIZE - sum(model.model_size for model in models_on_gpu))
+
+    Lower KVPR = less crowded = more memory headroom for serving.
+
+    Your program file `initial_program.py` defines a `compute_model_placement` function
+    within EVOLVE-BLOCK-START / EVOLVE-BLOCK-END markers — only modify code within
+    those markers:
+
+        # EVOLVE-BLOCK-START
+        def compute_model_placement(
+            gpu_num: int,
+            models: list[Model],   # each model has: model_name, model_size (GB),
+                                   #   req_rate (req/s), slo (latency s), cur_gpu_id
+        ) -> dict[int, list[Model]]:
+            # Returns mapping from gpu_id -> list of Model assigned to that GPU
+            # Constraint: sum(model.model_size) <= 80 GB per GPU
+        # EVOLVE-BLOCK-END
+
+    Score: (1 / avg_max_kvpr) + success_rate across 50 random test cases.
+
+  files:
+    - "initial_program.py"
+
+grader:
+  timeout: 360
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-opus-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/ADRS/prism/seed"

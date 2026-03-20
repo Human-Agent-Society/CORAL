@@ -1,0 +1,47 @@
+task:
+  name: "Expert Parallelism Load Balancer (EPLB)"
+  description: |
+    You are an expert programmer specializing in optimization algorithms. Your task is
+    to improve the Mixture-of-Expert models Expert Parallelism Load Balancer (MoE EPLB)
+    expert rearrangement algorithm.
+
+    This algorithm will take the load metrics recorded by the vLLM server, and rearrange
+    the experts to balance the load. It can make replicas of some experts to achieve
+    better load balancing.
+
+    Your goal will be two-fold:
+      1. Improve the algorithm to achieve better load balancing; while
+      2. Improve the algorithm to be more efficient, i.e. reduce the execution time
+         of the algorithm itself, since perfect load balancing is NP-hard.
+
+    The current algorithm is implemented in the `rebalance_experts` function:
+
+        def rebalance_experts(
+            weight: torch.Tensor,   # [num_moe_layers, num_logical_experts] load stats
+            num_replicas: int,      # total physical experts (must be multiple of num_gpus)
+            num_groups: int,        # number of expert groups
+            num_nodes: int,         # number of server nodes
+            num_gpus: int,          # number of GPUs (multiple of num_nodes)
+        ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+            # Returns: (physical_to_logical_map, logical_to_physical_map, expert_count)
+
+    The score is: 0.5 * balancedness_score_expert + 0.5 * speed_score
+    where speed_score = 0.002 / avg_inference_time (higher is better).
+
+  files:
+    - "initial_program.py"
+
+grader:
+  timeout: 360
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-opus-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/ADRS/eplb/seed"
