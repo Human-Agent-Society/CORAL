@@ -103,15 +103,21 @@ def _submit_and_poll(
         data=payload,
         headers={"Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req) as resp:
-        submit_data = json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req) as resp:
+            submit_data = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        return 0.0, f"submit failed ({e.code}): pid={problem_id}"
     sid = submit_data["sid"]
 
     # Poll for result
     deadline = time.monotonic() + POLL_TIMEOUT
     while time.monotonic() < deadline:
-        with urllib.request.urlopen(f"{judge_url}/result/{sid}") as resp:
-            result_data = json.loads(resp.read())
+        try:
+            with urllib.request.urlopen(f"{judge_url}/result/{sid}") as resp:
+                result_data = json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            return 0.0, f"poll failed ({e.code}): sid={sid}"
 
         status = result_data.get("status", "")
         if status == "done":
