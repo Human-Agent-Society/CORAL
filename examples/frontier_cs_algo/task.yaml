@@ -52,12 +52,10 @@ grader:
   timeout: 3600
   direction: maximize
   args:
-    frontier_cs_dir: "/Users/pingu/posttrain/projects/has/Frontier-CS"
-    backend: "docker"
     judge_url: "http://localhost:8081"
 
 agents:
-  count: 2
+  count: 1
   runtime: claude_code
   model: claude-opus-4-6
   max_turns: 200

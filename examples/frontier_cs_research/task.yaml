@@ -73,8 +73,7 @@ grader:
   timeout: 7200
   direction: maximize
   args:
-    frontier_cs_dir: "/Users/pingu/posttrain/projects/has/Frontier-CS"
-    backend: "docker"
+    problems_dir: "/path/to/frontier-cs-research-problems"
 
 agents:
   count: 2

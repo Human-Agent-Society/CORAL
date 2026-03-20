@@ -1,54 +1,39 @@
 """Frontier-CS Algorithmic batch grader.
 
-Evaluates all C++ solutions found in solutions/ against the Frontier-CS
-go-judge server. Returns the average score across all attempted problems.
+Evaluates all C++ solutions found in solutions/ against a go-judge server.
+Returns the average score across all attempted problems.
 """
 
 from __future__ import annotations
 
-import sys
+import json
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from coral.grader import TaskGrader
 from coral.types import Score, ScoreBundle
 
+POLL_INTERVAL = 2
+POLL_TIMEOUT = 1000
+
 
 class Grader(TaskGrader):
     """Batch grader for Frontier-CS algorithmic problems.
 
-    Scans solutions/ for .cpp files, evaluates each via SingleEvaluator,
+    Scans solutions/ for .cpp files, submits each to a go-judge server,
     and returns the average score. Problems without solutions are skipped.
     """
 
     def evaluate(self) -> ScoreBundle:
-        frontier_cs_dir = self.args.get("frontier_cs_dir")
-        if not frontier_cs_dir:
-            return self.fail("grader arg 'frontier_cs_dir' is required")
-
-        frontier_cs_path = Path(frontier_cs_dir)
-        if not frontier_cs_path.exists():
-            return self.fail(f"Frontier-CS directory not found: {frontier_cs_dir}")
-
-        # Add Frontier-CS src to path so we can import the evaluator
-        src_path = str(frontier_cs_path / "src")
-        if src_path not in sys.path:
-            sys.path.insert(0, src_path)
-
-        from frontier_cs.single_evaluator import SingleEvaluator
-        from frontier_cs.runner.base import EvaluationStatus
-
-        backend = self.args.get("backend", "docker")
         judge_url = self.args.get("judge_url", "http://localhost:8081")
 
-        evaluator = SingleEvaluator(
-            backend=backend,
-            base_dir=frontier_cs_path,
-            judge_url=judge_url,
-            register_cleanup=False,
-        )
+        # Count total problems from the seed's problems/ directory
+        problems_dir = Path(self.codebase_path) / "problems"
+        if not problems_dir.exists():
+            return self.fail("problems/ directory not found in codebase")
 
-        # Count total problems from the Frontier-CS repo
-        problems_dir = frontier_cs_path / "algorithmic" / "problems"
         all_problem_ids = sorted(
             [d.name for d in problems_dir.iterdir() if d.is_dir() and not d.name.startswith(".")],
             key=lambda x: (int(x) if x.isdigit() else float("inf"), x),
@@ -69,7 +54,7 @@ class Grader(TaskGrader):
             code = sol_file.read_text(encoding="utf-8")
 
             try:
-                result = evaluator.evaluate("algorithmic", problem_id, code)
+                problem_score, status_str = _submit_and_poll(judge_url, problem_id, code)
             except Exception as e:
                 scores[f"problem_{problem_id}"] = Score(
                     value=0.0, name=f"problem_{problem_id}",
@@ -78,17 +63,11 @@ class Grader(TaskGrader):
                 attempted += 1
                 continue
 
-            problem_score = result.score if result.score is not None else 0.0
-            if result.status != EvaluationStatus.SUCCESS:
-                problem_score = 0.0
-
             scores[f"problem_{problem_id}"] = Score(
                 value=problem_score, name=f"problem_{problem_id}",
             )
             total_score += problem_score
             attempted += 1
-
-            status_str = "ok" if result.success else result.status.value
             lines.append(f"problem {problem_id}: {problem_score:.2f} ({status_str})")
 
         # Average over ALL problems, not just attempted ones
@@ -104,3 +83,44 @@ class Grader(TaskGrader):
             aggregated=avg_score,
             feedback=feedback,
         )
+
+
+def _submit_and_poll(
+    judge_url: str, problem_id: str, code: str
+) -> tuple[float, str]:
+    """Submit code to the judge and poll for results.
+
+    Returns (score, status_string).
+    """
+    # Submit
+    payload = json.dumps({
+        "problem_id": problem_id,
+        "code": code,
+        "language": "cpp",
+    }).encode()
+    req = urllib.request.Request(
+        f"{judge_url}/submit",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req) as resp:
+        submit_data = json.loads(resp.read())
+    submission_id = submit_data["submission_id"]
+
+    # Poll for result
+    deadline = time.monotonic() + POLL_TIMEOUT
+    while time.monotonic() < deadline:
+        with urllib.request.urlopen(f"{judge_url}/result/{submission_id}") as resp:
+            result_data = json.loads(resp.read())
+
+        status = result_data.get("status", "")
+        if status == "done":
+            score = float(result_data.get("score", 0.0))
+            return score, "ok"
+        if status == "error":
+            error_msg = result_data.get("message", "unknown error")
+            return 0.0, f"error: {error_msg}"
+
+        time.sleep(POLL_INTERVAL)
+
+    return 0.0, "timeout"
