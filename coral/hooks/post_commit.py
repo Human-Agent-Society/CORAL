@@ -188,17 +188,15 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
     try:
         result = _run_grader_with_timeout(str(config_path), str(coral_dir), str(workdir_path), [task], eval_timeout)
         score = result.aggregated
-        # Use explicit feedback if set, otherwise build from score explanations
-        if result.feedback is not None:
-            feedback = result.feedback
-        else:
-            feedback = ""
-            if result.scores:
-                parts = []
-                for name, s in result.scores.items():
-                    if s.explanation:
-                        parts.append(f"{name}: {s.explanation}")
-                feedback = "; ".join(parts)
+        # Build feedback from bundle-level feedback + per-score explanations
+        parts = []
+        if result.feedback:
+            parts.append(result.feedback)
+        if result.scores:
+            for name, s in result.scores.items():
+                if s.explanation:
+                    parts.append(f"{name}: {s.explanation}")
+        feedback = "\n".join(parts)
         # score is None when grader returns fail() — treat as crashed
         if score is None:
             status = "crashed"

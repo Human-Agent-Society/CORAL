@@ -47,15 +47,13 @@ class Grader(TaskGrader):
         scores: dict[str, Score] = {}
         total_score = 0.0
         attempted = 0
-        lines: list[str] = []
 
         for problem_id, sol_path in sorted(solution_entries):
             score_key = problem_id.replace("/", "_")
             problem_dir = problems_path / problem_id
 
             if not problem_dir.exists():
-                scores[score_key] = Score(value=0.0, name=score_key)
-                lines.append(f"{problem_id}: 0.00 (problem dir not found)")
+                scores[score_key] = Score(value=0.0, name=score_key, explanation="problem dir not found")
                 attempted += 1
                 continue
 
@@ -64,28 +62,21 @@ class Grader(TaskGrader):
                     problem_dir, sol_path
                 )
             except Exception as e:
-                scores[score_key] = Score(value=0.0, name=score_key)
-                lines.append(f"{problem_id}: 0.00 (error: {e})")
+                scores[score_key] = Score(value=0.0, name=score_key, explanation=f"error: {e}")
                 attempted += 1
                 continue
 
-            scores[score_key] = Score(value=problem_score, name=score_key)
+            scores[score_key] = Score(value=problem_score, name=score_key, explanation=status_str)
             total_score += problem_score
             attempted += 1
-            lines.append(f"{problem_id}: {problem_score:.2f} ({status_str})")
 
         # Average over ALL problems, not just attempted ones
         avg_score = total_score / total_problems
 
-        feedback = (
-            f"Solved {attempted}/{total_problems} problems | Average: {avg_score:.4f}\n"
-            + "\n".join(lines)
-        )
-
         return ScoreBundle(
             scores=scores,
             aggregated=avg_score,
-            feedback=feedback,
+            feedback=f"Solved {attempted}/{total_problems} problems | Average: {avg_score:.4f}",
         )
 
 

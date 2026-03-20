@@ -116,7 +116,7 @@ class AgentManager:
         shared_dir_name = self.runtime.shared_dir_name
         setup_shared_state(worktree_path, self.paths.coral_dir, shared_dir_name)
 
-        # Claude Code-specific: write .claude/settings.json with permissions + sandbox
+        # Claude Code-specific: write .claude/settings.json with permissions
         if shared_dir_name == ".claude":
             setup_claude_settings(worktree_path, coral_dir=self.paths.coral_dir, research=self.config.agents.research)
 
