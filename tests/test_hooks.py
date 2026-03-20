@@ -1,4 +1,4 @@
-"""Tests for eval implementation and workspace guard hook."""
+"""Tests for eval implementation and Claude Code settings."""
 
 import json
 import subprocess
@@ -11,8 +11,7 @@ from coral.hooks.post_commit import (
     run_eval,
     _increment_eval_count,
 )
-from coral.config import CoralConfig, GraderConfig, TaskConfig
-from coral.hooks.workspace_guard import _is_under, _resolve
+from coral.workspace.setup import setup_claude_settings
 
 
 def _setup_repo_with_config(base_dir: Path) -> Path:
@@ -141,132 +140,67 @@ def test_run_eval_tracks_eval_count():
             sys.path.pop(0)
 
 
-# --- Workspace guard tests ---
+
+# --- setup_claude_settings tests ---
 
 
-def _run_guard(tool_name: str, tool_input: dict, cwd: str, extra_args: list[str] | None = None) -> subprocess.CompletedProcess:
-    """Invoke the workspace_guard hook as a subprocess."""
-    import sys
-
-    hook_input = json.dumps({
-        "tool_name": tool_name,
-        "tool_input": tool_input,
-        "cwd": cwd,
-    })
-    cmd = [sys.executable, "-m", "coral.hooks.workspace_guard"]
-    if extra_args:
-        cmd.extend(extra_args)
-    return subprocess.run(
-        cmd,
-        input=hook_input,
-        capture_output=True,
-        text=True,
-    )
-
-
-def test_workspace_guard_allows_own_worktree():
-    """Guard should allow file operations within the agent's worktree."""
-    with tempfile.TemporaryDirectory() as d:
-        worktree = Path(d) / "worktree"
-        worktree.mkdir()
-        (worktree / "main.py").write_text("x = 1\n")
-
-        result = _run_guard("Read", {"file_path": str(worktree / "main.py")}, str(worktree))
-        assert result.returncode == 0
-
-
-def test_workspace_guard_allows_read_sibling_worktree():
-    """Guard should allow read-only access to sibling agent worktrees."""
-    with tempfile.TemporaryDirectory() as d:
-        wt1 = Path(d) / "agents" / "agent-1"
-        wt2 = Path(d) / "agents" / "agent-2"
-        wt1.mkdir(parents=True)
-        wt2.mkdir(parents=True)
-        (wt2 / "main.py").write_text("x = 2\n")
-
-        result = _run_guard("Read", {"file_path": str(wt2 / "main.py")}, str(wt1))
-        assert result.returncode == 0
-
-
-def test_workspace_guard_blocks_write_other_worktree():
-    """Guard should block write operations targeting another agent's worktree."""
-    with tempfile.TemporaryDirectory() as d:
-        wt1 = Path(d) / "agents" / "agent-1"
-        wt2 = Path(d) / "agents" / "agent-2"
-        wt1.mkdir(parents=True)
-        wt2.mkdir(parents=True)
-        (wt2 / "main.py").write_text("x = 2\n")
-
-        result = _run_guard("Write", {"file_path": str(wt2 / "main.py")}, str(wt1))
-        assert result.returncode == 2
-        assert "outside your workspace" in result.stderr
-
-
-def test_workspace_guard_allows_coral_public():
-    """Guard should allow reading from .coral/public/ via breadcrumb."""
-    with tempfile.TemporaryDirectory() as d:
-        worktree = Path(d) / "worktree"
-        worktree.mkdir()
-        coral_dir = Path(d) / ".coral"
-        (coral_dir / "public" / "notes").mkdir(parents=True)
-        (coral_dir / "public" / "notes" / "note.md").write_text("insight")
-
-        # Write .coral_dir breadcrumb
-        (worktree / ".coral_dir").write_text(str(coral_dir))
-
-        result = _run_guard(
-            "Read",
-            {"file_path": str(coral_dir / "public" / "notes" / "note.md")},
-            str(worktree),
-        )
-        assert result.returncode == 0
-
-
-def test_workspace_guard_blocks_coral_private():
-    """Guard should block reading from .coral/private/ via absolute path."""
+def test_setup_claude_settings_permissions():
+    """Settings should grant tool permissions."""
     with tempfile.TemporaryDirectory() as d:
         worktree = Path(d) / "worktree"
         worktree.mkdir()
         coral_dir = Path(d) / ".coral"
         (coral_dir / "private").mkdir(parents=True)
-        (coral_dir / "private" / "secret.txt").write_text("secret")
+        (coral_dir / "public").mkdir(parents=True)
 
-        # .coral_dir breadcrumb points to the shared .coral directory
-        (worktree / ".coral_dir").write_text(str(coral_dir))
+        setup_claude_settings(worktree, coral_dir)
 
-        result = _run_guard(
-            "Read",
-            {"file_path": str(coral_dir / "private" / "secret.txt")},
-            str(worktree),
-        )
-        assert result.returncode == 2
-        assert "private" in result.stderr
+        settings = json.loads((worktree / ".claude" / "settings.json").read_text())
+        private_dir = str(coral_dir.resolve() / "private")
+
+        worktree_str = str(worktree.resolve())
+        agents_dir = str(coral_dir.resolve().parent / "agents")
+
+        # No sandbox
+        assert "sandbox" not in settings
+
+        # Permission allow rules grant agent autonomy
+        allow = settings["permissions"]["allow"]
+        # Bash/Read/Edit/Write scoped to own worktree (Read also allows agents dir)
+        assert any("Bash" in r and worktree_str in r for r in allow)
+        assert any("Read" in r and worktree_str in r for r in allow)
+        assert any("Read" in r and agents_dir in r for r in allow)
+        assert "Read" not in allow  # no blanket Read
+        assert any("Edit" in r and worktree_str in r for r in allow)
+        assert any("Write" in r and worktree_str in r for r in allow)
+        assert "WebSearch" in allow  # research=True by default
+        assert "WebFetch" in allow
+
+        # Permission deny rules block git and private dir
+        deny = settings["permissions"]["deny"]
+        assert "Bash(git *)" in deny
+        assert any(private_dir in r for r in deny)
+        assert not any("WebSearch" in r for r in deny)
+
+        assert "hooks" not in settings
 
 
-def test_workspace_guard_blocks_web_without_research():
-    """Guard should block WebSearch when --research is not enabled."""
+def test_setup_claude_settings_no_research():
+    """Settings should deny WebSearch/WebFetch when research=False."""
     with tempfile.TemporaryDirectory() as d:
-        result = _run_guard("WebSearch", {"query": "hello"}, d)
-        assert result.returncode == 2
-        assert "not allowed" in result.stderr
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+        coral_dir = Path(d) / ".coral"
+        (coral_dir / "private").mkdir(parents=True)
+        (coral_dir / "public").mkdir(parents=True)
 
+        setup_claude_settings(worktree, coral_dir, research=False)
 
-def test_workspace_guard_allows_web_with_research():
-    """Guard should allow WebSearch when --research is enabled."""
-    with tempfile.TemporaryDirectory() as d:
-        result = _run_guard("WebSearch", {"query": "hello"}, d, extra_args=["--research"])
-        assert result.returncode == 0
+        settings = json.loads((worktree / ".claude" / "settings.json").read_text())
+        allow = settings["permissions"]["allow"]
+        deny = settings["permissions"]["deny"]
 
-
-def test_workspace_guard_allows_non_file_tools():
-    """Guard should allow tools that are not file, bash, or web tools."""
-    with tempfile.TemporaryDirectory() as d:
-        result = _run_guard("AskUserQuestion", {"question": "hello?"}, d)
-        assert result.returncode == 0
-
-
-def test_workspace_guard_allows_glob_without_path():
-    """Guard should allow Glob/Grep when no path is specified (defaults to cwd)."""
-    with tempfile.TemporaryDirectory() as d:
-        result = _run_guard("Glob", {"pattern": "*.py"}, d)
-        assert result.returncode == 0
+        assert "WebSearch" not in allow
+        assert "WebFetch" not in allow
+        assert "WebSearch" in deny
+        assert "WebFetch" in deny

@@ -116,9 +116,9 @@ class AgentManager:
         shared_dir_name = self.runtime.shared_dir_name
         setup_shared_state(worktree_path, self.paths.coral_dir, shared_dir_name)
 
-        # Claude Code-specific: write .claude/settings.json with hooks and permissions
+        # Claude Code-specific: write .claude/settings.json with permissions + sandbox
         if shared_dir_name == ".claude":
-            setup_claude_settings(worktree_path, research=self.config.agents.research)
+            setup_claude_settings(worktree_path, coral_dir=self.paths.coral_dir, research=self.config.agents.research)
 
         # Seed local heartbeat config from task YAML if not already present
         if not read_agent_heartbeat(self.paths.coral_dir, agent_id):

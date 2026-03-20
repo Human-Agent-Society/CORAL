@@ -1,7 +1,7 @@
 const BASE = "/api";
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
+async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, { signal });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
@@ -184,7 +184,7 @@ export const api = {
   notes: () => get<Note[]>("/notes"),
   skills: () => get<Skill[]>("/skills"),
   skill: (name: string) => get<SkillDetail>(`/skills/${name}`),
-  logs: (agentId: string) => get<LogData>(`/logs/${agentId}`),
+  logs: (agentId: string, signal?: AbortSignal) => get<LogData>(`/logs/${agentId}`, signal),
   logsList: () => get<Record<string, Array<{ path: string; index: number; size_bytes: number; modified: number }>>>("/logs"),
   status: () => get<RunStatus>("/status"),
   runs: () => get<RunsResponse>("/runs"),

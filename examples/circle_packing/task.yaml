@@ -49,4 +49,4 @@ agents:
 
 workspace:
   results_dir: "./results"
-  repo_path: "./tasks/circle_packing/seed"
+  repo_path: "./examples/circle_packing/seed"

@@ -8,7 +8,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -496,30 +495,50 @@ def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: st
                 dst.symlink_to(src.resolve())
 
 
-def setup_claude_settings(worktree_path: Path, *, research: bool = True) -> None:
-    """Write Claude Code-specific settings.json with workspace guard hook and permissions.
+def setup_claude_settings(worktree_path: Path, coral_dir: Path, *, research: bool = True) -> None:
+    """Write Claude Code settings.json with permissions.
 
-    This is only needed for the Claude Code runtime — other runtimes don't read
-    .claude/settings.json.
+    Grants the agent all tool permissions via allow rules (replacing
+    --dangerously-skip-permissions).
     """
     claude_dir = worktree_path / ".claude"
     claude_dir.mkdir(exist_ok=True)
 
-    settings = {
-        "hooks": {
-            "PreToolUse": [
-                {
-                    "type": "command",
-                    "command": f"{sys.executable} -m coral.hooks.workspace_guard"
-                        + (" --research" if research else ""),
-                }
-            ],
-            "UserPromptSubmit": [
-                {
-                    "type": "command",
-                    "command": f"{sys.executable} -m coral.hooks.skill_reminder",
-                }
-            ],
+    private_dir = str(coral_dir.resolve() / "private")
+    agents_dir = str(coral_dir.resolve().parent / "agents")
+    worktree_str = str(worktree_path.resolve())
+    # Permission deny patterns use // prefix for absolute paths (gitignore-style).
+    # Since private_dir already starts with /, we use / + private_dir to get //path.
+    private_pattern = f"/{private_dir}/**"
+    agents_pattern = f"/{agents_dir}/**"
+    worktree_pattern = f"/{worktree_str}/**"
+
+    # Allow rules grant agent autonomy without --dangerously-skip-permissions
+    # Bash/Edit/Write are scoped to the agent's own worktree via allow + deny rules
+    allow_rules: list[str] = [
+        f"Bash({worktree_pattern})",
+        f"Read({worktree_pattern})",
+        f"Read({agents_pattern})",
+        f"Edit({worktree_pattern})",
+        f"Write({worktree_pattern})",
+    ]
+    if research:
+        allow_rules.extend(["WebSearch", "WebFetch"])
+
+    # Deny rules block git and private dir access.
+    # Edit/Write/Bash don't need agents_pattern denies — the scoped allows
+    # already restrict them to the agent's own worktree.
+    deny_rules: list[str] = [
+        "Bash(git *)",
+        f"Read({private_pattern})",
+    ]
+    if not research:
+        deny_rules.extend(["WebSearch", "WebFetch"])
+
+    settings: dict = {
+        "permissions": {
+            "allow": allow_rules,
+            "deny": deny_rules,
         },
     }
 

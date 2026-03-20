@@ -63,7 +63,6 @@ class ClaudeCodeRuntime:
         cmd = [
             "claude",
             "-p", prompt,
-            "--dangerously-skip-permissions",
             "--model", model,
             "--max-turns", str(max_turns),
             "--output-format", "stream-json",
