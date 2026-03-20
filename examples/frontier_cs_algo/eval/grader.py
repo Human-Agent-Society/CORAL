@@ -94,9 +94,9 @@ def _submit_and_poll(
     """
     # Submit
     payload = json.dumps({
-        "problem_id": problem_id,
+        "pid": problem_id,
         "code": code,
-        "language": "cpp",
+        "lang": "cpp",
     }).encode()
     req = urllib.request.Request(
         f"{judge_url}/submit",
@@ -105,12 +105,12 @@ def _submit_and_poll(
     )
     with urllib.request.urlopen(req) as resp:
         submit_data = json.loads(resp.read())
-    submission_id = submit_data["submission_id"]
+    sid = submit_data["sid"]
 
     # Poll for result
     deadline = time.monotonic() + POLL_TIMEOUT
     while time.monotonic() < deadline:
-        with urllib.request.urlopen(f"{judge_url}/result/{submission_id}") as resp:
+        with urllib.request.urlopen(f"{judge_url}/result/{sid}") as resp:
             result_data = json.loads(resp.read())
 
         status = result_data.get("status", "")
