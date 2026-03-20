@@ -1,0 +1,12 @@
+tag: hpc
+runtime:
+  language: cpp
+  timeout_seconds: 600
+  environment: "C++17 with OpenMP (GCC with libgomp1) on Ubuntu 22.04, 16 vCPUs"
+  docker:
+    image: "gcc:13"
+  resources:
+    cloud: aws
+    instance_type: c7i.4xlarge
+    cpus: "16"
+    memory: "32"

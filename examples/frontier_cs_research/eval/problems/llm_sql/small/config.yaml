@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "uv_project": "resources"
+  },
+  "datasets": [],
+  "runtime": {
+    "timeout_seconds": 1800
+  },
+  "tag": "db"
+}

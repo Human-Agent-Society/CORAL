@@ -1,0 +1,9 @@
+dependencies:
+  uv_project: resources
+datasets: []
+tag: hpc
+runtime:
+  docker:
+    image: andylizf/triton-tlx:tlx-nv-cu122
+    gpu: true
+  environment: "Triton 3.2.0 with CUDA 12.2 (triton-tlx image)"

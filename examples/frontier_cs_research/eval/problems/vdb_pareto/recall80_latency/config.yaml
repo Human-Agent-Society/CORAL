@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "uv_project": "resources"
+  },
+  "datasets": [
+    {
+      "type": "local_tar",
+      "path": "resources/sift.tar.gz",
+      "target": "data/sift1M",
+      "expected_glob": "*.fvecs"
+    }
+  ],
+  "runtime": {
+    "timeout_seconds": 3600
+  },
+  "tag": "db"
+}

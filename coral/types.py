@@ -87,6 +87,7 @@ class ScoreBundle:
     scores: dict[str, Score]
     aggregated: float | None = None
     is_public: bool = True
+    feedback: str | None = None
 
     def get(self, name: str) -> Score | None:
         return self.scores.get(name)
@@ -112,11 +113,14 @@ class ScoreBundle:
         return total / weight_sum if weight_sum > 0 else 0.0
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "scores": {name: score.to_dict() for name, score in self.scores.items()},
             "aggregated": self.aggregated,
             "is_public": self.is_public,
         }
+        if self.feedback is not None:
+            d["feedback"] = self.feedback
+        return d
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ScoreBundle:
@@ -125,6 +129,7 @@ class ScoreBundle:
             scores=scores,
             aggregated=data.get("aggregated"),
             is_public=data.get("is_public", True),
+            feedback=data.get("feedback"),
         )
 
 

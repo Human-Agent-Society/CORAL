@@ -525,9 +525,11 @@ all = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pyyaml" },
+    { name = "requests" },
     { name = "ruff" },
     { name = "starlette" },
     { name = "swebench" },
+    { name = "tqdm" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 dev = [
@@ -540,6 +542,11 @@ erdos = [
     { name = "jax" },
     { name = "numpy" },
     { name = "optax" },
+]
+frontier-cs = [
+    { name = "pyyaml" },
+    { name = "requests" },
+    { name = "tqdm" },
 ]
 swebench = [
     { name = "datasets" },
@@ -559,7 +566,7 @@ ui = [
 
 [package.metadata]
 requires-dist = [
-    { name = "coral", extras = ["dev", "swebench", "terminalbench", "erdos", "ui"], marker = "extra == 'all'" },
+    { name = "coral", extras = ["dev", "swebench", "terminalbench", "erdos", "frontier-cs", "ui"], marker = "extra == 'all'" },
     { name = "datasets", marker = "extra == 'swebench'", specifier = ">=2.0.0" },
     { name = "datasets", marker = "extra == 'terminalbench'", specifier = ">=2.0.0" },
     { name = "docker", marker = "extra == 'swebench'", specifier = ">=7.0.0" },
@@ -572,13 +579,16 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "pyyaml", marker = "extra == 'frontier-cs'", specifier = ">=6.0" },
     { name = "pyyaml", marker = "extra == 'ui'", specifier = ">=6.0" },
+    { name = "requests", marker = "extra == 'frontier-cs'", specifier = ">=2.32.5" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5.0" },
     { name = "starlette", marker = "extra == 'ui'", specifier = ">=0.40.0" },
     { name = "swebench", marker = "extra == 'swebench'", specifier = ">=2.0.0" },
+    { name = "tqdm", marker = "extra == 'frontier-cs'", specifier = ">=4.67.1" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'ui'", specifier = ">=0.30.0" },
 ]
-provides-extras = ["dev", "swebench", "terminalbench", "erdos", "ui", "all"]
+provides-extras = ["dev", "swebench", "terminalbench", "erdos", "frontier-cs", "ui", "all"]
 
 [[package]]
 name = "cryptography"

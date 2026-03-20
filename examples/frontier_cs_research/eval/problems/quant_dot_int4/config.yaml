@@ -1,0 +1,8 @@
+dependencies:
+  uv_project: resources
+datasets: []
+tag: hpc
+runtime:
+  docker:
+    image: andylizf/triton-tlx:tlx-nv-cu122
+    gpu: true

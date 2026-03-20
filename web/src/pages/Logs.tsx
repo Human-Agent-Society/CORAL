@@ -11,6 +11,20 @@ export default function Logs() {
   const [agentAttempts, setAgentAttempts] = useState<Attempt[]>([]);
   const [loading, setLoading] = useState(false);
   const logPanelRef = useRef<HTMLDivElement>(null);
+  const userHasScrolled = useRef(false);
+  const prevSelectedAgent = useRef<string | null>(null);
+
+  // Track when user scrolls away from bottom
+  useEffect(() => {
+    const el = logPanelRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+      userHasScrolled.current = !atBottom;
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
 
   // Load agent list + status
   useEffect(() => {
@@ -40,13 +54,20 @@ export default function Logs() {
     api.agentAttempts(selectedAgent).then(setAgentAttempts).catch(() => setAgentAttempts([]));
   }, [selectedAgent]);
 
-  // Scroll to bottom when log data loads
+  // Scroll to bottom only on initial load or agent switch
   useEffect(() => {
     if (!logData) return;
-    requestAnimationFrame(() => {
-      logPanelRef.current?.scrollTo({ top: logPanelRef.current.scrollHeight });
-    });
-  }, [logData]);
+    const agentChanged = selectedAgent !== prevSelectedAgent.current;
+    if (agentChanged) {
+      prevSelectedAgent.current = selectedAgent;
+      userHasScrolled.current = false;
+    }
+    if (!userHasScrolled.current) {
+      requestAnimationFrame(() => {
+        logPanelRef.current?.scrollTo({ top: logPanelRef.current.scrollHeight });
+      });
+    }
+  }, [logData, selectedAgent]);
 
   useSSE({
     "log:update": () => { if (selectedAgent) fetchAgentData(selectedAgent); },

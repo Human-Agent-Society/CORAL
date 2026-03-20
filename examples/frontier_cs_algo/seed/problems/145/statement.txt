@@ -1,0 +1,58 @@
+# Meituan Cup Warm-up Problem — Number Loop
+
+This year's Meituan Cup warm-up problem is a **Number Loop**.
+
+When designing this problem, Suanxie first selected the following template, ensuring that the puzzle must contain the two patterns **MT** and **PKU**.
+
+The next step is to replace all `?` in the template with digits from `0` to `3`, thus forming a valid Number Loop puzzle. An important requirement is that the puzzle must have a **unique solution** (the definition of a solution can be found in the warm-up problem).
+
+However, Suanxie found that creating a puzzle of suitable difficulty with a unique solution on this template was extremely challenging. Therefore, he temporarily modified the template, which resulted in the final warm-up problem used in the contest.
+
+Although he eventually managed to produce a valid puzzle, the feeling of failure still bothered him. Now, he hopes that you can help him achieve his original goal — **to construct a unique-solution Number Loop puzzle based on the original template.**
+
+---
+
+## Problem Description
+
+You need to construct a valid Number Loop puzzle according to the given input type.
+
+* If the input is `0`, this corresponds to the **Small Task**: replace all `?` in the template with integers from `0` to `3`, ensuring the resulting puzzle has a **unique solution**.
+* If the input is `1`, this corresponds to the **Large Task**: replace all `?` in the template with integers from `1` to `3`, ensuring the resulting puzzle has a **unique solution**.
+
+Your program should output a $12\times12$ grid consisting only of spaces and digits `0`–`3`, representing the constructed puzzle. Each row of the grid corresponds to one line of output (including spaces).
+
+---
+
+## Input Format
+
+The input contains a single integer:
+
+* `0` — requires output of the Small Task solution.
+* `1` — requires output of the Large Task solution.
+
+---
+
+## Output Format
+
+Output a $12\times12$ character matrix containing only spaces and digits `0`–`3`, representing your constructed Number Loop puzzle.
+
+---
+
+## Sample Output
+
+Below is a sample output (note that this example has **multiple solutions** and therefore does **not** satisfy the problem requirement; it is shown only to illustrate the format):
+
+```
+0   0   000 
+00 00  0   0
+0 0 0  0   0
+0 0 0  0000 
+0 0 0  0    
+0   0  0    
+
+0  0   00000
+0 0      0  
+00   0 0 0  
+0 0  0 0 0  
+0  0 000 0  
+```

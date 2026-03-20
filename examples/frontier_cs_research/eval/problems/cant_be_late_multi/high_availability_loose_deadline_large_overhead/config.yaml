@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "uv_project": "../common/cant-be-late-simulator"
+  },
+  "datasets": [
+    {
+      "type": "local_tar",
+      "path": "../common/real_traces.tar.gz",
+      "target": "../common/cant-be-late-simulator/data",
+      "expected_glob": "converted_multi_region_aligned/*/0.json"
+    }
+  ],
+  "tag": "os"
+}

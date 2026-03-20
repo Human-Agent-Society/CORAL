@@ -72,15 +72,19 @@ class TaskGrader(ABC):
         """Get the absolute path to a file in eval/."""
         return Path(self.private_dir) / "eval" / relative_path
 
-    def score(self, value: float | None, explanation: str = "") -> ScoreBundle:
+    def score(
+        self, value: float | None, explanation: str = "", feedback: str | None = None,
+    ) -> ScoreBundle:
         """Return a single-score bundle."""
-        return self.bundle(value, explanation)
+        return self.bundle(value, explanation, feedback=feedback)
 
-    def fail(self, explanation: str = "") -> ScoreBundle:
+    def fail(self, explanation: str = "", feedback: str | None = None) -> ScoreBundle:
         """Return a bundle with a null score (evaluation failed)."""
-        return self.bundle(None, explanation)
+        return self.bundle(None, explanation, feedback=feedback)
 
-    def bundle(self, value: float | None, explanation: str = "") -> ScoreBundle:
+    def bundle(
+        self, value: float | None, explanation: str = "", feedback: str | None = None,
+    ) -> ScoreBundle:
         """Create a ScoreBundle from a score value and explanation."""
         s = Score(
             value=value,
@@ -90,6 +94,7 @@ class TaskGrader(ABC):
         return ScoreBundle(
             scores={"eval": s},
             aggregated=value,
+            feedback=feedback,
         )
 
     # --- Internal: called by the framework ---

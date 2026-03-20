@@ -351,7 +351,7 @@ export default function ScoreChart({
   return (
     <div className={expanded ? "h-full flex flex-col" : ""}>
       {/* Row 1: Core controls */}
-      <div className={`flex items-center gap-4 ${expanded ? "mb-2" : "mb-4"} flex-wrap`}>
+      <div className={`flex items-center gap-4 ${expanded ? "mb-2" : "mb-4 pr-16"} flex-wrap`}>
         <div className="flex items-center gap-1">
           <span className="font-mono text-[10px] text-muted-fg uppercase tracking-widest mr-2">
             Scale

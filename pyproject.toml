@@ -55,13 +55,18 @@ erdos = [
     "jax>=0.4.0",
     "optax>=0.2.0",
 ]
+frontier-cs = [
+    "pyyaml>=6.0",
+    "requests>=2.32.5",
+    "tqdm>=4.67.1",
+]
 ui = [
     "starlette>=0.40.0",
     "uvicorn[standard]>=0.30.0",
     "pyyaml>=6.0",
 ]
 all = [
-    "coral[dev,swebench,terminalbench,erdos,ui]",
+    "coral[dev,swebench,terminalbench,erdos,frontier-cs,ui]",
 ]
 
 [project.scripts]
