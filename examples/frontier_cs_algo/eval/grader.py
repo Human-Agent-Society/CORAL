@@ -108,16 +108,16 @@ def _submit_and_poll(
             submit_data = json.loads(resp.read())
     except urllib.error.HTTPError as e:
         return 0.0, f"submit failed ({e.code}): pid={problem_id}"
-    sid = submit_data["sid"]
+    submission_id = submit_data["submission_id"]
 
     # Poll for result
     deadline = time.monotonic() + POLL_TIMEOUT
     while time.monotonic() < deadline:
         try:
-            with urllib.request.urlopen(f"{judge_url}/result/{sid}") as resp:
+            with urllib.request.urlopen(f"{judge_url}/result/{submission_id}") as resp:
                 result_data = json.loads(resp.read())
         except urllib.error.HTTPError as e:
-            return 0.0, f"poll failed ({e.code}): sid={sid}"
+            return 0.0, f"poll failed ({e.code}): submission_id={submission_id}"
 
         status = result_data.get("status", "")
         if status == "done":
