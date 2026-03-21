@@ -48,6 +48,7 @@ class AgentConfig:
     count: int = 1
     runtime: str = "claude_code"
     model: str = "sonnet"
+    runtime_options: dict[str, Any] = field(default_factory=dict)
     max_turns: int = 200
     timeout: int = 3600
     heartbeat: list[HeartbeatActionConfig] = field(default_factory=lambda: [
@@ -186,6 +187,7 @@ class CoralConfig:
                 "count": self.agents.count,
                 "runtime": self.agents.runtime,
                 "model": self.agents.model,
+                "runtime_options": self.agents.runtime_options,
                 "max_turns": self.agents.max_turns,
                 "timeout": self.agents.timeout,
                 "heartbeat": [

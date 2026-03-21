@@ -24,6 +24,7 @@ class AgentRuntime(Protocol):
         worktree_path: Path,
         coral_md_path: Path,
         model: str = "sonnet",
+        runtime_options: dict[str, Any] | None = None,
         max_turns: int = 200,
         log_dir: Path | None = None,
         verbose: bool = False,
