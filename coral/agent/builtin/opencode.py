@@ -8,6 +8,7 @@ import subprocess
 import sys
 import threading
 from pathlib import Path
+from typing import Any
 
 from coral.agent.runtime import AgentHandle, write_coral_log_entry
 
@@ -61,6 +62,7 @@ class OpenCodeRuntime:
         worktree_path: Path,
         coral_md_path: Path,
         model: str = "gpt-5",
+        runtime_options: dict[str, Any] | None = None,
         max_turns: int = 200,
         log_dir: Path | None = None,
         verbose: bool = False,

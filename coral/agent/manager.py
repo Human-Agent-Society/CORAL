@@ -143,6 +143,7 @@ class AgentManager:
             worktree_path=worktree_path,
             coral_md_path=worktree_path / instruction_file,
             model=self.config.agents.model,
+            runtime_options=self.config.agents.runtime_options,
             max_turns=self.config.agents.max_turns,
             verbose=self.verbose,
             log_dir=self.paths.coral_dir / "public" / "logs",

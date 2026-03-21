@@ -33,3 +33,26 @@ def test_config_from_dict():
     assert config.task.name == "t"
     assert config.grader.type == "kernel_builder"
     assert config.agents.count == 1  # default
+
+
+def test_agent_runtime_options_roundtrip():
+    config = CoralConfig(
+        task=TaskConfig(name="test", description="A test"),
+        agents=AgentConfig(
+            runtime="codex",
+            model="gpt-5.4",
+            runtime_options={
+                "model_reasoning_effort": "medium",
+                "fast_mode": True,
+            },
+        ),
+    )
+
+    with tempfile.NamedTemporaryFile(suffix=".yaml", mode="w", delete=False) as f:
+        config.to_yaml(f.name)
+        restored = CoralConfig.from_yaml(f.name)
+
+    assert restored.agents.runtime_options == {
+        "model_reasoning_effort": "medium",
+        "fast_mode": True,
+    }

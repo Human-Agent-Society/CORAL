@@ -7,6 +7,7 @@ import subprocess
 import sys
 import threading
 from pathlib import Path
+from typing import Any
 
 from coral.agent.runtime import AgentHandle, _extract_session_id, write_coral_log_entry
 
@@ -32,6 +33,7 @@ class ClaudeCodeRuntime:
         worktree_path: Path,
         coral_md_path: Path,
         model: str = "opus",
+        runtime_options: dict[str, Any] | None = None,
         max_turns: int = 200,
         log_dir: Path | None = None,
         verbose: bool = False,

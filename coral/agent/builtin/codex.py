@@ -8,10 +8,18 @@ import subprocess
 import sys
 import threading
 from pathlib import Path
+from typing import Any
 
 from coral.agent.runtime import AgentHandle, write_coral_log_entry
 
 logger = logging.getLogger(__name__)
+
+_CODEX_RUNTIME_OPTION_KEYS = {
+    "model_reasoning_effort",
+    "fast_mode",
+    "personality",
+    "web_search",
+}
 
 
 def _extract_codex_session_id(log_path: Path) -> str | None:
@@ -57,6 +65,7 @@ class CodexRuntime:
         worktree_path: Path,
         coral_md_path: Path,
         model: str = "gpt-5.4",
+        runtime_options: dict[str, Any] | None = None,
         max_turns: int = 200,
         log_dir: Path | None = None,
         verbose: bool = False,
@@ -88,6 +97,8 @@ class CodexRuntime:
             else:
                 prompt = "Begin."
 
+        option_args = _build_codex_runtime_option_args(runtime_options)
+
         if resume_session_id:
             # codex exec resume <session_id> "follow-up prompt"
             cmd = [
@@ -96,6 +107,7 @@ class CodexRuntime:
                 prompt,
                 "--full-auto",
                 "--model", model,
+                *option_args,
                 "--json",
             ]
         else:
@@ -105,6 +117,7 @@ class CodexRuntime:
                 prompt,
                 "--full-auto",
                 "--model", model,
+                *option_args,
                 "--json",
             ]
 
@@ -178,3 +191,26 @@ class CodexRuntime:
             session_id=resume_session_id,
             _log_file=log_file_ref,
         )
+
+
+def _toml_literal(value: Any) -> str:
+    """Serialize a scalar value for `codex -c key=value`."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int | float):
+        return str(value)
+    return json.dumps(str(value))
+
+
+def _build_codex_runtime_option_args(runtime_options: dict[str, Any] | None) -> list[str]:
+    """Translate runtime options into `codex exec -c key=value` arguments."""
+    if not runtime_options:
+        return []
+
+    args: list[str] = []
+    for key in sorted(runtime_options):
+        if key not in _CODEX_RUNTIME_OPTION_KEYS:
+            logger.warning(f"Ignoring unsupported Codex runtime option: {key}")
+            continue
+        args.extend(["-c", f"{key}={_toml_literal(runtime_options[key])}"])
+    return args
