@@ -507,16 +507,14 @@ def setup_claude_settings(worktree_path: Path, coral_dir: Path, *, research: boo
     private_dir = str(coral_dir.resolve() / "private")
     agents_dir = str(coral_dir.resolve().parent / "agents")
     worktree_str = str(worktree_path.resolve())
-    # Permission deny patterns use // prefix for absolute paths (gitignore-style).
-    # Since private_dir already starts with /, we use / + private_dir to get //path.
-    private_pattern = f"/{private_dir}/**"
-    agents_pattern = f"/{agents_dir}/**"
-    worktree_pattern = f"/{worktree_str}/**"
+    private_pattern = f"{private_dir}/**"
+    agents_pattern = f"{agents_dir}/**"
+    worktree_pattern = f"{worktree_str}/**"
 
     # Allow rules grant agent autonomy without --dangerously-skip-permissions
     # Bash/Edit/Write are scoped to the agent's own worktree via allow + deny rules
     allow_rules: list[str] = [
-        f"Bash({worktree_pattern})",
+        "Bash",
         f"Read({worktree_pattern})",
         f"Read({agents_pattern})",
         f"Edit({worktree_pattern})",

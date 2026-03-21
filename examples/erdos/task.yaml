@@ -43,8 +43,8 @@ grader:
 agents:
   count: 1
   runtime: claude_code
-  model: opus
+  model: claude-opus-4-6
 
 workspace:
   results_dir: "./results"
-  repo_path: "./erdos_project/repo"
+  repo_path: "./examples/erdos/seed"
