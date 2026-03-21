@@ -1,0 +1,42 @@
+task:
+  name: "Heilbronn Triangle"
+  description: |
+    Place 11 points inside an equilateral triangle with vertices (0,0), (1,0), (0.5, sqrt(3)/2)
+    to maximize the area of the smallest triangle formed by any 3 of the 11 points.
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    a numpy array of shape (11, 2) with the (x, y) coordinates of the 11 points.
+
+    All points must lie inside the equilateral triangle (within tolerance 1e-6).
+
+    The score is computed as:
+      min_triangle_area / equilateral_triangle_area / BENCHMARK
+    where BENCHMARK = 0.036529889880030156.
+
+    A score of 1.0 means matching the best known result; above 1.0 is a new record.
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator checks all C(11,3) = 165 triangles formed by point triples.
+    - Points must be inside the equilateral triangle with vertices (0,0), (1,0), (0.5, sqrt(3)/2).
+    - numpy and scipy are always available.
+    - Score = min_area_normalized / 0.036529889880030156; 1.0 means matching the best known result.
+    - Consider optimization approaches: simulated annealing, gradient descent, basin-hopping.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/heilbronn_triangle/seed"

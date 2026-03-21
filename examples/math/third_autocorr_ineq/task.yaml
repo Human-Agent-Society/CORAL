@@ -1,0 +1,57 @@
+task:
+  name: "Third Autocorrelation Inequality"
+  description: |
+    Minimize the C3 constant in the third autocorrelation inequality.
+
+    Given a function f on [0, 0.5] (can be positive or negative), the C3 constant is:
+      C3 = max(|autoconvolution(f)|) / (integral(f))^2
+
+    where autoconvolution is computed as np.convolve(f, f, mode="full") * dx,
+    dx = 0.5 / n_points, and the integral is sum(f) * dx.
+
+    Note: unlike C1, f is NOT required to be non-negative for C3, and we take
+    the maximum of the absolute value of the autoconvolution.
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    (f_values, c3_achieved, loss, n_points) where:
+      - f_values: numpy array of shape (n_points,), function values (may be negative)
+      - c3_achieved: float, the C3 ratio achieved
+      - loss: float, the optimization loss
+      - n_points: int, number of discretization points
+
+    The goal is to minimize C3 (find a tighter upper bound).
+    Score = BENCHMARK / C3 where BENCHMARK = 1.4556427953745406.
+    A score of 1.0 means matching the benchmark; higher is better.
+
+    Consider:
+    - Gradient-based optimization (Adam, L-BFGS)
+    - Allowing f to take negative values for better C3 bounds
+    - Multi-start optimization to escape local minima
+    - Learning rate schedules with warmup
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator verifies: shape matches n_points, integral is non-zero, recomputes C3 independently.
+    - numpy and scipy are always available.
+    - Current best known C3 is ~1.4556 (AlphaEvolve result).
+    - Score = BENCHMARK / your_C3; 1.0 means matching the best known result.
+    - Lower C3 values yield higher scores.
+    - This is a non-convex problem with multiple local optima.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/third_autocorr_ineq/seed"

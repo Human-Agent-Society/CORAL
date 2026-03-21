@@ -1,0 +1,49 @@
+task:
+  name: "Minimizing Max-Min Distance (3D, 14 points)"
+  description: |
+    Place 14 points in 3D space to maximize the ratio of minimum to maximum
+    pairwise distance.
+
+    Given N=14 points in R^3, compute all pairwise distances and find:
+      ratio = (min_distance / max_distance)^2
+
+    The goal is to maximize this ratio by placing points as "uniformly" as possible.
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    a numpy array of shape (14, 3) containing the point coordinates.
+
+    Score = ratio / BENCHMARK where BENCHMARK = 1/4.165849767.
+    A score of 1.0 means matching the benchmark; higher is better.
+
+    Consider:
+    - Optimization on the sphere (normalize to unit max distance)
+    - Simulated annealing with pairwise distance objectives
+    - Force-directed methods (repulsion between close points)
+    - Known polyhedra and geometric constructions for 14 points
+    - Gradient descent on smooth objective formulations
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator checks: shape is (14, 3), computes pairwise distances via scipy.spatial.distance.pdist.
+    - numpy and scipy are always available.
+    - Best known ratio for 14 points in 3D has BENCHMARK = 1/4.165849767.
+    - Score = (min_dist/max_dist)^2 / BENCHMARK; 1.0 means matching the best known result.
+    - Higher ratio values yield higher scores.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/minimizing_max_min_dist_3d/seed"

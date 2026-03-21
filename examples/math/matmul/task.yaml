@@ -1,0 +1,64 @@
+task:
+  name: "Matrix Multiplication Tensor Decomposition"
+  description: |
+    Find a low-rank decomposition of the matrix multiplication tensor for <n=2, m=4, p=5>.
+
+    Given the standard matrix multiplication tensor T of shape (n*m, m*p, n*p) = (8, 20, 10),
+    find the smallest integer R (rank) such that there exist factor matrices U, V, W where:
+      T_ijk = sum_r U_ir * V_jr * W_kr
+
+    with U of shape (n*m, R) = (8, R), V of shape (m*p, R) = (20, R), W of shape (n*p, R) = (10, R).
+
+    The ground truth tensor is constructed as:
+      matmul_tensor[i*m+j, j*p+k, k*n+i] = 1  for all i in [0,n), j in [0,m), k in [0,p)
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    (decomposition, n, m, p, loss, rank) where:
+      - decomposition: tuple of three numpy arrays (U, V, W)
+      - n, m, p: integers (must be 2, 4, 5)
+      - loss: float, the final reconstruction loss
+      - rank: int, the rank R used in the decomposition
+
+    Validation:
+      1. Factor matrix shapes must match: U(8, R), V(20, R), W(10, R)
+      2. Reconstructed tensor via einsum("ir,jr,kr->ijk", U, V, W) must EXACTLY equal the ground truth
+      3. If not exact, the decomposition is rejected
+
+    Score = 32 / rank (higher is better). 32 is the best known rank (AlphaEvolve result).
+    A score of 1.0 means matching the state-of-the-art; >1.0 means a new record.
+
+    Consider:
+    - JAX/optax gradient-based optimization with multiple restarts
+    - Straight-Through Estimator (STE) for rounding continuous solutions to discrete values
+    - Two-phase approach: continuous search followed by discrete fine-tuning
+    - Different initialization strategies and learning rate schedules
+    - Constraint enforcement to keep solutions in a valid space
+    - Grid-based search in the space of half-integer or integer decompositions
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator checks EXACT equality of the reconstructed tensor vs ground truth — approximate solutions score 0.
+    - numpy is always available; jax, optax, tqdm are available if installed.
+    - Best known rank for (2,4,5) is 32 (AlphaEvolve result).
+    - Score = 32 / your_rank; 1.0 means matching the best known result and the goal is to reach or surpass 1!
+    - The decomposition values are typically half-integers (multiples of 0.5). Use rounding schemes to enforce this.
+    - Multi-restart optimization is critical due to the non-convex landscape.
+    - Lower rank is harder but scores higher. Start with a higher rank to verify correctness, then reduce.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/matmul/seed"

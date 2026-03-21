@@ -515,10 +515,10 @@ def setup_claude_settings(worktree_path: Path, coral_dir: Path, *, research: boo
     # Bash/Edit/Write are scoped to the agent's own worktree via allow + deny rules
     allow_rules: list[str] = [
         "Bash",
-        f"Read({worktree_pattern})",
-        f"Read({agents_pattern})",
-        f"Edit({worktree_pattern})",
-        f"Write({worktree_pattern})",
+        f"Read(/{worktree_pattern})",
+        f"Read(/{agents_pattern})",
+        f"Edit(/{worktree_pattern})",
+        f"Write(/{worktree_pattern})",
     ]
     if research:
         allow_rules.extend(["WebSearch", "WebFetch"])
@@ -528,7 +528,7 @@ def setup_claude_settings(worktree_path: Path, coral_dir: Path, *, research: boo
     # already restrict them to the agent's own worktree.
     deny_rules: list[str] = [
         "Bash(git *)",
-        f"Read({private_pattern})",
+        f"Read(/{private_pattern})",
     ]
     if not research:
         deny_rules.extend(["WebSearch", "WebFetch"])

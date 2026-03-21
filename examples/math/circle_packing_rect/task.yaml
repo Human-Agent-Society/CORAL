@@ -1,0 +1,46 @@
+task:
+  name: "Circle Packing in Rectangle"
+  description: |
+    Pack N = 21 non-overlapping circles inside a rectangle with perimeter 4 to maximize
+    the sum of radii.
+
+    The rectangle dimensions (width, height) satisfy width + height = 2 (perimeter = 4).
+    You may choose the optimal width/height ratio.
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    a numpy array of shape (21, 3) where each row is (x, y, radius).
+
+    Constraints:
+      1. All radii must be non-negative
+      2. No two circles may overlap: dist(c_i, c_j) >= r_i + r_j for all i != j
+      3. All circles must fit inside the minimum circumscribing rectangle with perimeter <= 4
+      4. sum(radii) is maximized
+
+    Your score is based on how close your sum of radii is to the best known result (2.3658321334167627).
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator computes the minimum circumscribing rectangle and checks its perimeter <= 4.
+    - numpy and scipy are always available.
+    - Best known sum of radii for N=21 is 2.3658321334167627 (AlphaEvolve result).
+    - You can freely choose the rectangle aspect ratio -- the evaluator only checks
+      that the minimum bounding rectangle has perimeter <= 4.
+    - Score = your_sum_radii / 2.3658321334167627; 1.0 means matching the best known result.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/circle_packing_rect/seed"

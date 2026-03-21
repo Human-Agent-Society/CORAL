@@ -1,0 +1,53 @@
+task:
+  name: "Sums and Differences of Finite Sets"
+  description: |
+    Find a finite set U of non-negative integers (containing 0) that maximizes the
+    C6 lower bound, defined as:
+
+      C6 = 1 + log(|U-U| / |U+U|) / log(2*max(U) + 1)
+
+    where U+U = {a+b : a,b in U} and U-U = {a-b : a,b in U}.
+
+    The goal is to find sets where the difference set is much larger relative to
+    the sumset, maximizing the C6 ratio.
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    (u_set, c6_bound) where:
+      - u_set: numpy array of non-negative integers containing 0
+      - c6_bound: float, the achieved C6 lower bound
+
+    Score = c6_bound / BENCHMARK (higher is better; higher C6 yields higher score).
+    The benchmark (AlphaEvolve best) is 1.158417281556896.
+
+    Consider:
+    - Simulated annealing with random element flipping
+    - Genetic algorithms exploring set compositions
+    - Greedy construction with local search refinement
+    - Multi-start approaches with different random seeds
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator checks: U is a 1D array, contains 0, all non-negative integers, recomputes C6 and verifies consistency.
+    - numpy is always available.
+    - Best known C6 lower bound is ~1.1584 (AlphaEvolve result).
+    - Score = your_c6_bound / 1.158417281556896; 1.0 means matching the benchmark.
+    - Sparse sets with specific structure tend to yield better C6 bounds.
+    - The search space grows combinatorially -- intelligent pruning is essential.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/sums_diffs_finite_sets/seed"

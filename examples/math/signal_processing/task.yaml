@@ -1,0 +1,65 @@
+task:
+  name: "Signal Processing"
+  description: |
+    Implement a real-time adaptive signal processing algorithm for non-stationary
+    time series that minimizes a multi-objective cost function.
+
+    The algorithm must filter volatile, non-stationary time series data using a
+    sliding window approach while minimizing noise and preserving signal dynamics.
+
+    Your program file `initial_program.py` must define a `run_signal_processing`
+    function with signature:
+
+      run_signal_processing(noisy_signal=None, window_size=20, ...) -> dict
+
+    The function receives a noisy signal array and window size, and must return a
+    dictionary containing at least:
+      - "filtered_signal": numpy array of the filtered output
+
+    The multi-objective cost function is:
+      J(theta) = a1*S + a2*L_recent + a3*L_avg + a4*R
+    where a1=0.3, a2=a3=0.2, a4=0.3, and:
+      - S: Slope change penalty (directional reversals in filtered signal)
+      - L_recent: Instantaneous lag error |y[n] - x[n]|
+      - L_avg: Average tracking error over the window
+      - R: False reversal penalty (mismatched trend changes vs clean signal)
+
+    The evaluator tests on 5 different signal types (sinusoidal, multi-frequency,
+    non-stationary, step changes, random walk) with varying noise levels.
+
+    Final score combines: composite metric (40%), smoothness (20%),
+    correlation accuracy (20%), noise reduction (10%), reliability (10%).
+
+    Consider:
+    - Kalman filtering for optimal state estimation
+    - Wavelet denoising for multi-scale processing
+    - Exponential moving averages with adaptive weighting
+    - Savitzky-Golay filtering for trend preservation
+    - Median filtering for impulse noise rejection
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. Each of 5 test signals has a 10s per-signal timeout.
+    - The evaluator generates 5 test signals with different characteristics and noise levels.
+    - numpy and scipy are always available.
+    - Score is gated: if correlation with clean signal < 0.1, score is forced to 0.
+    - The filtered signal length should be len(input) - window_size + 1.
+    - Balance smoothness (fewer slope changes) against responsiveness (low lag error).
+    - The function must handle arbitrary input signals, not just the test cases.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/signal_processing/seed"

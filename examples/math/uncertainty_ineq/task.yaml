@@ -1,0 +1,55 @@
+task:
+  name: "Uncertainty Inequality"
+  description: |
+    Find coefficients for a polynomial P(x) constructed from even Hermite polynomials
+    (H0, H4, H8, ...) that minimize the largest positive root of P(x)/x^2,
+    providing an upper bound for the uncertainty inequality constant C4.
+
+    The polynomial P is built as a linear combination of even Hermite polynomials
+    H_{4k} for k = 0, 1, ..., m, with the constraint P(0) = 0 enforced by solving
+    for the coefficient of H0. The polynomial must be non-negative for large x
+    (leading coefficient positive).
+
+    C4 = r_max^2 / (2*pi) where r_max is the largest positive root of P(x)/x^2.
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    (coeffs, c4_bound, r_max) where:
+      - coeffs: numpy array of Hermite basis coefficients (including the computed c0)
+      - c4_bound: float, the achieved C4 upper bound
+      - r_max: float, the largest positive root of P(x)/x^2
+
+    Score = BENCHMARK / c4_bound (higher is better; lower C4 yields higher score).
+    The benchmark (AlphaEvolve best) is 0.3215872333529007.
+
+    Consider:
+    - Gradient-based optimization of Hermite coefficients
+    - Multiple restarts with small perturbations around known good solutions
+    - Careful numerical root-finding after optimization
+    - Using scipy.special.hermite for polynomial construction
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator uses sympy for exact symbolic verification of P(0)=0, positivity at +inf, and root finding.
+    - numpy, scipy, and sympy are required.
+    - Best known C4 upper bound is ~0.3216 (AlphaEvolve result).
+    - Score = 0.3215872333529007 / your_c4_bound; 1.0 means matching the benchmark.
+    - The validation step uses high-precision symbolic computation and may be slow.
+    - Coefficients are for the input Hermite basis (c1, c2, ..., not including the auto-computed c0).
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/uncertainty_ineq/seed"

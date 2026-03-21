@@ -1,0 +1,47 @@
+task:
+  name: "Hexagon Packing (N=12)"
+  description: |
+    Pack N = 12 disjoint unit regular hexagons inside a larger regular hexagon to minimize
+    the outer hexagon's side length (equivalently, maximize 1/outer_hex_side_length).
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    (inner_hex_data, outer_hex_data, outer_hex_side_length) where:
+      - inner_hex_data: numpy array of shape (12, 3), each row is (x, y, angle_degrees)
+        for each unit hexagon's center position and rotation angle
+      - outer_hex_data: numpy array of shape (3,), (x, y, angle_degrees) for the outer hexagon
+      - outer_hex_side_length: float, side length of the outer hexagon
+
+    Constraints:
+      1. All inner hexagons have unit side length (side_length = 1)
+      2. All pairs of inner hexagons must be disjoint (SAT-based check)
+      3. All vertices of inner hexagons must lie within the outer hexagon
+      4. 1/outer_hex_side_length is maximized
+
+    Your score is based on how close 1/outer_hex_side_length is to the best known result
+    (1/3.9419123 ~ 0.2537).
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator uses the Separating Axis Theorem (SAT) for disjointness checks.
+    - Hexagons can be rotated — the angle_degrees parameter controls rotation.
+    - numpy and scipy are always available.
+    - Best known result: outer_hex_side_length = 3.9419123 (1/S ~ 0.2537).
+    - Score = (1/your_side_length) / (1/3.9419123); 1.0 means matching the best known result.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/hexagon_packing_12/seed"

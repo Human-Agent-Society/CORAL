@@ -1,0 +1,40 @@
+task:
+  name: "Heilbronn Convex 14"
+  description: |
+    Place 14 points in 2D to maximize the area of the smallest triangle formed by any 3 of the 14 points,
+    normalized by the convex hull area of the point set.
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    a numpy array of shape (14, 2) with the (x, y) coordinates of the 14 points.
+
+    The score is computed as:
+      (min_triangle_area / convex_hull_area) / BENCHMARK
+    where BENCHMARK = 0.027835571458482138.
+
+    A score of 1.0 means matching the best known result; above 1.0 is a new record.
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator checks all C(14,3) = 364 triangles formed by point triples.
+    - No constraints on point coordinates; the evaluator normalizes by convex hull area.
+    - numpy and scipy are always available.
+    - Score = (min_triangle_area / convex_hull_area) / 0.027835571458482138.
+    - Consider optimization approaches: simulated annealing, gradient descent, basin-hopping.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/heilbronn_convex_14/seed"

@@ -1,0 +1,41 @@
+task:
+  name: "Minimizing Max-Min Distance 2D"
+  description: |
+    Place 16 points in 2 dimensions to maximize the ratio (min_distance / max_distance)^2
+    over all pairwise distances.
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    a numpy array of shape (16, 2) with the (x, y) coordinates of the 16 points.
+
+    The score is computed as:
+      (min_dist / max_dist)^2 / BENCHMARK
+    where BENCHMARK = 1 / 12.889266112.
+
+    A score of 1.0 means matching the best known result; above 1.0 is a new record.
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator computes all pairwise distances using scipy.spatial.distance.pdist.
+    - numpy and scipy are always available.
+    - Score = (min_dist/max_dist)^2 / (1/12.889266112); 1.0 means matching the best known result.
+    - Key reformulation: maximize (d_min/d_max)^2, equivalent to finding points where
+      pairwise distances are as uniform as possible.
+    - Consider optimization approaches: simulated annealing, gradient descent, basin-hopping.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/minimizing_max_min_dist_2d/seed"

@@ -1,0 +1,56 @@
+task:
+  name: "Second Autocorrelation Inequality"
+  description: |
+    Maximize the C2 constant in the second autocorrelation inequality.
+
+    Given a non-negative function f on [0, 0.5], the C2 constant is defined as:
+      C2 = ||f*f||_2^2 / (||f*f||_1 * ||f*f||_inf)
+
+    where f*f is the unscaled discrete autoconvolution (np.convolve(f, f, mode="full")),
+    and the norms are computed using piecewise linear integration:
+      - L2^2: piecewise linear quadrature with boundary zeros
+      - L1: sum(|conv|) / (len(conv) + 1)
+      - Linf: max(|conv|)
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    (f_values, c2_achieved, loss, n_points) where:
+      - f_values: numpy array of shape (n_points,), non-negative function values
+      - c2_achieved: float, the C2 ratio achieved
+      - loss: float, the optimization loss
+      - n_points: int, number of discretization points
+
+    The goal is to maximize C2 (find a higher lower bound).
+    Score = C2_verified / BENCHMARK where BENCHMARK = 0.8962799441554086.
+    A score of 1.0 means matching the benchmark; higher is better.
+
+    Consider:
+    - Gradient-based optimization with negated objective
+    - Varying discretization resolution
+    - Smart initialization strategies
+    - Learning rate schedules with warmup
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator verifies: f is non-negative, shape matches n_points, recomputes C2 using the piecewise linear integral method.
+    - numpy and scipy are always available.
+    - Current best known C2 is ~0.8963 (AlphaEvolve result).
+    - Score = verified_C2 / BENCHMARK; 1.0 means matching the best known result.
+    - Higher C2 values yield higher scores.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/second_autocorr_ineq/seed"

@@ -1,0 +1,53 @@
+task:
+  name: "Erdos Minimum Overlap"
+  description: |
+    Find a step function h: [0,2] -> [0,1] that minimizes the maximum overlap integral,
+    providing an upper bound for the Erdos-Selfridge C5 constant.
+
+    The function h is discretized into n_points intervals over [0,2], with each h(x) in [0,1].
+    The integral of h must equal 1 (i.e., sum(h) * dx = 1 where dx = 2/n_points).
+
+    The objective is to minimize C5 = max_k integral h(x)(1 - h(x+k)) dx,
+    computed via cross-correlation of h with (1-h).
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    (h_values, c5_bound, n_points) where:
+      - h_values: numpy array of shape (n_points,) with values in [0,1]
+      - c5_bound: float, the achieved upper bound for C5
+      - n_points: int, number of discretization points
+
+    Score = BENCHMARK / c5_bound (higher is better; lower C5 yields higher score).
+    The benchmark (AlphaEvolve best) is 0.38092303510845016.
+
+    Consider:
+    - Gradient-based optimization (Adam, L-BFGS) with sigmoid parameterization
+    - FFT-based correlation computation for speed
+    - Penalty methods for the integral constraint
+    - Multi-start optimization with different initializations
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator checks: h in [0,1], integral of h = 1 (atol=1e-3), recomputes C5 via np.correlate and verifies consistency (atol=1e-4).
+    - numpy and scipy are always available.
+    - Best known C5 upper bound is ~0.3809 (AlphaEvolve result).
+    - Score = 0.38092303510845016 / your_c5_bound; 1.0 means matching the benchmark.
+    - Use FFT-based convolution for efficient correlation computation.
+    - The integral constraint sum(h)*dx = 1 must be satisfied precisely.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/erdos_min_overlap/seed"

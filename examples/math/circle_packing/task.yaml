@@ -1,0 +1,52 @@
+task:
+  name: "Circle Packing"
+  description: |
+    Pack N = 26 circles into a unit square (side length 1) to maximize the sum of radii.
+
+    Find positions (x_i, y_i) and radii r_i for i = 1..N such that:
+      1. x_i - r_i >= 0 and x_i + r_i <= 1  (circle within unit square horizontally)
+      2. y_i - r_i >= 0 and y_i + r_i <= 1  (circle within unit square vertically)
+      3. sqrt((x_i - x_j)^2 + (y_i - y_j)^2) >= r_i + r_j for all i != j  (no overlap)
+      4. sum(r_i) is maximized
+
+    Your program file `initial_program.py` must define a `run()` function that returns
+    (centers, radii, sum_radii) where:
+      - centers: numpy array of shape (26, 2) with (x, y) coordinates
+      - radii: numpy array of shape (26,) with radius of each circle
+      - sum_radii: float, sum of all radii
+
+    Your score is based on how close your sum of radii is to the best known result (2.635977).
+
+    Consider:
+    - Simulated annealing with careful cooling schedules
+    - Basin-hopping or other global optimization methods
+    - Physics-based simulation (force-directed placement)
+    - Multi-start local optimization with perturbation
+    - Gradient descent on a smooth penalty formulation
+    - Quasi-Newton methods (L-BFGS-B) with constraint handling
+  files:
+    - "initial_program.py"
+  seed:
+    - "initial_program.py"
+  tips: |
+    - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
+    - The evaluator checks: all circles within the unit square, no overlaps, and measures sum of radii.
+    - numpy and scipy are always available.
+    - Best known sum of radii for N=26 is 2.635977 (AlphaEvolve result).
+    - Small improvements in packing density matter — optimize to high precision.
+    - Score = your_sum_radii / 2.635977; 1.0 means matching the best known result and the goal is to reach or surpass 1!
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/math/circle_packing/seed"
