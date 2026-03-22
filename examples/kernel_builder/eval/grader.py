@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import textwrap
 
 from coral.grader import TaskGrader
@@ -38,7 +37,7 @@ class Grader(TaskGrader):
         timeout = self.args.get("timeout", 120)
 
         try:
-            result = _run_evaluation(program_path, self.read_eval_path("frozen_problem.py"), timeout)
+            result = _run_evaluation(program_path, self.read_eval_path("frozen_problem.py"), timeout, self.get_python_command())
         except TimeoutError:
             return self.fail(f"Evaluation timed out after {timeout}s")
         except Exception as e:
@@ -68,7 +67,7 @@ class Grader(TaskGrader):
         return self.score(float(cycles), explanation)
 
 
-def _run_evaluation(program_path: str, utils_path: str, timeout: int) -> dict:
+def _run_evaluation(program_path: str, utils_path: str, timeout: int, python_cmd: list[str]) -> dict:
     """Run the kernel in a subprocess with the frozen simulator.
 
     Matches the original submission_tests.py methodology:
@@ -138,7 +137,7 @@ def _run_evaluation(program_path: str, utils_path: str, timeout: int) -> dict:
     """)
     import subprocess
     result = subprocess.run(
-        [sys.executable, "-c", script],
+        [*python_cmd, "-c", script],
         capture_output=True,
         text=True,
         timeout=timeout,

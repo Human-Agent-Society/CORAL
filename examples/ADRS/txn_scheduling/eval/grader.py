@@ -35,7 +35,7 @@ class Grader(TaskGrader):
             evaluator_mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(evaluator_mod)
 
-            result = evaluator_mod.evaluate(program_path)
+            result = evaluator_mod.evaluate(program_path, python_cmd=self.get_python_command())
 
             combined_score = float(result.get("combined_score", 0.0))
             makespan = result.get("makespan", 0.0)
