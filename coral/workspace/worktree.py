@@ -9,7 +9,10 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from coral.workspace.repo import run_setup_commands
+from coral.workspace.repo import (
+    run_setup_commands,
+    _clean_env,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -226,8 +229,6 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
     if (worktree_path / "pyproject.toml").exists() and shutil.which("uv"):
         coral_root = Path(__file__).resolve().parent.parent.parent
         if (coral_root / "pyproject.toml").exists():
-            from coral.workspace.repo import _clean_env
-
             logger.info(f"Installing coral into worktree venv from {coral_root}")
             result = subprocess.run(
                 ["uv", "pip", "install", "-e", str(coral_root)],
