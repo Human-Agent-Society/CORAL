@@ -174,11 +174,22 @@ def find_coral_dir(task: str | None = None, run: str | None = None) -> Path:
     """Find the .coral directory for a task run.
 
     Search order:
-    1. If --task and --run given: results/<task>/<run>/.coral
-    2. If --task given: results/<task>/latest (symlink)
-    3. Walk up from cwd looking for results/ dir, pick the sole task or latest
-    4. Fall back to .coral_dir breadcrumb in cwd
+    1. .coral_dir breadcrumb in cwd (always correct for agents in worktrees)
+    2. If --task and --run given: results/<task>/<run>/.coral
+    3. If --task given: results/<task>/latest (symlink)
+    4. Walk up from cwd looking for results/ dir, pick the sole task or latest
     """
+    # Priority 1: read .coral_dir breadcrumb from cwd (agents always have this)
+    if not task and not run:
+        coral_dir_file = Path.cwd() / ".coral_dir"
+        if coral_dir_file.exists():
+            try:
+                coral_dir = Path(coral_dir_file.read_text().strip()).resolve()
+                if coral_dir.is_dir():
+                    return coral_dir
+            except (OSError, ValueError):
+                pass
+
     # Find results dir by walking up
     results_dir = None
     current = Path.cwd()
@@ -233,19 +244,83 @@ def find_coral_dir(task: str | None = None, run: str | None = None) -> Path:
                 coral = resolved / ".coral" if (resolved / ".coral").is_dir() else resolved
                 return coral
 
-    # Fallback: read .coral_dir breadcrumb from cwd
-    coral_dir_file = Path.cwd() / ".coral_dir"
-    if coral_dir_file.exists():
-        try:
-            coral_dir = Path(coral_dir_file.read_text().strip()).resolve()
-            if coral_dir.is_dir():
-                return coral_dir
-        except (OSError, ValueError):
-            pass
-
     print(
         "Error: No results directory found. Run 'coral start' first, "
         "or use --task to specify the task name.",
         file=sys.stderr,
     )
     sys.exit(1)
+
+
+def pick_run(status_filter: str | None = None, allow_cancel: bool = False) -> Path | None:
+    """Interactively pick a run from the results directory.
+
+    Args:
+        status_filter: If set, only show runs with this status ("running" or "stopped").
+        allow_cancel: If True, show a cancel option and return None if chosen.
+
+    Returns:
+        Path to the selected run's .coral directory, or None if cancelled.
+    """
+    from coral.cli.query import _collect_runs, _find_results_dir, _relative_time
+
+    results_dir = _find_results_dir()
+    runs = _collect_runs(results_dir)
+
+    if status_filter:
+        runs = [r for r in runs if r["status"] == status_filter]
+
+    # Sort: running first, then most recent first
+    running = [r for r in runs if r["status"] == "running"]
+    stopped = [r for r in runs if r["status"] != "running"]
+    running.sort(key=lambda r: r["run"], reverse=True)
+    stopped.sort(key=lambda r: r["run"], reverse=True)
+    runs = running + stopped
+
+    if not runs:
+        label = status_filter or "available"
+        print(f"No {label} runs found.", file=sys.stderr)
+        sys.exit(1)
+
+    if len(runs) == 1:
+        r = runs[0]
+        print(f"Auto-selected: {r['task']} / {r['run']}")
+        return Path(r["path"]) / ".coral"
+
+    # Display table
+    tw = max(len("TASK"), max(len(r["task"]) for r in runs)) + 2
+    rw = max(len("RUN"), max(len(r["run"]) for r in runs)) + 2
+    sw = max(len("STATUS"), 10) + 2
+
+    header = f"{'#':>3}  {'TASK':<{tw}}{'RUN':<{rw}}{'STATUS':<{sw}}{'AGENTS':>7}{'EVALS':>7}{'BEST':>9}"
+    print(header)
+    print("-" * len(header))
+
+    for i, r in enumerate(runs, 1):
+        if r["status"] == "running":
+            status_str = "running"
+        else:
+            status_str = f"stopped {_relative_time(r['run'])}"
+        best_str = f"{r['best']:.4f}" if r["best"] is not None else "-"
+        print(
+            f"{i:>3}  {r['task']:<{tw}}{r['run']:<{rw}}{status_str:<{sw}}"
+            f"{r['agents']:>7}{r['attempts']:>7}{best_str:>9}"
+        )
+
+    print()
+    cancel_hint = ", 0 to cancel" if allow_cancel else ""
+    while True:
+        try:
+            choice = input(f"Select run [1-{len(runs)}{cancel_hint}]: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            sys.exit(1)
+        if allow_cancel and choice == "0":
+            return None
+        try:
+            idx = int(choice)
+            if 1 <= idx <= len(runs):
+                return Path(runs[idx - 1]["path"]) / ".coral"
+        except ValueError:
+            pass
+        print(f"Invalid choice. Enter a number between 1 and {len(runs)}.")

@@ -17,6 +17,7 @@ from coral.cli._helpers import (
     in_tmux,
     kill_orphaned_agents,
     kill_tmux_session,
+    pick_run,
     read_direction,
     save_tmux_session_name,
     setup_logging,
@@ -271,10 +272,14 @@ def cmd_resume(args: argparse.Namespace) -> None:
     verbose = getattr(args, "verbose", False)
     setup_logging(verbose=verbose)
 
-    coral_dir = find_coral_dir(
-        getattr(args, "task", None),
-        getattr(args, "run", None),
-    )
+    task = getattr(args, "task", None)
+    run = getattr(args, "run", None)
+    if task or run:
+        coral_dir = find_coral_dir(task, run)
+    else:
+        coral_dir = pick_run(status_filter="stopped", allow_cancel=True)
+    if coral_dir is None:
+        return
 
     if not getattr(args, "no_tmux", False):
         existing_session = find_tmux_session(coral_dir)
@@ -440,7 +445,14 @@ def cmd_stop(args: argparse.Namespace) -> None:
             _stop_one(Path(r["path"]) / ".coral")
         print(f"\nStopped {len(active)} run(s).")
     else:
-        coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
+        task = getattr(args, "task", None)
+        run = getattr(args, "run", None)
+        if task or run:
+            coral_dir = find_coral_dir(task, run)
+        else:
+            coral_dir = pick_run(status_filter="running", allow_cancel=True)
+        if coral_dir is None:
+            return
         _stop_one(coral_dir)
 
 
@@ -452,7 +464,12 @@ def cmd_status(args: argparse.Namespace) -> None:
         get_leaderboard,
     )
 
-    coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
+    task = getattr(args, "task", None)
+    run = getattr(args, "run", None)
+    if task or run:
+        coral_dir = find_coral_dir(task, run)
+    else:
+        coral_dir = pick_run()
 
     real_coral = coral_dir.resolve()
     run_dir = real_coral.parent
