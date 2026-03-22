@@ -12,6 +12,7 @@ TaskGrader and implementing evaluate():
 
 from __future__ import annotations
 
+import json
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -85,6 +86,47 @@ class TaskGrader(ABC):
             capture_output=True,
             text=True,
             timeout=timeout,
+        )
+
+    def run_script_json(
+        self,
+        script: str,
+        *,
+        timeout: int = 300,
+    ) -> dict:
+        """Run an inline script that prints JSON to stdout and return parsed dict.
+
+        Handles common failure modes:
+        - Non-zero exit: raises RuntimeError with stderr
+        - Empty stdout: raises RuntimeError with stderr for diagnostics
+        - Stdout polluted by print statements: scans for last JSON line
+        """
+        result = self.run_script(script, timeout=timeout)
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.strip()[-2000:])
+        stdout = result.stdout.strip()
+        if not stdout:
+            stderr_tail = result.stderr.strip()[-1000:]
+            raise RuntimeError(
+                f"Script produced no output on stdout.\nstderr: {stderr_tail}"
+            )
+        # Try full stdout first
+        try:
+            return json.loads(stdout)
+        except json.JSONDecodeError:
+            pass
+        # Scan lines in reverse for a JSON object (handles print() pollution)
+        for line in reversed(stdout.splitlines()):
+            line = line.strip()
+            if line.startswith("{"):
+                try:
+                    return json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+        raise RuntimeError(
+            f"No valid JSON in script output.\n"
+            f"stdout (last 500): {stdout[-500:]}\n"
+            f"stderr (last 500): {result.stderr.strip()[-500:]}"
         )
 
     def read_eval(self, relative_path: str) -> str:

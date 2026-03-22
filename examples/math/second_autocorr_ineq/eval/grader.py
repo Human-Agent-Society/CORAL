@@ -144,5 +144,26 @@ def _run_evaluation(program_path: str, timeout: int, python_cmd: list[str]) -> d
         timeout=timeout,
     )
     if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip()[-1000:])
-    return json.loads(result.stdout)
+        raise RuntimeError(result.stderr.strip()[-2000:])
+    stdout = result.stdout.strip()
+    if not stdout:
+        raise RuntimeError(
+            f"Script produced no output.
+stderr: {result.stderr.strip()[-1000:]}"
+        )
+    try:
+        return json.loads(stdout)
+    except json.JSONDecodeError:
+        # Handle stdout pollution from print statements
+        for line in reversed(stdout.splitlines()):
+            line = line.strip()
+            if line.startswith("{"):
+                try:
+                    return json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+        raise RuntimeError(
+            f"No valid JSON in output.
+stdout: {stdout[-500:]}
+stderr: {result.stderr.strip()[-500:]}"
+        )
