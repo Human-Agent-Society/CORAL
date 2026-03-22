@@ -17,7 +17,6 @@ from coral.workspace.repo import (
     copy_private_data,
     copy_seed_directory,
     copy_seed_files,
-    run_setup_commands,
 )
 
 logger = logging.getLogger(__name__)
@@ -139,10 +138,6 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     # Copy private grader data into .coral/ (hidden from agents)
     if config.grader.private:
         copy_private_data(config.grader.private, coral_dir, config_dir or Path.cwd())
-
-    # Run setup commands in the cloned repo after seeding
-    if config.workspace.setup:
-        run_setup_commands(config.workspace.setup, repo_dir)
 
     return ProjectPaths(
         results_dir=results_dir,

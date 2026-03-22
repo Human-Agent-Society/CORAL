@@ -11,6 +11,7 @@ from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig, Wor
 from coral.workspace import (
     create_project,
     setup_gitignore,
+    setup_worktree_env,
     write_agent_id,
 )
 
@@ -121,24 +122,14 @@ def test_setup_gitignore_idempotent():
 
 
 def test_create_project_runs_setup_commands():
-    """Setup commands execute in the cloned repo directory."""
+    """Setup commands execute in the worktree directory."""
     with tempfile.TemporaryDirectory() as d:
-        subprocess.run(["git", "init", d], capture_output=True, check=True)
-        subprocess.run(["git", "-C", d, "commit", "--allow-empty", "-m", "init"], capture_output=True, check=True)
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
 
-        config = CoralConfig(
-            task=TaskConfig(name="Setup Test", description="test"),
-            grader=GraderConfig(type="function"),
-            agents=AgentConfig(count=1),
-            workspace=WorkspaceConfig(
-                results_dir=os.path.join(d, "results"),
-                repo_path=d,
-                setup=["echo hello > setup_marker.txt"],
-            ),
-        )
-        paths = create_project(config)
+        setup_worktree_env(worktree, ["echo hello > setup_marker.txt"])
 
-        marker = paths.repo_dir / "setup_marker.txt"
+        marker = worktree / "setup_marker.txt"
         assert marker.exists()
         assert marker.read_text().strip() == "hello"
 
@@ -146,46 +137,25 @@ def test_create_project_runs_setup_commands():
 def test_create_project_setup_command_failure():
     """A failing setup command raises RuntimeError."""
     with tempfile.TemporaryDirectory() as d:
-        subprocess.run(["git", "init", d], capture_output=True, check=True)
-        subprocess.run(["git", "-C", d, "commit", "--allow-empty", "-m", "init"], capture_output=True, check=True)
-
-        config = CoralConfig(
-            task=TaskConfig(name="Fail Test", description="test"),
-            grader=GraderConfig(type="function"),
-            agents=AgentConfig(count=1),
-            workspace=WorkspaceConfig(
-                results_dir=os.path.join(d, "results"),
-                repo_path=d,
-                setup=["exit 1"],
-            ),
-        )
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
 
         with pytest.raises(RuntimeError, match="Setup command failed"):
-            create_project(config)
+            setup_worktree_env(worktree, ["exit 1"])
 
 
 def test_create_project_setup_runs_sequentially():
     """Setup commands run in order so later commands can depend on earlier ones."""
     with tempfile.TemporaryDirectory() as d:
-        subprocess.run(["git", "init", d], capture_output=True, check=True)
-        subprocess.run(["git", "-C", d, "commit", "--allow-empty", "-m", "init"], capture_output=True, check=True)
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
 
-        config = CoralConfig(
-            task=TaskConfig(name="Sequential Test", description="test"),
-            grader=GraderConfig(type="function"),
-            agents=AgentConfig(count=1),
-            workspace=WorkspaceConfig(
-                results_dir=os.path.join(d, "results"),
-                repo_path=d,
-                setup=[
-                    "mkdir -p mydir",
-                    "echo done > mydir/result.txt",
-                ],
-            ),
-        )
-        paths = create_project(config)
+        setup_worktree_env(worktree, [
+            "mkdir -p mydir",
+            "echo done > mydir/result.txt",
+        ])
 
-        result_file = paths.repo_dir / "mydir" / "result.txt"
+        result_file = worktree / "mydir" / "result.txt"
         assert result_file.exists()
         assert result_file.read_text().strip() == "done"
 
