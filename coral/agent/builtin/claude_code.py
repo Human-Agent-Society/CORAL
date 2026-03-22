@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from coral.agent.runtime import AgentHandle, _extract_session_id, write_coral_log_entry
+from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)
 
@@ -98,9 +99,8 @@ class ClaudeCodeRuntime:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,  # own process group for clean SIGINT
-            )
-
-            def _tee_output(proc: subprocess.Popen, log_f, agent: str) -> None:
+                env=_clean_env(),
+            )(proc: subprocess.Popen, log_f, agent: str) -> None:
                 try:
                     assert proc.stdout is not None
                     for line in iter(proc.stdout.readline, b""):
@@ -134,6 +134,7 @@ class ClaudeCodeRuntime:
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,  # own process group for clean SIGINT
+                env=_clean_env(),
             )
             log_file_ref = log_file
 

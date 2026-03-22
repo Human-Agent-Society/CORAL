@@ -3,11 +3,23 @@
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import subprocess
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+
+def _clean_env() -> dict[str, str]:
+    """Return a copy of the environment with venv variables removed.
+
+    This prevents CORAL's own venv from leaking into subprocesses
+    (setup commands, agent spawning) that should use project-local venvs.
+    """
+    env = os.environ.copy()
+    env.pop("VIRTUAL_ENV", None)
+    return env
 
 
 def clone_or_init_repo(source: Path, dest: Path) -> Path:
@@ -182,6 +194,7 @@ def run_setup_commands(commands: list[str], cwd: Path) -> None:
             cwd=str(cwd),
             capture_output=True,
             text=True,
+            env=_clean_env(),
         )
         if result.returncode != 0:
             raise RuntimeError(
