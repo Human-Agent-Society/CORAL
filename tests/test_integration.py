@@ -11,7 +11,7 @@ from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig, Wor
 from coral.hub.attempts import format_leaderboard, get_leaderboard, read_attempts, search_attempts, write_attempt
 from coral.template.coral_md import generate_coral_md
 from coral.types import Attempt
-from coral.workspace.setup import create_project, setup_gitignore, write_agent_id
+from coral.workspace import create_project, setup_gitignore, write_agent_id
 
 
 def test_full_workspace_creation():

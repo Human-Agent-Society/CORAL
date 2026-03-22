@@ -107,9 +107,9 @@ def _start_in_tmux(args: argparse.Namespace) -> None:
 
     # Pre-create the results directory so we can save tmux markers there.
     # Must match create_project()'s resolution: relative to CWD, not task config dir.
-    from coral.workspace.setup import _slugify
+    from coral.workspace import slugify
     results_dir = Path(config.workspace.results_dir).resolve()
-    task_dir = results_dir / _slugify(config.task.name)
+    task_dir = results_dir / slugify(config.task.name)
     task_dir.mkdir(parents=True, exist_ok=True)
     save_tmux_session_name(task_dir, session_name)
 
@@ -324,7 +324,7 @@ def cmd_resume(args: argparse.Namespace) -> None:
     if args.model:
         config.agents.model = args.model
 
-    from coral.workspace.setup import reconstruct_paths
+    from coral.workspace import reconstruct_paths
 
     paths = reconstruct_paths(coral_dir)
 

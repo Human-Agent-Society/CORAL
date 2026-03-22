@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 
-from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig
+from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig, WorkspaceConfig
 
 
 def test_config_roundtrip():
@@ -56,3 +56,26 @@ def test_agent_runtime_options_roundtrip():
         "model_reasoning_effort": "medium",
         "fast_mode": True,
     }
+
+
+def test_config_setup_roundtrip():
+    config = CoralConfig(
+        task=TaskConfig(name="test", description="A test"),
+        workspace=WorkspaceConfig(
+            setup=["pip install numpy", "python download_data.py"],
+        ),
+    )
+
+    with tempfile.NamedTemporaryFile(suffix=".yaml", mode="w", delete=False) as f:
+        config.to_yaml(f.name)
+        restored = CoralConfig.from_yaml(f.name)
+
+    assert restored.workspace.setup == ["pip install numpy", "python download_data.py"]
+
+
+def test_config_setup_defaults_empty():
+    data = {
+        "task": {"name": "t", "description": "d"},
+    }
+    config = CoralConfig.from_dict(data)
+    assert config.workspace.setup == []

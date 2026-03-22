@@ -11,7 +11,7 @@ from coral.hooks.post_commit import (
     run_eval,
     _increment_eval_count,
 )
-from coral.workspace.setup import setup_claude_settings
+from coral.workspace import setup_claude_settings
 
 
 def _setup_repo_with_config(base_dir: Path) -> Path:

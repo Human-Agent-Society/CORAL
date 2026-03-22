@@ -26,7 +26,7 @@ from coral.hub.heartbeat import (
     write_global_heartbeat,
 )
 from coral.template.coral_md import generate_coral_md
-from coral.workspace.setup import (
+from coral.workspace import (
     ProjectPaths,
     create_agent_worktree,
     create_project,
