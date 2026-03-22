@@ -33,6 +33,7 @@ from coral.workspace import (
     setup_claude_settings,
     setup_gitignore,
     setup_shared_state,
+    setup_worktree_env,
     write_agent_id,
     write_coral_dir,
 )
@@ -108,6 +109,9 @@ class AgentManager:
 
         # Set up .gitignore for CORAL files
         setup_gitignore(worktree_path)
+
+        # Run setup commands (uv sync, etc.) and install coral in the worktree
+        setup_worktree_env(worktree_path, self.config.workspace.setup)
 
         # Write .coral_dir breadcrumb (used by workspace guard hook)
         write_coral_dir(worktree_path, self.paths.coral_dir)

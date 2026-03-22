@@ -5,8 +5,11 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import subprocess
 from pathlib import Path
+
+from coral.workspace.repo import run_setup_commands
 
 logger = logging.getLogger(__name__)
 
@@ -202,3 +205,36 @@ def setup_claude_settings(worktree_path: Path, coral_dir: Path, *, research: boo
     settings_path = claude_dir / "settings.json"
     # Always overwrite — each agent needs its own copy
     settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+
+
+def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
+    """Run setup commands and install coral in a worktree's venv.
+
+    After creating a worktree, we need to:
+    1. Run workspace setup commands (e.g. ``uv sync``) so the worktree
+       gets its own ``.venv`` with task dependencies.
+    2. Install ``coral`` into that venv so ``coral eval`` is available
+       when the agent uses ``uv run``.
+    """
+    if not setup_commands:
+        return
+
+    run_setup_commands(setup_commands, worktree_path)
+
+    # Install coral into the worktree's venv so agents can use
+    # ``uv run coral eval`` and graders can ``from coral.grader import ...``.
+    if (worktree_path / "pyproject.toml").exists() and shutil.which("uv"):
+        coral_root = Path(__file__).resolve().parent.parent.parent
+        if (coral_root / "pyproject.toml").exists():
+            logger.info(f"Installing coral into worktree venv from {coral_root}")
+            result = subprocess.run(
+                ["uv", "pip", "install", "-e", str(coral_root)],
+                cwd=str(worktree_path),
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                logger.warning(
+                    f"Failed to install coral in worktree: {result.stderr.strip()}"
+                )
+

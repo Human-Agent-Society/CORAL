@@ -12,6 +12,7 @@ from coral.workspace.worktree import (
     setup_claude_settings,
     setup_gitignore,
     setup_shared_state,
+    setup_worktree_env,
     write_agent_id,
     write_coral_dir,
 )
@@ -25,6 +26,7 @@ __all__ = [
     "setup_claude_settings",
     "setup_gitignore",
     "setup_shared_state",
+    "setup_worktree_env",
     "slugify",
     "write_agent_id",
     "write_coral_dir",
