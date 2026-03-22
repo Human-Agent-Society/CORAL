@@ -5,10 +5,13 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import pytest
+
 from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig, WorkspaceConfig
-from coral.workspace.setup import (
+from coral.workspace import (
     create_project,
     setup_gitignore,
+    setup_worktree_env,
     write_agent_id,
 )
 
@@ -116,5 +119,44 @@ def test_setup_gitignore_idempotent():
 
         content = (worktree / ".gitignore").read_text()
         assert content.count(".claude/") == 1
+
+
+def test_create_project_runs_setup_commands():
+    """Setup commands execute in the worktree directory."""
+    with tempfile.TemporaryDirectory() as d:
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+
+        setup_worktree_env(worktree, ["echo hello > setup_marker.txt"])
+
+        marker = worktree / "setup_marker.txt"
+        assert marker.exists()
+        assert marker.read_text().strip() == "hello"
+
+
+def test_create_project_setup_command_failure():
+    """A failing setup command raises RuntimeError."""
+    with tempfile.TemporaryDirectory() as d:
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+
+        with pytest.raises(RuntimeError, match="Setup command failed"):
+            setup_worktree_env(worktree, ["exit 1"])
+
+
+def test_create_project_setup_runs_sequentially():
+    """Setup commands run in order so later commands can depend on earlier ones."""
+    with tempfile.TemporaryDirectory() as d:
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+
+        setup_worktree_env(worktree, [
+            "mkdir -p mydir",
+            "echo done > mydir/result.txt",
+        ])
+
+        result_file = worktree / "mydir" / "result.txt"
+        assert result_file.exists()
+        assert result_file.read_text().strip() == "done"
 
 

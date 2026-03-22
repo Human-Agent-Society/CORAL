@@ -28,7 +28,7 @@ def validate_schedule(txn_seq):
     return True
 
 
-def run_with_timeout(program_path, timeout_seconds=20):
+def run_with_timeout(program_path, timeout_seconds=20, python_cmd=None):
     """
     Run the program in a separate process with timeout
     using a simple subprocess approach
@@ -36,10 +36,13 @@ def run_with_timeout(program_path, timeout_seconds=20):
     Args:
         program_path: Path to the program file
         timeout_seconds: Maximum execution time in seconds
+        python_cmd: Python command list (e.g. ["uv", "run", "python"])
 
     Returns:
         makespan, schedule tuple from the program
     """
+    if python_cmd is None:
+        python_cmd = [sys.executable]
     # Create a temporary file to execute
     # Ensure the scheduling module directory is on sys.path for imports like `import workloads`
     sched_dir = os.path.dirname(os.path.abspath(__file__))
@@ -98,7 +101,7 @@ except Exception as e:
     try:
         # Run the script with timeout
         process = subprocess.Popen(
-            [sys.executable, temp_file_path],
+            [*python_cmd, temp_file_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -143,12 +146,13 @@ except Exception as e:
             os.unlink(results_path)
 
 
-def evaluate(program_path):
+def evaluate(program_path, python_cmd=None):
     """
     Evaluate the program by running it once and checking the schedule
 
     Args:
         program_path: Path to the program file
+        python_cmd: Python command list (e.g. ["uv", "run", "python"])
 
     Returns:
         Dictionary of metrics
@@ -161,7 +165,7 @@ def evaluate(program_path):
 
         # Use subprocess to run with timeout
         makespan, schedule = run_with_timeout(
-            program_path, timeout_seconds=600  # Single timeout
+            program_path, timeout_seconds=600, python_cmd=python_cmd
         )
 
         end_time = time.time()
@@ -201,14 +205,14 @@ def evaluate(program_path):
         }
 
 # Stage-based evaluation for cascade evaluation
-def evaluate_stage1(program_path):
+def evaluate_stage1(program_path, python_cmd=None):
     """
     First stage evaluation - quick validation check
     """
     try:
         # Use the simplified subprocess approach
         try:
-            makespan, schedule = run_with_timeout(program_path, timeout_seconds=600)
+            makespan, schedule = run_with_timeout(program_path, timeout_seconds=600, python_cmd=python_cmd)
 
             valid = True
             for s in schedule:
@@ -241,12 +245,12 @@ def evaluate_stage1(program_path):
         return {"validity": 0.0, "combined_score": 0.0, "error": str(e)}
 
 
-def evaluate_stage2(program_path):
+def evaluate_stage2(program_path, python_cmd=None):
     """
     Second stage evaluation - full evaluation
     """
     # Full evaluation as in the main evaluate function
-    return evaluate(program_path)
+    return evaluate(program_path, python_cmd=python_cmd)
 
 
 if __name__ == "__main__":

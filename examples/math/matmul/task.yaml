@@ -62,3 +62,5 @@ agents:
 workspace:
   results_dir: "./results"
   repo_path: "./examples/math/matmul/seed"
+  setup:
+    - "uv sync"

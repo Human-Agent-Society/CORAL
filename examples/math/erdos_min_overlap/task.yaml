@@ -51,3 +51,5 @@ agents:
 workspace:
   results_dir: "./results"
   repo_path: "./examples/math/erdos_min_overlap/seed"
+  setup:
+    - "uv sync"

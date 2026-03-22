@@ -53,3 +53,5 @@ agents:
 workspace:
   results_dir: "./results"
   repo_path: "./examples/math/uncertainty_ineq/seed"
+  setup:
+    - "uv sync"

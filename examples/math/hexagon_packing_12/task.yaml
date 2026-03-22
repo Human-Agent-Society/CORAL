@@ -45,3 +45,5 @@ agents:
 workspace:
   results_dir: "./results"
   repo_path: "./examples/math/hexagon_packing_12/seed"
+  setup:
+    - "uv sync"

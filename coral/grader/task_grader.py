@@ -12,6 +12,7 @@ TaskGrader and implementing evaluate():
 
 from __future__ import annotations
 
+import json
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -41,6 +42,20 @@ class TaskGrader(ABC):
 
     # --- Helpers ---
 
+    def get_python_command(self) -> list[str]:
+        """Return the Python command for running task programs.
+
+        Uses ``uv run`` when a ``pyproject.toml`` exists in the codebase so
+        that task-specific dependencies (numpy, scipy, …) are available.
+        Falls back to the current interpreter otherwise.
+        """
+        import shutil
+        import sys
+
+        if (Path(self.codebase_path) / "pyproject.toml").exists() and shutil.which("uv"):
+            return ["uv", "run", "--project", self.codebase_path, "python"]
+        return [sys.executable]
+
     def run_program(
         self,
         filename: str,
@@ -48,17 +63,70 @@ class TaskGrader(ABC):
         timeout: int = 300,
     ) -> subprocess.CompletedProcess[str]:
         """Run a file from the agent's codebase in a subprocess."""
-        import sys
-
         filepath = Path(self.codebase_path) / filename
         if not filepath.exists():
             raise FileNotFoundError(f"{filename} not found in codebase")
         return subprocess.run(
-            [sys.executable, str(filepath), *cmd_args],
+            [*self.get_python_command(), str(filepath), *cmd_args],
             capture_output=True,
             text=True,
             cwd=self.codebase_path,
             timeout=timeout,
+        )
+
+    def run_script(
+        self,
+        script: str,
+        *,
+        timeout: int = 300,
+    ) -> subprocess.CompletedProcess[str]:
+        """Run an inline Python script using the correct interpreter."""
+        return subprocess.run(
+            [*self.get_python_command(), "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+
+    def run_script_json(
+        self,
+        script: str,
+        *,
+        timeout: int = 300,
+    ) -> dict:
+        """Run an inline script that prints JSON to stdout and return parsed dict.
+
+        Handles common failure modes:
+        - Non-zero exit: raises RuntimeError with stderr
+        - Empty stdout: raises RuntimeError with stderr for diagnostics
+        - Stdout polluted by print statements: scans for last JSON line
+        """
+        result = self.run_script(script, timeout=timeout)
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.strip()[-2000:])
+        stdout = result.stdout.strip()
+        if not stdout:
+            stderr_tail = result.stderr.strip()[-1000:]
+            raise RuntimeError(
+                f"Script produced no output on stdout.\nstderr: {stderr_tail}"
+            )
+        # Try full stdout first
+        try:
+            return json.loads(stdout)
+        except json.JSONDecodeError:
+            pass
+        # Scan lines in reverse for a JSON object (handles print() pollution)
+        for line in reversed(stdout.splitlines()):
+            line = line.strip()
+            if line.startswith("{"):
+                try:
+                    return json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+        raise RuntimeError(
+            f"No valid JSON in script output.\n"
+            f"stdout (last 500): {stdout[-500:]}\n"
+            f"stderr (last 500): {result.stderr.strip()[-500:]}"
         )
 
     def read_eval(self, relative_path: str) -> str:

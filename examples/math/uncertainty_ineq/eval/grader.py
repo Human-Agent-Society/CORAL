@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import textwrap
 
 from coral.grader import TaskGrader
@@ -38,7 +37,7 @@ class Grader(TaskGrader):
         timeout = self.args.get("timeout", 600)
 
         try:
-            result = _run_evaluation(program_path, timeout)
+            result = _run_evaluation(program_path, timeout, self.get_python_command())
         except TimeoutError:
             return self.fail(f"Evaluation timed out after {timeout}s")
         except Exception as e:
@@ -65,7 +64,7 @@ class Grader(TaskGrader):
         return self.score(combined_score, explanation)
 
 
-def _run_evaluation(program_path: str, timeout: int) -> dict:
+def _run_evaluation(program_path: str, timeout: int, python_cmd: list[str]) -> dict:
     """Run the program in a subprocess with timeout."""
     script = textwrap.dedent(f"""\
         import json, sys, os, time
@@ -158,11 +157,29 @@ def _run_evaluation(program_path: str, timeout: int) -> dict:
     """)
     import subprocess
     result = subprocess.run(
-        [sys.executable, "-c", script],
+        [*python_cmd, "-c", script],
         capture_output=True,
         text=True,
         timeout=timeout,
     )
     if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip()[-1000:])
-    return json.loads(result.stdout)
+        raise RuntimeError(result.stderr.strip()[-2000:])
+    stdout = result.stdout.strip()
+    if not stdout:
+        raise RuntimeError(
+            f"Script produced no output.\nstderr: {result.stderr.strip()[-1000:]}"
+        )
+    try:
+        return json.loads(stdout)
+    except json.JSONDecodeError:
+        # Handle stdout pollution from print statements
+        for line in reversed(stdout.splitlines()):
+            line = line.strip()
+            if line.startswith("{"):
+                try:
+                    return json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+        raise RuntimeError(
+            f"No valid JSON in output.\nstdout: {stdout[-500:]}\nstderr: {result.stderr.strip()[-500:]}"
+        )

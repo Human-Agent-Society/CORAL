@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from coral.agent.runtime import AgentHandle, write_coral_log_entry
+from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +126,7 @@ class OpenCodeRuntime:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
+                env=_clean_env(),
             )
 
             def _tee_output(proc: subprocess.Popen, log_f, agent: str) -> None:
@@ -160,6 +162,7 @@ class OpenCodeRuntime:
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
+                env=_clean_env(),
             )
             log_file_ref = log_file
 

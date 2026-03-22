@@ -80,6 +80,7 @@ class WorkspaceConfig:
 
     results_dir: str = "./results"
     repo_path: str = "."
+    setup: list[str] = field(default_factory=list)  # shell commands to run before agents start
     # Ignored if results_dir is set
     base_dir: str = ""
 
@@ -156,6 +157,7 @@ class CoralConfig:
         workspace = WorkspaceConfig(
             results_dir=ws_data.get("results_dir", "./results"),
             repo_path=ws_data.get("repo_path", "."),
+            setup=ws_data.get("setup", []),
             base_dir=ws_data.get("base_dir", ""),
         )
         return cls(
@@ -204,6 +206,7 @@ class CoralConfig:
             "workspace": {
                 "results_dir": self.workspace.results_dir,
                 "repo_path": self.workspace.repo_path,
+                "setup": self.workspace.setup,
             },
         }
 

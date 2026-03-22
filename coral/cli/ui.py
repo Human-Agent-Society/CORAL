@@ -85,13 +85,32 @@ def _ensure_ui_built() -> None:
     print("[coral]   Done.")
 
 
+def _ensure_ui_deps() -> None:
+    """Auto-install UI dependencies if missing."""
+    try:
+        import uvicorn  # noqa: F401
+    except ImportError:
+        print("[coral] UI dependencies not installed. Running: uv sync --extra ui ...")
+        result = subprocess.run(
+            ["uv", "sync", "--extra", "ui"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            output = (result.stdout + "\n" + result.stderr).strip()
+            print(f"Error: failed to install UI dependencies:\n{output}", file=sys.stderr)
+            sys.exit(1)
+        print("[coral] UI dependencies installed.")
+
+
 def start_ui_background(coral_dir: Path, port: int = 8420, host: str = "127.0.0.1") -> None:
     """Start the web dashboard in a background thread."""
+    _ensure_ui_deps()
     try:
         import uvicorn
     except ImportError:
         print(
-            "Warning: Web UI dependencies not installed (uv sync --extra ui). Skipping --ui.",
+            "Error: Web UI dependencies still not available after install.",
             file=sys.stderr,
         )
         return
@@ -126,14 +145,8 @@ def cmd_ui(args: argparse.Namespace) -> None:
       coral ui                      Open dashboard in browser
       coral ui --port 9000          Use custom port
     """
-    try:
-        import uvicorn
-    except ImportError:
-        print(
-            "Error: Web UI dependencies not installed. Run: uv sync --extra ui",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    _ensure_ui_deps()
+    import uvicorn
 
     _ensure_ui_built()
 
