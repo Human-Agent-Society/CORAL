@@ -8,7 +8,7 @@ version = "0.2.0"
 description = "Orchestration system for autonomous coding agents"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.11"
+requires-python = ">=3.11, <3.14"
 authors = [
     { name = "CORAL Team" }
 ]
