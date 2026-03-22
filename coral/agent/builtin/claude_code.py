@@ -100,7 +100,9 @@ class ClaudeCodeRuntime:
                 stderr=subprocess.STDOUT,
                 start_new_session=True,  # own process group for clean SIGINT
                 env=_clean_env(),
-            )(proc: subprocess.Popen, log_f, agent: str) -> None:
+            )
+
+            def _tee_output(proc: subprocess.Popen, log_f, agent: str) -> None:
                 try:
                     assert proc.stdout is not None
                     for line in iter(proc.stdout.readline, b""):
