@@ -78,7 +78,7 @@ def create_agent_worktree(repo_path: Path, agent_id: str, agents_dir: Path) -> P
 def setup_gitignore(worktree_path: Path) -> None:
     """Write .gitignore to exclude CORAL-managed files from git."""
     gitignore_path = worktree_path / ".gitignore"
-    entries = {".coral_agent_id", ".coral_dir", "CLAUDE.md", "AGENTS.md", ".claude/", ".codex/", ".opencode/"}
+    entries = {".coral_agent_id", ".coral_dir", "CLAUDE.md", "AGENTS.md", ".claude/", ".codex/", ".opencode/", ".venv/"}
 
     # Preserve existing entries
     existing = set()

@@ -41,6 +41,20 @@ class TaskGrader(ABC):
 
     # --- Helpers ---
 
+    def get_python_command(self) -> list[str]:
+        """Return the Python command for running task programs.
+
+        Uses ``uv run`` when a ``pyproject.toml`` exists in the codebase so
+        that task-specific dependencies (numpy, scipy, …) are available.
+        Falls back to the current interpreter otherwise.
+        """
+        import shutil
+        import sys
+
+        if (Path(self.codebase_path) / "pyproject.toml").exists() and shutil.which("uv"):
+            return ["uv", "run", "--project", self.codebase_path, "python"]
+        return [sys.executable]
+
     def run_program(
         self,
         filename: str,
@@ -48,16 +62,28 @@ class TaskGrader(ABC):
         timeout: int = 300,
     ) -> subprocess.CompletedProcess[str]:
         """Run a file from the agent's codebase in a subprocess."""
-        import sys
-
         filepath = Path(self.codebase_path) / filename
         if not filepath.exists():
             raise FileNotFoundError(f"{filename} not found in codebase")
         return subprocess.run(
-            [sys.executable, str(filepath), *cmd_args],
+            [*self.get_python_command(), str(filepath), *cmd_args],
             capture_output=True,
             text=True,
             cwd=self.codebase_path,
+            timeout=timeout,
+        )
+
+    def run_script(
+        self,
+        script: str,
+        *,
+        timeout: int = 300,
+    ) -> subprocess.CompletedProcess[str]:
+        """Run an inline Python script using the correct interpreter."""
+        return subprocess.run(
+            [*self.get_python_command(), "-c", script],
+            capture_output=True,
+            text=True,
             timeout=timeout,
         )
 

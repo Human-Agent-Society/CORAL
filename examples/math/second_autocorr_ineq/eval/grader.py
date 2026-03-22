@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import textwrap
 
 from coral.grader import TaskGrader
@@ -43,7 +42,7 @@ class Grader(TaskGrader):
         timeout = self.args.get("timeout", 600)
 
         try:
-            result = _run_evaluation(program_path, timeout)
+            result = _run_evaluation(program_path, timeout, self.get_python_command())
         except TimeoutError:
             return self.fail(f"Evaluation timed out after {timeout}s")
         except Exception as e:
@@ -70,7 +69,7 @@ class Grader(TaskGrader):
         return self.score(score, explanation)
 
 
-def _run_evaluation(program_path: str, timeout: int) -> dict:
+def _run_evaluation(program_path: str, timeout: int, python_cmd: list[str]) -> dict:
     """Run the program in a subprocess with timeout and verify the solution."""
     script = textwrap.dedent(f"""\
         import json, sys, os, time
@@ -139,7 +138,7 @@ def _run_evaluation(program_path: str, timeout: int) -> dict:
     """)
     import subprocess
     result = subprocess.run(
-        [sys.executable, "-c", script],
+        [*python_cmd, "-c", script],
         capture_output=True,
         text=True,
         timeout=timeout,
