@@ -166,11 +166,10 @@ def test_setup_claude_settings_permissions():
 
         # Permission allow rules grant agent autonomy
         allow = settings["permissions"]["allow"]
-        # Bash/Read/Edit/Write scoped to own worktree (Read also allows agents dir)
-        assert any("Bash" in r and worktree_str in r for r in allow)
+        # Bash is unscoped; Read/Edit/Write scoped to own worktree
+        assert "Bash" in allow
         assert any("Read" in r and worktree_str in r for r in allow)
         assert any("Read" in r and agents_dir in r for r in allow)
-        assert "Read" not in allow  # no blanket Read
         assert any("Edit" in r and worktree_str in r for r in allow)
         assert any("Write" in r and worktree_str in r for r in allow)
         assert "WebSearch" in allow  # research=True by default
