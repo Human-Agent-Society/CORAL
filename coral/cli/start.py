@@ -105,9 +105,10 @@ def _start_in_tmux(args: argparse.Namespace) -> None:
         print(f"Error creating tmux session: {result.stderr}", file=sys.stderr)
         sys.exit(1)
 
-    # Pre-create the results directory so we can save tmux markers there
+    # Pre-create the results directory so we can save tmux markers there.
+    # Must match create_project()'s resolution: relative to CWD, not task config dir.
     from coral.workspace.setup import _slugify
-    results_dir = (config.task_dir or config_path.parent or Path.cwd()) / config.workspace.results_dir
+    results_dir = Path(config.workspace.results_dir).resolve()
     task_dir = results_dir / _slugify(config.task.name)
     task_dir.mkdir(parents=True, exist_ok=True)
     save_tmux_session_name(task_dir, session_name)
