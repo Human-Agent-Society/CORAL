@@ -56,9 +56,8 @@ def load_grader(config: CoralConfig, coral_dir: str | Path) -> Any:
             f"got {grader_cls.__bases__}"
         )
 
-    # Instantiate with config args and attach full grader config
-    grader = grader_cls(**config.grader.args)
-    grader.config = config.grader
+    # Instantiate with grader config
+    grader = grader_cls(config=config.grader)
     grader.private_dir = str(private_dir)
 
     logger.info(f"Loaded grader from {grader_path}")

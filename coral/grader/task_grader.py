@@ -33,10 +33,14 @@ class TaskGrader(ABC):
     codebase_path: str
     private_dir: str
     config: GraderConfig
-    args: dict[str, Any]
 
-    def __init__(self, **kwargs: Any) -> None:
-        self.args = kwargs
+    def __init__(self, config: GraderConfig) -> None:
+        self.config = config
+
+    @property
+    def args(self) -> dict[str, Any]:
+        """Grader-specific args from config."""
+        return self.config.args
 
     @property
     def timeout(self) -> int:
