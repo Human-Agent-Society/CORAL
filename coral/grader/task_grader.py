@@ -12,6 +12,8 @@ TaskGrader and implementing evaluate():
 
 from __future__ import annotations
 
+import asyncio
+import concurrent.futures
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -115,9 +117,21 @@ class TaskGrader(ABC):
         tasks: list[Task],
         **kwargs: Any,
     ) -> ScoreBundle:
-        """GraderInterface implementation. Sets context and calls evaluate()."""
+        """GraderInterface implementation. Sets context and calls evaluate().
+
+        Enforces self.timeout around the entire evaluate() call.
+        """
         self.codebase_path = codebase_path
-        result = self.evaluate()
+
+        loop = asyncio.get_running_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            try:
+                result = await asyncio.wait_for(
+                    loop.run_in_executor(pool, self.evaluate),
+                    timeout=self.timeout if self.timeout > 0 else None,
+                )
+            except asyncio.TimeoutError:
+                return self.fail(f"Evaluation timed out after {self.timeout}s")
 
         if isinstance(result, ScoreBundle):
             return result
