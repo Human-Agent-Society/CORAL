@@ -56,8 +56,10 @@ def load_grader(config: CoralConfig, coral_dir: str | Path) -> Any:
             f"got {grader_cls.__bases__}"
         )
 
-    # Instantiate with config args
-    grader = grader_cls(**config.grader.args)
+    # Merge top-level grader.timeout into args (args takes precedence)
+    grader_kwargs = {"timeout": config.grader.timeout}
+    grader_kwargs.update(config.grader.args)
+    grader = grader_cls(**grader_kwargs)
     grader.private_dir = str(private_dir)
 
     logger.info(f"Loaded grader from {grader_path}")
