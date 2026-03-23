@@ -106,7 +106,7 @@ class CodexRuntime:
                 "codex", "exec",
                 "resume", resume_session_id,
                 prompt,
-                "--full-auto",
+                "--dangerously-bypass-approvals-and-sandbox",
                 "--model", model,
                 *option_args,
                 "--json",
@@ -116,7 +116,7 @@ class CodexRuntime:
             cmd = [
                 "codex", "exec",
                 prompt,
-                "--full-auto",
+                "--dangerously-bypass-approvals-and-sandbox",
                 "--model", model,
                 *option_args,
                 "--json",
