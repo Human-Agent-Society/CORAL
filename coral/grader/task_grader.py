@@ -43,9 +43,9 @@ class TaskGrader(ABC):
         return self.config.args
 
     @property
-    def timeout(self) -> int:
-        """Eval timeout in seconds, from grader config."""
-        return self.config.timeout
+    def timeout(self) -> int | None:
+        """Eval timeout in seconds, from grader config. None means no limit."""
+        return self.config.timeout or None
 
     @abstractmethod
     def evaluate(self) -> float | ScoreBundle:
@@ -128,7 +128,7 @@ class TaskGrader(ABC):
             try:
                 result = await asyncio.wait_for(
                     loop.run_in_executor(pool, self.evaluate),
-                    timeout=self.timeout if self.timeout > 0 else None,
+                    timeout=self.timeout,
                 )
             except asyncio.TimeoutError:
                 return self.fail(f"Evaluation timed out after {self.timeout}s")
