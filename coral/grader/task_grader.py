@@ -12,12 +12,15 @@ TaskGrader and implementing evaluate():
 
 from __future__ import annotations
 
+import asyncio
+import concurrent.futures
 import json
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
+from coral.config import GraderConfig
 from coral.types import Score, ScoreBundle, Task
 
 
@@ -25,15 +28,25 @@ class TaskGrader(ABC):
     """Base class for task graders.
 
     Subclasses implement evaluate() and return a float or ScoreBundle.
-    The framework sets codebase_path, private_dir, and args before calling.
+    The framework sets codebase_path, private_dir, config, and args before calling.
     """
 
     codebase_path: str
     private_dir: str
-    args: dict[str, Any]
+    config: GraderConfig
 
-    def __init__(self, **kwargs: Any) -> None:
-        self.args = kwargs
+    def __init__(self, config: GraderConfig) -> None:
+        self.config = config
+
+    @property
+    def args(self) -> dict[str, Any]:
+        """Grader-specific args from config."""
+        return self.config.args
+
+    @property
+    def timeout(self) -> int | None:
+        """Eval timeout in seconds, from grader config. None means no limit."""
+        return self.config.timeout or None
 
     @abstractmethod
     def evaluate(self) -> float | ScoreBundle:
@@ -60,7 +73,6 @@ class TaskGrader(ABC):
         self,
         filename: str,
         *cmd_args: str,
-        timeout: int = 300,
     ) -> subprocess.CompletedProcess[str]:
         """Run a file from the agent's codebase in a subprocess."""
         filepath = Path(self.codebase_path) / filename
@@ -71,7 +83,7 @@ class TaskGrader(ABC):
             capture_output=True,
             text=True,
             cwd=self.codebase_path,
-            timeout=timeout,
+            timeout=self.timeout,
         )
 
     def run_script(
@@ -173,9 +185,21 @@ class TaskGrader(ABC):
         tasks: list[Task],
         **kwargs: Any,
     ) -> ScoreBundle:
-        """GraderInterface implementation. Sets context and calls evaluate()."""
+        """GraderInterface implementation. Sets context and calls evaluate().
+
+        Enforces self.timeout around the entire evaluate() call.
+        """
         self.codebase_path = codebase_path
-        result = self.evaluate()
+
+        loop = asyncio.get_running_loop()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            try:
+                result = await asyncio.wait_for(
+                    loop.run_in_executor(pool, self.evaluate),
+                    timeout=self.timeout,
+                )
+            except asyncio.TimeoutError:
+                return self.fail(f"Evaluation timed out after {self.timeout}s")
 
         if isinstance(result, ScoreBundle):
             return result
