@@ -25,7 +25,7 @@ class Grader(TaskGrader):
         program_file = self.args.get("program_file", "solution.py")
         train_file = self.args.get("train_file", "data/train.npz")
         test_file = self.args.get("test_file", "data/test.npz")
-        timeout = self.args.get("timeout", 300)
+        timeout = self.timeout
 
         program_path = os.path.join(self.codebase_path, program_file)
         train_path = os.path.join(self.codebase_path, train_file)

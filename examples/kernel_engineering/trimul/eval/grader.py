@@ -50,7 +50,7 @@ class Grader(TaskGrader):
 
     def evaluate(self) -> ScoreBundle:
         task_name = self.args.get("task_name", "trimul")
-        timeout = self.args.get("timeout", 1200)
+        timeout = self.timeout
 
         submission_path = os.path.join(self.codebase_path, "submission.py")
         if not os.path.exists(submission_path):

@@ -59,27 +59,29 @@ def _create_grader_file(directory: Path) -> None:
         "from coral.grader.task_grader import TaskGrader\n"
         "class Grader(TaskGrader):\n"
         "    def evaluate(self):\n"
-        "        return self.args.get('timeout', 300)\n"
+        "        return self.timeout\n"
     )
 
 
-def test_loader_passes_config_timeout():
-    """grader.timeout from task.yaml should be available in self.args."""
+def test_loader_passes_grader_config():
+    """GraderConfig from task.yaml should be accessible as self.config."""
     with tempfile.TemporaryDirectory() as tmpdir:
         coral_dir = Path(tmpdir)
         _create_grader_file(coral_dir)
         config = CoralConfig(task=TaskConfig(name="t", description="d"))
         config.grader = GraderConfig(timeout=3000)
         grader = load_grader(config, coral_dir)
-        assert grader.args["timeout"] == 3000
+        assert grader.config is config.grader
+        assert grader.timeout == 3000
 
 
-def test_loader_args_timeout_overrides_config():
-    """Explicit grader.args.timeout should take precedence over grader.timeout."""
+def test_loader_passes_args_separately():
+    """grader.args should be passed as kwargs, config.timeout via self.config."""
     with tempfile.TemporaryDirectory() as tmpdir:
         coral_dir = Path(tmpdir)
         _create_grader_file(coral_dir)
         config = CoralConfig(task=TaskConfig(name="t", description="d"))
-        config.grader = GraderConfig(timeout=3000, args={"timeout": 5000})
+        config.grader = GraderConfig(timeout=3000, args={"program_file": "sol.py"})
         grader = load_grader(config, coral_dir)
-        assert grader.args["timeout"] == 5000
+        assert grader.timeout == 3000
+        assert grader.args["program_file"] == "sol.py"

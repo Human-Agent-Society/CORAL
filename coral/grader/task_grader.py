@@ -15,24 +15,33 @@ from __future__ import annotations
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from coral.types import Score, ScoreBundle, Task
+
+if TYPE_CHECKING:
+    from coral.config import GraderConfig
 
 
 class TaskGrader(ABC):
     """Base class for task graders.
 
     Subclasses implement evaluate() and return a float or ScoreBundle.
-    The framework sets codebase_path, private_dir, and args before calling.
+    The framework sets codebase_path, private_dir, config, and args before calling.
     """
 
     codebase_path: str
     private_dir: str
+    config: GraderConfig
     args: dict[str, Any]
 
     def __init__(self, **kwargs: Any) -> None:
         self.args = kwargs
+
+    @property
+    def timeout(self) -> int:
+        """Eval timeout in seconds from grader config (default 300)."""
+        return self.config.timeout
 
     @abstractmethod
     def evaluate(self) -> float | ScoreBundle:
@@ -45,11 +54,16 @@ class TaskGrader(ABC):
         self,
         filename: str,
         *cmd_args: str,
-        timeout: int = 300,
+        timeout: int | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        """Run a file from the agent's codebase in a subprocess."""
+        """Run a file from the agent's codebase in a subprocess.
+
+        Uses self.timeout (from grader config) if no explicit timeout is given.
+        """
         import sys
 
+        if timeout is None:
+            timeout = self.timeout
         filepath = Path(self.codebase_path) / filename
         if not filepath.exists():
             raise FileNotFoundError(f"{filename} not found in codebase")

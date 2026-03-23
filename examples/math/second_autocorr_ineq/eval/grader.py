@@ -40,7 +40,7 @@ class Grader(TaskGrader):
         if not os.path.exists(program_path):
             return self.fail(f"Program file not found: {program_file}")
 
-        timeout = self.args.get("timeout", 600)
+        timeout = self.timeout
 
         try:
             result = _run_evaluation(program_path, timeout)
