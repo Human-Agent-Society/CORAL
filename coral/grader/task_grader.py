@@ -56,17 +56,10 @@ class TaskGrader(ABC):
         self,
         filename: str,
         *cmd_args: str,
-        timeout: int | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        """Run a file from the agent's codebase in a subprocess.
-
-        Args:
-            timeout: Seconds before killing the subprocess.
-                     Defaults to self.timeout (from grader config) when None.
-        """
+        """Run a file from the agent's codebase in a subprocess."""
         import sys
 
-        effective_timeout = timeout if timeout is not None else self.timeout
         filepath = Path(self.codebase_path) / filename
         if not filepath.exists():
             raise FileNotFoundError(f"{filename} not found in codebase")
@@ -75,7 +68,7 @@ class TaskGrader(ABC):
             capture_output=True,
             text=True,
             cwd=self.codebase_path,
-            timeout=effective_timeout,
+            timeout=self.timeout,
         )
 
     def read_eval(self, relative_path: str) -> str:
