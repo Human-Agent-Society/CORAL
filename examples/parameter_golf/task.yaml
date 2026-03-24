@@ -38,5 +38,5 @@ agents:
   research: true
 
 workspace:
-  results_dir: "/local/checkpoints/parameter_golf"
+  results_dir: "./results"
   repo_path: "./examples/parameter_golf/seed"

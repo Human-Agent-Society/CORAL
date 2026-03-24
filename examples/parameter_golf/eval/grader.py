@@ -50,6 +50,7 @@ class Grader(TaskGrader):
         env["TOKENIZER_PATH"] = tokenizer_path
         env["RUN_ID"] = "coral_eval"
         env["SEED"] = "1337"
+        env["MAX_WALLCLOCK_SECONDS"] = "600"
 
         cmd = [
             "torchrun", "--standalone",

@@ -65,8 +65,17 @@ ui = [
     "uvicorn[standard]>=0.30.0",
     "pyyaml>=6.0",
 ]
+parameter-golf = [
+    "torch>=2.0.0",
+    "numpy>=1.24.0",
+    "sentencepiece>=0.2.0",
+    "huggingface-hub>=0.20.0",
+    "kernels>=0.3.0",
+    "tqdm>=4.60.0",
+    "tiktoken>=0.7.0",
+]
 all = [
-    "coral[dev,swebench,terminalbench,erdos,frontier-cs,ui]",
+    "coral[dev,swebench,terminalbench,erdos,frontier-cs,ui,parameter-golf]",
 ]
 
 [project.scripts]
