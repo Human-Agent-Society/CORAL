@@ -30,6 +30,7 @@ class GraderConfig:
     args: dict[str, Any] = field(default_factory=dict)
     private: list[str] = field(default_factory=list)  # files/dirs copied to .coral/ (hidden from agents)
     direction: str = "maximize"  # "maximize" or "minimize"
+    eval_queue: bool = False  # serialize evals so only one runs at a time
 
 
 @dataclass
@@ -120,6 +121,7 @@ class CoralConfig:
             args=grader_data.get("args", {}),
             private=grader_data.get("private", []),
             direction=grader_data.get("direction", "maximize"),
+            eval_queue=grader_data.get("eval_queue", False),
         )
         agents_data = data.get("agents", {})
         heartbeat_raw = agents_data.pop("heartbeat", None)
@@ -184,6 +186,7 @@ class CoralConfig:
                 "args": self.grader.args,
                 "private": self.grader.private,
                 "direction": self.grader.direction,
+                "eval_queue": self.grader.eval_queue,
             },
             "agents": {
                 "count": self.agents.count,

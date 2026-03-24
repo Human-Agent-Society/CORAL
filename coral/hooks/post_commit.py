@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fcntl
 import logging
 import multiprocessing
 import subprocess
@@ -185,6 +186,16 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
     # Run evaluation with timeout
     eval_timeout = config.grader.timeout  # 0 = no limit
 
+    # Acquire eval queue lock if enabled (serializes evals across agents)
+    lock_file = None
+    lock_fd = None
+    if config.grader.eval_queue:
+        lock_file = coral_dir / "eval_queue.lock"
+        lock_fd = open(lock_file, "w")
+        logger.info(f"[{agent_id}] Waiting for eval queue lock...")
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        logger.info(f"[{agent_id}] Acquired eval queue lock")
+
     try:
         result = _run_grader_with_timeout(str(config_path), str(coral_dir), str(workdir_path), [task], eval_timeout)
         score = result.aggregated
@@ -229,6 +240,12 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
         score = None
         status = "crashed"
         feedback = str(e)
+    finally:
+        # Release eval queue lock
+        if lock_fd is not None:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            lock_fd.close()
+            logger.info(f"[{agent_id}] Released eval queue lock")
 
     # Create attempt record
     attempt = Attempt(

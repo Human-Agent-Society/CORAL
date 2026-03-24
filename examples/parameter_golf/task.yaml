@@ -27,12 +27,13 @@ task:
 grader:
   timeout: 900
   direction: minimize
+  eval_queue: true
   args:
     program_file: "train_gpt.py"
     num_gpus: 8
 
 agents:
-  count: 1
+  count: 4
   runtime: claude_code
   model: claude-opus-4-6
   research: true
