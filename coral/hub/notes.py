@@ -14,7 +14,9 @@ Legacy format (single notes.md with ## headings) is also supported.
 
 from __future__ import annotations
 
+import os
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -93,6 +95,7 @@ def _parse_note_file(path: Path) -> dict[str, Any]:
         "body": body,
         "creator": meta.get("creator", ""),
         "filename": path.name,
+        "_mtime": os.path.getmtime(path),
     }
 
 
@@ -119,6 +122,21 @@ def _collect_from_dir(directory: Path) -> list[dict[str, Any]]:
     return []
 
 
+def _sort_key(entry: dict[str, Any]) -> datetime:
+    """Return a datetime for sorting. Parses the frontmatter date string,
+    falling back to file mtime if unavailable or unparseable."""
+    date_str = entry.get("date", "")
+    if date_str:
+        try:
+            return datetime.fromisoformat(date_str)
+        except (ValueError, TypeError):
+            pass
+    mtime = entry.get("_mtime")
+    if mtime is not None:
+        return datetime.fromtimestamp(mtime, tz=UTC)
+    return datetime.min.replace(tzinfo=UTC)
+
+
 def list_notes(coral_dir: str | Path) -> list[dict[str, Any]]:
     """List all note entries from the notes directory.
 
@@ -136,6 +154,7 @@ def list_notes(coral_dir: str | Path) -> list[dict[str, Any]]:
             if e["filename"] not in seen:
                 entries.append(e)
 
+    entries.sort(key=_sort_key)
     return entries
 
 
