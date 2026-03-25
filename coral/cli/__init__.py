@@ -187,6 +187,13 @@ Run 'coral <command> --help' for details on any command."""
     )
     _add_run_args(p_resume)
     p_resume.add_argument(
+        "--instruction",
+        "-i",
+        type=str,
+        default=None,
+        help="Additional instruction to inject into agents at resume time",
+    )
+    p_resume.add_argument(
         "overrides",
         nargs="*",
         default=[],

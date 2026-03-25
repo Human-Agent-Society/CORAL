@@ -129,6 +129,10 @@ def _resume_in_tmux(args: argparse.Namespace, config: CoralConfig, coral_dir: Pa
         cmd.extend(["--run", args.run])
     else:
         cmd.extend(["--run", run_name])
+    # Forward --instruction flag if provided
+    instruction = getattr(args, "instruction", None)
+    if instruction:
+        cmd.extend(["--instruction", instruction])
     # Forward user overrides, then force tmux off (inner process is already in tmux)
     cmd.extend(getattr(args, "overrides", []))
     cmd.append("run.tmux=false")
@@ -327,8 +331,9 @@ def cmd_resume(args: argparse.Namespace) -> None:
         print(f"[coral] Task:    {config.task.name}")
         print(f"[coral] Model:   {config.agents.model}")
 
+    instruction = getattr(args, "instruction", None)
     manager = AgentManager(config, verbose=verbose)
-    handles = manager.resume_all(paths)
+    handles = manager.resume_all(paths, instruction=instruction)
 
     print(f"Resumed {len(handles)} agent(s):")
     for h in handles:

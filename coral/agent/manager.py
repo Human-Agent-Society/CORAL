@@ -212,7 +212,7 @@ class AgentManager:
             prompt_source=prompt_source,
         )
 
-    def resume_all(self, paths: ProjectPaths) -> list[AgentHandle]:
+    def resume_all(self, paths: ProjectPaths, instruction: str | None = None) -> list[AgentHandle]:
         """Resume agents into an existing run's worktrees."""
         self._start_time = datetime.now(UTC)
         self.paths = paths
@@ -248,6 +248,9 @@ class AgentManager:
             "Build on what worked. Don't duplicate prior efforts."
         )
 
+        if instruction:
+            fresh_start_prompt += f"\n\n## Additional Instructions\n{instruction}"
+
         handles = []
         for agent_dir in agent_dirs:
             agent_id = agent_dir.name
@@ -266,7 +269,7 @@ class AgentManager:
 
             if session_id:
                 logger.info(f"Resuming {agent_id} with session {session_id}")
-                prompt = None  # runtime default: "Session resumed. Continue where you left off."
+                prompt = instruction if instruction else None  # None → runtime default
             else:
                 logger.info(f"Starting {agent_id} fresh (no session to resume)")
                 prompt = fresh_start_prompt
@@ -538,6 +541,14 @@ class AgentManager:
                     )
                     if not actions:
                         continue
+
+                    # If a plateau action fired, reset the improvement baseline
+                    # to the current score so the agent only needs to beat their
+                    # post-pivot score, not their all-time best.
+                    if any(a.trigger == "plateau" for a in actions):
+                        if score is not None:
+                            self._agent_best_scores[committing_agent_id] = score
+                        self._agent_evals_since_improvement[committing_agent_id] = 0
 
                     # Find the committing agent's handle
                     committing_idx = None
