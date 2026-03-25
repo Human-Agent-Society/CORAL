@@ -56,3 +56,8 @@ workspace:
   repo_path: "./examples/math/second_autocorr_ineq/seed"
   setup:
     - "uv sync"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

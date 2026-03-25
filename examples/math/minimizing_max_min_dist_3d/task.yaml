@@ -49,3 +49,8 @@ workspace:
   repo_path: "./examples/math/minimizing_max_min_dist_3d/seed"
   setup:
     - "uv sync"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

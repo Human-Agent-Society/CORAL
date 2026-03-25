@@ -57,3 +57,8 @@ agents:
 workspace:
   results_dir: "./results"
   repo_path: "./examples/kernel_builder/seed"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

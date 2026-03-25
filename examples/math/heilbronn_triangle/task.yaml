@@ -42,3 +42,8 @@ workspace:
   repo_path: "./examples/math/heilbronn_triangle/seed"
   setup:
     - "uv sync"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

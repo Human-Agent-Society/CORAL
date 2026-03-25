@@ -65,3 +65,8 @@ workspace:
   repo_path: "./examples/math/signal_processing/seed"
   setup:
     - "uv sync"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

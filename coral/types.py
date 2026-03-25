@@ -145,9 +145,11 @@ class Attempt:
     parent_hash: str | None
     timestamp: str
     feedback: str = ""
+    shared_state_hash: str | None = None
+    parent_shared_state_hash: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d = {
             "commit_hash": self.commit_hash,
             "agent_id": self.agent_id,
             "title": self.title,
@@ -157,6 +159,11 @@ class Attempt:
             "timestamp": self.timestamp,
             "feedback": self.feedback,
         }
+        if self.shared_state_hash is not None:
+            d["shared_state_hash"] = self.shared_state_hash
+        if self.parent_shared_state_hash is not None:
+            d["parent_shared_state_hash"] = self.parent_shared_state_hash
+        return d
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Attempt:
@@ -169,4 +176,6 @@ class Attempt:
             parent_hash=data.get("parent_hash"),
             timestamp=data["timestamp"],
             feedback=data.get("feedback", ""),
+            shared_state_hash=data.get("shared_state_hash"),
+            parent_shared_state_hash=data.get("parent_shared_state_hash"),
         )

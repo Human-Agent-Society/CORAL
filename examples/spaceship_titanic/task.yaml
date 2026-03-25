@@ -87,3 +87,8 @@ agents:
 workspace:
   results_dir: "./results"
   repo_path: "./spaceship_titanic/repo"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

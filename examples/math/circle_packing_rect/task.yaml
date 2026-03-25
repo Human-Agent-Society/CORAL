@@ -46,3 +46,8 @@ workspace:
   repo_path: "./examples/math/circle_packing_rect/seed"
   setup:
     - "uv sync"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

@@ -8,8 +8,8 @@ from pathlib import Path
 import yaml
 
 from coral.hooks.post_commit import (
-    run_eval,
     _increment_eval_count,
+    run_eval,
 )
 from coral.workspace import setup_claude_settings
 
@@ -95,7 +95,7 @@ def test_run_eval_no_changes():
 
         sys.path.insert(0, str(repo))
         try:
-            attempt = run_eval(message="No changes", agent_id="agent-test", workdir=str(repo))
+            run_eval(message="No changes", agent_id="agent-test", workdir=str(repo))
             assert False, "Should have raised RuntimeError"
         except RuntimeError as e:
             assert "Nothing to commit" in str(e)
@@ -139,6 +139,41 @@ def test_run_eval_tracks_eval_count():
         finally:
             sys.path.pop(0)
 
+
+
+def test_run_eval_sets_shared_state_hash():
+    """run_eval should checkpoint shared state and store hash in the attempt.
+
+    The checkpoint runs before write_attempt, so the first eval has no prior
+    shared state changes (hash is None). The second eval sees the first eval's
+    attempt JSON and eval_count, producing a non-None hash.
+    """
+    import sys
+
+    with tempfile.TemporaryDirectory() as d:
+        repo = _setup_repo_with_config(Path(d))
+
+        sys.path.insert(0, str(repo))
+        try:
+            # First eval — no prior shared state changes, hash should be None
+            (repo / "hello.py").write_text("print('v1')\n")
+            a1 = run_eval(message="first", agent_id="agent-test", workdir=str(repo))
+            assert a1.shared_state_hash is None
+
+            # Second eval — first eval wrote attempt JSON + eval_count, so checkpoint finds changes
+            (repo / "hello.py").write_text("print('v2')\n")
+            a2 = run_eval(message="second", agent_id="agent-test", workdir=str(repo))
+            assert a2.shared_state_hash is not None
+            assert len(a2.shared_state_hash) == 40
+            # Parent shared state hash comes from the first attempt
+            assert a2.parent_shared_state_hash == a1.shared_state_hash
+
+            # Verify hashes were persisted in the attempt JSON
+            attempt_file = repo / ".coral" / "public" / "attempts" / f"{a2.commit_hash}.json"
+            data = json.loads(attempt_file.read_text())
+            assert data["shared_state_hash"] == a2.shared_state_hash
+        finally:
+            sys.path.pop(0)
 
 
 # --- setup_claude_settings tests ---

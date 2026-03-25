@@ -129,6 +129,25 @@ def cmd_notes(args: argparse.Namespace) -> None:
 
     coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
 
+    if getattr(args, "history", False):
+        from coral.hub.checkpoint import checkpoint_history
+
+        entries = checkpoint_history(str(coral_dir))
+        if not entries:
+            print("No checkpoint history.")
+            return
+        print(f"{'HASH':<12} {'DATE':<26} MESSAGE")
+        print("-" * 72)
+        for e in entries:
+            print(f"{e['hash'][:10]}   {e['date']:<26} {e['message']}")
+        return
+
+    if getattr(args, "diff", None):
+        from coral.hub.checkpoint import checkpoint_diff
+
+        print(checkpoint_diff(str(coral_dir), args.diff))
+        return
+
     if args.read:
         try:
             idx = int(args.read)

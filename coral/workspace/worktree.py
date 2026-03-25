@@ -226,12 +226,13 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
 
     # Install coral into the worktree's venv so agents can use
     # ``uv run coral eval`` and graders can ``from coral.grader import ...``.
-    if (worktree_path / "pyproject.toml").exists() and shutil.which("uv"):
+    venv_python = worktree_path / ".venv" / "bin" / "python"
+    if venv_python.exists() and shutil.which("uv"):
         coral_root = Path(__file__).resolve().parent.parent.parent
         if (coral_root / "pyproject.toml").exists():
             logger.info(f"Installing coral into worktree venv from {coral_root}")
             result = subprocess.run(
-                ["uv", "pip", "install", "-e", str(coral_root)],
+                ["uv", "pip", "install", "--python", str(venv_python), "-e", str(coral_root)],
                 cwd=str(worktree_path),
                 capture_output=True,
                 text=True,

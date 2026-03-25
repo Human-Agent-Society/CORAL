@@ -86,14 +86,21 @@ agents:
 
 ```bash
 # start a run
-uv run coral start --config examples/kernel_builder/task.yaml
+uv run coral start -c examples/kernel_builder/task.yaml
+
+# override any config value via dotlist syntax
+uv run coral start -c task.yaml agents.count=4 agents.model=opus
+uv run coral start -c task.yaml run.verbose=true        # stream agent output
+uv run coral start -c task.yaml run.ui=true              # also launch web dashboard
+uv run coral start -c task.yaml run.tmux=false           # skip tmux, run inline
 
 # stop and resume
-uv run coral stop                                      # stop anytime
-uv run coral resume                                    # pick up where you left off
+uv run coral stop                                        # stop anytime
+uv run coral resume                                      # pick up where you left off
+uv run coral resume agents.model=opus run.verbose=true   # resume with overrides
 
 # monitor progress
-uv run coral ui                                        # open the web dashboard
+uv run coral ui                                          # open the web dashboard
 ```
 
 ### How It Works
@@ -206,8 +213,9 @@ workspace:
 #### 4. Launch
 
 ```bash
-uv run coral start --config examples/tsp/task.yaml  # You should then see Coral in tmux session `coral-tsp`
-uv sync --extra ui && uv run coral ui          # Open web dashboard, default to run on port 8420
+uv run coral start -c examples/tsp/task.yaml             # launches in tmux session `coral-tsp`
+uv run coral start -c examples/tsp/task.yaml agents.count=4  # override agent count
+uv sync --extra ui && uv run coral ui                     # open web dashboard (port 8420)
 uv run coral status      # CLI leaderboard
 uv run coral log         # View attempts
 uv run coral stop        # Stop all agents
@@ -222,8 +230,8 @@ uv run coral stop        # Stop all agents
 | ------------------------------------ | ----------------------------------- |
 | `uv run coral init <name>`           | Scaffold a new task                 |
 | `uv run coral validate <name>`       | Test the grader                     |
-| `uv run coral start -c task.yaml`    | Launch agents                       |
-| `uv run coral resume`                | Resume a previous run               |
+| `uv run coral start -c task.yaml [overrides...]` | Launch agents (e.g. `agents.count=4 run.verbose=true`) |
+| `uv run coral resume [overrides...]` | Resume a previous run (e.g. `agents.model=opus`)       |
 | `uv run coral stop`                  | Stop all agents                     |
 | `uv run coral status`                | Agent health + leaderboard          |
 | `uv run coral log`                   | Leaderboard (top 20)                |
