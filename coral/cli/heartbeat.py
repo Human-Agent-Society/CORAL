@@ -48,16 +48,24 @@ def _cmd_heartbeat_show(args: argparse.Namespace) -> None:
         for action in local_actions:
             name = action["name"]
             every = action.get("every", 1)
+            trigger = action.get("trigger", "interval")
             protected = " (protected)" if name in PROTECTED_ACTIONS else ""
-            print(f"    {name}: every {every} eval(s){protected}")
+            if trigger == "plateau":
+                print(f"    {name}: after {every} non-improving eval(s) [plateau]{protected}")
+            else:
+                print(f"    {name}: every {every} eval(s){protected}")
     if global_actions:
         print()
         print("  Global (shared eval count, all agents):")
         for action in global_actions:
             name = action["name"]
             every = action.get("every", 1)
+            trigger = action.get("trigger", "interval")
             protected = " (protected)" if name in PROTECTED_ACTIONS else ""
-            print(f"    {name}: every {every} eval(s){protected}")
+            if trigger == "plateau":
+                print(f"    {name}: after {every} non-improving eval(s) [plateau]{protected}")
+            else:
+                print(f"    {name}: every {every} eval(s){protected}")
 
 
 def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
@@ -65,6 +73,7 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
     from coral.hub.heartbeat import (
         DEFAULT_GLOBAL,
         DEFAULT_PROMPTS,
+        DEFAULT_TRIGGER,
         PROTECTED_GLOBAL,
         PROTECTED_LOCAL,
         read_agent_heartbeat,
@@ -81,6 +90,7 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
     every = args.every
     prompt = getattr(args, "prompt", None)
     is_global = getattr(args, "is_global", None)
+    trigger = getattr(args, "trigger", None)
 
     if every <= 0:
         print("Error: --every must be at least 1.", file=sys.stderr)
@@ -111,12 +121,17 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
         else:
             is_global = DEFAULT_GLOBAL.get(name, False)
 
+    # Resolve trigger: explicit flag > existing > built-in default
+    if trigger is None:
+        trigger = DEFAULT_TRIGGER.get(name, "interval")
+
     if is_global:
         actions = read_global_heartbeat(coral_dir)
         found = False
         for action in actions:
             if action["name"] == name:
                 action["every"] = every
+                action["trigger"] = trigger
                 if prompt is not None:
                     action["prompt"] = prompt
                 found = True
@@ -126,15 +141,18 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
                 "name": name,
                 "every": every,
                 "prompt": prompt if prompt is not None else DEFAULT_PROMPTS.get(name, ""),
+                "trigger": trigger,
             })
         write_global_heartbeat(coral_dir, actions)
-        print(f"Set '{name}' to every {every} eval(s) (global) for all agents.")
+        label = f"after {every} non-improving eval(s) [plateau]" if trigger == "plateau" else f"every {every} eval(s)"
+        print(f"Set '{name}' to {label} (global) for all agents.")
     else:
         actions = read_agent_heartbeat(coral_dir, agent_id)
         found = False
         for action in actions:
             if action["name"] == name:
                 action["every"] = every
+                action["trigger"] = trigger
                 if prompt is not None:
                     action["prompt"] = prompt
                 found = True
@@ -144,9 +162,11 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
                 "name": name,
                 "every": every,
                 "prompt": prompt if prompt is not None else DEFAULT_PROMPTS.get(name, ""),
+                "trigger": trigger,
             })
         write_agent_heartbeat(coral_dir, agent_id, actions)
-        print(f"Set '{name}' to every {every} eval(s) (local) for {agent_id}.")
+        label = f"after {every} non-improving eval(s) [plateau]" if trigger == "plateau" else f"every {every} eval(s)"
+        print(f"Set '{name}' to {label} (local) for {agent_id}.")
 
 
 def _cmd_heartbeat_remove(args: argparse.Namespace) -> None:

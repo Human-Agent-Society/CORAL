@@ -380,8 +380,14 @@ Run 'coral <command> --help' for details on any command."""
 
     hb_set = hb_sub.add_parser("set", help="Add or update a heartbeat action")
     hb_set.add_argument("name", help="Action name (e.g. reflect, consolidate)")
-    hb_set.add_argument("--every", type=int, required=True, help="Trigger every N evals")
+    hb_set.add_argument("--every", type=int, required=True, help="Trigger every N evals (or stall threshold for plateau)")
     hb_set.add_argument("--prompt", help="Prompt text (required for custom actions)")
+    hb_set.add_argument(
+        "--trigger",
+        choices=["interval", "plateau"],
+        default=None,
+        help="Trigger type: 'interval' (every N evals) or 'plateau' (after N non-improving evals)",
+    )
     hb_set.add_argument(
         "--global",
         dest="is_global",

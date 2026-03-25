@@ -18,6 +18,7 @@ from coral.agent.runtime import AgentHandle, AgentRuntime
 from coral.config import CoralConfig
 from coral.hub.heartbeat import (
     DEFAULT_PROMPTS,
+    DEFAULT_TRIGGER,
     default_global_actions,
     default_local_actions,
     read_agent_heartbeat,
@@ -57,6 +58,8 @@ class AgentManager:
         self._start_time: datetime | None = None
         self._restart_counts: dict[str, int] = {}
         self._agent_eval_counts: dict[str, int] = {}
+        self._agent_best_scores: dict[str, float] = {}
+        self._agent_evals_since_improvement: dict[str, int] = {}
 
     def start_all(self) -> list[AgentHandle]:
         """Create workspace structure and spawn all agents."""
@@ -411,15 +414,19 @@ class AgentManager:
         heartbeat_actions = []
         for ad in local_actions:
             prompt_template = ad.get("prompt") or DEFAULT_PROMPTS.get(ad["name"], "")
-            prompt = prompt_template.format(shared_dir=shared_dir) if prompt_template else ""
+            prompt = prompt_template.format(shared_dir=shared_dir, agent_id=agent_id) if prompt_template else ""
+            trigger = ad.get("trigger") or DEFAULT_TRIGGER.get(ad["name"], "interval")
             heartbeat_actions.append(HeartbeatAction(
                 name=ad["name"], every=ad["every"], prompt=prompt, is_global=False,
+                trigger=trigger,
             ))
         for ad in global_actions:
             prompt_template = ad.get("prompt") or DEFAULT_PROMPTS.get(ad["name"], "")
-            prompt = prompt_template.format(shared_dir=shared_dir) if prompt_template else ""
+            prompt = prompt_template.format(shared_dir=shared_dir, agent_id=agent_id) if prompt_template else ""
+            trigger = ad.get("trigger") or DEFAULT_TRIGGER.get(ad["name"], "interval")
             heartbeat_actions.append(HeartbeatAction(
                 name=ad["name"], every=ad["every"], prompt=prompt, is_global=True,
+                trigger=trigger,
             ))
         return HeartbeatRunner(heartbeat_actions)
 
@@ -495,11 +502,39 @@ class AgentManager:
                     agent_eval_count = self._agent_eval_counts[committing_agent_id]
                     global_eval_count = self._get_eval_count()
 
+                    # Track plateau state (evals since personal-best improvement)
+                    score = attempt_data.get("score")
+                    minimize = self.config.grader.direction == "minimize"
+                    if score is not None:
+                        prev_best = self._agent_best_scores.get(committing_agent_id)
+                        improved = (
+                            prev_best is None
+                            or (minimize and score < prev_best)
+                            or (not minimize and score > prev_best)
+                        )
+                        if improved:
+                            self._agent_best_scores[committing_agent_id] = score
+                            self._agent_evals_since_improvement[committing_agent_id] = 0
+                        else:
+                            self._agent_evals_since_improvement[committing_agent_id] = (
+                                self._agent_evals_since_improvement.get(committing_agent_id, 0) + 1
+                            )
+                    else:
+                        # Failed/crashed eval counts as non-improving
+                        self._agent_evals_since_improvement[committing_agent_id] = (
+                            self._agent_evals_since_improvement.get(committing_agent_id, 0) + 1
+                        )
+
+                    evals_since_improvement = self._agent_evals_since_improvement.get(
+                        committing_agent_id, 0
+                    )
+
                     # Check heartbeat actions
                     runner = self._get_heartbeat_runner(committing_agent_id)
                     actions = runner.check(
                         local_eval_count=agent_eval_count,
                         global_eval_count=global_eval_count,
+                        evals_since_improvement=evals_since_improvement,
                     )
                     if not actions:
                         continue
@@ -514,7 +549,6 @@ class AgentManager:
                         continue
 
                     # Build eval header + combined heartbeat prompts
-                    score = attempt_data.get("score")
                     score_str = f"{score:.10f}" if score is not None else "FAILED"
                     commit = attempt_data.get("commit_hash", "unknown")[:12]
                     feedback = attempt_data.get("feedback", "")

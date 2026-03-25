@@ -34,12 +34,21 @@ def _load_prompt(name: str) -> str:
 DEFAULT_PROMPTS: dict[str, str] = {
     "reflect": _load_prompt("reflect"),
     "consolidate": _load_prompt("consolidate"),
+    "pivot": _load_prompt("pivot"),
 }
 
 # Which built-in actions default to global scope
 DEFAULT_GLOBAL: dict[str, bool] = {
     "reflect": False,
     "consolidate": True,
+    "pivot": False,
+}
+
+# Which built-in actions use plateau trigger instead of interval
+DEFAULT_TRIGGER: dict[str, str] = {
+    "reflect": "interval",
+    "consolidate": "interval",
+    "pivot": "plateau",
 }
 
 # Protected actions: reflect is always local, consolidate is always global
@@ -138,10 +147,12 @@ def default_local_actions(config) -> list[dict]:
     for action_cfg in config.agents.heartbeat:
         is_global = action_cfg.is_global or DEFAULT_GLOBAL.get(action_cfg.name, False)
         if not is_global:
+            trigger = getattr(action_cfg, "trigger", None) or DEFAULT_TRIGGER.get(action_cfg.name, "interval")
             actions.append({
                 "name": action_cfg.name,
                 "every": action_cfg.every,
                 "prompt": DEFAULT_PROMPTS.get(action_cfg.name, ""),
+                "trigger": trigger,
             })
     return actions
 
@@ -152,9 +163,11 @@ def default_global_actions(config) -> list[dict]:
     for action_cfg in config.agents.heartbeat:
         is_global = action_cfg.is_global or DEFAULT_GLOBAL.get(action_cfg.name, False)
         if is_global:
+            trigger = getattr(action_cfg, "trigger", None) or DEFAULT_TRIGGER.get(action_cfg.name, "interval")
             actions.append({
                 "name": action_cfg.name,
                 "every": action_cfg.every,
                 "prompt": DEFAULT_PROMPTS.get(action_cfg.name, ""),
+                "trigger": trigger,
             })
     return actions

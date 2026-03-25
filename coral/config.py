@@ -39,9 +39,10 @@ class GraderConfig:
 class HeartbeatActionConfig:
     """Configuration for a single heartbeat action."""
 
-    name: str = MISSING  # e.g. "reflect", "consolidate"
-    every: int = MISSING  # trigger every N evals (must be >= 1)
+    name: str = MISSING  # e.g. "reflect", "consolidate", "pivot"
+    every: int = MISSING  # trigger every N evals (interval) or stall threshold (plateau)
     is_global: bool = False  # True = use global eval count, False = per-agent
+    trigger: str = "interval"  # "interval" or "plateau"
 
 
 @dataclass
@@ -58,6 +59,7 @@ class AgentConfig:
         default_factory=lambda: [
             HeartbeatActionConfig(name="reflect", every=1),
             HeartbeatActionConfig(name="consolidate", every=10, is_global=True),
+            HeartbeatActionConfig(name="pivot", every=5, trigger="plateau"),
         ]
     )
     research: bool = True  # enable web search / literature review step in workflow
@@ -171,6 +173,7 @@ def _preprocess(data: dict[str, Any]) -> dict[str, Any]:
                 "name": h["name"],
                 "every": h["every"],
                 "is_global": h.get("global", False),
+                "trigger": h.get("trigger", "interval"),
             }
             for h in heartbeat_raw
         ]
