@@ -74,7 +74,6 @@ coral start -c task.yaml run.ui=true              # Also launch web dashboard
 coral start -c task.yaml run.tmux=false           # No tmux session
 coral resume                                      # Resume a previous run
 coral resume agents.model=opus                    # Resume with model override
-coral resume -i "Try greedy approaches"           # Resume with additional instruction
 coral stop                         # Stop all agents
 coral status                       # Agent health + leaderboard
 coral log                          # Leaderboard (top 20)
