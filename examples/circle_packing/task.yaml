@@ -50,3 +50,8 @@ agents:
 workspace:
   results_dir: "./results"
   repo_path: "./examples/circle_packing/seed"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

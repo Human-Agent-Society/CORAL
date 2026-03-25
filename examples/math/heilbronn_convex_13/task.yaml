@@ -40,3 +40,8 @@ workspace:
   repo_path: "./examples/math/heilbronn_convex_13/seed"
   setup:
     - "uv sync"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

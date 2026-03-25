@@ -22,6 +22,7 @@ from coral.cli._helpers import (
     save_tmux_session_name,
     setup_logging,
 )
+from coral.config import CoralConfig
 
 
 def _resolved_python() -> str:
@@ -55,33 +56,17 @@ def _tmux_env() -> dict[str, str]:
 
 
 def _build_coral_command(args: argparse.Namespace) -> list[str]:
-    """Reconstruct the coral start command with --no-tmux added."""
+    """Reconstruct the coral start command with run.tmux=false added."""
     cmd = [_resolved_python(), "-m", "coral.cli", "start"]
     cmd.extend(["--config", str(Path(args.config).resolve())])
-    if args.agents:
-        cmd.extend(["--agents", str(args.agents)])
-    if args.model:
-        cmd.extend(["--model", args.model])
-    if args.runtime:
-        cmd.extend(["--runtime", args.runtime])
-    if args.research is True:
-        cmd.append("--research")
-    elif args.research is False:
-        cmd.append("--no-research")
-    if args.verbose:
-        cmd.append("--verbose")
-    if args.ui:
-        cmd.append("--ui")
-    cmd.append("--no-tmux")
+    # Forward user overrides, then force tmux off (inner process is already in tmux)
+    cmd.extend(getattr(args, "overrides", []))
+    cmd.append("run.tmux=false")
     return cmd
 
 
-def _start_in_tmux(args: argparse.Namespace) -> None:
+def _start_in_tmux(args: argparse.Namespace, config: CoralConfig) -> None:
     """Create a tmux session and run coral start inside it."""
-    from coral.config import CoralConfig
-
-    config_path = Path(args.config).resolve()
-    config = CoralConfig.from_yaml(config_path)
     task_name = config.task.name.replace(" ", "-").lower()
     session_name = f"coral-{task_name}"
 
@@ -108,6 +93,7 @@ def _start_in_tmux(args: argparse.Namespace) -> None:
     # Pre-create the results directory so we can save tmux markers there.
     # Must match create_project()'s resolution: relative to CWD, not task config dir.
     from coral.workspace import slugify
+
     results_dir = Path(config.workspace.results_dir).resolve()
     task_dir = results_dir / slugify(config.task.name)
     task_dir.mkdir(parents=True, exist_ok=True)
@@ -119,12 +105,8 @@ def _start_in_tmux(args: argparse.Namespace) -> None:
     print("  Stop:    coral stop")
 
 
-def _resume_in_tmux(args: argparse.Namespace, coral_dir: Path) -> None:
+def _resume_in_tmux(args: argparse.Namespace, config: CoralConfig, coral_dir: Path) -> None:
     """Resume CORAL inside a tmux session."""
-    from coral.config import CoralConfig
-
-    config_path = coral_dir / "config.yaml"
-    config = CoralConfig.from_yaml(config_path)
     task_name = config.task.name.replace(" ", "-").lower()
     session_name = f"coral-{task_name}"
 
@@ -134,17 +116,22 @@ def _resume_in_tmux(args: argparse.Namespace, coral_dir: Path) -> None:
     )
 
     cmd = [_resolved_python(), "-m", "coral.cli", "resume"]
+    # Derive task/run from coral_dir path to avoid re-prompting inside tmux.
+    # Path structure: results/<task>/<run>/.coral
+    resolved = coral_dir.resolve()
+    run_name = resolved.parent.name
+    task_slug = resolved.parent.parent.name
     if args.task:
         cmd.extend(["--task", args.task])
+    else:
+        cmd.extend(["--task", task_slug])
     if args.run:
         cmd.extend(["--run", args.run])
-    if args.model:
-        cmd.extend(["--model", args.model])
-    if getattr(args, "verbose", False):
-        cmd.append("--verbose")
-    if getattr(args, "ui", False):
-        cmd.append("--ui")
-    cmd.append("--no-tmux")
+    else:
+        cmd.extend(["--run", run_name])
+    # Forward user overrides, then force tmux off (inner process is already in tmux)
+    cmd.extend(getattr(args, "overrides", []))
+    cmd.append("run.tmux=false")
     shell_cmd = " ".join(f"'{c}'" if " " in c else c for c in cmd)
 
     result = subprocess.run(
@@ -170,26 +157,34 @@ def _resume_in_tmux(args: argparse.Namespace, coral_dir: Path) -> None:
 
 def cmd_start(args: argparse.Namespace) -> None:
     """Start CORAL agents."""
-    if not args.no_tmux and not in_tmux() and has_tmux():
-        _start_in_tmux(args)
+    config_path = Path(args.config).resolve()
+    config = CoralConfig.from_yaml(config_path)
+    overrides = getattr(args, "overrides", [])
+    if overrides:
+        config = CoralConfig.merge_dotlist(config, overrides)
+
+    if config.run.tmux and not in_tmux() and has_tmux():
+        _start_in_tmux(args, config)
         return
 
-    if not args.no_tmux and not in_tmux() and not has_tmux():
+    if config.run.tmux and not in_tmux() and not has_tmux():
         print(
             "Warning: tmux is not installed. Running in foreground mode.\n"
             "  Install tmux for background session support: brew install tmux (macOS) / apt install tmux (Linux)\n",
             file=sys.stderr,
         )
 
+    # If we're the inner process spawned by _start_in_tmux, run.tmux=false was
+    # added to avoid recursion.  Restore it so the saved config preserves the
+    # user's original intent (otherwise `coral resume` won't launch tmux).
+    if in_tmux():
+        config.run.tmux = True
+
     from coral.agent.manager import AgentManager
-    from coral.config import CoralConfig
     from coral.cli.validation import validate_task
 
-    verbose = args.verbose
+    verbose = config.run.verbose
     setup_logging(verbose=verbose)
-
-    config_path = Path(args.config).resolve()
-    config = CoralConfig.from_yaml(config_path)
 
     task_dir = config_path.parent
     config.task_dir = task_dir
@@ -199,20 +194,6 @@ def cmd_start(args: argparse.Namespace) -> None:
         for err in errors:
             print(f"  - {err}", file=sys.stderr)
         sys.exit(1)
-    if args.agents:
-        config.agents.count = args.agents
-    if args.runtime:
-        config.agents.runtime = args.runtime
-    if args.model:
-        config.agents.model = args.model
-    elif args.runtime:
-        # No explicit --model but runtime changed: use runtime-specific default
-        from coral.agent.registry import default_model_for_runtime
-        default_model = default_model_for_runtime(args.runtime)
-        if default_model:
-            config.agents.model = default_model
-    if args.research is not None:
-        config.agents.research = args.research
 
     if verbose:
         print(f"[coral] Config:     {args.config}")
@@ -235,6 +216,13 @@ def cmd_start(args: argparse.Namespace) -> None:
         print(f"  {h.agent_id}: PID {h.process.pid if h.process else '?'} @ {h.worktree_path}")
 
     assert manager.paths is not None
+
+    # Save the starting command for reproducibility
+    start_cmd = f"coral start -c {args.config}"
+    if overrides:
+        start_cmd += " " + " ".join(overrides)
+    (manager.paths.run_dir / "start_cmd.txt").write_text(start_cmd + "\n")
+
     print(f"\nRun directory: {manager.paths.run_dir}")
     print(f"Logs:          {manager.paths.coral_dir / 'public' / 'logs'}")
 
@@ -252,7 +240,7 @@ def cmd_start(args: argparse.Namespace) -> None:
                 manager.paths.coral_dir / "public", session_name, owned=coral_owns
             )
 
-    if args.ui:
+    if config.run.ui:
         from coral.cli.ui import start_ui_background
 
         start_ui_background(manager.paths.coral_dir)
@@ -268,10 +256,6 @@ def cmd_start(args: argparse.Namespace) -> None:
 def cmd_resume(args: argparse.Namespace) -> None:
     """Resume a previous CORAL run."""
     from coral.agent.manager import AgentManager
-    from coral.config import CoralConfig
-
-    verbose = getattr(args, "verbose", False)
-    setup_logging(verbose=verbose)
 
     task = getattr(args, "task", None)
     run = getattr(args, "run", None)
@@ -282,7 +266,17 @@ def cmd_resume(args: argparse.Namespace) -> None:
     if coral_dir is None:
         return
 
-    if not getattr(args, "no_tmux", False):
+    config_path = coral_dir / "config.yaml"
+    if not config_path.exists():
+        print(f"Error: No config.yaml found in {coral_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    config = CoralConfig.from_yaml(config_path)
+    overrides = getattr(args, "overrides", [])
+    if overrides:
+        config = CoralConfig.merge_dotlist(config, overrides)
+
+    if config.run.tmux:
         existing_session = find_tmux_session(coral_dir)
         if existing_session:
             print(f"Found existing tmux session: {existing_session}")
@@ -290,16 +284,19 @@ def cmd_resume(args: argparse.Namespace) -> None:
             os.execvp("tmux", ["tmux", "attach", "-t", existing_session])
             return
 
-    if not getattr(args, "no_tmux", False) and not in_tmux() and has_tmux():
-        _resume_in_tmux(args, coral_dir)
+    if config.run.tmux and not in_tmux() and has_tmux():
+        _resume_in_tmux(args, config, coral_dir)
         return
 
-    if not getattr(args, "no_tmux", False) and not in_tmux() and not has_tmux():
+    if config.run.tmux and not in_tmux() and not has_tmux():
         print(
             "Warning: tmux is not installed. Running in foreground mode.\n"
             "  Install tmux for background session support: brew install tmux (macOS) / apt install tmux (Linux)\n",
             file=sys.stderr,
         )
+
+    verbose = config.run.verbose
+    setup_logging(verbose=verbose)
 
     pid_file = coral_dir / "public" / "manager.pid"
     if pid_file.exists():
@@ -313,16 +310,6 @@ def cmd_resume(args: argparse.Namespace) -> None:
             sys.exit(1)
         except ProcessLookupError:
             pass
-
-    config_path = coral_dir / "config.yaml"
-    if not config_path.exists():
-        print(f"Error: No config.yaml found in {coral_dir}", file=sys.stderr)
-        sys.exit(1)
-
-    config = CoralConfig.from_yaml(config_path)
-
-    if args.model:
-        config.agents.model = args.model
 
     from coral.workspace import reconstruct_paths
 
@@ -360,11 +347,9 @@ def cmd_resume(args: argparse.Namespace) -> None:
             session_name = result.stdout.strip()
             # Mark as owned if coral created this tmux session (via _resume_in_tmux)
             coral_owns = session_name.startswith("coral-")
-            save_tmux_session_name(
-                paths.coral_dir / "public", session_name, owned=coral_owns
-            )
+            save_tmux_session_name(paths.coral_dir / "public", session_name, owned=coral_owns)
 
-    if getattr(args, "ui", False):
+    if config.run.ui:
         from coral.cli.ui import start_ui_background
 
         start_ui_background(paths.coral_dir)

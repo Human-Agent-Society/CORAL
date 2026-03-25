@@ -67,8 +67,13 @@ uv sync --all-extras       # Everything
 # CLI
 coral init my-task                 # Scaffold a new task
 coral validate my-task             # Test the grader
-coral start -c task.yaml           # Launch agents
-coral resume                       # Resume a previous run
+coral start -c task.yaml                          # Launch agents
+coral start -c task.yaml agents.count=4           # Override config via dotlist
+coral start -c task.yaml run.verbose=true         # Verbose output
+coral start -c task.yaml run.ui=true              # Also launch web dashboard
+coral start -c task.yaml run.tmux=false           # No tmux session
+coral resume                                      # Resume a previous run
+coral resume agents.model=opus                    # Resume with model override
 coral stop                         # Stop all agents
 coral status                       # Agent health + leaderboard
 coral log                          # Leaderboard (top 20)
@@ -109,7 +114,7 @@ uv run ruff format .
 
 5. **Hub modules**: attempts (JSON CRUD + search), notes (Markdown + YAML frontmatter), skills (directories with SKILL.md)
 
-6. **Config**: YAML-based `CoralConfig` with task, grader, agents, sharing, workspace sections
+6. **Config**: YAML-based `CoralConfig` with task, grader, agents, sharing, workspace, run sections
 
 ## Key Files
 

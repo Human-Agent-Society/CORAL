@@ -149,3 +149,8 @@ agents:
 workspace:
   results_dir: "./results"
   repo_path: "."
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

@@ -46,3 +46,8 @@ agents:
 workspace:
   results_dir: "./results"
   repo_path: "./examples/ADRS/prism/seed"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true
