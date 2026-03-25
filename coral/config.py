@@ -61,6 +61,7 @@ class AgentConfig:
         ]
     )
     research: bool = True  # enable web search / literature review step in workflow
+    knowledge: bool = True  # master switch: False disables notes, skills, and heartbeat
 
     def heartbeat_interval(self, name: str) -> int:
         """Get the interval for a heartbeat action by name."""

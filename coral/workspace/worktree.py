@@ -120,7 +120,10 @@ def get_coral_dir(worktree_path: Path) -> Path | None:
     return None
 
 
-def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: str = ".claude") -> None:
+def setup_shared_state(
+    worktree_path: Path, coral_dir: Path, shared_dir_name: str = ".claude",
+    knowledge: bool = True,
+) -> None:
     """Create a shared state directory in the worktree with symlinks to .coral/public/.
 
     Symlinks notes, skills, attempts, and logs from .coral/public/ into
@@ -130,6 +133,7 @@ def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: st
         worktree_path: Path to the agent's git worktree
         coral_dir: Path to the shared .coral directory
         shared_dir_name: Name of the shared dir in the worktree (e.g. ".claude", ".codex", ".opencode")
+        knowledge: If False, skip symlinks for notes, skills, and heartbeat
     """
     coral_public = coral_dir / "public"
 
@@ -142,13 +146,9 @@ def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: st
     shared_dir.mkdir(exist_ok=True)
 
     # Symlink shared content from .coral/public/
-    shared_items = [
-        "notes",
-        "skills",
-        "attempts",
-        "logs",
-        "heartbeat",
-    ]
+    shared_items = ["attempts", "logs"]
+    if knowledge:
+        shared_items.extend(["notes", "skills", "heartbeat"])
     for item in shared_items:
         src = coral_public / item
         dst = shared_dir / item

@@ -89,9 +89,10 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     (coral_dir / "public").mkdir(parents=True, exist_ok=True)
     (coral_dir / "public" / "attempts").mkdir(parents=True, exist_ok=True)
     (coral_dir / "public" / "logs").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "public" / "skills").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "public" / "notes").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "public" / "heartbeat").mkdir(parents=True, exist_ok=True)
+    if config.agents.knowledge:
+        (coral_dir / "public" / "skills").mkdir(parents=True, exist_ok=True)
+        (coral_dir / "public" / "notes").mkdir(parents=True, exist_ok=True)
+        (coral_dir / "public" / "heartbeat").mkdir(parents=True, exist_ok=True)
     (coral_dir / "private").mkdir(parents=True, exist_ok=True)
     agents_dir.mkdir(parents=True, exist_ok=True)
 
@@ -99,14 +100,15 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     init_checkpoint_repo(str(coral_dir))
 
     # Seed bundled skills from coral/template/skills/
-    seed_skills_dir = _SEED_SKILLS_DIR
-    if seed_skills_dir.is_dir():
-        for skill_dir in seed_skills_dir.iterdir():
-            if skill_dir.is_dir():
-                dst = coral_dir / "public" / "skills" / skill_dir.name
-                if not dst.exists():
-                    shutil.copytree(skill_dir, dst)
-                    logger.info(f"Seeded skill: {skill_dir.name}")
+    if config.agents.knowledge:
+        seed_skills_dir = _SEED_SKILLS_DIR
+        if seed_skills_dir.is_dir():
+            for skill_dir in seed_skills_dir.iterdir():
+                if skill_dir.is_dir():
+                    dst = coral_dir / "public" / "skills" / skill_dir.name
+                    if not dst.exists():
+                        shutil.copytree(skill_dir, dst)
+                        logger.info(f"Seeded skill: {skill_dir.name}")
 
     # Save config
     config.to_yaml(coral_dir / "config.yaml")

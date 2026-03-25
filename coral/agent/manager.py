@@ -69,7 +69,7 @@ class AgentManager:
         logger.info(f"  repo_dir:  {self.paths.repo_dir}")
 
         # 2. Seed global heartbeat config if not already present
-        if not read_global_heartbeat(self.paths.coral_dir):
+        if self.config.agents.knowledge and not read_global_heartbeat(self.paths.coral_dir):
             write_global_heartbeat(self.paths.coral_dir, default_global_actions(self.config))
             logger.info("Seeded global heartbeat config")
 
@@ -118,14 +118,17 @@ class AgentManager:
 
         # Set up shared state directory (notes, skills, attempts symlinks)
         shared_dir_name = self.runtime.shared_dir_name
-        setup_shared_state(worktree_path, self.paths.coral_dir, shared_dir_name)
+        setup_shared_state(
+            worktree_path, self.paths.coral_dir, shared_dir_name,
+            knowledge=self.config.agents.knowledge,
+        )
 
         # Claude Code-specific: write .claude/settings.json with permissions
         if shared_dir_name == ".claude":
             setup_claude_settings(worktree_path, coral_dir=self.paths.coral_dir, research=self.config.agents.research)
 
         # Seed local heartbeat config from task YAML if not already present
-        if not read_agent_heartbeat(self.paths.coral_dir, agent_id):
+        if self.config.agents.knowledge and not read_agent_heartbeat(self.paths.coral_dir, agent_id):
             write_agent_heartbeat(self.paths.coral_dir, agent_id, default_local_actions(self.config))
             logger.info(f"  Seeded heartbeat config for {agent_id}")
 
@@ -139,6 +142,7 @@ class AgentManager:
             self.config, agent_id,
             single_agent=single_agent,
             shared_dir=shared_dir_name,
+            knowledge=self.config.agents.knowledge,
         )
         (worktree_path / instruction_file).write_text(coral_md)
 
@@ -234,16 +238,26 @@ class AgentManager:
         if not agent_dirs:
             raise RuntimeError(f"No agent worktrees found in {paths.agents_dir}")
 
-        fresh_start_prompt = (
-            "Begin. This is a resumed run — previous work already exists. "
-            "Before writing any code, review the current state:\n"
-            "1. Run `coral log` to see the leaderboard\n"
-            "2. Run `coral log --recent` to see recent activity\n"
-            "3. Read notes in your shared directory (e.g. `.claude/notes/`)\n"
-            "4. Check skills in your shared directory (e.g. `.claude/skills/`)\n"
-            "5. Inspect top attempts with `coral show <hash>` to understand what's been tried\n\n"
-            "Build on what worked. Don't duplicate prior efforts."
-        )
+        if self.config.agents.knowledge:
+            fresh_start_prompt = (
+                "Begin. This is a resumed run — previous work already exists. "
+                "Before writing any code, review the current state:\n"
+                "1. Run `coral log` to see the leaderboard\n"
+                "2. Run `coral log --recent` to see recent activity\n"
+                "3. Read notes in your shared directory (e.g. `.claude/notes/`)\n"
+                "4. Check skills in your shared directory (e.g. `.claude/skills/`)\n"
+                "5. Inspect top attempts with `coral show <hash>` to understand what's been tried\n\n"
+                "Build on what worked. Don't duplicate prior efforts."
+            )
+        else:
+            fresh_start_prompt = (
+                "Begin. This is a resumed run — previous work already exists. "
+                "Before writing any code, review the current state:\n"
+                "1. Run `coral log` to see the leaderboard\n"
+                "2. Run `coral log --recent` to see recent activity\n"
+                "3. Inspect top attempts with `coral show <hash>` to understand what's been tried\n\n"
+                "Build on what worked. Don't duplicate prior efforts."
+            )
 
         if instruction:
             fresh_start_prompt += f"\n\n## Additional Instructions\n{instruction}"
@@ -498,7 +512,9 @@ class AgentManager:
                     agent_eval_count = self._agent_eval_counts[committing_agent_id]
                     global_eval_count = self._get_eval_count()
 
-                    # Check heartbeat actions
+                    # Check heartbeat actions (skip if knowledge accumulation is disabled)
+                    if not self.config.agents.knowledge:
+                        continue
                     runner = self._get_heartbeat_runner(committing_agent_id)
                     actions = runner.check(
                         local_eval_count=agent_eval_count,

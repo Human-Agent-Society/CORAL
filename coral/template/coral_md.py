@@ -8,6 +8,8 @@ from coral.config import CoralConfig
 
 _TEMPLATE_PATH = Path(__file__).parent / "coral.md.template"
 _SINGLE_TEMPLATE_PATH = Path(__file__).parent / "coral_single.md.template"
+_NO_KNOWLEDGE_TEMPLATE_PATH = Path(__file__).parent / "coral_no_knowledge.md.template"
+_SINGLE_NO_KNOWLEDGE_TEMPLATE_PATH = Path(__file__).parent / "coral_single_no_knowledge.md.template"
 
 
 def generate_coral_md(
@@ -15,6 +17,7 @@ def generate_coral_md(
     agent_id: str,
     single_agent: bool = False,
     shared_dir: str = ".claude",
+    knowledge: bool = True,
 ) -> str:
     """Produce the CORAL.md file that agents read at startup.
 
@@ -23,8 +26,12 @@ def generate_coral_md(
         agent_id: This agent's ID
         single_agent: If True, use simplified single-agent template (no sharing references)
         shared_dir: Name of the shared state directory (e.g. ".claude", ".codex", ".opencode")
+        knowledge: If False, use templates without notes/skills/heartbeat content
     """
-    template_path = _SINGLE_TEMPLATE_PATH if single_agent else _TEMPLATE_PATH
+    if knowledge:
+        template_path = _SINGLE_TEMPLATE_PATH if single_agent else _TEMPLATE_PATH
+    else:
+        template_path = _SINGLE_NO_KNOWLEDGE_TEMPLATE_PATH if single_agent else _NO_KNOWLEDGE_TEMPLATE_PATH
     template = template_path.read_text()
 
     # Build optional sections
@@ -76,7 +83,7 @@ def generate_coral_md(
         research_back_reference = ""
         repeat_research_hint = "research new techniques, "
 
-    return template.format(
+    variables = dict(
         task_name=config.task.name,
         task_description=config.task.description,
         files_section=files_section,
@@ -94,6 +101,7 @@ def generate_coral_md(
         research_back_reference=research_back_reference,
         repeat_research_hint=repeat_research_hint,
     )
+    return template.format(**variables)
 
 
 def _get_score_direction(config: CoralConfig) -> str:
