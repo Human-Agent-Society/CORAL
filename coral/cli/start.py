@@ -279,6 +279,8 @@ def cmd_resume(args: argparse.Namespace) -> None:
     overrides = getattr(args, "overrides", [])
     if overrides:
         config = CoralConfig.merge_dotlist(config, overrides)
+        # Persist overrides so eval hooks (which re-read config.yaml) see them
+        config.to_yaml(config_path)
 
     if config.run.tmux:
         existing_session = find_tmux_session(coral_dir)
