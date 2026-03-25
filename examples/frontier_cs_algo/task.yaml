@@ -63,3 +63,8 @@ agents:
 workspace:
   results_dir: "./results"
   repo_path: "./examples/frontier_cs_algo/seed"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

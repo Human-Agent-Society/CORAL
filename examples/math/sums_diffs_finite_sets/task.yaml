@@ -53,3 +53,8 @@ workspace:
   repo_path: "./examples/math/sums_diffs_finite_sets/seed"
   setup:
     - "uv sync"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

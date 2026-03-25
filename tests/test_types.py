@@ -45,3 +45,44 @@ def test_attempt_roundtrip():
     assert restored.commit_hash == "abc123"
     assert restored.score == 0.85
     assert restored.feedback == "Good improvement"
+    assert restored.shared_state_hash is None
+    assert restored.parent_shared_state_hash is None
+    assert "shared_state_hash" not in data  # omitted when None
+    assert "parent_shared_state_hash" not in data
+
+
+def test_attempt_shared_state_hash_roundtrip():
+    parent_ssh = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    attempt = Attempt(
+        commit_hash="abc123",
+        agent_id="agent-1",
+        title="Test",
+        score=0.5,
+        status="improved",
+        parent_hash=None,
+        timestamp="2026-03-11T10:00:00Z",
+        shared_state_hash="deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        parent_shared_state_hash=parent_ssh,
+    )
+    data = attempt.to_dict()
+    assert data["shared_state_hash"] == "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+    assert data["parent_shared_state_hash"] == parent_ssh
+    restored = Attempt.from_dict(data)
+    assert restored.shared_state_hash == "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+    assert restored.parent_shared_state_hash == parent_ssh
+
+
+def test_attempt_from_dict_without_shared_state_hash():
+    """Backward compat: JSON without shared state fields loads as None."""
+    data = {
+        "commit_hash": "abc123",
+        "agent_id": "agent-1",
+        "title": "Old attempt",
+        "score": 0.5,
+        "status": "improved",
+        "parent_hash": None,
+        "timestamp": "2026-03-11T10:00:00Z",
+    }
+    attempt = Attempt.from_dict(data)
+    assert attempt.shared_state_hash is None
+    assert attempt.parent_shared_state_hash is None

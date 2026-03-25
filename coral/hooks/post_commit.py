@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import multiprocessing
 import subprocess
 import traceback
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 from coral.config import CoralConfig
 from coral.grader.loader import load_grader
 from coral.hub.attempts import get_agent_attempts, write_attempt
+from coral.hub.checkpoint import checkpoint
 from coral.types import Attempt, Task
 
 logger = logging.getLogger(__name__)
@@ -230,6 +231,17 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
         status = "crashed"
         feedback = str(e)
 
+    # Look up parent attempt's shared state hash
+    parent_shared_state_hash = None
+    if parent_hash:
+        parent_attempt_file = coral_dir / "public" / "attempts" / f"{parent_hash}.json"
+        if parent_attempt_file.exists():
+            try:
+                parent_data = json.loads(parent_attempt_file.read_text())
+                parent_shared_state_hash = parent_data.get("shared_state_hash")
+            except (json.JSONDecodeError, OSError):
+                pass
+
     # Create attempt record
     attempt = Attempt(
         commit_hash=commit_hash,
@@ -240,7 +252,11 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
         parent_hash=parent_hash,
         timestamp=datetime.now(UTC).isoformat(),
         feedback=feedback,
+        parent_shared_state_hash=parent_shared_state_hash,
     )
+
+    # Checkpoint shared state and record the hash
+    attempt.shared_state_hash = checkpoint(str(coral_dir), agent_id, message)
 
     # Write to shared state
     write_attempt(str(coral_dir), attempt)

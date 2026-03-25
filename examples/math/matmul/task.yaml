@@ -64,3 +64,8 @@ workspace:
   repo_path: "./examples/math/matmul/seed"
   setup:
     - "uv sync"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

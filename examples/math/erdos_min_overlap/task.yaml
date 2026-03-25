@@ -53,3 +53,8 @@ workspace:
   repo_path: "./examples/math/erdos_min_overlap/seed"
   setup:
     - "uv sync"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

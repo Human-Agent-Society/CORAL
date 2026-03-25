@@ -1,9 +1,17 @@
 """Tests for YAML configuration."""
 
 import tempfile
-from pathlib import Path
 
-from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig, WorkspaceConfig
+import pytest
+
+from coral.config import (
+    AgentConfig,
+    CoralConfig,
+    GraderConfig,
+    RunConfig,
+    TaskConfig,
+    WorkspaceConfig,
+)
 
 
 def test_config_roundtrip():
@@ -79,3 +87,122 @@ def test_config_setup_defaults_empty():
     }
     config = CoralConfig.from_dict(data)
     assert config.workspace.setup == []
+
+
+# --- OmegaConf-specific tests ---
+
+
+def test_dotlist_merge():
+    config = CoralConfig(
+        task=TaskConfig(name="test", description="A test"),
+        agents=AgentConfig(count=1, model="sonnet"),
+    )
+    merged = CoralConfig.merge_dotlist(config, ["agents.count=4", "agents.model=opus"])
+    assert merged.agents.count == 4
+    assert merged.agents.model == "opus"
+    # Original unchanged
+    assert config.agents.count == 1
+
+
+def test_dotlist_merge_nested():
+    config = CoralConfig(
+        task=TaskConfig(name="test", description="A test"),
+        grader=GraderConfig(timeout=300),
+    )
+    merged = CoralConfig.merge_dotlist(config, ["grader.timeout=600"])
+    assert merged.grader.timeout == 600
+
+
+def test_dotlist_merge_empty():
+    config = CoralConfig(
+        task=TaskConfig(name="test", description="A test"),
+    )
+    merged = CoralConfig.merge_dotlist(config, [])
+    assert merged.task.name == "test"
+
+
+def test_missing_required_field():
+    """Missing task.name should raise an error."""
+    from omegaconf.errors import MissingMandatoryValue
+
+    with pytest.raises(MissingMandatoryValue):
+        CoralConfig.from_dict({"task": {"description": "d"}})
+
+
+def test_missing_task_description():
+    from omegaconf.errors import MissingMandatoryValue
+
+    with pytest.raises(MissingMandatoryValue):
+        CoralConfig.from_dict({"task": {"name": "t"}})
+
+
+def test_legacy_reflect_every():
+    """Legacy reflect_every/heartbeat_every keys should be preprocessed."""
+    data = {
+        "task": {"name": "t", "description": "d"},
+        "agents": {"reflect_every": 3, "heartbeat_every": 5},
+    }
+    config = CoralConfig.from_dict(data)
+    assert config.agents.heartbeat_interval("reflect") == 3
+    assert config.agents.heartbeat_interval("consolidate") == 5
+
+
+def test_heartbeat_global_flag_roundtrip():
+    """Heartbeat 'global' key in YAML should map to is_global."""
+    data = {
+        "task": {"name": "t", "description": "d"},
+        "agents": {
+            "heartbeat": [
+                {"name": "reflect", "every": 1, "global": True},
+            ]
+        },
+    }
+    config = CoralConfig.from_dict(data)
+    assert config.agents.heartbeat[0].is_global is True
+
+    # Round-trip through to_dict
+    d = config.to_dict()
+    assert d["agents"]["heartbeat"][0]["global"] is True
+
+
+def test_run_config_defaults():
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+    )
+    assert config.run.verbose is False
+    assert config.run.ui is False
+    assert config.run.tmux is True
+
+
+def test_run_config_dotlist_override():
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+    )
+    merged = CoralConfig.merge_dotlist(config, ["run.tmux=false", "run.verbose=true"])
+    assert merged.run.tmux is False
+    assert merged.run.verbose is True
+    assert merged.run.ui is False
+
+
+def test_run_config_roundtrip():
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+        run=RunConfig(verbose=True, ui=True, tmux=False),
+    )
+
+    with tempfile.NamedTemporaryFile(suffix=".yaml", mode="w", delete=False) as f:
+        config.to_yaml(f.name)
+        restored = CoralConfig.from_yaml(f.name)
+
+    assert restored.run.verbose is True
+    assert restored.run.ui is True
+    assert restored.run.tmux is False
+
+
+def test_to_dict_excludes_task_dir():
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+    )
+    config.task_dir = "/some/path"
+    d = config.to_dict()
+    assert "task_dir" not in d

@@ -86,3 +86,8 @@ agents:
 workspace:
   results_dir: "./results"
   repo_path: "./stanford_covid_vaccine/repo"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

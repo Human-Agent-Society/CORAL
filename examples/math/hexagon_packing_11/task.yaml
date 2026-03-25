@@ -47,3 +47,8 @@ workspace:
   repo_path: "./examples/math/hexagon_packing_11/seed"
   setup:
     - "uv sync"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

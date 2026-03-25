@@ -55,3 +55,8 @@ workspace:
   repo_path: "./examples/math/uncertainty_ineq/seed"
   setup:
     - "uv sync"
+
+run:
+  verbose: false
+  ui: false
+  tmux: true

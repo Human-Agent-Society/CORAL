@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from coral.config import CoralConfig
+from coral.hub.checkpoint import init_checkpoint_repo
 from coral.workspace.repo import (
     clone_or_init_repo,
     copy_eval_to_private,
@@ -93,6 +94,9 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     (coral_dir / "public" / "heartbeat").mkdir(parents=True, exist_ok=True)
     (coral_dir / "private").mkdir(parents=True, exist_ok=True)
     agents_dir.mkdir(parents=True, exist_ok=True)
+
+    # Initialize checkpoint repo for shared state versioning
+    init_checkpoint_repo(str(coral_dir))
 
     # Seed bundled skills from coral/template/skills/
     seed_skills_dir = _SEED_SKILLS_DIR
