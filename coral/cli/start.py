@@ -285,10 +285,25 @@ def cmd_resume(args: argparse.Namespace) -> None:
     if config.run.tmux:
         existing_session = find_tmux_session(coral_dir)
         if existing_session:
-            print(f"Found existing tmux session: {existing_session}")
-            print("Attaching...")
-            os.execvp("tmux", ["tmux", "attach", "-t", existing_session])
-            return
+            # Check if the manager is actually running in that session.
+            # If not, the session is stale — don't reattach, just resume fresh.
+            pid_file = coral_dir / "public" / "manager.pid"
+            manager_alive = False
+            if pid_file.exists():
+                try:
+                    os.kill(int(pid_file.read_text().strip()), 0)
+                    manager_alive = True
+                except (ProcessLookupError, ValueError):
+                    pass
+            if manager_alive:
+                print(f"Found existing tmux session: {existing_session}")
+                if in_tmux():
+                    print("Switching to session...")
+                    os.execvp("tmux", ["tmux", "switch-client", "-t", existing_session])
+                else:
+                    print("Attaching...")
+                    os.execvp("tmux", ["tmux", "attach", "-t", existing_session])
+                return
 
     if config.run.tmux and not in_tmux() and has_tmux():
         _resume_in_tmux(args, config, coral_dir)
@@ -301,7 +316,7 @@ def cmd_resume(args: argparse.Namespace) -> None:
             file=sys.stderr,
         )
 
-    verbose = config.run.verbose
+    verbose = True
     setup_logging(verbose=verbose)
 
     pid_file = coral_dir / "public" / "manager.pid"

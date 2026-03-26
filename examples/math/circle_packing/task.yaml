@@ -43,10 +43,11 @@ grader:
     program_file: "initial_program.py"
 
 agents:
-  count: 2
+  count: 1
   runtime: claude_code
   model: opus
-  knowledge: False
+  knowledge: false
+  research: false
 
 workspace:
   results_dir: "./results"
