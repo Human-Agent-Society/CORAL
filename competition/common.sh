@@ -7,6 +7,7 @@ CORAL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RESULTS_DIR="$SCRIPT_DIR/results"
 TIMEOUT_SECONDS=$((90 * 60))  # 1.5 hours per problem
 PARALLEL=2                     # run 2 problems concurrently
+GRADER_PYTHON_PATH="${GRADER_PYTHON_PATH:-$HOME/code/Frontier-CS/src}"  # python path for grader
 
 # Initialize CSV for a group
 # Usage: init_csv <group_name>
@@ -104,10 +105,11 @@ run_one() {
 
     # Build coral start command (1 agent, verbose, no internet)
     local cmd
+    local python_path_override="grader.python_path=[${GRADER_PYTHON_PATH}]"
     if [ "$runtime" = "codex" ]; then
-        cmd="uv run coral start -c ${task_yaml} agents.count=1 agents.runtime=codex agents.model=${model} run.verbose=true run.tmux=false agents.research=false"
+        cmd="uv run coral start -c ${task_yaml} agents.count=1 agents.runtime=codex agents.model=${model} run.verbose=true run.tmux=false agents.research=false ${python_path_override}"
     else
-        cmd="uv run coral start -c ${task_yaml} agents.count=1 agents.model=${model} run.verbose=true run.tmux=false agents.research=false"
+        cmd="uv run coral start -c ${task_yaml} agents.count=1 agents.model=${model} run.verbose=true run.tmux=false agents.research=false ${python_path_override}"
     fi
 
     echo "[$(date '+%H:%M:%S')] START $problem_id | timeout ${TIMEOUT_SECONDS}s"
