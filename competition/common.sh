@@ -6,7 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CORAL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RESULTS_DIR="$SCRIPT_DIR/results"
 TIMEOUT_SECONDS=$((90 * 60))  # 1.5 hours per problem
-PARALLEL=2                     # run 2 problems concurrently
+PARALLEL=1                     # run 1 problem at a time
+EVAL_POLL_SECONDS=10           # refresh CSV when a higher score appears
 GRADER_PYTHON_PATH="${GRADER_PYTHON_PATH:-$HOME/code/Frontier-CS/src}"  # python path for grader
 
 # Initialize CSV for a group
@@ -14,10 +15,94 @@ GRADER_PYTHON_PATH="${GRADER_PYTHON_PATH:-$HOME/code/Frontier-CS/src}"  # python
 init_csv() {
     local group_name="$1"
     local csv="$RESULTS_DIR/${group_name}.csv"
+    mkdir -p "$RESULTS_DIR"
     if [ ! -f "$csv" ]; then
         echo "problem_id,problem_path,command,result_dir,best_score,sota_score,gap_to_sota,status" > "$csv"
     fi
     echo "$csv"
+}
+
+# Upsert a CSV row for one problem. If the problem already exists, only replace
+# the stored row when the new score is higher or when there is no previous row.
+# Usage: upsert_csv_row <csv_file> <problem_id> <problem_path> <cmd> <result_dir> <best_score> <status>
+upsert_csv_row() {
+    local csv_file="$1"
+    local problem_id="$2"
+    local problem_path="$3"
+    local cmd="$4"
+    local result_dir="$5"
+    local best_score="$6"
+    local status="$7"
+
+    python3 - "$csv_file" "$problem_id" "$problem_path" "$cmd" "$result_dir" "$best_score" "$status" <<'PY2'
+import csv
+import os
+import sys
+
+csv_file, problem_id, problem_path, cmd, result_dir, best_score, status = sys.argv[1:]
+fieldnames = [
+    "problem_id",
+    "problem_path",
+    "command",
+    "result_dir",
+    "best_score",
+    "sota_score",
+    "gap_to_sota",
+    "status",
+]
+
+try:
+    new_score = float(best_score)
+except ValueError:
+    new_score = 0.0
+
+rows = []
+existing = None
+if os.path.exists(csv_file):
+    with open(csv_file, newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get("problem_id") == problem_id:
+                existing = row
+            else:
+                rows.append(row)
+
+replace = existing is None
+if existing is not None:
+    try:
+        old_score = float(existing.get("best_score", "0") or 0)
+    except ValueError:
+        old_score = 0.0
+    replace = (
+        new_score > old_score
+        or existing.get("status", "") != status
+        or existing.get("result_dir", "") != result_dir
+        or existing.get("command", "") != cmd
+        or existing.get("problem_path", "") != problem_path
+    )
+
+if replace:
+    existing = {
+        "problem_id": problem_id,
+        "problem_path": problem_path,
+        "command": cmd,
+        "result_dir": result_dir,
+        "best_score": best_score,
+        "sota_score": existing.get("sota_score", "") if existing else "",
+        "gap_to_sota": existing.get("gap_to_sota", "") if existing else "",
+        "status": status,
+    }
+
+if existing is not None:
+    rows.append(existing)
+
+rows.sort(key=lambda row: row.get("problem_id", ""))
+
+with open(csv_file, "w", newline="") as f:
+    writer = csv.DictWriter(f, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(rows)
+PY2
 }
 
 # Extract best score from .coral/public/attempts/*.json
@@ -44,17 +129,17 @@ print(f'{best:.4f}')
 "
 }
 
-# Collect result for a finished problem and append to CSV
-# Usage: collect_result <csv_file> <problem_path> <cmd>
-collect_result() {
-    local csv_file="$1"
-    local problem_path="$2"
-    local cmd="$3"
-    local problem_id
-    problem_id=$(basename "$problem_path")
+# Resolve the current result directory and .coral directory for a problem.
+# Usage: get_result_context <problem_path>
+get_result_context() {
+    local problem_path="$1"
     local task_yaml="$problem_path/task.yaml"
 
-    # Find the result directory via task name slug
+    if [ ! -f "$task_yaml" ]; then
+        echo "N/A|"
+        return
+    fi
+
     local task_name
     task_name=$(python3 -c "
 import yaml
@@ -69,6 +154,7 @@ print(cfg.get('task', {}).get('name', ''))
     local coral_dir=""
     if [ -d "$CORAL_ROOT/results" ]; then
         for d in "$CORAL_ROOT/results/${slug}"*; do
+            [ -e "$d" ] || continue
             if [ -L "$d/latest" ]; then
                 result_dir="$(readlink -f "$d/latest")"
                 coral_dir="$d/latest/.coral"
@@ -77,6 +163,22 @@ print(cfg.get('task', {}).get('name', ''))
             fi
         done
     fi
+
+    echo "${result_dir}|${coral_dir}"
+}
+
+# Collect result for a problem and upsert it into CSV
+# Usage: collect_result <csv_file> <problem_path> <cmd>
+collect_result() {
+    local csv_file="$1"
+    local problem_path="$2"
+    local cmd="$3"
+    local problem_id
+    problem_id=$(basename "$problem_path")
+    local context
+    context=$(get_result_context "$problem_path")
+    local result_dir="${context%%|*}"
+    local coral_dir="${context#*|}"
 
     local best_score="0"
     if [ -n "$coral_dir" ] && [ -d "$coral_dir" ]; then
@@ -89,8 +191,45 @@ print(cfg.get('task', {}).get('name', ''))
     else
         status="no_score"
     fi
-    echo "${problem_id},${problem_path},\"${cmd}\",${result_dir},${best_score},,,${status}" >> "$csv_file"
-    echo "[DONE] $problem_id -> best_score=$best_score"
+    upsert_csv_row "$csv_file" "$problem_id" "$problem_path" "$cmd" "$result_dir" "$best_score" "$status"
+    echo "[CSV] $problem_id -> best_score=$best_score status=$status"
+}
+
+# Monitor a running problem and refresh CSV whenever the score improves.
+# Usage: watch_problem_progress <pid> <csv_file> <problem_path> <cmd>
+watch_problem_progress() {
+    local runner_pid="$1"
+    local csv_file="$2"
+    local problem_path="$3"
+    local cmd="$4"
+    local best_seen="-1"
+    local problem_id
+    problem_id=$(basename "$problem_path")
+
+    while kill -0 "$runner_pid" 2>/dev/null; do
+        local context
+        context=$(get_result_context "$problem_path")
+        local result_dir="${context%%|*}"
+        local coral_dir="${context#*|}"
+
+        if [ -n "$coral_dir" ] && [ -d "$coral_dir" ]; then
+            local best_score
+            best_score=$(extract_best_score "$coral_dir")
+            local improved
+            improved=$(python3 - "$best_score" "$best_seen" <<'PY2'
+import sys
+print('1' if float(sys.argv[1]) > float(sys.argv[2]) else '0')
+PY2
+)
+            if [ "$improved" = "1" ]; then
+                best_seen="$best_score"
+                upsert_csv_row "$csv_file" "$problem_id" "$problem_path" "$cmd" "$result_dir" "$best_score" "running"
+                echo "[EVAL] $problem_id -> improved to $best_score"
+            fi
+        fi
+
+        sleep "$EVAL_POLL_SECONDS"
+    done
 }
 
 # Run a single problem with coral (blocks until timeout or early exit)
@@ -122,7 +261,7 @@ run_one() {
     echo "[$(date '+%H:%M:%S')] STOP  $problem_id"
 }
 
-# Run all problems in a group, 2 at a time
+# Run all problems in a group, one at a time
 # Usage: run_group <csv_file> <runtime> <model> <problem1> <problem2> ...
 run_group() {
     local csv_file="$1"
@@ -131,57 +270,37 @@ run_group() {
     shift 3
     local problems=("$@")
     local total=${#problems[@]}
-    local i=0
+    local processed=0
 
     echo "Running $total problems, $PARALLEL at a time, ${TIMEOUT_SECONDS}s each"
     echo ""
 
-    while [ $i -lt $total ]; do
-        local pids=()
-        local batch_problems=()
+    for p in "${problems[@]}"; do
+        local pid_name
+        pid_name=$(basename "$p")
+        processed=$((processed + 1))
 
-        # Launch up to PARALLEL problems
-        for (( j=0; j<PARALLEL && i+j<total; j++ )); do
-            local idx=$((i + j))
-            local p="${problems[$idx]}"
-            local pid_name=$(basename "$p")
+        local task_yaml="$p/task.yaml"
+        if [ ! -f "$task_yaml" ]; then
+            echo "[SKIP] $pid_name: task.yaml not found"
+            upsert_csv_row "$csv_file" "$pid_name" "$p" "SKIP" "N/A" "0" "missing_task_yaml"
+            continue
+        fi
 
-            # Skip if already in CSV
-            if grep -q "^${pid_name}," "$csv_file" 2>/dev/null; then
-                echo "[SKIP] $pid_name already in CSV"
-                continue
-            fi
+        local cmd_desc
+        if [ "$runtime" = "codex" ]; then
+            cmd_desc="uv run coral start -c ${p}/task.yaml agents.count=1 agents.runtime=codex agents.model=${model} run.verbose=true run.tmux=false agents.research=false"
+        else
+            cmd_desc="uv run coral start -c ${p}/task.yaml agents.count=1 agents.model=${model} run.verbose=true run.tmux=false agents.research=false"
+        fi
 
-            local task_yaml="$p/task.yaml"
-            if [ ! -f "$task_yaml" ]; then
-                echo "[SKIP] $pid_name: task.yaml not found"
-                echo "$(basename "$p"),${p},SKIP,,0,,,missing_task_yaml" >> "$csv_file"
-                continue
-            fi
+        echo "[QUEUE] ($processed/$total) $pid_name"
 
-            # Run in subshell so each problem has its own process group
-            ( run_one "$p" "$runtime" "$model" ) &
-            pids+=($!)
-            batch_problems+=("$p")
-        done
-
-        # Wait for this batch to finish
-        for pid in "${pids[@]}"; do
-            wait "$pid" 2>/dev/null || true
-        done
-
-        # Collect results for this batch
-        for p in "${batch_problems[@]}"; do
-            local cmd_desc
-            if [ "$runtime" = "codex" ]; then
-                cmd_desc="uv run coral start -c ${p}/task.yaml agents.count=1 agents.runtime=codex agents.model=${model} run.verbose=true run.tmux=false agents.research=false"
-            else
-                cmd_desc="uv run coral start -c ${p}/task.yaml agents.count=1 agents.model=${model} run.verbose=true run.tmux=false agents.research=false"
-            fi
-            collect_result "$csv_file" "$p" "$cmd_desc"
-        done
-
-        i=$((i + PARALLEL))
+        ( run_one "$p" "$runtime" "$model" ) &
+        local runner_pid=$!
+        watch_problem_progress "$runner_pid" "$csv_file" "$p" "$cmd_desc"
+        wait "$runner_pid" 2>/dev/null || true
+        collect_result "$csv_file" "$p" "$cmd_desc"
     done
 }
 
