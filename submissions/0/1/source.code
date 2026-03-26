@@ -8,6 +8,7 @@ int main() {
     int n;
     cin >> n;
 
+    // Read all polyominoes
     struct Poly {
         int k;
         vector<pair<int,int>> cells;
@@ -24,19 +25,22 @@ int main() {
         totalCells += polys[i].k;
     }
 
-    // Transform: reflect (if flip) then rotate CW rot times
-    // Returns normalized cells (min at 0,0) and the raw offset (minx, miny before normalization)
-    struct TransResult {
+    // Normalize each polyomino: shift so min coords are (0,0)
+    // Try all 8 orientations (4 rotations x 2 reflections), pick the one
+    // with smallest bounding box height then width
+    struct Placement {
         vector<pair<int,int>> cells;
         int w, h;
-        int off_x, off_y; // min of raw transformed coords
+        int rot, flip;
     };
 
-    auto transform = [](const vector<pair<int,int>>& cells, int rot, int flip) -> TransResult {
+    auto transform = [](const vector<pair<int,int>>& cells, int rot, int flip) {
         vector<pair<int,int>> res;
         for (auto [x, y] : cells) {
             int nx = x, ny = y;
+            // Flip first (reflect across y-axis)
             if (flip) nx = -nx;
+            // Rotate clockwise rot times
             for (int r = 0; r < rot; r++) {
                 int tmp = nx;
                 nx = ny;
@@ -44,36 +48,34 @@ int main() {
             }
             res.push_back({nx, ny});
         }
+        // Normalize
         int minx = INT_MAX, miny = INT_MAX;
         for (auto [x, y] : res) { minx = min(minx, x); miny = min(miny, y); }
         for (auto& [x, y] : res) { x -= minx; y -= miny; }
-        int mx = 0, my = 0;
-        for (auto [x, y] : res) { mx = max(mx, x); my = max(my, y); }
-        return {res, mx + 1, my + 1, minx, miny};
+        return res;
     };
 
-    struct Placement {
-        vector<pair<int,int>> cells;
-        int w, h;
-        int rot, flip;
-        int off_x, off_y;
-    };
-
+    // For each poly, find best orientation (smallest h, then w)
+    // and store the chosen orientation
     vector<Placement> best(n);
     for (int i = 0; i < n; i++) {
         best[i].w = INT_MAX;
         best[i].h = INT_MAX;
         for (int f = 0; f < 2; f++) {
             for (int r = 0; r < 4; r++) {
-                auto tr = transform(polys[i].cells, r, f);
-                if (tr.h < best[i].h || (tr.h == best[i].h && tr.w < best[i].w)) {
-                    best[i] = {tr.cells, tr.w, tr.h, r, f, tr.off_x, tr.off_y};
+                auto cells = transform(polys[i].cells, r, f);
+                int mx = 0, my = 0;
+                for (auto [x, y] : cells) { mx = max(mx, x); my = max(my, y); }
+                int w = mx + 1, h = my + 1;
+                // Prefer orientations that are wide and short (good for row packing)
+                if (h < best[i].h || (h == best[i].h && w < best[i].w)) {
+                    best[i] = {cells, w, h, r, f};
                 }
             }
         }
     }
 
-    // Sort by height desc, then width desc (FFDH-like)
+    // Sort polyominoes by height descending, then width descending (FFDH-like)
     vector<int> order(n);
     iota(order.begin(), order.end(), 0);
     sort(order.begin(), order.end(), [&](int a, int b) {
@@ -81,8 +83,11 @@ int main() {
         return best[a].w > best[b].w;
     });
 
+    // Grid size: start with ceil(sqrt(totalCells)) and expand if needed
     int S = max(1, (int)ceil(sqrt((double)totalCells * 1.3)));
 
+    // Simple greedy placement: use a grid, place each piece at the first
+    // position where it fits (scan row by row, left to right)
     vector<vector<bool>> grid;
     vector<int> tx(n), ty(n);
 
@@ -93,11 +98,13 @@ int main() {
             bool placed = false;
             for (int y = 0; y <= S - p.h && !placed; y++) {
                 for (int x = 0; x <= S - p.w && !placed; x++) {
+                    // Check if all cells are free
                     bool ok = true;
                     for (auto [cx, cy] : p.cells) {
                         if (grid[y + cy][x + cx]) { ok = false; break; }
                     }
                     if (ok) {
+                        // Place it
                         for (auto [cx, cy] : p.cells) {
                             grid[y + cy][x + cx] = true;
                         }
@@ -112,19 +119,15 @@ int main() {
         return true;
     };
 
+    // Try increasing sizes until it fits
     while (!tryPlace(S)) {
         S++;
     }
 
-    // Output: W H then per-polyomino X Y R F
-    // Judge applies: reflect -> rotate -> translate(X,Y) on ORIGINAL cells
-    // We placed normalized cells at (tx,ty), so X = tx - off_x, Y = ty - off_y
-    // where off_x, off_y are the min coords of raw reflected+rotated cells
+    // Output: W H (the problem says W=H for square)
     cout << S << " " << S << "\n";
     for (int i = 0; i < n; i++) {
-        int X = tx[i] - best[i].off_x;
-        int Y = ty[i] - best[i].off_y;
-        cout << X << " " << Y << " " << best[i].rot << " " << best[i].flip << "\n";
+        cout << tx[i] << " " << ty[i] << " " << best[i].rot << " " << best[i].flip << "\n";
     }
 
     return 0;
