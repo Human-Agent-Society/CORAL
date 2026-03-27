@@ -80,7 +80,8 @@ coral status                       # Agent health + leaderboard
 coral log                          # Leaderboard (top 20)
 coral log -n 5 --recent            # Recent attempts
 coral log --search "query"         # Search attempts
-coral show <hash>                  # Attempt details + diff
+coral show <hash>                  # Attempt details + file summary
+coral show <hash> --diff           # Attempt details + full code diff
 coral notes                        # Browse shared notes
 coral skills                       # Browse shared skills
 coral runs                         # List all runs

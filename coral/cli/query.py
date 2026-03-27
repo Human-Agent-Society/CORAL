@@ -100,13 +100,17 @@ def cmd_show(args: argparse.Namespace) -> None:
         print(f"Feedback: {data['feedback']}")
 
     commit = data["commit_hash"]
+    git_args = ["git", "show", commit]
+    if not getattr(args, "diff", False):
+        git_args.insert(2, "--stat")
     result = subprocess.run(
-        ["git", "show", "--stat", commit],
+        git_args,
         capture_output=True,
         text=True,
     )
     if result.returncode == 0:
-        print(f"\n--- Diff ---\n{result.stdout}")
+        label = "Diff" if getattr(args, "diff", False) else "Summary"
+        print(f"\n--- {label} ---\n{result.stdout}")
 
 
 def cmd_notes(args: argparse.Namespace) -> None:

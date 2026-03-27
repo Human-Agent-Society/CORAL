@@ -256,10 +256,14 @@ Run 'coral <command> --help' for details on any command."""
         formatter_class=_CommandHelpFormatter,
     )
     p_show.add_argument("hash", help="Commit hash or prefix")
+    p_show.add_argument(
+        "--diff", action="store_true", default=False, help="Show full code diff instead of summary"
+    )
     _add_run_args(p_show)
     # Hidden alias: attempt -> show
     p_attempt_alias = sub.add_parser("attempt", help=argparse.SUPPRESS)
     p_attempt_alias.add_argument("hash", help=argparse.SUPPRESS)
+    p_attempt_alias.add_argument("--diff", action="store_true", default=False, help=argparse.SUPPRESS)
     _add_run_args(p_attempt_alias)
 
     p_notes = sub.add_parser(
