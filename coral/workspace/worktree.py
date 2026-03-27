@@ -218,25 +218,34 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
        gets its own ``.venv`` with task dependencies.
     2. Install ``coral`` into that venv so ``coral eval`` is available
        when the agent uses ``uv run``.
+
+    Each worktree gets its own isolated ``.venv`` via UV_PROJECT_ENVIRONMENT
+    to prevent concurrent agents from corrupting a shared venv.
     """
     if not setup_commands:
         return
 
-    run_setup_commands(setup_commands, worktree_path)
+    # Force uv to create/use a venv inside this worktree, even if
+    # pyproject.toml is resolved from a parent directory.
+    worktree_venv = worktree_path / ".venv"
+    env_override = {"UV_PROJECT_ENVIRONMENT": str(worktree_venv)}
+    run_setup_commands(setup_commands, worktree_path, extra_env=env_override)
 
     # Install coral into the worktree's venv so agents can use
     # ``uv run coral eval`` and graders can ``from coral.grader import ...``.
-    venv_python = worktree_path / ".venv" / "bin" / "python"
+    venv_python = worktree_venv / "bin" / "python"
     if venv_python.exists() and shutil.which("uv"):
         coral_root = Path(__file__).resolve().parent.parent.parent
         if (coral_root / "pyproject.toml").exists():
             logger.info(f"Installing coral into worktree venv from {coral_root}")
+            env = _clean_env()
+            env.update(env_override)
             result = subprocess.run(
                 ["uv", "pip", "install", "--python", str(venv_python), "-e", str(coral_root)],
                 cwd=str(worktree_path),
                 capture_output=True,
                 text=True,
-                env=_clean_env(),
+                env=env,
             )
             if result.returncode != 0:
                 logger.warning(

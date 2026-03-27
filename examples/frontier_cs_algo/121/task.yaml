@@ -1,0 +1,65 @@
+task:
+  name: 'Frontier-CS Algo #121: DNA Matching'
+  description: 'Solve algorithmic problem #121 from the Frontier-CS benchmark.
+
+    Read the problem statement in `statement.txt`, then write a C++17 solution
+
+    and save it as `solution.cpp`.
+
+
+    ## Solution format
+
+    Your solution must be a self-contained C++17 file that:
+
+    - Reads input from stdin
+
+    - Writes output to stdout
+
+    - Compiles with `g++ -std=c++17 -O2`
+
+    - Runs within the time limit of 2s per test case
+
+    - Uses at most 512MB of memory
+
+
+    ## Strategy tips
+
+    - Start with a correct brute-force, then optimize.
+
+    - Many problems reward heuristics: simulated annealing, beam search, greedy +
+    local search.
+
+    - Check the scoring formula in the statement — some problems score relative to
+    a baseline.
+
+    - Test your solution locally before submitting.'
+  files:
+  - solution.cpp
+  tips: '- Your score is 0-100 based on solution quality across 3 test cases.
+
+    - Invalid or crashing solutions score 0.
+
+    - Time limit: 2s per test case. Memory limit: 512MB.
+
+    - The problem statement is in statement.txt.'
+grader:
+  timeout: 300
+  direction: maximize
+  args:
+    problem_id: '121'
+    problem_type: default
+    time_limit: 2
+    memory_mb: 512
+    n_cases: 3
+agents:
+  count: 1
+  runtime: claude_code
+  model: claude-sonnet-4-6
+  max_turns: 200
+workspace:
+  results_dir: ./results
+  repo_path: ./examples/frontier_cs_algo/121/seed
+run:
+  verbose: false
+  ui: false
+  tmux: true

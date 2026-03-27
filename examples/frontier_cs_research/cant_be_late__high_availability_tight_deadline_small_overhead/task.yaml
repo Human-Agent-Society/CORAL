@@ -1,0 +1,44 @@
+task:
+  name: 'Frontier-CS Research: cant_be_late (high_availability_tight_deadline_small_overhead)'
+  description: 'Solve the ''cant_be_late (high_availability_tight_deadline_small_overhead)''
+    research problem from the Frontier-CS benchmark.
+
+    Read the full problem statement in `statement.md`.
+
+
+    Write your solution in `solution.py`.
+
+
+    Your score will be 0-100 based on solution quality.
+
+    '
+  files:
+  - solution.py
+  tips: '- Read statement.md carefully for the exact interface and scoring formula.
+
+    - Evaluation timeout: 1800s.
+
+    - Language: Python.
+
+    '
+grader:
+  timeout: 1800
+  direction: maximize
+  args:
+    problem_name: cant_be_late
+    variant_name: high_availability_tight_deadline_small_overhead
+    variant_dir: /home/qua/Code/coral/fix/Frontier-CS/research/problems/cant_be_late/high_availability_tight_deadline_small_overhead
+    language: python
+    needs_gpu: false
+agents:
+  count: 1
+  runtime: claude_code
+  model: claude-sonnet-4-6
+  max_turns: 200
+workspace:
+  results_dir: ./results
+  repo_path: ./examples/frontier_cs_research/cant_be_late__high_availability_tight_deadline_small_overhead/seed
+run:
+  verbose: false
+  ui: false
+  tmux: true

@@ -1,0 +1,37 @@
+task:
+  name: 'Frontier-CS Research: poc_generation (stack_buffer_overflow_oss_fuzz_42534949)'
+  description: "            Solve the 'poc_generation (stack_buffer_overflow_oss_fuzz_42534949)'\
+    \ research problem from the Frontier-CS benchmark.\n            Read the full\
+    \ problem statement in `statement.md`.\n\n            Write your solution in `solution.py`.\n\
+    NOTE: This problem requires GPU (CUDA) for evaluation.\nDocker image: python:3.11-slim-trixie\n\
+    \n            Your score will be 0-100 based on solution quality.\n"
+  files:
+  - solution.py
+  tips: '- Read statement.md carefully for the exact interface and scoring formula.
+
+    - Evaluation timeout: 1800s.
+
+    - Language: Python.
+
+    - GPU (CUDA) required for evaluation.'
+grader:
+  timeout: 1800
+  direction: maximize
+  args:
+    problem_name: poc_generation
+    variant_name: stack_buffer_overflow_oss_fuzz_42534949
+    variant_dir: /home/qua/Code/coral/fix/Frontier-CS/research/problems/poc_generation/stack_buffer_overflow/oss_fuzz_42534949
+    language: python
+    needs_gpu: true
+agents:
+  count: 1
+  runtime: claude_code
+  model: claude-sonnet-4-6
+  max_turns: 200
+workspace:
+  results_dir: ./results
+  repo_path: ./examples/frontier_cs_research/poc_generation__stack_buffer_overflow_oss_fuzz_42534949/seed
+run:
+  verbose: false
+  ui: false
+  tmux: true

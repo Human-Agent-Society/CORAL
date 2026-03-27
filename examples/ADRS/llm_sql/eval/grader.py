@@ -40,6 +40,9 @@ class Grader(TaskGrader):
         # Add eval dir so evaluator can import utils and solver
         if eval_dir not in sys.path:
             sys.path.insert(0, eval_dir)
+        # Add codebase path so evaluator can import initial_program
+        if self.codebase_path not in sys.path:
+            sys.path.insert(0, self.codebase_path)
 
         try:
             spec = importlib.util.spec_from_file_location(

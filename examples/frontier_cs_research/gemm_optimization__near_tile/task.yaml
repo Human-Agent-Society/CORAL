@@ -1,0 +1,37 @@
+task:
+  name: 'Frontier-CS Research: gemm_optimization (near_tile)'
+  description: "            Solve the 'gemm_optimization (near_tile)' research problem\
+    \ from the Frontier-CS benchmark.\n            Read the full problem statement\
+    \ in `statement.md`.\n\n            Write your solution in `solution.py`.\nNOTE:\
+    \ This problem requires GPU (CUDA) for evaluation.\nDocker image: andylizf/triton-tlx:tlx-nv-cu122\n\
+    \n            Your score will be 0-100 based on solution quality.\n"
+  files:
+  - solution.py
+  tips: '- Read statement.md carefully for the exact interface and scoring formula.
+
+    - Evaluation timeout: 1800s.
+
+    - Language: Python.
+
+    - GPU (CUDA) required for evaluation.'
+grader:
+  timeout: 1800
+  direction: maximize
+  args:
+    problem_name: gemm_optimization
+    variant_name: near_tile
+    variant_dir: /home/qua/Code/coral/fix/Frontier-CS/research/problems/gemm_optimization/near_tile
+    language: python
+    needs_gpu: true
+agents:
+  count: 1
+  runtime: claude_code
+  model: claude-sonnet-4-6
+  max_turns: 200
+workspace:
+  results_dir: ./results
+  repo_path: ./examples/frontier_cs_research/gemm_optimization__near_tile/seed
+run:
+  verbose: false
+  ui: false
+  tmux: true

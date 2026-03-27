@@ -78,6 +78,10 @@ class ClaudeCodeRuntime:
         logger.info(f"Starting agent {agent_id} in {worktree_path}")
         logger.info(f"Command: {' '.join(cmd)}")
 
+        # Give each agent its own venv so concurrent uv operations don't collide
+        agent_env = _clean_env()
+        agent_env["UV_PROJECT_ENVIRONMENT"] = str(worktree_path / ".venv")
+
         log_file = open(log_path, "w", buffering=1)  # line-buffered
 
         # Write CORAL prompt entry so the initial instruction is captured in the log
@@ -99,7 +103,7 @@ class ClaudeCodeRuntime:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,  # own process group for clean SIGINT
-                env=_clean_env(),
+                env=agent_env,
             )
 
             def _tee_output(proc: subprocess.Popen, log_f, agent: str) -> None:
@@ -136,7 +140,7 @@ class ClaudeCodeRuntime:
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,  # own process group for clean SIGINT
-                env=_clean_env(),
+                env=agent_env,
             )
             log_file_ref = log_file
 

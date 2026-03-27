@@ -1,0 +1,36 @@
+task:
+  name: 'Frontier-CS Research: nbody_simulation (random_100k)'
+  description: "            Solve the 'nbody_simulation (random_100k)' research problem\
+    \ from the Frontier-CS benchmark.\n            Read the full problem statement\
+    \ in `statement.md`.\n\n            Write your solution in `solution.cpp`.\nDocker\
+    \ image: gcc:13\n\n            Your score will be 0-100 based on solution quality.\n"
+  files:
+  - solution.cpp
+  tips: '- Read statement.md carefully for the exact interface and scoring formula.
+
+    - Evaluation timeout: 600s.
+
+    - Language: C++17.
+
+    '
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    problem_name: nbody_simulation
+    variant_name: random_100k
+    variant_dir: /home/qua/Code/coral/fix/Frontier-CS/research/problems/nbody_simulation/random_100k
+    language: cpp
+    needs_gpu: false
+agents:
+  count: 1
+  runtime: claude_code
+  model: claude-sonnet-4-6
+  max_turns: 200
+workspace:
+  results_dir: ./results
+  repo_path: ./examples/frontier_cs_research/nbody_simulation__random_100k/seed
+run:
+  verbose: false
+  ui: false
+  tmux: true

@@ -1,0 +1,48 @@
+task:
+  name: 'Frontier-CS Algo #140: Mineral Deposits (interactive)'
+  description: "                Solve algorithmic problem #140 from the Frontier-CS\
+    \ benchmark.\n                Read the problem statement in `statement.txt`, then\
+    \ write a C++17 solution\n                and save it as `solution.cpp`.\n\n \
+    \               ## Solution format\n                Your solution must be a self-contained\
+    \ C++17 file that:\n                - Reads input from stdin\n               \
+    \ - Writes output to stdout\n                - Compiles with `g++ -std=c++17 -O2`\n\
+    \                - Runs within the time limit of 1s per test case\n          \
+    \      - Uses at most 256MB of memory\n## Interactive problem\nThis is an interactive\
+    \ problem. Your solution communicates with a judge\nprogram via stdin/stdout.\
+    \ Read the problem statement carefully for the\ninteraction protocol. Make sure\
+    \ to flush stdout after each output line\n(use `cout.flush()` or `endl`).\n\n\
+    \                ## Strategy tips\n                - Start with a correct brute-force,\
+    \ then optimize.\n                - Many problems reward heuristics: simulated\
+    \ annealing, beam search, greedy + local search.\n                - Check the\
+    \ scoring formula in the statement — some problems score relative to a baseline.\n\
+    \                - Test your solution locally before submitting."
+  files:
+  - solution.cpp
+  tips: '- Your score is 0-100 based on solution quality across 3 test cases.
+
+    - Invalid or crashing solutions score 0.
+
+    - Time limit: 1s per test case. Memory limit: 256MB.
+
+    - The problem statement is in statement.txt.'
+grader:
+  timeout: 300
+  direction: maximize
+  args:
+    problem_id: '140'
+    problem_type: interactive
+    time_limit: 1
+    memory_mb: 256
+    n_cases: 3
+agents:
+  count: 1
+  runtime: claude_code
+  model: claude-sonnet-4-6
+  max_turns: 200
+workspace:
+  results_dir: ./results
+  repo_path: ./examples/frontier_cs_algo/140/seed
+run:
+  verbose: false
+  ui: false
+  tmux: true

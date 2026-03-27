@@ -180,12 +180,20 @@ def copy_private_data(private_paths: list[str], coral_dir: Path, config_dir: Pat
             logger.info(f"Private data file: {src.name}")
 
 
-def run_setup_commands(commands: list[str], cwd: Path) -> None:
+def run_setup_commands(
+    commands: list[str],
+    cwd: Path,
+    extra_env: dict[str, str] | None = None,
+) -> None:
     """Run setup commands in the given directory.
 
     Commands are executed sequentially via the shell. If any command fails,
     a RuntimeError is raised with the failing command and stderr.
     """
+    env = _clean_env()
+    if extra_env:
+        env.update(extra_env)
+
     for cmd in commands:
         logger.info(f"Running setup command: {cmd}")
         result = subprocess.run(
@@ -194,7 +202,7 @@ def run_setup_commands(commands: list[str], cwd: Path) -> None:
             cwd=str(cwd),
             capture_output=True,
             text=True,
-            env=_clean_env(),
+            env=env,
         )
         if result.returncode != 0:
             raise RuntimeError(
