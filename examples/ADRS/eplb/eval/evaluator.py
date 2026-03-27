@@ -70,16 +70,18 @@ def simulate_inference(
                 
             num_replicas = int(logcnt[layer_id][logical_id].item())
 
-            # 跳过零副本
             if num_replicas <= 0:
+                # Expert has load but no replicas — penalize by concentrating
+                # all its load on physical slot 0 (worst-case imbalance).
+                total_physical_load[layer_id, 0] += logical_load
                 continue
 
             # 获取物理专家映射
             physical_ids = log2phy[layer_id][logical_id][:num_replicas]
-                
+
             # 计算每个副本的负载（基于有效副本数量）
             replica_load = logical_load / num_replicas
-            
+
             # 分配负载到有效的物理专家
             total_physical_load[layer_id, physical_ids] += replica_load
     

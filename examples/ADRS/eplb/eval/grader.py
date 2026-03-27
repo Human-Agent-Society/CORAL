@@ -49,21 +49,16 @@ class Grader(TaskGrader):
             evaluator_mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(evaluator_mod)
 
-            NUM_RUNS = 3
-            results = []
-            for _ in range(NUM_RUNS):
-                result = evaluator_mod.evaluate(program_path)
-                if "error" in result:
-                    return self.fail(result["error"])
-                results.append(result)
+            result = evaluator_mod.evaluate(program_path)
+            if "error" in result:
+                return self.fail(result["error"])
 
-            avg = lambda key: sum(r.get(key, 0.0) for r in results) / NUM_RUNS
-            combined_score = avg("combined_score")
-            bal_gpu = avg("balancedness_score_gpu")
-            bal_expert = avg("balancedness_score_expert")
-            speed = avg("speed_score")
-            t_algo = avg("times_algorithm")
-            t_infer = avg("times_inference")
+            combined_score = result.get("combined_score", 0.0)
+            bal_gpu = result.get("balancedness_score_gpu", 0.0)
+            bal_expert = result.get("balancedness_score_expert", 0.0)
+            speed = result.get("speed_score", 0.0)
+            t_algo = result.get("times_algorithm", 0.0)
+            t_infer = result.get("times_inference", 0.0)
 
             explanation = (
                 f"combined={combined_score:.4f} | "
