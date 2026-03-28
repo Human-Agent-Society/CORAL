@@ -8,6 +8,7 @@ import logging
 import os
 import signal
 import threading
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -80,6 +81,9 @@ class AgentManager:
         handles = []
         for i in range(self.config.agents.count):
             agent_id = f"agent-{i + 1}"
+            if i > 0 and self.config.agents.stagger_seconds > 0:
+                logger.info(f"Staggering {agent_id} by {self.config.agents.stagger_seconds}s")
+                time.sleep(self.config.agents.stagger_seconds)
             handle = self._setup_and_start_agent(agent_id)
             handles.append(handle)
 
