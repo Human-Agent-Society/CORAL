@@ -8,6 +8,7 @@ import logging
 import os
 import signal
 import threading
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -78,8 +79,12 @@ class AgentManager:
 
         # 3. For each agent: create worktree, generate CLAUDE.md, spawn runtime
         handles = []
+        stagger = self.config.agents.stagger_seconds
         for i in range(self.config.agents.count):
             agent_id = f"agent-{i + 1}"
+            if i > 0 and stagger > 0:
+                logger.info(f"Staggering {agent_id} by {stagger}s (rate-limit backpressure)")
+                time.sleep(stagger)
             handle = self._setup_and_start_agent(agent_id)
             handles.append(handle)
 
