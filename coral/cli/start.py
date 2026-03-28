@@ -68,13 +68,8 @@ def _build_coral_command(args: argparse.Namespace) -> list[str]:
 def _start_in_tmux(args: argparse.Namespace, config: CoralConfig) -> None:
     """Create a tmux session and run coral start inside it."""
     task_name = config.task.name.replace(" ", "-").lower()
-    session_name = f"coral-{task_name}"
-
-    # Kill existing session with same name if it exists
-    subprocess.run(
-        ["tmux", "kill-session", "-t", session_name],
-        capture_output=True,
-    )
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    session_name = f"coral-{task_name}-{timestamp}"
 
     coral_cmd = _build_coral_command(args)
     shell_cmd = " ".join(f"'{c}'" if " " in c else c for c in coral_cmd)
@@ -108,8 +103,10 @@ def _start_in_tmux(args: argparse.Namespace, config: CoralConfig) -> None:
 def _resume_in_tmux(args: argparse.Namespace, config: CoralConfig, coral_dir: Path) -> None:
     """Resume CORAL inside a tmux session."""
     task_name = config.task.name.replace(" ", "-").lower()
-    session_name = f"coral-{task_name}"
+    run_name = coral_dir.resolve().parent.name
+    session_name = f"coral-{task_name}-{run_name}"
 
+    # Kill stale session with same name (same run being re-resumed)
     subprocess.run(
         ["tmux", "kill-session", "-t", session_name],
         capture_output=True,
