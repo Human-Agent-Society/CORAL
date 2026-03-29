@@ -71,7 +71,7 @@ coral start -c task.yaml                          # Launch agents
 coral start -c task.yaml agents.count=4           # Override config via dotlist
 coral start -c task.yaml run.verbose=true         # Verbose output
 coral start -c task.yaml run.ui=true              # Also launch web dashboard
-coral start -c task.yaml run.tmux=false           # No tmux session
+coral start -c task.yaml run.session=local           # No tmux session
 coral resume                                      # Resume a previous run
 coral resume agents.model=opus                    # Resume with model override
 coral resume -i "Try greedy approaches"           # Resume with additional instruction

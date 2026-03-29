@@ -91,6 +91,7 @@ class WorkspaceConfig:
     setup: list[str] = field(default_factory=list)  # shell commands to run before agents start
     # Ignored if results_dir is set
     base_dir: str = ""
+    run_dir: str = ""  # if set, use this exact run directory instead of generating one
 
 
 @dataclass
@@ -99,7 +100,8 @@ class RunConfig:
 
     verbose: bool = False
     ui: bool = False
-    tmux: bool = True
+    session: str = "tmux"  # "local", "tmux", or "docker"
+    docker_image: str = ""  # empty = auto-build from project Dockerfile
 
 
 @dataclass

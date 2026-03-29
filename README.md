@@ -92,7 +92,8 @@ uv run coral start -c examples/kernel_builder/task.yaml
 uv run coral start -c task.yaml agents.count=4 agents.model=opus
 uv run coral start -c task.yaml run.verbose=true        # stream agent output
 uv run coral start -c task.yaml run.ui=true              # also launch web dashboard
-uv run coral start -c task.yaml run.tmux=false           # skip tmux, run inline
+uv run coral start -c task.yaml run.session=local         # skip tmux, run inline
+uv run coral start -c task.yaml run.session=docker        # run inside Docker container
 
 # stop and resume
 uv run coral stop                                        # stop anytime
