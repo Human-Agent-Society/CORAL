@@ -75,6 +75,8 @@ class CodexRuntime:
         prompt_source: str | None = None,
         task_name: str | None = None,
         task_description: str | None = None,
+        gateway_url: str | None = None,
+        gateway_api_key: str | None = None,
     ) -> AgentHandle:
         """Start a Codex agent in the given worktree.
 
@@ -127,6 +129,13 @@ class CodexRuntime:
 
         agent_env = _clean_env()
         agent_env["UV_PROJECT_ENVIRONMENT"] = str(worktree_path / ".venv")
+
+        # Route through gateway if configured
+        if gateway_url:
+            agent_env["OPENAI_BASE_URL"] = gateway_url
+            logger.info(f"Codex agent {agent_id}: routing via gateway at {gateway_url}")
+        if gateway_api_key:
+            agent_env["OPENAI_API_KEY"] = gateway_api_key
 
         log_file = open(log_path, "w", buffering=1)
 

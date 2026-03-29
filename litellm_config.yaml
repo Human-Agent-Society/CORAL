@@ -1,0 +1,25 @@
+model_list:
+  - model_name: sonnet
+    litellm_params:
+      model: claude-sonnet-4-20250514
+      api_key: os.environ/ANTHROPIC_API_KEY
+      api_base: os.environ/ANTHROPIC_BASE_URL
+      extra_headers:
+        x-custom-header: os.environ/CUSTOM_HEADER
+  - model_name: opus
+    litellm_params:
+      model: claude-opus-4-20250514
+      api_key: os.environ/ANTHROPIC_API_KEY
+      api_base: os.environ/ANTHROPIC_BASE_URL
+      extra_headers:
+        x-custom-header: os.environ/CUSTOM_HEADER
+  - model_name: haiku
+    litellm_params:
+      model: claude-haiku-4-20250514
+      api_key: os.environ/ANTHROPIC_API_KEY
+      api_base: os.environ/ANTHROPIC_BASE_URL
+      extra_headers:
+        x-custom-header: os.environ/CUSTOM_HEADER
+
+litellm_settings:
+  drop_params: true

@@ -43,6 +43,8 @@ class ClaudeCodeRuntime:
         prompt_source: str | None = None,
         task_name: str | None = None,
         task_description: str | None = None,
+        gateway_url: str | None = None,
+        gateway_api_key: str | None = None,
     ) -> AgentHandle:
         """Start a Claude Code agent in the given worktree."""
         agent_id_file = worktree_path / ".coral_agent_id"
@@ -81,6 +83,13 @@ class ClaudeCodeRuntime:
         # Give each agent its own venv so concurrent uv operations don't collide
         agent_env = _clean_env()
         agent_env["UV_PROJECT_ENVIRONMENT"] = str(worktree_path / ".venv")
+
+        # Route through gateway if configured
+        if gateway_url:
+            agent_env["ANTHROPIC_BASE_URL"] = gateway_url
+            logger.info(f"Agent {agent_id}: routing via gateway at {gateway_url}")
+        if gateway_api_key:
+            agent_env["ANTHROPIC_API_KEY"] = gateway_api_key
 
         log_file = open(log_path, "w", buffering=1)  # line-buffered
 

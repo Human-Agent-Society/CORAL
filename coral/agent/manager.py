@@ -60,6 +60,8 @@ class AgentManager:
         self._agent_eval_counts: dict[str, int] = {}
         self._agent_best_scores: dict[str, float] = {}
         self._agent_evals_since_improvement: dict[str, int] = {}
+        self._gateway: Any | None = None
+        self._gateway_keys: dict[str, str] = {}  # agent_id -> proxy key
 
     def start_all(self) -> list[AgentHandle]:
         """Create workspace structure and spawn all agents."""
@@ -70,6 +72,9 @@ class AgentManager:
         logger.info(f"Run directory: {self.paths.run_dir}")
         logger.info(f"  coral_dir: {self.paths.coral_dir}")
         logger.info(f"  repo_dir:  {self.paths.repo_dir}")
+
+        # 1b. Start gateway if configured
+        self._start_gateway_if_enabled()
 
         # 2. Seed global heartbeat config if not already present
         if not read_global_heartbeat(self.paths.coral_dir):
@@ -93,6 +98,38 @@ class AgentManager:
         atexit.register(self._atexit_cleanup)
 
         return handles
+
+    def _start_gateway_if_enabled(self) -> None:
+        """Start the LiteLLM gateway if configured."""
+        assert self.paths is not None
+        gw_cfg = self.config.agents.gateway
+        if not gw_cfg.enabled:
+            return
+
+        from coral.gateway.config import generate_default_litellm_config
+        from coral.gateway.server import GatewayManager
+
+        # Resolve config path relative to task dir
+        config_path = gw_cfg.config
+        if not config_path:
+            # Generate default config at project root
+            config_path = str(self.paths.run_dir / "litellm_config.yaml")
+            generate_default_litellm_config(
+                Path(config_path), model=self.config.agents.model,
+            )
+        elif self.config.task_dir and not Path(config_path).is_absolute():
+            config_path = str(self.config.task_dir / config_path)
+
+        log_dir = self.paths.coral_dir / "public" / "gateway"
+        gateway = GatewayManager(
+            port=gw_cfg.port,
+            config_path=config_path,
+            api_key=gw_cfg.api_key,
+            log_dir=log_dir,
+        )
+        gateway.start()
+        self._gateway = gateway
+        logger.info(f"Gateway running at {gateway.url}")
 
     def _setup_and_start_agent(
         self, agent_id: str,
@@ -145,7 +182,14 @@ class AgentManager:
         )
         (worktree_path / instruction_file).write_text(coral_md)
 
+        # Register agent with gateway if active
+        if self._gateway and agent_id not in self._gateway_keys:
+            proxy_key = self._gateway.register_agent(agent_id, worktree_path)
+            self._gateway_keys[agent_id] = proxy_key
+
         # Start agent
+        gateway_url = self._gateway.url if self._gateway else None
+        gateway_api_key = self._gateway_keys.get(agent_id)
         handle = self.runtime.start(
             worktree_path=worktree_path,
             coral_md_path=worktree_path / instruction_file,
@@ -159,6 +203,8 @@ class AgentManager:
             prompt_source=prompt_source,
             task_name=self.config.task.name,
             task_description=self.config.task.description,
+            gateway_url=gateway_url,
+            gateway_api_key=gateway_api_key,
         )
         return handle
 
@@ -216,6 +262,9 @@ class AgentManager:
         """Resume agents into an existing run's worktrees."""
         self._start_time = datetime.now(UTC)
         self.paths = paths
+
+        # Start gateway if configured
+        self._start_gateway_if_enabled()
 
         # Kill any leftover agent processes from a previous run so they
         # don't hold session locks and block the new agents.
@@ -348,6 +397,10 @@ class AgentManager:
             if handle.alive:
                 handle.stop()
         self._cleanup_pid_file()
+        # Stop gateway after all agents are down
+        if self._gateway:
+            self._gateway.stop()
+            self._gateway = None
         logger.info("All agents stopped.")
 
     def status(self) -> list[dict[str, Any]]:
@@ -695,6 +748,9 @@ class AgentManager:
                         handle.process.kill()
                     except Exception:
                         pass
+        if self._gateway:
+            self._gateway.stop()
+            self._gateway = None
         self._cleanup_pid_file()
 
     def _cleanup_pid_file(self) -> None:

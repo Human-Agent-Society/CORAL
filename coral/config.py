@@ -46,12 +46,23 @@ class HeartbeatActionConfig:
 
 
 @dataclass
+class GatewayConfig:
+    """LiteLLM gateway configuration for intercepting agent model traffic."""
+
+    enabled: bool = False
+    port: int = 4000
+    config: str = ""  # path to litellm_config.yaml
+    api_key: str = ""  # LiteLLM master key (auto-generated if empty)
+
+
+@dataclass
 class AgentConfig:
     """Agent spawning configuration."""
 
     count: int = 1
     runtime: str = "claude_code"
     model: str = "sonnet"
+    gateway: GatewayConfig = field(default_factory=GatewayConfig)
     runtime_options: dict[str, Any] = field(default_factory=dict)
     max_turns: int = 200
     timeout: int = 3600
