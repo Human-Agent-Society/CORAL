@@ -61,6 +61,7 @@ class AgentManager:
         self._agent_eval_counts: dict[str, int] = {}
         self._agent_best_scores: dict[str, float] = {}
         self._agent_evals_since_improvement: dict[str, int] = {}
+        self._dispatcher = None  # QueueDispatcher, if queue is enabled
 
     def start_all(self) -> list[AgentHandle]:
         """Create workspace structure and spawn all agents."""
@@ -72,12 +73,15 @@ class AgentManager:
         logger.info(f"  coral_dir: {self.paths.coral_dir}")
         logger.info(f"  repo_dir:  {self.paths.repo_dir}")
 
-        # 2. Seed global heartbeat config if not already present
+        # 2. Initialize queue dispatcher
+        self._init_dispatcher(self.paths.coral_dir)
+
+        # 3. Seed global heartbeat config if not already present
         if not read_global_heartbeat(self.paths.coral_dir):
             write_global_heartbeat(self.paths.coral_dir, default_global_actions(self.config))
             logger.info("Seeded global heartbeat config")
 
-        # 3. For each agent: create worktree, generate CLAUDE.md, spawn runtime
+        # 4. For each agent: create worktree, generate CLAUDE.md, spawn runtime
         handles = []
         for i in range(self.config.agents.count):
             agent_id = f"agent-{i + 1}"
@@ -221,6 +225,9 @@ class AgentManager:
         self._start_time = datetime.now(UTC)
         self.paths = paths
 
+        # Initialize queue dispatcher
+        self._init_dispatcher(paths.coral_dir)
+
         # Kill any leftover agent processes from a previous run so they
         # don't hold session locks and block the new agents.
         self._kill_old_agent_processes()
@@ -331,6 +338,20 @@ class AgentManager:
             return self.runtime.extract_session_id(logs[-1])
         return None
 
+    def _init_dispatcher(self, coral_dir: Path) -> None:
+        """Initialize the queue dispatcher."""
+        from coral.queue.dispatcher import QueueDispatcher
+
+        # Ensure queue directories exist
+        (coral_dir / "queue" / "pending").mkdir(parents=True, exist_ok=True)
+        (coral_dir / "queue" / "results").mkdir(parents=True, exist_ok=True)
+
+        self._dispatcher = QueueDispatcher(coral_dir, self.config.grader.queue)
+        logger.info(
+            f"Queue dispatcher initialized (max_concurrent={self.config.grader.queue.max_concurrent}, "
+            f"strategy={self.config.grader.queue.strategy}, executor={self.config.grader.queue.executor})"
+        )
+
     def stop_all(self) -> None:
         """Gracefully stop all agents.
 
@@ -342,6 +363,9 @@ class AgentManager:
         self._stopping = True
         self._running = False
         self._stop_event.set()
+        # Shut down queue dispatcher
+        if self._dispatcher is not None:
+            self._dispatcher.shutdown()
         # Save session IDs before killing processes
         self._save_sessions()
         for handle in self.handles:
@@ -489,6 +513,13 @@ class AgentManager:
         logger.info(f"Monitoring {len(self.handles)} agent(s) (check every {check_interval}s)...")
 
         while self._running:
+            # Poll queue dispatcher if enabled
+            if self._dispatcher is not None:
+                try:
+                    self._dispatcher.poll_and_dispatch()
+                except Exception as e:
+                    logger.error(f"Queue dispatcher error: {e}")
+
             # Check for new attempts
             current_attempts = self._get_seen_attempts()
             new_attempts = current_attempts - seen_attempts

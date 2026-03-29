@@ -3,14 +3,16 @@
 import json
 import subprocess
 import tempfile
+import threading
+import time
 from pathlib import Path
 
 import yaml
 
-from coral.hooks.post_commit import (
-    _increment_eval_count,
-    run_eval,
-)
+from coral.config import QueueConfig
+from coral.hooks.post_commit import run_eval
+from coral.queue.counter import increment_eval_count
+from coral.queue.dispatcher import QueueDispatcher
 from coral.workspace import setup_claude_settings
 
 
@@ -32,6 +34,8 @@ def _setup_repo_with_config(base_dir: Path) -> Path:
     coral_dir = repo / ".coral"
     coral_dir.mkdir()
     (coral_dir / "public" / "attempts").mkdir(parents=True)
+    (coral_dir / "queue" / "pending").mkdir(parents=True)
+    (coral_dir / "queue" / "results").mkdir(parents=True)
 
     # Write .coral_dir breadcrumb (as write_coral_dir does)
     (repo / ".coral_dir").write_text(str(coral_dir.resolve()))
@@ -56,12 +60,32 @@ def _setup_repo_with_config(base_dir: Path) -> Path:
     return repo
 
 
+def _run_dispatcher_thread(coral_dir: Path, stop_event: threading.Event) -> threading.Thread:
+    """Start a background dispatcher thread that polls for eval requests."""
+    config = QueueConfig(max_concurrent=1, strategy="fifo", poll_interval=0.1, timeout=30)
+    dispatcher = QueueDispatcher(coral_dir, config)
+
+    def loop():
+        while not stop_event.is_set():
+            dispatcher.poll_and_dispatch()
+            time.sleep(0.1)
+
+    t = threading.Thread(target=loop, daemon=True)
+    t.start()
+    return t
+
+
 def test_run_eval_with_function_grader():
-    """Integration test: run_eval stages, commits, and grades."""
+    """Integration test: run_eval stages, commits, and grades via queue."""
     import sys
 
     with tempfile.TemporaryDirectory() as d:
         repo = _setup_repo_with_config(Path(d))
+        coral_dir = repo / ".coral"
+
+        # Start dispatcher thread
+        stop_event = threading.Event()
+        dispatcher_thread = _run_dispatcher_thread(coral_dir, stop_event)
 
         # Make a change that will be staged and committed by run_eval
         (repo / "hello.py").write_text("print('hello world')\n")
@@ -72,6 +96,8 @@ def test_run_eval_with_function_grader():
             attempt = run_eval(message="Update hello message", agent_id="agent-test", workdir=str(repo))
         finally:
             sys.path.pop(0)
+            stop_event.set()
+            dispatcher_thread.join(timeout=5)
 
         assert attempt.agent_id == "agent-test"
         assert attempt.title == "Update hello message"
@@ -104,26 +130,30 @@ def test_run_eval_no_changes():
 
 
 def test_eval_count_and_reflection():
-    """Test that eval count increments and reflection nudge triggers correctly."""
+    """Test that eval count increments correctly (atomic counter)."""
     with tempfile.TemporaryDirectory() as d:
         coral_dir = Path(d)
         (coral_dir / "public").mkdir()
 
         # Counter starts at 0, increments to 1
-        assert _increment_eval_count(coral_dir) == 1
-        assert _increment_eval_count(coral_dir) == 2
-        assert _increment_eval_count(coral_dir) == 3
+        assert increment_eval_count(coral_dir) == 1
+        assert increment_eval_count(coral_dir) == 2
+        assert increment_eval_count(coral_dir) == 3
 
         # Check file contents
         assert (coral_dir / "public" / "eval_count").read_text() == "3"
 
 
 def test_run_eval_tracks_eval_count():
-    """Integration: run_eval increments eval_count and sets reflection flag."""
+    """Integration: run_eval increments eval_count via queue."""
     import sys
 
     with tempfile.TemporaryDirectory() as d:
         repo = _setup_repo_with_config(Path(d))
+        coral_dir = repo / ".coral"
+
+        stop_event = threading.Event()
+        dispatcher_thread = _run_dispatcher_thread(coral_dir, stop_event)
 
         sys.path.insert(0, str(repo))
         try:
@@ -138,6 +168,8 @@ def test_run_eval_tracks_eval_count():
             assert getattr(a2, "_eval_count", None) == 2
         finally:
             sys.path.pop(0)
+            stop_event.set()
+            dispatcher_thread.join(timeout=5)
 
 
 
@@ -152,6 +184,10 @@ def test_run_eval_sets_shared_state_hash():
 
     with tempfile.TemporaryDirectory() as d:
         repo = _setup_repo_with_config(Path(d))
+        coral_dir = repo / ".coral"
+
+        stop_event = threading.Event()
+        dispatcher_thread = _run_dispatcher_thread(coral_dir, stop_event)
 
         sys.path.insert(0, str(repo))
         try:
@@ -174,6 +210,8 @@ def test_run_eval_sets_shared_state_hash():
             assert data["shared_state_hash"] == a2.shared_state_hash
         finally:
             sys.path.pop(0)
+            stop_event.set()
+            dispatcher_thread.join(timeout=5)
 
 
 # --- setup_claude_settings tests ---
