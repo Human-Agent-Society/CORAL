@@ -22,6 +22,20 @@ class TaskConfig:
 
 
 @dataclass
+class QueueConfig:
+    """Task queue configuration for centralized grading."""
+
+    max_concurrent: int = 1  # max simultaneous grader jobs
+    strategy: str = "fair"  # "fair" | "fifo" | "priority"
+    rate_limit: float = 0.0  # min seconds between evals per agent (0 = unlimited)
+    max_queue_size: int = 0  # max pending requests (0 = unlimited)
+    poll_interval: float = 1.0  # agent-side result polling interval (seconds)
+    timeout: int = 0  # max seconds agent waits for result (0 = grader timeout + 60s)
+    executor: str = "local"  # "local" | "slurm"
+    executor_args: dict[str, Any] = field(default_factory=dict)  # passed to submitit executor
+
+
+@dataclass
 class GraderConfig:
     """Grader configuration."""
 
@@ -33,6 +47,7 @@ class GraderConfig:
         default_factory=list
     )  # files/dirs copied to .coral/ (hidden from agents)
     direction: str = "maximize"  # "maximize" or "minimize"
+    queue: QueueConfig = field(default_factory=QueueConfig)
 
 
 @dataclass

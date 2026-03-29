@@ -95,6 +95,10 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     (coral_dir / "private").mkdir(parents=True, exist_ok=True)
     agents_dir.mkdir(parents=True, exist_ok=True)
 
+    # Create queue directories
+    (coral_dir / "queue" / "pending").mkdir(parents=True, exist_ok=True)
+    (coral_dir / "queue" / "results").mkdir(parents=True, exist_ok=True)
+
     # Initialize checkpoint repo for shared state versioning
     init_checkpoint_repo(str(coral_dir))
 

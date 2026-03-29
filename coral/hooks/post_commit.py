@@ -1,20 +1,19 @@
-"""Eval implementation: git-add, git-commit, grade, write attempt JSON, print score."""
+"""Eval implementation: git-add, git-commit, queue for grading, write attempt JSON, print score."""
 
 from __future__ import annotations
 
 import json
 import logging
-import multiprocessing
 import subprocess
-import traceback
 from datetime import UTC, datetime
 from pathlib import Path
 
 from coral.config import CoralConfig
-from coral.grader.loader import load_grader
 from coral.hub.attempts import get_agent_attempts, write_attempt
 from coral.hub.checkpoint import checkpoint
-from coral.types import Attempt, Task
+from coral.queue.client import QueueClient
+from coral.queue.counter import increment_eval_count
+from coral.types import Attempt
 
 logger = logging.getLogger(__name__)
 
@@ -64,79 +63,58 @@ def _get_parent_hash(commit_hash: str, cwd: str) -> str | None:
     return None
 
 
-def _increment_eval_count(coral_dir: Path) -> int:
-    """Increment and return the eval counter for this run."""
-    counter_file = coral_dir / "public" / "eval_count"
-    count = 0
-    if counter_file.exists():
-        try:
-            count = int(counter_file.read_text().strip())
-        except ValueError:
-            pass
-    count += 1
-    counter_file.write_text(str(count))
-    return count
+def _run_eval_via_queue(
+    config: CoralConfig,
+    coral_dir: Path,
+    agent_id: str,
+    commit_hash: str,
+    config_path: str,
+    codebase_path: str,
+) -> tuple[float | None, str, str]:
+    """Submit eval request to the queue and wait for a result."""
+    client = QueueClient(coral_dir, config.grader.queue, grader_timeout=config.grader.timeout)
+    request = client.submit(agent_id, commit_hash, config_path, codebase_path)
+    position = client.get_position(request.ticket_id)
+    print(f"Eval queued (position {position}, ticket {request.ticket_id[:8]})")
 
-
-def _grader_worker(config_path: str, coral_dir: str, codebase_path: str, tasks: list, result_queue):
-    """Run grader.grade() in a child process. Puts result or exception into queue.
-
-    Re-loads the grader from config inside the child to avoid pickling
-    dynamically-imported modules across process boundaries.
-    """
-    import asyncio
     try:
-        config = CoralConfig.from_yaml(config_path)
-        grader = load_grader(config, coral_dir=coral_dir)
-        result = asyncio.run(grader.grade(codebase_path, tasks))
-        result_queue.put(("ok", result))
-    except Exception as e:
-        result_queue.put(("error", e, traceback.format_exc()))
+        eval_result = client.wait_for_result(request.ticket_id)
+    except TimeoutError:
+        logger.error("Queue timeout waiting for eval result")
+        return None, "Timed out waiting for eval result from queue.", "timeout"
 
+    if eval_result.status == "error":
+        logger.error(f"Queue eval failed: {eval_result.error}")
+        return None, eval_result.error, "crashed"
 
-def _run_grader_with_timeout(config_path: str, coral_dir: str, codebase_path: str, tasks: list, timeout: int):
-    """Run grader in a separate process with a hard timeout.
+    if eval_result.status == "timeout":
+        return None, eval_result.error or "Grader timed out.", "timeout"
 
-    Uses multiprocessing so we can kill blocking synchronous code (numpy, etc.)
-    that asyncio.wait_for can't interrupt. The grader is re-loaded from config
-    inside the child process to avoid pickle issues with dynamic imports.
-    """
-    if timeout <= 0:
-        # No timeout — run directly
-        import asyncio
-        config = CoralConfig.from_yaml(config_path)
-        grader = load_grader(config, coral_dir=coral_dir)
-        return asyncio.run(grader.grade(codebase_path, tasks))
+    score = eval_result.score
+    feedback = eval_result.feedback
 
-    result_queue: multiprocessing.Queue = multiprocessing.Queue()
-    proc = multiprocessing.Process(
-        target=_grader_worker,
-        args=(config_path, coral_dir, codebase_path, tasks, result_queue),
-    )
-    try:
-        proc.start()
-        proc.join(timeout=timeout)
+    if score is None:
+        return score, feedback, "crashed"
 
-        if proc.is_alive():
-            # Timed out — kill the process
-            proc.kill()
-            proc.join(timeout=5)
-            raise TimeoutError(f"Grader timed out after {timeout}s")
-
-        if result_queue.empty():
-            raise RuntimeError("Grader process exited without returning a result")
-
-        status, *payload = result_queue.get_nowait()
-        if status == "ok":
-            return payload[0]
-        else:
-            # Re-raise the exception from the child process
-            exc, tb_str = payload
-            raise RuntimeError(f"Grader failed: {exc}\n{tb_str}")
-    finally:
-        result_queue.close()
-        result_queue.join_thread()
-        proc.close()
+    # Compare against previous best
+    prev_attempts = get_agent_attempts(str(coral_dir), agent_id)
+    prev_scores = [a.score for a in prev_attempts if a.score is not None]
+    minimize = config.grader.direction == "minimize"
+    if minimize:
+        prev_best = min(prev_scores) if prev_scores else None
+    else:
+        prev_best = max(prev_scores) if prev_scores else None
+    if prev_best is None:
+        status = "improved"
+    elif minimize and score < prev_best:
+        status = "improved"
+    elif not minimize and score > prev_best:
+        status = "improved"
+    elif score == prev_best:
+        status = "baseline"
+    else:
+        status = "regressed"
+    return score, feedback, status
 
 
 def _find_coral_dir(workdir: Path) -> Path | None:
@@ -151,7 +129,7 @@ def _find_coral_dir(workdir: Path) -> Path | None:
 
 
 def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
-    """Stage changes, commit with message, run evaluation, and return an Attempt record.
+    """Stage changes, commit with message, submit to eval queue, and return an Attempt record.
 
     This is the core of `coral eval -m "description"`.
     """
@@ -175,61 +153,10 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
     commit_hash = _git_add_and_commit(message, str(workdir_path))
     parent_hash = _get_parent_hash(commit_hash, str(workdir_path))
 
-    # Create task from config
-    task = Task(
-        id=config.task.name,
-        name=config.task.name,
-        description=config.task.description,
-        metadata={"files": config.task.files},
+    # Submit to queue and wait for result
+    score, feedback, status = _run_eval_via_queue(
+        config, coral_dir, agent_id, commit_hash, str(config_path), str(workdir_path),
     )
-
-    # Run evaluation with timeout
-    eval_timeout = config.grader.timeout  # 0 = no limit
-
-    try:
-        result = _run_grader_with_timeout(str(config_path), str(coral_dir), str(workdir_path), [task], eval_timeout)
-        score = result.aggregated
-        # Build feedback from bundle-level feedback + per-score explanations
-        parts = []
-        if result.feedback:
-            parts.append(result.feedback)
-        if result.scores:
-            for name, s in result.scores.items():
-                if s.explanation:
-                    parts.append(f"{name}: {s.explanation}")
-        feedback = "\n".join(parts)
-        # score is None when grader returns fail() — treat as crashed
-        if score is None:
-            status = "crashed"
-        else:
-            # Compare against this agent's previous best score
-            prev_attempts = get_agent_attempts(str(coral_dir), agent_id)
-            prev_scores = [a.score for a in prev_attempts if a.score is not None]
-            minimize = config.grader.direction == "minimize"
-            if minimize:
-                prev_best = min(prev_scores) if prev_scores else None
-            else:
-                prev_best = max(prev_scores) if prev_scores else None
-            if prev_best is None:
-                status = "improved"
-            elif minimize and score < prev_best:
-                status = "improved"
-            elif not minimize and score > prev_best:
-                status = "improved"
-            elif score == prev_best:
-                status = "baseline"
-            else:
-                status = "regressed"
-    except TimeoutError:
-        logger.error(f"Evaluation timed out after {eval_timeout}s")
-        score = None
-        status = "timeout"
-        feedback = f"Eval timed out after {eval_timeout}s."
-    except Exception as e:
-        logger.error(f"Evaluation failed: {e}")
-        score = None
-        status = "crashed"
-        feedback = str(e)
 
     # Look up parent attempt's shared state hash
     parent_shared_state_hash = None
@@ -262,7 +189,7 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
     write_attempt(str(coral_dir), attempt)
 
     # Track eval count
-    eval_count = _increment_eval_count(coral_dir)
+    eval_count = increment_eval_count(coral_dir)
     attempt._eval_count = eval_count  # type: ignore[attr-defined]
 
     return attempt

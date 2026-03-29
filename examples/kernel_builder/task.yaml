@@ -48,6 +48,10 @@ grader:
   direction: minimize
   args:
     program_file: "kernel_builder.py"
+  queue:
+    max_concurrent: 2
+    strategy: fair
+    executor: local
 
 agents:
   count: 1
