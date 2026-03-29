@@ -157,9 +157,11 @@ def evaluate(program_path):
 
             except TimeoutError:
                 print(f"Placement {i}: Timeout")
+                all_kvpr.append(1000000.0)
                 continue
             except Exception as e:
                 print(f"Placement {i}: Error - {str(e)}")
+                all_kvpr.append(1000000.0)
                 continue
 
         # If no successful runs, return minimal scores
