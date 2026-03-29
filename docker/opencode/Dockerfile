@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 
-# System deps: git, Node.js (for claude CLI), and build essentials
+# System deps: git, Node.js (for opencode npm package)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         curl \
@@ -17,8 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Install Claude CLI
-RUN npm install -g @anthropic-ai/claude-code
+# Install opencode via npm
+RUN npm install -g opencode-ai@latest
 
 # Install CORAL
 WORKDIR /app
@@ -26,9 +26,7 @@ COPY pyproject.toml uv.lock* README* ./
 COPY coral/ coral/
 RUN uv sync --no-dev
 
-# Entrypoint copies mounted credentials into a writable ~/.claude,
-# then runs coral. Host's ~/.claude is mounted at /claude-config (ro).
 ENV CORAL_IN_DOCKER=1
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY docker/opencode/entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 ENTRYPOINT ["/docker-entrypoint.sh"]

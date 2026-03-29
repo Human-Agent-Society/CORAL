@@ -43,13 +43,15 @@ grader:
     program_file: "initial_program.py"
 
 agents:
-  count: 2
-  runtime: claude_code
-  model: claude-sonnet-4-6
+  count: 1
+  runtime: opencode
+  model: minimax/MiniMax-M2.5
 
 workspace:
   results_dir: "./results"
   repo_path: "./examples/circle_packing/seed"
+  setup:
+    - "uv pip install numpy scipy"
 
 run:
   verbose: false

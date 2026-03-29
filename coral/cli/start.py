@@ -104,23 +104,40 @@ def _start_in_tmux(args: argparse.Namespace, config: CoralConfig) -> None:
     print("  Stop:    coral stop")
 
 
+_RUNTIME_DOCKER_DIR: dict[str, str] = {
+    "claude_code": "claude",
+    "codex": "codex",
+    "opencode": "opencode",
+}
+
+
 def _ensure_docker_image(config: CoralConfig) -> str:
     """Return the Docker image name, building it if necessary."""
-    image = config.run.docker_image or "coral:local"
     if config.run.docker_image:
-        return image
+        return config.run.docker_image
 
+    runtime = config.agents.runtime
+    docker_dir = _RUNTIME_DOCKER_DIR.get(runtime)
+    if docker_dir is None:
+        print(
+            f"Error: No Docker support for runtime {runtime!r}. "
+            f"Supported: {', '.join(sorted(_RUNTIME_DOCKER_DIR))}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    image = f"coral-{docker_dir}:local"
     coral_pkg = Path(__file__).resolve().parent.parent.parent
-    dockerfile = coral_pkg / "Dockerfile"
+    dockerfile = coral_pkg / "docker" / docker_dir / "Dockerfile"
     if not dockerfile.exists():
         print(
-            "Error: No Dockerfile found and no docker_image specified.",
+            f"Error: No Dockerfile found at {dockerfile} and no docker_image specified.",
             file=sys.stderr,
         )
         sys.exit(1)
     print(f"Building Docker image '{image}' ...")
     result = subprocess.run(
-        ["docker", "build", "-t", image, "."],
+        ["docker", "build", "-f", str(dockerfile), "-t", image, "."],
         cwd=str(coral_pkg),
     )
     if result.returncode != 0:
@@ -147,15 +164,33 @@ def _build_docker_cmd(
         "-v", f"{repo_path}:/repo:rw",
     ]
 
-    # Persistent Claude home inside the run dir so sessions survive restarts
-    claude_home = host_run_dir / ".claude_home"
-    claude_home.mkdir(exist_ok=True)
-    cmd.extend(["-v", f"{claude_home}:/root/.claude:rw"])
+    # Mount runtime-specific credentials
+    runtime = config.agents.runtime
+    docker_dir = _RUNTIME_DOCKER_DIR.get(runtime, "claude")
 
-    # Mount host credentials as read-only staging
-    claude_config = Path.home() / ".claude"
-    if claude_config.is_dir():
-        cmd.extend(["-v", f"{claude_config}:/claude-config:ro"])
+    if docker_dir == "claude":
+        # Persistent Claude home inside the run dir so sessions survive restarts
+        claude_home = host_run_dir / ".claude_home"
+        claude_home.mkdir(exist_ok=True)
+        cmd.extend(["-v", f"{claude_home}:/root/.claude:rw"])
+        # Mount host credentials as read-only staging
+        claude_config = Path.home() / ".claude"
+        if claude_config.is_dir():
+            cmd.extend(["-v", f"{claude_config}:/claude-config:ro"])
+    elif docker_dir == "codex":
+        codex_home = host_run_dir / ".codex_home"
+        codex_home.mkdir(exist_ok=True)
+        cmd.extend(["-v", f"{codex_home}:/root/.codex:rw"])
+        codex_config = Path.home() / ".codex"
+        if codex_config.is_dir():
+            cmd.extend(["-v", f"{codex_config}:/codex-config:ro"])
+    elif docker_dir == "opencode":
+        opencode_home = host_run_dir / ".opencode_home"
+        opencode_home.mkdir(exist_ok=True)
+        cmd.extend(["-v", f"{opencode_home}:/root/.opencode:rw"])
+        opencode_config = Path.home() / ".opencode"
+        if opencode_config.is_dir():
+            cmd.extend(["-v", f"{opencode_config}:/opencode-config:ro"])
 
     # Pass through API key env vars
     for key, val in os.environ.items():
