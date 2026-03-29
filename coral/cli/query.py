@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from coral.cli._helpers import find_coral_dir, read_direction
+from coral.cli._helpers import find_coral_dir, is_docker_container_running, read_direction
 
 
 def cmd_log(args: argparse.Namespace) -> None:
@@ -286,6 +286,14 @@ def _collect_runs(results_dir: Path) -> list[dict]:
                     status = "running"
                 except (ProcessLookupError, ValueError):
                     status = "stopped"
+
+            # If no local manager is running, check if a Docker container owns this run
+            if status == "stopped":
+                docker_marker = run_dir / ".coral_docker_container"
+                if docker_marker.exists():
+                    container_name = docker_marker.read_text().strip()
+                    if container_name and is_docker_container_running(container_name):
+                        status = "running"
 
             logs_dir = coral_dir / "public" / "logs"
             agent_names: set[str] = set()

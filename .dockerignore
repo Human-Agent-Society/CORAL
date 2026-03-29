@@ -1,0 +1,10 @@
+results/
+.git/
+__pycache__/
+.venv/
+.coral/
+examples/
+tests/
+*.pyc
+.ruff_cache/
+.mypy_cache/

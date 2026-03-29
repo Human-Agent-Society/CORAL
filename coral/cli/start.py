@@ -13,12 +13,17 @@ from pathlib import Path
 from coral.cli._helpers import (
     find_coral_dir,
     find_tmux_session,
+    has_docker,
     has_tmux,
+    in_docker,
     in_tmux,
+    is_docker_run_alive,
+    kill_docker_container,
     kill_orphaned_agents,
     kill_tmux_session,
     pick_run,
     read_direction,
+    save_docker_container_name,
     save_tmux_session_name,
     setup_logging,
 )
@@ -56,12 +61,12 @@ def _tmux_env() -> dict[str, str]:
 
 
 def _build_coral_command(args: argparse.Namespace) -> list[str]:
-    """Reconstruct the coral start command with run.tmux=false added."""
+    """Reconstruct the coral start command with run.session=local added."""
     cmd = [_resolved_python(), "-m", "coral.cli", "start"]
     cmd.extend(["--config", str(Path(args.config).resolve())])
-    # Forward user overrides, then force tmux off (inner process is already in tmux)
+    # Forward user overrides, then force local (inner process is already in tmux)
     cmd.extend(getattr(args, "overrides", []))
-    cmd.append("run.tmux=false")
+    cmd.append("run.session=local")
     return cmd
 
 
@@ -100,6 +105,140 @@ def _start_in_tmux(args: argparse.Namespace, config: CoralConfig) -> None:
     print("  Stop:    coral stop")
 
 
+def _ensure_docker_image(config: CoralConfig) -> str:
+    """Return the Docker image name, building it if necessary."""
+    image = config.run.docker_image or "coral:local"
+    if config.run.docker_image:
+        return image
+
+    coral_pkg = Path(__file__).resolve().parent.parent.parent
+    dockerfile = coral_pkg / "Dockerfile"
+    if not dockerfile.exists():
+        print(
+            "Error: No Dockerfile found and no docker_image specified.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    print(f"Building Docker image '{image}' ...")
+    result = subprocess.run(
+        ["docker", "build", "-t", image, "."],
+        cwd=str(coral_pkg),
+    )
+    if result.returncode != 0:
+        print("Error: Docker build failed.", file=sys.stderr)
+        sys.exit(1)
+    return image
+
+
+def _build_docker_cmd(
+    *,
+    container_name: str,
+    config_dir: Path,
+    host_run_dir: Path,
+    repo_path: Path,
+    config: CoralConfig,
+    image: str,
+) -> list[str]:
+    """Build the `docker run` command with standard mounts and env vars."""
+    cmd: list[str] = [
+        "docker", "run", "-d",
+        "--name", container_name,
+        "-v", f"{config_dir}:/task:ro",
+        "-v", f"{host_run_dir}:/run:rw",
+        "-v", f"{repo_path}:/repo:rw",
+    ]
+
+    # Persistent Claude home inside the run dir so sessions survive restarts
+    claude_home = host_run_dir / ".claude_home"
+    claude_home.mkdir(exist_ok=True)
+    cmd.extend(["-v", f"{claude_home}:/root/.claude:rw"])
+
+    # Mount host credentials as read-only staging
+    claude_config = Path.home() / ".claude"
+    if claude_config.is_dir():
+        cmd.extend(["-v", f"{claude_config}:/claude-config:ro"])
+
+    # Pass through API key env vars
+    for key, val in os.environ.items():
+        if key.endswith("_API_KEY") or key.endswith("_API_TOKEN"):
+            cmd.extend(["-e", f"{key}={val}"])
+
+    cmd.extend(["-e", "CORAL_IN_DOCKER=1"])
+
+    if config.run.ui:
+        cmd.extend(["-p", "8420:8420"])
+
+    cmd.append(image)
+    return cmd
+
+
+def _run_docker_container(docker_cmd: list[str], container_name: str) -> None:
+    """Execute docker run and exit on failure."""
+    result = subprocess.run(docker_cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error starting Docker container: {result.stderr}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Started CORAL in Docker container: {container_name}")
+    print(f"  Logs:    docker logs -f {container_name}")
+    print("  Status:  coral status")
+    print("  Stop:    coral stop")
+
+
+def _start_in_docker(args: argparse.Namespace, config: CoralConfig) -> None:
+    """Build (if needed) and run coral start inside a Docker container."""
+    image = _ensure_docker_image(config)
+
+    task_name = config.task.name.replace(" ", "-").lower()
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    container_name = f"coral-{task_name}-{timestamp}"
+
+    config_path = Path(args.config).resolve()
+    config_dir = config_path.parent
+
+    from coral.workspace import slugify
+
+    results_dir = Path(config.workspace.results_dir)
+    if not results_dir.is_absolute():
+        results_dir = (Path.cwd() / results_dir).resolve()
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    task_slug = slugify(config.task.name)
+    host_task_dir = results_dir / task_slug
+    host_task_dir.mkdir(parents=True, exist_ok=True)
+    host_run_dir = host_task_dir / timestamp
+    host_run_dir.mkdir(parents=True, exist_ok=True)
+
+    repo_path = Path(config.workspace.repo_path).resolve()
+
+    docker_cmd = _build_docker_cmd(
+        container_name=container_name,
+        config_dir=config_dir,
+        host_run_dir=host_run_dir,
+        repo_path=repo_path,
+        config=config,
+        image=image,
+    )
+    docker_cmd.extend([
+        "start", "--config", f"/task/{config_path.name}",
+        "workspace.run_dir=/run", "workspace.repo_path=/repo", "run.session=local",
+    ])
+    docker_cmd.extend(getattr(args, "overrides", []))
+
+    _run_docker_container(docker_cmd, container_name)
+
+    save_docker_container_name(host_run_dir, container_name)
+    (host_run_dir / ".coral_host_repo_path").write_text(str(repo_path))
+    (host_run_dir / ".coral_host_config_dir").write_text(str(config_dir))
+
+    # Create the "latest" symlink on the host
+    latest_link = host_task_dir / "latest"
+    rel = os.path.relpath(host_run_dir, host_task_dir)
+    if latest_link.is_symlink() or latest_link.exists():
+        latest_link.unlink()
+    latest_link.symlink_to(rel)
+
+
 def _resume_in_tmux(args: argparse.Namespace, config: CoralConfig, coral_dir: Path) -> None:
     """Resume CORAL inside a tmux session."""
     task_name = config.task.name.replace(" ", "-").lower()
@@ -130,9 +269,9 @@ def _resume_in_tmux(args: argparse.Namespace, config: CoralConfig, coral_dir: Pa
     instruction = getattr(args, "instruction", None)
     if instruction:
         cmd.extend(["--instruction", instruction])
-    # Forward user overrides, then force tmux off (inner process is already in tmux)
+    # Forward user overrides, then force local (inner process is already in tmux)
     cmd.extend(getattr(args, "overrides", []))
-    cmd.append("run.tmux=false")
+    cmd.append("run.session=local")
     shell_cmd = " ".join(f"'{c}'" if " " in c else c for c in cmd)
 
     result = subprocess.run(
@@ -164,22 +303,36 @@ def cmd_start(args: argparse.Namespace) -> None:
     if overrides:
         config = CoralConfig.merge_dotlist(config, overrides)
 
-    if config.run.tmux and not in_tmux() and has_tmux():
+    session = config.run.session
+
+    if session == "docker" and not in_docker():
+        if not has_docker():
+            print(
+                "Error: docker is not installed but run.session=docker.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        _start_in_docker(args, config)
+        return
+
+    if session == "tmux" and not in_tmux() and has_tmux():
         _start_in_tmux(args, config)
         return
 
-    if config.run.tmux and not in_tmux() and not has_tmux():
+    if session == "tmux" and not in_tmux() and not has_tmux():
         print(
             "Warning: tmux is not installed. Running in foreground mode.\n"
             "  Install tmux for background session support: brew install tmux (macOS) / apt install tmux (Linux)\n",
             file=sys.stderr,
         )
 
-    # If we're the inner process spawned by _start_in_tmux, run.tmux=false was
-    # added to avoid recursion.  Restore it so the saved config preserves the
-    # user's original intent (otherwise `coral resume` won't launch tmux).
+    # Inner process: run.session=local was set to avoid recursion.
+    # Restore the original session mode so the saved config preserves user intent
+    # (otherwise `coral resume` won't re-launch in the same wrapper).
     if in_tmux():
-        config.run.tmux = True
+        config.run.session = "tmux"
+    elif in_docker():
+        config.run.session = "docker"
 
     from coral.agent.manager import AgentManager
     from coral.cli.validation import validate_task
@@ -254,13 +407,56 @@ def cmd_start(args: argparse.Namespace) -> None:
         manager.monitor_loop()
 
 
+def _resume_in_docker(args: argparse.Namespace, config: CoralConfig, coral_dir: Path) -> None:
+    """Resume CORAL inside a Docker container."""
+    image = _ensure_docker_image(config)
+
+    task_name = config.task.name.replace(" ", "-").lower()
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    container_name = f"coral-{task_name}-resume-{timestamp}"
+
+    host_run_dir = coral_dir.resolve().parent
+
+    # Read original host paths saved by _start_in_docker
+    config_dir_file = host_run_dir / ".coral_host_config_dir"
+    repo_path_file = host_run_dir / ".coral_host_repo_path"
+    config_dir = (
+        Path(config_dir_file.read_text().strip()) if config_dir_file.exists()
+        else Path(config.task_dir or Path.cwd()).resolve()
+    )
+    repo_path = (
+        Path(repo_path_file.read_text().strip()) if repo_path_file.exists()
+        else Path(config.workspace.repo_path).resolve()
+    )
+
+    docker_cmd = _build_docker_cmd(
+        container_name=container_name,
+        config_dir=config_dir,
+        host_run_dir=host_run_dir,
+        repo_path=repo_path,
+        config=config,
+        image=image,
+    )
+    docker_cmd.extend([
+        "resume",
+        "workspace.run_dir=/run", "workspace.repo_path=/repo", "run.session=local",
+    ])
+    instruction = getattr(args, "instruction", None)
+    if instruction:
+        docker_cmd.extend(["--instruction", instruction])
+    docker_cmd.extend(getattr(args, "overrides", []))
+
+    _run_docker_container(docker_cmd, container_name)
+    save_docker_container_name(host_run_dir, container_name)
+
+
 def cmd_resume(args: argparse.Namespace) -> None:
     """Resume a previous CORAL run."""
     from coral.agent.manager import AgentManager
 
     task = getattr(args, "task", None)
     run = getattr(args, "run", None)
-    if task or run:
+    if task or run or in_docker():
         coral_dir = find_coral_dir(task, run)
     else:
         coral_dir = pick_run(status_filter="stopped", allow_cancel=True)
@@ -279,7 +475,17 @@ def cmd_resume(args: argparse.Namespace) -> None:
         # Persist overrides so eval hooks (which re-read config.yaml) see them
         config.to_yaml(config_path)
 
-    if config.run.tmux:
+    if config.run.session == "docker" and not in_docker():
+        if not has_docker():
+            print(
+                "Error: docker is not installed but run.session=docker.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        _resume_in_docker(args, config, coral_dir)
+        return
+
+    if config.run.session == "tmux":
         existing_session = find_tmux_session(coral_dir)
         if existing_session:
             print(f"Found existing tmux session: {existing_session}")
@@ -287,11 +493,11 @@ def cmd_resume(args: argparse.Namespace) -> None:
             os.execvp("tmux", ["tmux", "attach", "-t", existing_session])
             return
 
-    if config.run.tmux and not in_tmux() and has_tmux():
+    if config.run.session == "tmux" and not in_tmux() and has_tmux():
         _resume_in_tmux(args, config, coral_dir)
         return
 
-    if config.run.tmux and not in_tmux() and not has_tmux():
+    if config.run.session == "tmux" and not in_tmux() and not has_tmux():
         print(
             "Warning: tmux is not installed. Running in foreground mode.\n"
             "  Install tmux for background session support: brew install tmux (macOS) / apt install tmux (Linux)\n",
@@ -383,38 +589,38 @@ def _stop_one(coral_dir: Path) -> None:
 
     _stop_ui(coral_dir)
 
-    if not pid_file.exists():
-        print("No running CORAL manager found.")
-        kill_orphaned_agents(agent_pids_file)
-        kill_tmux_session(coral_dir)
-        return
-
-    pid = int(pid_file.read_text().strip())
     try:
-        os.kill(pid, signal.SIGTERM)
-        print(f"Sent SIGTERM to manager (PID {pid}).")
-        import time
+        if not pid_file.exists():
+            print("No running CORAL manager found.")
+            kill_orphaned_agents(agent_pids_file)
+            return
 
-        for _ in range(10):
-            time.sleep(0.5)
-            try:
-                os.kill(pid, 0)
-            except ProcessLookupError:
-                print("Manager stopped.")
-                kill_tmux_session(coral_dir)
-                return
-        print("Manager didn't stop gracefully. Force killing...")
+        pid = int(pid_file.read_text().strip())
         try:
-            os.kill(pid, signal.SIGKILL)
+            os.kill(pid, signal.SIGTERM)
+            print(f"Sent SIGTERM to manager (PID {pid}).")
+            import time
+
+            for _ in range(10):
+                time.sleep(0.5)
+                try:
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    print("Manager stopped.")
+                    return
+            print("Manager didn't stop gracefully. Force killing...")
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            kill_orphaned_agents(agent_pids_file)
+            pid_file.unlink(missing_ok=True)
         except ProcessLookupError:
-            pass
-        kill_orphaned_agents(agent_pids_file)
-        pid_file.unlink(missing_ok=True)
-        kill_tmux_session(coral_dir)
-    except ProcessLookupError:
-        print(f"Manager (PID {pid}) not running. Cleaning up.")
-        kill_orphaned_agents(agent_pids_file)
-        pid_file.unlink(missing_ok=True)
+            print(f"Manager (PID {pid}) not running. Cleaning up.")
+            kill_orphaned_agents(agent_pids_file)
+            pid_file.unlink(missing_ok=True)
+    finally:
+        kill_docker_container(coral_dir)
         kill_tmux_session(coral_dir)
 
 
@@ -475,9 +681,20 @@ def cmd_status(args: argparse.Namespace) -> None:
             manager_alive = True
             print(f"Manager: RUNNING (PID {pid})")
         except ProcessLookupError:
+            pass
+
+    # Check if managed by a Docker container
+    if not manager_alive and is_docker_run_alive(coral_dir):
+        manager_alive = True
+        docker_marker = run_dir / ".coral_docker_container"
+        container_name = docker_marker.read_text().strip() if docker_marker.exists() else "unknown"
+        print(f"Manager: RUNNING (Docker container {container_name})")
+
+    if not manager_alive:
+        if pid_file.exists():
             print("Manager: NOT RUNNING (stale PID file)")
-    else:
-        print("Manager: not running")
+        else:
+            print("Manager: not running")
 
     logs_dir = coral_dir / "public" / "logs"
     if logs_dir.exists():

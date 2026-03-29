@@ -76,9 +76,13 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     task_slug = slugify(config.task.name)
     task_dir = results_dir / task_slug
 
-    # Create timestamped run directory
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    run_dir = task_dir / timestamp
+    # Use explicit run_dir if provided, otherwise generate timestamped one
+    if config.workspace.run_dir:
+        run_dir = Path(config.workspace.run_dir).resolve()
+        task_dir = run_dir.parent
+    else:
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        run_dir = task_dir / timestamp
     coral_dir = run_dir / ".coral"
     agents_dir = run_dir / "agents"
     run_repo = run_dir / "repo"
