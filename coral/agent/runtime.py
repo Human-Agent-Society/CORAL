@@ -33,6 +33,8 @@ class AgentRuntime(Protocol):
         prompt_source: str | None = None,
         task_name: str | None = None,
         task_description: str | None = None,
+        gateway_url: str | None = None,
+        gateway_api_key: str | None = None,
     ) -> AgentHandle: ...
 
     def extract_session_id(self, log_path: Path) -> str | None: ...
