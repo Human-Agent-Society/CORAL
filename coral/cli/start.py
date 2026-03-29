@@ -28,6 +28,7 @@ from coral.cli._helpers import (
     setup_logging,
 )
 from coral.config import CoralConfig
+from coral.workspace.project import slugify
 
 
 def _resolved_python() -> str:
@@ -72,7 +73,7 @@ def _build_coral_command(args: argparse.Namespace) -> list[str]:
 
 def _start_in_tmux(args: argparse.Namespace, config: CoralConfig) -> None:
     """Create a tmux session and run coral start inside it."""
-    task_name = config.task.name.replace(" ", "-").lower()
+    task_name = slugify(config.task.name)
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     session_name = f"coral-{task_name}-{timestamp}"
 
@@ -92,8 +93,6 @@ def _start_in_tmux(args: argparse.Namespace, config: CoralConfig) -> None:
 
     # Pre-create the results directory so we can save tmux markers there.
     # Must match create_project()'s resolution: relative to CWD, not task config dir.
-    from coral.workspace import slugify
-
     results_dir = Path(config.workspace.results_dir).resolve()
     task_dir = results_dir / slugify(config.task.name)
     task_dir.mkdir(parents=True, exist_ok=True)
@@ -189,14 +188,12 @@ def _start_in_docker(args: argparse.Namespace, config: CoralConfig) -> None:
     """Build (if needed) and run coral start inside a Docker container."""
     image = _ensure_docker_image(config)
 
-    task_name = config.task.name.replace(" ", "-").lower()
+    task_name = slugify(config.task.name)
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     container_name = f"coral-{task_name}-{timestamp}"
 
     config_path = Path(args.config).resolve()
     config_dir = config_path.parent
-
-    from coral.workspace import slugify
 
     results_dir = Path(config.workspace.results_dir)
     if not results_dir.is_absolute():
@@ -241,7 +238,7 @@ def _start_in_docker(args: argparse.Namespace, config: CoralConfig) -> None:
 
 def _resume_in_tmux(args: argparse.Namespace, config: CoralConfig, coral_dir: Path) -> None:
     """Resume CORAL inside a tmux session."""
-    task_name = config.task.name.replace(" ", "-").lower()
+    task_name = slugify(config.task.name)
     run_name = coral_dir.resolve().parent.name
     session_name = f"coral-{task_name}-{run_name}"
 
@@ -411,7 +408,7 @@ def _resume_in_docker(args: argparse.Namespace, config: CoralConfig, coral_dir: 
     """Resume CORAL inside a Docker container."""
     image = _ensure_docker_image(config)
 
-    task_name = config.task.name.replace(" ", "-").lower()
+    task_name = slugify(config.task.name)
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     container_name = f"coral-{task_name}-resume-{timestamp}"
 
