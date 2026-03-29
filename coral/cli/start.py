@@ -157,10 +157,25 @@ def _build_docker_cmd(
     if claude_config.is_dir():
         cmd.extend(["-v", f"{claude_config}:/claude-config:ro"])
 
-    # Pass through API key env vars
+    # Pass through auth-related env vars.
+    # Covers: ANTHROPIC_API_KEY, AWS_* (Bedrock), GOOGLE_*/GCP_* (Vertex),
+    # CLAUDE_* (Claude Code config like CLAUDE_CODE_USE_BEDROCK), and any
+    # custom *_API_KEY / *_API_TOKEN vars.
+    _AUTH_PREFIXES = ("ANTHROPIC_", "CLAUDE_", "AWS_", "GOOGLE_", "GCP_", "OPENAI_")
+    found_api_key = False
     for key, val in os.environ.items():
-        if key.endswith("_API_KEY") or key.endswith("_API_TOKEN"):
+        if key.endswith("_API_KEY") or key.endswith("_API_TOKEN") or key.startswith(_AUTH_PREFIXES):
             cmd.extend(["-e", f"{key}={val}"])
+            if "API_KEY" in key or "AUTH_TOKEN" in key:
+                found_api_key = True
+
+    if not found_api_key:
+        print(
+            "Warning: No API key env vars found (e.g. ANTHROPIC_API_KEY).\n"
+            "  Claude Code inside Docker may fail to authenticate.\n"
+            "  Set ANTHROPIC_API_KEY or run `claude login` on the host.\n",
+            file=sys.stderr,
+        )
 
     cmd.extend(["-e", "CORAL_IN_DOCKER=1"])
 
