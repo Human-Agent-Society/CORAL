@@ -274,7 +274,8 @@ class Evolved(Algorithm):
         distinct_value_threshold: float = 0.8,
         parallel: bool = True,
     ) -> Tuple[pd.DataFrame, List[List[str]]]:
-        # Prepare
+        # Prepare — convert all values to strings for consistent prefix matching
+        df = df.astype(str)
         initial_df = df.copy()
         if col_merge:
             self.num_rows, self.column_stats = self.calculate_col_stats(df, enable_index=True)
