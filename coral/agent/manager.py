@@ -8,6 +8,7 @@ import logging
 import os
 import signal
 import threading
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -32,6 +33,7 @@ from coral.workspace import (
     create_agent_worktree,
     create_project,
     setup_claude_settings,
+    setup_opencode_settings,
     setup_gitignore,
     setup_shared_state,
     setup_worktree_env,
@@ -85,6 +87,9 @@ class AgentManager:
         handles = []
         for i in range(self.config.agents.count):
             agent_id = f"agent-{i + 1}"
+            if i > 0 and self.config.agents.stagger_seconds > 0:
+                logger.info(f"Staggering {agent_id} by {self.config.agents.stagger_seconds}s")
+                time.sleep(self.config.agents.stagger_seconds)
             handle = self._setup_and_start_agent(agent_id)
             handles.append(handle)
 
@@ -160,9 +165,11 @@ class AgentManager:
         shared_dir_name = self.runtime.shared_dir_name
         setup_shared_state(worktree_path, self.paths.coral_dir, shared_dir_name)
 
-        # Claude Code-specific: write .claude/settings.json with permissions
+        # Runtime-specific: write permission settings per worktree
         if shared_dir_name == ".claude":
             setup_claude_settings(worktree_path, coral_dir=self.paths.coral_dir, research=self.config.agents.research)
+        elif shared_dir_name == ".opencode":
+            setup_opencode_settings(worktree_path, coral_dir=self.paths.coral_dir, research=self.config.agents.research)
 
         # Seed local heartbeat config from task YAML if not already present
         if not read_agent_heartbeat(self.paths.coral_dir, agent_id):

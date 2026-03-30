@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from coral.cli._helpers import find_coral_dir, read_direction
+from coral.cli._helpers import find_coral_dir, is_docker_container_running, read_direction
 
 
 def cmd_log(args: argparse.Namespace) -> None:
@@ -279,12 +279,20 @@ def _collect_runs(results_dir: Path) -> list[dict]:
             pid_file = coral_dir / "public" / "manager.pid"
             status = "stopped"
             manager_pid = None
-            if pid_file.exists():
+
+            # Check Docker container first — PIDs in manager.pid are
+            # container-internal and meaningless on the host.
+            docker_marker = run_dir / ".coral_docker_container"
+            if docker_marker.exists():
+                container_name = docker_marker.read_text().strip()
+                if container_name and is_docker_container_running(container_name):
+                    status = "running"
+            elif pid_file.exists():
                 try:
                     manager_pid = int(pid_file.read_text().strip())
                     os.kill(manager_pid, 0)
                     status = "running"
-                except (ProcessLookupError, ValueError):
+                except (ProcessLookupError, PermissionError, ValueError):
                     status = "stopped"
 
             logs_dir = coral_dir / "public" / "logs"

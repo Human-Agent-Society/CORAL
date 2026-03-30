@@ -164,6 +164,7 @@ def cmd_ui(args: argparse.Namespace) -> None:
     pid_file = coral_dir / "public" / "ui.pid"
     import os
 
+    pid_file.parent.mkdir(parents=True, exist_ok=True)
     pid_file.write_text(str(os.getpid()))
 
     if not args.no_open:

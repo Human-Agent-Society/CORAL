@@ -45,4 +45,4 @@ workspace:
 run:
   verbose: false
   ui: false
-  tmux: true
+  session: tmux

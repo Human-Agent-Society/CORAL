@@ -210,6 +210,47 @@ def setup_claude_settings(worktree_path: Path, coral_dir: Path, *, research: boo
     settings_path.write_text(json.dumps(settings, indent=2) + "\n")
 
 
+def setup_opencode_settings(worktree_path: Path, coral_dir: Path, *, research: bool = True) -> None:
+    """Write OpenCode opencode.json with scoped permissions.
+
+    Allows access to the agent's worktree and shared public state,
+    but denies access to .coral/private/ (grader data, answer keys).
+    """
+    opencode_dir = worktree_path / ".opencode"
+    opencode_dir.mkdir(exist_ok=True)
+
+    private_pattern = str(coral_dir.resolve() / "private") + "/**"
+    public_pattern = str(coral_dir.resolve() / "public") + "/**"
+
+    settings: dict = {
+        "$schema": "https://opencode.ai/config.json",
+        "permission": {
+            "external_directory": {
+                public_pattern: "allow",
+            },
+            "read": {
+                private_pattern: "deny",
+            },
+            "bash": {
+                private_pattern: "deny",
+            },
+            "edit": {
+                private_pattern: "deny",
+            },
+            "write": {
+                private_pattern: "deny",
+            },
+            "question": "deny",
+            "doom_loop": "allow",
+            "webfetch": "deny" if not research else "allow",
+            "websearch": "deny" if not research else "allow",
+        },
+    }
+
+    settings_path = opencode_dir / "opencode.json"
+    settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+
+
 def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
     """Run setup commands and install coral in a worktree's venv.
 

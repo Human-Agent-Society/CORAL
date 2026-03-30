@@ -131,6 +131,93 @@ def kill_tmux_session(coral_dir: Path) -> None:
             pass
 
 
+def has_docker() -> bool:
+    """Check if docker is available on the system."""
+    import shutil
+
+    return shutil.which("docker") is not None
+
+
+def in_docker() -> bool:
+    """Check if we're already running inside a Docker container."""
+    if os.environ.get("CORAL_IN_DOCKER") == "1":
+        return True
+    return Path("/.dockerenv").exists()
+
+
+def is_docker_container_running(container_name: str) -> bool:
+    """Check if a Docker container is currently running."""
+    result = subprocess.run(
+        ["sudo", "docker", "inspect", "-f", "{{.State.Running}}", container_name],
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0 and result.stdout.strip() == "true"
+
+
+def has_docker_marker(coral_dir: Path) -> bool:
+    """Check if this run is managed by a Docker container."""
+    for search_dir in [coral_dir / "public", coral_dir.parent]:
+        if (search_dir / ".coral_docker_container").exists():
+            return True
+    return False
+
+
+def is_docker_run_alive(coral_dir: Path) -> bool:
+    """Check if this run is managed by a live Docker container."""
+    run_dir = coral_dir.resolve().parent
+    marker = run_dir / ".coral_docker_container"
+    if marker.exists():
+        name = marker.read_text().strip()
+        if name:
+            return is_docker_container_running(name)
+    return False
+
+
+def save_docker_container_name(save_dir: Path, container_name: str) -> None:
+    """Save the Docker container name for coral stop to find."""
+    marker = save_dir / ".coral_docker_container"
+    marker.write_text(container_name)
+
+
+def kill_docker_container(coral_dir: Path) -> None:
+    """Stop and remove the Docker container associated with this run."""
+    for search_dir in [coral_dir / "public", coral_dir.parent]:
+        marker = search_dir / ".coral_docker_container"
+        if marker.exists():
+            container_name = marker.read_text().strip()
+            if container_name:
+                stopped = subprocess.run(
+                    ["sudo", "docker", "stop", container_name],
+                    capture_output=True,
+                ).returncode == 0
+                # Always try rm (container may already be stopped)
+                subprocess.run(
+                    ["sudo", "docker", "rm", container_name],
+                    capture_output=True,
+                )
+                if stopped:
+                    print(f"Stopped Docker container: {container_name}")
+            marker.unlink(missing_ok=True)
+            return
+
+
+def kill_ui(coral_dir: Path) -> None:
+    """Stop a standalone UI process if running."""
+    import signal
+
+    ui_pid_file = coral_dir / "public" / "ui.pid"
+    if not ui_pid_file.exists():
+        return
+    try:
+        pid = int(ui_pid_file.read_text().strip())
+        os.kill(pid, signal.SIGKILL)
+        print(f"Stopped dashboard (PID {pid}).")
+    except (ProcessLookupError, ValueError):
+        pass
+    ui_pid_file.unlink(missing_ok=True)
+
+
 def kill_orphaned_agents(agent_pids_file: Path) -> None:
     """Kill agent processes that survived the manager."""
     import signal
@@ -189,6 +276,12 @@ def find_coral_dir(task: str | None = None, run: str | None = None) -> Path:
                     return coral_dir
             except (OSError, ValueError):
                 pass
+
+    # Docker shortcut: run dir is mounted at /run, no results/ tree exists
+    if in_docker():
+        docker_coral = Path("/run/.coral")
+        if docker_coral.is_dir():
+            return docker_coral
 
     # Find results dir by walking up
     results_dir = None

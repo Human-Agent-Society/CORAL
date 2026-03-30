@@ -171,15 +171,15 @@ def test_run_config_defaults():
     )
     assert config.run.verbose is False
     assert config.run.ui is False
-    assert config.run.tmux is True
+    assert config.run.session == "tmux"
 
 
 def test_run_config_dotlist_override():
     config = CoralConfig(
         task=TaskConfig(name="t", description="d"),
     )
-    merged = CoralConfig.merge_dotlist(config, ["run.tmux=false", "run.verbose=true"])
-    assert merged.run.tmux is False
+    merged = CoralConfig.merge_dotlist(config, ["run.session=local", "run.verbose=true"])
+    assert merged.run.session == "local"
     assert merged.run.verbose is True
     assert merged.run.ui is False
 
@@ -187,7 +187,7 @@ def test_run_config_dotlist_override():
 def test_run_config_roundtrip():
     config = CoralConfig(
         task=TaskConfig(name="t", description="d"),
-        run=RunConfig(verbose=True, ui=True, tmux=False),
+        run=RunConfig(verbose=True, ui=True, session="docker"),
     )
 
     with tempfile.NamedTemporaryFile(suffix=".yaml", mode="w", delete=False) as f:
@@ -196,7 +196,7 @@ def test_run_config_roundtrip():
 
     assert restored.run.verbose is True
     assert restored.run.ui is True
-    assert restored.run.tmux is False
+    assert restored.run.session == "docker"
 
 
 def test_to_dict_excludes_task_dir():

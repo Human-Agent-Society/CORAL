@@ -128,7 +128,10 @@ def _sort_key(entry: dict[str, Any]) -> datetime:
     date_str = entry.get("date", "")
     if date_str:
         try:
-            return datetime.fromisoformat(date_str)
+            dt = datetime.fromisoformat(date_str)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=UTC)
+            return dt
         except (ValueError, TypeError):
             pass
     mtime = entry.get("_mtime")

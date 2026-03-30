@@ -28,11 +28,20 @@ def _make_config(repo_path: str, results_dir: str | None = None) -> CoralConfig:
     )
 
 
+def _git_init(d: str) -> None:
+    """Initialise a git repo with a dummy commit (works without global config)."""
+    subprocess.run(["git", "init", d], capture_output=True, check=True)
+    subprocess.run(
+        ["git", "-C", d, "-c", "user.name=test", "-c", "user.email=test@test.com",
+         "commit", "--allow-empty", "-m", "init"],
+        capture_output=True, check=True,
+    )
+
+
 def test_create_project_structure():
     with tempfile.TemporaryDirectory() as d:
         # Init a git repo so workspace can create worktrees
-        subprocess.run(["git", "init", d], capture_output=True, check=True)
-        subprocess.run(["git", "-C", d, "commit", "--allow-empty", "-m", "init"], capture_output=True, check=True)
+        _git_init(d)
 
         config = _make_config(d)
         paths = create_project(config)
@@ -58,8 +67,7 @@ def test_create_project_structure():
 def test_create_project_unique_runs():
     """Each create_project call gets a unique run directory."""
     with tempfile.TemporaryDirectory() as d:
-        subprocess.run(["git", "init", d], capture_output=True, check=True)
-        subprocess.run(["git", "-C", d, "commit", "--allow-empty", "-m", "init"], capture_output=True, check=True)
+        _git_init(d)
 
         config = _make_config(d)
         paths1 = create_project(config)

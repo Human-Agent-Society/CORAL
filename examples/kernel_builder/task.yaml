@@ -52,7 +52,7 @@ grader:
 agents:
   count: 1
   runtime: claude_code
-  model: opus
+  model: claude-opus-4-6
 
 workspace:
   results_dir: "./results"
@@ -61,4 +61,5 @@ workspace:
 run:
   verbose: false
   ui: false
-  tmux: true
+  session: docker
+  docker_image: ""

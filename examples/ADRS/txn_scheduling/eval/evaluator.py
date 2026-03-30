@@ -183,7 +183,8 @@ def evaluate(program_path, python_cmd=None):
 
         # Combined score - higher is better, positive values that scale with makespan
         # Use reciprocal scaling: higher makespan = lower score, but always positive
-        combined_score = 1000 / (1 + makespan) * 1000 
+        # Invalid schedules get score 0
+        combined_score = 1000 / (1 + makespan) * 1000 if valid else 0.0
 
         print(f"Evaluation: valid={valid}, makespan={makespan}, time={eval_time:.2f}s")
 

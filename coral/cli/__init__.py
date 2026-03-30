@@ -166,7 +166,7 @@ Run 'coral <command> --help' for details on any command."""
             "Examples:\n"
             "  coral start -c task.yaml\n"
             "  coral start -c task.yaml agents.count=4 agents.model=opus\n"
-            "  coral start -c task.yaml run.verbose=true run.ui=true run.tmux=false"
+            "  coral start -c task.yaml run.verbose=true run.ui=true run.session=local"
         ),
         formatter_class=_CommandHelpFormatter,
     )
@@ -175,7 +175,7 @@ Run 'coral <command> --help' for details on any command."""
         "overrides",
         nargs="*",
         default=[],
-        help="Config overrides as key=value (e.g. agents.count=4 run.verbose=true run.tmux=false)",
+        help="Config overrides as key=value (e.g. agents.count=4 run.verbose=true run.session=local)",
     )
 
     p_resume = sub.add_parser(

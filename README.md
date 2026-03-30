@@ -3,21 +3,12 @@
 
 <img src="assets/logo.png" alt="Coral" width="360">
 
-### **Spawn Agents. Share Knowledge. Optimize Forever.**
 
-<p>
-  <img src="assets/mit_logo.png" alt="MIT" height="50">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="assets/nus.png" alt="NUS" height="50">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="assets/stanford.png" alt="Stanford" height="50">
-</p>
+#### Robust, lightweight infrastructure for multi-agent self-evolution, built for autoresearch.
 
-**Ao Qu\*, Yihao Yan\*, Han Zheng\*, Zijian Zhou\*, Shao Yong Ong, Fenglu Hong, Jiacheng Zhu**
+## 🚀 Supercharge Your AutoResearch
 
-**Bryan Kian Hsiang Low‡, Jinhua Zhao‡, Paul Pu Liang‡**
 
-<sub>\* Equal Contribution &nbsp;&nbsp; ‡ Equal Advising</sub>
 
 [![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://human-agent-society.github.io/CORAL/)
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -92,7 +83,8 @@ uv run coral start -c examples/kernel_builder/task.yaml
 uv run coral start -c task.yaml agents.count=4 agents.model=opus
 uv run coral start -c task.yaml run.verbose=true        # stream agent output
 uv run coral start -c task.yaml run.ui=true              # also launch web dashboard
-uv run coral start -c task.yaml run.tmux=false           # skip tmux, run inline
+uv run coral start -c task.yaml run.session=local         # skip tmux, run inline
+uv run coral start -c task.yaml run.session=docker        # run inside Docker container
 
 # stop and resume
 uv run coral stop                                        # stop anytime

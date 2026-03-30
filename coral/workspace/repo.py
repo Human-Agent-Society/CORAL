@@ -12,13 +12,20 @@ logger = logging.getLogger(__name__)
 
 
 def _clean_env() -> dict[str, str]:
-    """Return a copy of the environment with venv variables removed.
+    """Return a copy of the environment with venv and IDE variables removed.
 
     This prevents CORAL's own venv from leaking into subprocesses
     (setup commands, agent spawning) that should use project-local venvs.
+
+    Also strips VS Code Remote SSH IPC variables — these reference
+    session-specific Unix sockets that may no longer exist after a
+    reconnect/restart, causing ENOENT errors in Node.js subprocesses.
     """
     env = os.environ.copy()
     env.pop("VIRTUAL_ENV", None)
+    for key in list(env):
+        if key.startswith("VSCODE_"):
+            env.pop(key)
     return env
 
 
