@@ -148,11 +148,19 @@ def in_docker() -> bool:
 def is_docker_container_running(container_name: str) -> bool:
     """Check if a Docker container is currently running."""
     result = subprocess.run(
-        ["docker", "inspect", "-f", "{{.State.Running}}", container_name],
+        ["sudo", "docker", "inspect", "-f", "{{.State.Running}}", container_name],
         capture_output=True,
         text=True,
     )
     return result.returncode == 0 and result.stdout.strip() == "true"
+
+
+def has_docker_marker(coral_dir: Path) -> bool:
+    """Check if this run is managed by a Docker container."""
+    for search_dir in [coral_dir / "public", coral_dir.parent]:
+        if (search_dir / ".coral_docker_container").exists():
+            return True
+    return False
 
 
 def is_docker_run_alive(coral_dir: Path) -> bool:
@@ -180,12 +188,12 @@ def kill_docker_container(coral_dir: Path) -> None:
             container_name = marker.read_text().strip()
             if container_name:
                 stopped = subprocess.run(
-                    ["docker", "stop", container_name],
+                    ["sudo", "docker", "stop", container_name],
                     capture_output=True,
                 ).returncode == 0
                 # Always try rm (container may already be stopped)
                 subprocess.run(
-                    ["docker", "rm", container_name],
+                    ["sudo", "docker", "rm", container_name],
                     capture_output=True,
                 )
                 if stopped:

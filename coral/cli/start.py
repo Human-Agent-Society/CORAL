@@ -14,6 +14,7 @@ from coral.cli._helpers import (
     find_coral_dir,
     find_tmux_session,
     has_docker,
+    has_docker_marker,
     has_tmux,
     in_docker,
     in_tmux,
@@ -614,14 +615,6 @@ def _stop_ui(coral_dir: Path) -> None:
     ui_pid_file.unlink(missing_ok=True)
 
 
-def _has_docker_marker(coral_dir: Path) -> bool:
-    """Check if this run is managed by a Docker container."""
-    for search_dir in [coral_dir / "public", coral_dir.parent]:
-        if (search_dir / ".coral_docker_container").exists():
-            return True
-    return False
-
-
 def _stop_one(coral_dir: Path) -> None:
     """Stop a single CORAL run by its .coral directory."""
     pid_file = coral_dir / "public" / "manager.pid"
@@ -631,7 +624,7 @@ def _stop_one(coral_dir: Path) -> None:
 
     # For Docker-managed runs, stop the container directly.
     # The manager/agent PIDs are container-internal and meaningless on the host.
-    if _has_docker_marker(coral_dir):
+    if has_docker_marker(coral_dir):
         kill_docker_container(coral_dir)
         pid_file.unlink(missing_ok=True)
         agent_pids_file.unlink(missing_ok=True)
