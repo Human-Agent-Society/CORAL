@@ -279,21 +279,21 @@ def _collect_runs(results_dir: Path) -> list[dict]:
             pid_file = coral_dir / "public" / "manager.pid"
             status = "stopped"
             manager_pid = None
-            if pid_file.exists():
+
+            # Check Docker container first — PIDs in manager.pid are
+            # container-internal and meaningless on the host.
+            docker_marker = run_dir / ".coral_docker_container"
+            if docker_marker.exists():
+                container_name = docker_marker.read_text().strip()
+                if container_name and is_docker_container_running(container_name):
+                    status = "running"
+            elif pid_file.exists():
                 try:
                     manager_pid = int(pid_file.read_text().strip())
                     os.kill(manager_pid, 0)
                     status = "running"
-                except (ProcessLookupError, ValueError):
+                except (ProcessLookupError, PermissionError, ValueError):
                     status = "stopped"
-
-            # If no local manager is running, check if a Docker container owns this run
-            if status == "stopped":
-                docker_marker = run_dir / ".coral_docker_container"
-                if docker_marker.exists():
-                    container_name = docker_marker.read_text().strip()
-                    if container_name and is_docker_container_running(container_name):
-                        status = "running"
 
             logs_dir = coral_dir / "public" / "logs"
             agent_names: set[str] = set()

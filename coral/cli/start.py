@@ -137,7 +137,7 @@ def _ensure_docker_image(config: CoralConfig) -> str:
         sys.exit(1)
     print(f"Building Docker image '{image}' ...")
     result = subprocess.run(
-        ["docker", "build", "-f", str(dockerfile), "-t", image, "."],
+        ["sudo", "docker", "build", "-f", str(dockerfile), "-t", image, "."],
         cwd=str(coral_pkg),
     )
     if result.returncode != 0:
@@ -157,7 +157,7 @@ def _build_docker_cmd(
 ) -> list[str]:
     """Build the `docker run` command with standard mounts and env vars."""
     cmd: list[str] = [
-        "docker", "run", "-d",
+        "sudo", "docker", "run", "-d",
         "--name", container_name,
         "-v", f"{config_dir}:/task:ro",
         "-v", f"{host_run_dir}:/run:rw",
@@ -614,12 +614,29 @@ def _stop_ui(coral_dir: Path) -> None:
     ui_pid_file.unlink(missing_ok=True)
 
 
+def _has_docker_marker(coral_dir: Path) -> bool:
+    """Check if this run is managed by a Docker container."""
+    for search_dir in [coral_dir / "public", coral_dir.parent]:
+        if (search_dir / ".coral_docker_container").exists():
+            return True
+    return False
+
+
 def _stop_one(coral_dir: Path) -> None:
     """Stop a single CORAL run by its .coral directory."""
     pid_file = coral_dir / "public" / "manager.pid"
     agent_pids_file = coral_dir / "public" / "agent.pids"
 
     _stop_ui(coral_dir)
+
+    # For Docker-managed runs, stop the container directly.
+    # The manager/agent PIDs are container-internal and meaningless on the host.
+    if _has_docker_marker(coral_dir):
+        kill_docker_container(coral_dir)
+        pid_file.unlink(missing_ok=True)
+        agent_pids_file.unlink(missing_ok=True)
+        (coral_dir / "public" / "agent_pids.json").unlink(missing_ok=True)
+        return
 
     try:
         if not pid_file.exists():
@@ -643,11 +660,11 @@ def _stop_one(coral_dir: Path) -> None:
             print("Manager didn't stop gracefully. Force killing...")
             try:
                 os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
+            except (ProcessLookupError, PermissionError):
                 pass
             kill_orphaned_agents(agent_pids_file)
             pid_file.unlink(missing_ok=True)
-        except ProcessLookupError:
+        except (ProcessLookupError, PermissionError):
             print(f"Manager (PID {pid}) not running. Cleaning up.")
             kill_orphaned_agents(agent_pids_file)
             pid_file.unlink(missing_ok=True)
