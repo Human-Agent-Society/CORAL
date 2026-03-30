@@ -22,6 +22,7 @@ from coral.cli._helpers import (
     kill_docker_container,
     kill_orphaned_agents,
     kill_tmux_session,
+    kill_ui,
     pick_run,
     read_direction,
     save_docker_container_name,
@@ -601,26 +602,12 @@ def cmd_resume(args: argparse.Namespace) -> None:
     manager.monitor_loop()
 
 
-def _stop_ui(coral_dir: Path) -> None:
-    """Stop a standalone UI process if running."""
-    ui_pid_file = coral_dir / "public" / "ui.pid"
-    if not ui_pid_file.exists():
-        return
-    try:
-        pid = int(ui_pid_file.read_text().strip())
-        os.kill(pid, signal.SIGKILL)
-        print(f"Stopped dashboard (PID {pid}).")
-    except (ProcessLookupError, ValueError):
-        pass
-    ui_pid_file.unlink(missing_ok=True)
-
-
 def _stop_one(coral_dir: Path) -> None:
     """Stop a single CORAL run by its .coral directory."""
     pid_file = coral_dir / "public" / "manager.pid"
     agent_pids_file = coral_dir / "public" / "agent.pids"
 
-    _stop_ui(coral_dir)
+    kill_ui(coral_dir)
 
     # For Docker-managed runs, stop the container directly.
     # The manager/agent PIDs are container-internal and meaningless on the host.

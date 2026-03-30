@@ -202,6 +202,22 @@ def kill_docker_container(coral_dir: Path) -> None:
             return
 
 
+def kill_ui(coral_dir: Path) -> None:
+    """Stop a standalone UI process if running."""
+    import signal
+
+    ui_pid_file = coral_dir / "public" / "ui.pid"
+    if not ui_pid_file.exists():
+        return
+    try:
+        pid = int(ui_pid_file.read_text().strip())
+        os.kill(pid, signal.SIGKILL)
+        print(f"Stopped dashboard (PID {pid}).")
+    except (ProcessLookupError, ValueError):
+        pass
+    ui_pid_file.unlink(missing_ok=True)
+
+
 def kill_orphaned_agents(agent_pids_file: Path) -> None:
     """Kill agent processes that survived the manager."""
     import signal
