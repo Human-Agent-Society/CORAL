@@ -32,9 +32,10 @@ classifiers = [
 dependencies = [
     "pyyaml>=6.0",
     "omegaconf>=2.3.0",
-    "litellm>=1.0.0",
     "httpx>=0.27",
-    "uvicorn>=0.30",
+    "uvicorn>=0.30.0",
+    "litellm[proxy]==1.82.3",
+    "pip>=26.0.1",
 ]
 
 [project.optional-dependencies]
@@ -44,33 +45,13 @@ dev = [
     "ruff>=0.5.0",
     "mypy>=1.10.0",
 ]
-swebench = [
-    "swebench>=2.0.0",
-    "datasets>=2.0.0",
-    "docker>=7.0.0",
-]
-terminalbench = [
-    "datasets>=2.0.0",
-    "docker>=7.0.0",
-    "harbor>=0.1.22; python_version >= '3.12'",
-]
-erdos = [
-    "numpy>=1.24.0",
-    "jax>=0.4.0",
-    "optax>=0.2.0",
-]
-frontier-cs = [
-    "pyyaml>=6.0",
-    "requests>=2.32.5",
-    "tqdm>=4.67.1",
-]
 ui = [
     "starlette>=0.40.0",
     "uvicorn[standard]>=0.30.0",
     "pyyaml>=6.0",
 ]
 all = [
-    "coral[dev,swebench,terminalbench,erdos,frontier-cs,ui]",
+    "coral[dev,ui]",
 ]
 
 [project.scripts]

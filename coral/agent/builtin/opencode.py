@@ -94,6 +94,10 @@ class OpenCodeRuntime:
                 prompt = "Begin."
 
         # Build command: opencode run [flags] <prompt>
+        # Keep the full provider/model format (e.g. "minimax/MiniMax-M2.5")
+        # so OpenCode knows which provider to use. When the gateway is active,
+        # the provider's baseURL is patched in opencode.json to route through
+        # the LiteLLM proxy.
         cmd = [
             "opencode", "run",
             "--model", model,

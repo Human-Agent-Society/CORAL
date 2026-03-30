@@ -46,6 +46,10 @@ agents:
   count: 1
   runtime: opencode
   model: minimax/MiniMax-M2.5
+  gateway:
+    enabled: true
+    port: 4000
+    config: "./litellm_config.yaml"
 
 workspace:
   results_dir: "./results"
@@ -56,4 +60,4 @@ workspace:
 run:
   verbose: false
   ui: false
-  session: tmux
+  session: local

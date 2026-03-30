@@ -78,7 +78,6 @@ class GatewayManager:
         try:
             loop.run_until_complete(initialize(
                 config=self.config_path,
-                master_key=self.api_key,
             ))
         finally:
             loop.close()

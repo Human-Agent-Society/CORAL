@@ -6,6 +6,7 @@ import json
 import logging
 import subprocess
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -23,9 +24,7 @@ class CoralGatewayMiddleware:
     1. Identifies the agent by its unique API key
     2. Reads the agent's current git commit hash (cached briefly)
     3. Adds X-Coral-Agent-Id and X-Coral-Session-Id headers
-    4. Logs full request body to JSONL
-    5. Passes through to LiteLLM
-    6. Logs full response body to JSONL
+    4. Logs request and assembled response as linked JSONL entries
     """
 
     def __init__(self, app: Any, log_dir: Path, master_key: str) -> None:
@@ -47,15 +46,29 @@ class CoralGatewayMiddleware:
         )
 
     def _get_agent_info(self, auth_header: str) -> AgentInfo | None:
-        """Look up agent info from the Authorization header."""
+        """Look up agent info from the Authorization header.
+
+        Falls back to the sole registered agent if the key doesn't match
+        (e.g. when OpenCode uses a static apiKey from opencode.json).
+        """
         if not auth_header:
+            if len(self._agent_map) == 1:
+                return next(iter(self._agent_map.values()))
             return None
         # Extract bearer token
         parts = auth_header.split(" ", 1)
         if len(parts) != 2 or parts[0].lower() != "bearer":
+            if len(self._agent_map) == 1:
+                return next(iter(self._agent_map.values()))
             return None
         token = parts[1]
-        return self._agent_map.get(token)
+        info = self._agent_map.get(token)
+        if info:
+            return info
+        # Key not recognized — fall back to sole agent if only one registered
+        if len(self._agent_map) == 1:
+            return next(iter(self._agent_map.values()))
+        return None
 
     def _get_commit_hash(self, worktree_path: Path) -> str:
         """Get the current commit hash for a worktree, with brief caching."""
@@ -102,8 +115,10 @@ class CoralGatewayMiddleware:
         if not _is_api_path(path):
             return await self.app(scope, receive, send)
 
+        # Generate a unique request ID to link request and response
+        request_id = str(uuid.uuid4())[:8]
+
         # Read headers
-        headers = dict(scope.get("headers", []))
         auth_header = ""
         for raw_name, raw_value in scope.get("headers", []):
             name = raw_name.decode("latin-1").lower() if isinstance(raw_name, bytes) else raw_name.lower()
@@ -120,15 +135,11 @@ class CoralGatewayMiddleware:
 
         # Read request body
         body_parts: list[bytes] = []
-        request_complete = False
 
         async def receive_wrapper() -> dict:
-            nonlocal request_complete
             message = await receive()
             if message.get("type") == "http.request":
                 body_parts.append(message.get("body", b""))
-                if not message.get("more_body", False):
-                    request_complete = True
             return message
 
         # Add CORAL headers to the request and replace auth with master key
@@ -166,30 +177,23 @@ class CoralGatewayMiddleware:
 
         duration_ms = int((time.monotonic() - start_time) * 1000)
 
-        # Log request
+        # Log request (with messages trimmed for readability)
         request_body = b"".join(body_parts)
         request_body_parsed = _safe_parse_json(request_body)
-        self._log_entry({
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "agent_id": agent_id,
-            "session_id": session_id,
-            "direction": "request",
-            "method": method,
-            "path": path,
-            "body": request_body_parsed,
-        })
+        request_model = None
+        if isinstance(request_body_parsed, dict):
+            request_model = request_body_parsed.get("model")
 
-        # Log response
-        response_body = b"".join(response_body_parts)
-        response_body_parsed = _safe_parse_json(response_body)
         self._log_entry({
+            "request_id": request_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "agent_id": agent_id,
             "session_id": session_id,
-            "direction": "response",
             "method": method,
             "path": path,
-            "body": response_body_parsed,
+            "model": request_model,
+            "request": request_body_parsed,
+            "response": _assemble_response(b"".join(response_body_parts)),
             "status_code": response_status,
             "duration_ms": duration_ms,
         })
@@ -217,6 +221,71 @@ def _is_api_path(path: str) -> bool:
         "/completions",
     )
     return any(path.startswith(p) for p in api_prefixes)
+
+
+def _assemble_response(data: bytes) -> Any:
+    """Assemble a response body into a clean structure.
+
+    For streaming SSE responses, concatenates the text content from all chunks
+    into a single assembled message. For non-streaming responses, parses as JSON.
+    """
+    if not data:
+        return None
+
+    raw = data.decode("utf-8", errors="replace")
+
+    # Check if this is an SSE stream (starts with "data: ")
+    if not raw.lstrip().startswith("data:"):
+        return _safe_parse_json(data)
+
+    # Parse SSE chunks and assemble content
+    content_parts: list[str] = []
+    model = None
+    finish_reason = None
+    usage = None
+    response_id = None
+
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line.startswith("data:"):
+            continue
+        payload = line[5:].strip()
+        if payload == "[DONE]":
+            continue
+        try:
+            chunk = json.loads(payload)
+        except (json.JSONDecodeError, ValueError):
+            continue
+
+        if not response_id and chunk.get("id"):
+            response_id = chunk["id"]
+        if not model and chunk.get("model"):
+            model = chunk["model"]
+
+        for choice in chunk.get("choices", []):
+            delta = choice.get("delta", {})
+            text = delta.get("content", "")
+            if text:
+                content_parts.append(text)
+            if choice.get("finish_reason"):
+                finish_reason = choice["finish_reason"]
+
+        if chunk.get("usage"):
+            usage = chunk["usage"]
+
+    assembled: dict[str, Any] = {}
+    if response_id:
+        assembled["id"] = response_id
+    if model:
+        assembled["model"] = model
+    if content_parts:
+        assembled["content"] = "".join(content_parts)
+    if finish_reason:
+        assembled["finish_reason"] = finish_reason
+    if usage:
+        assembled["usage"] = usage
+
+    return assembled
 
 
 def _safe_parse_json(data: bytes) -> Any:
