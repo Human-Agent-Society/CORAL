@@ -20,7 +20,7 @@
 </div>
 
 <p align="center">
-<a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
+<a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#using-opencode">OpenCode</a> · <a href="#using-the-gateway-for-custom-models">Gateway</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
 </p>
 
 
@@ -277,6 +277,105 @@ coral/
 ```
 
 </details>
+
+### Using OpenCode
+
+To use [OpenCode](https://github.com/opencode-ai/opencode) as your agent runtime, you need to provide an `opencode.json` configuration file in your seed directory. This file configures OpenCode's permissions and provider settings.
+
+Here is an example from `examples/circle_packing/seed/opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "external_directory": "allow",
+    "question": "deny",
+    "doom_loop": "allow",
+    "bash": "allow",
+    "edit": "allow",
+    "read": "allow",
+    "write": "allow",
+    "webfetch": "deny",
+    "websearch": "deny",
+    "codesearch": "allow",
+    "lsp": "allow",
+    "skill": "allow"
+  },
+  "provider": {
+    "claude": {
+      "npm": "@ai-sdk/anthropic",
+      "name": "claude",
+      "options": {
+        "baseURL": "http://localhost:4000/v1",
+        "apiKey": "xxx"
+      },
+      "models": {
+        "claude-opus-4-6": {
+          "name": "claude-opus-4-6"
+        }
+      }
+    }
+  }
+}
+```
+
+Key points:
+- Set all permissions to `"allow"` (except `question`, `webfetch`, `websearch` which should be `"deny"`) so the agent can run autonomously without interactive prompts.
+- The `provider` section configures which model to use. When using the gateway (see below), point `baseURL` at `http://localhost:<gateway_port>/v1` and set `apiKey` to any placeholder value — the gateway handles authentication.
+- Place `opencode.json` in your seed directory so it gets copied into each agent's worktree.
+
+Then set your task config to use OpenCode:
+
+```yaml
+agents:
+  runtime: opencode
+  model: claude/claude-opus-4-6  # must match a model defined in opencode.json
+```
+
+### Using the Gateway for Custom Models
+
+CORAL includes a built-in **LiteLLM gateway** that acts as a proxy between agents and model providers. This is useful when you want to:
+
+- Route agent requests through a single proxy with unified API key management
+- Use custom or self-hosted models
+- Add request logging and per-agent tracking
+- Use providers that require non-standard authentication
+
+#### Setting up the gateway
+
+**1. Create a LiteLLM config file** (e.g. `litellm_config.yaml`) alongside your `task.yaml`:
+
+```yaml
+# examples/circle_packing/litellm_config.yaml
+model_list:
+  - model_name: "claude-opus-4-6"
+    litellm_params:
+      model: "anthropic/claude-opus-4-6"
+      api_key: "YOUR_ANTHROPIC_API_KEY"
+
+litellm_settings:
+  drop_params: true
+```
+
+Each entry in `model_list` defines a model the gateway will serve. The `model_name` is what agents request; `litellm_params.model` is the upstream provider model. See the [LiteLLM docs](https://docs.litellm.ai/docs/proxy/configs) for full configuration options (multiple providers, load balancing, fallbacks, etc.).
+
+**2. Enable the gateway in your task config:**
+
+```yaml
+agents:
+  runtime: opencode           # or claude_code, codex
+  model: claude/claude-opus-4-6
+  gateway:
+    enabled: true
+    port: 4000                # port the gateway listens on
+    config: "./litellm_config.yaml"  # path relative to task.yaml
+```
+
+**3. Point your agent at the gateway.** For OpenCode, set `baseURL` in `opencode.json` to `http://localhost:<port>/v1`. For Claude Code, the gateway URL is automatically injected.
+
+When you run `coral start`, the gateway starts before agents are spawned, and all agent API requests are routed through it. The gateway automatically assigns each agent a unique proxy key for per-agent request tracking.
+
+See `examples/circle_packing/` for a complete working example using OpenCode with the gateway.
 
 ### Examples
 

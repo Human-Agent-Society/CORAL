@@ -115,6 +115,10 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     # Save config
     config.to_yaml(coral_dir / "config.yaml")
 
+    # Save config_dir so resume can restore task_dir for relative path resolution
+    effective_config_dir = config.task_dir or config_dir or Path.cwd()
+    (coral_dir / "config_dir").write_text(str(effective_config_dir))
+
     # Create/update "latest" symlink at task_dir/latest -> this run directory
     latest_link = task_dir / "latest"
     if latest_link.is_symlink():

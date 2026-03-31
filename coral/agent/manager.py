@@ -122,8 +122,14 @@ class AgentManager:
             generate_default_litellm_config(
                 Path(config_path), model=self.config.agents.model,
             )
-        elif self.config.task_dir and not Path(config_path).is_absolute():
-            config_path = str(self.config.task_dir / config_path)
+        elif not Path(config_path).is_absolute():
+            if self.config.task_dir:
+                config_path = str(self.config.task_dir / config_path)
+            else:
+                logger.warning(
+                    f"Cannot resolve relative gateway config '{config_path}': "
+                    f"task_dir is unknown. Trying as-is."
+                )
 
         log_dir = self.paths.coral_dir / "public" / "gateway"
         gateway = GatewayManager(

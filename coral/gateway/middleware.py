@@ -118,13 +118,16 @@ class CoralGatewayMiddleware:
         # Generate a unique request ID to link request and response
         request_id = str(uuid.uuid4())[:8]
 
-        # Read headers
+        # Read headers — check both Authorization (OpenAI) and x-api-key (Anthropic)
         auth_header = ""
         for raw_name, raw_value in scope.get("headers", []):
             name = raw_name.decode("latin-1").lower() if isinstance(raw_name, bytes) else raw_name.lower()
             if name == "authorization":
                 auth_header = raw_value.decode("latin-1") if isinstance(raw_value, bytes) else raw_value
                 break
+            elif name == "x-api-key" and not auth_header:
+                val = raw_value.decode("latin-1") if isinstance(raw_value, bytes) else raw_value
+                auth_header = f"Bearer {val}"
 
         # Identify agent
         agent_info = self._get_agent_info(auth_header)

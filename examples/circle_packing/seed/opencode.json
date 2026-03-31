@@ -1,0 +1,32 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "permission": {
+      "external_directory": "allow",
+      "question": "deny",
+      "doom_loop": "allow",
+      "bash": "allow",
+      "edit": "allow",
+      "read": "allow",
+      "write": "allow",
+      "webfetch": "deny",
+      "websearch": "deny",
+      "codesearch": "allow",
+      "lsp": "allow",
+      "skill": "allow"
+    },
+    "provider": {
+      "claude": {
+        "npm": "@ai-sdk/anthropic",
+        "name": "claude",
+        "options": {
+          "baseURL": "http://localhost:4000/v1",
+          "apiKey": "xxx"
+        },
+        "models": {
+          "claude-opus-4-6": {
+            "name": "claude-opus-4-6"
+          }
+        }
+      }
+    }
+  }

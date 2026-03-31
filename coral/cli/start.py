@@ -558,6 +558,11 @@ def cmd_resume(args: argparse.Namespace) -> None:
 
     paths = reconstruct_paths(coral_dir)
 
+    # Restore task_dir so relative paths (e.g. gateway config) resolve correctly
+    config_dir_file = coral_dir / "config_dir"
+    if config_dir_file.exists():
+        config.task_dir = Path(config_dir_file.read_text().strip())
+
     latest_link = paths.task_dir / "latest"
     if latest_link.is_symlink():
         latest_link.unlink()

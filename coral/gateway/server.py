@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import secrets
+import socket
 import threading
 import time
 import urllib.error
@@ -64,6 +65,9 @@ class GatewayManager:
 
         from coral.gateway.middleware import CoralGatewayMiddleware
 
+        # Fail fast if port is already in use (e.g. stale gateway from previous run)
+        self._check_port_available()
+
         logger.info(f"Starting gateway on port {self.port}")
         logger.info(f"LiteLLM config: {self.config_path}")
 
@@ -91,11 +95,16 @@ class GatewayManager:
         self._middleware = middleware
 
         # Configure uvicorn
+        # Disable ASGI lifespan so LiteLLM's proxy_startup_event doesn't run.
+        # That handler tries to check licenses, connect to databases, etc. which
+        # can hang in Docker.  We already called initialize() above, so the
+        # model list / router is ready.
         config = uvicorn.Config(
             app=middleware,
             host="0.0.0.0",
             port=self.port,
             log_level="warning",
+            lifespan="off",
         )
         server = uvicorn.Server(config)
         self._server = server
@@ -126,6 +135,20 @@ class GatewayManager:
         self._server = None
         self._server_thread = None
         logger.info("Gateway stopped.")
+
+    def _check_port_available(self) -> None:
+        """Raise early if the gateway port is already in use."""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.bind(("127.0.0.1", self.port))
+        except OSError:
+            raise RuntimeError(
+                f"Port {self.port} is already in use. "
+                f"A stale gateway may still be running — try `coral stop` or "
+                f"`lsof -i :{self.port}` to find the process."
+            )
+        finally:
+            sock.close()
 
     def _wait_healthy(self) -> None:
         """Poll /health until 200 or timeout."""

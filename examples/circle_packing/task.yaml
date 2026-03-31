@@ -45,10 +45,10 @@ grader:
 agents:
   count: 1
   runtime: opencode
-  model: minimax/MiniMax-M2.5
+  model: claude/claude-opus-4-6  # to be consistent with ./seed/opencode.json
   gateway:
     enabled: true
-    port: 4000
+    port: 4000  # to be consistent with ./seed/opencode.json
     config: "./litellm_config.yaml"
 
 workspace:
@@ -60,4 +60,4 @@ workspace:
 run:
   verbose: false
   ui: false
-  session: local
+  session: docker
