@@ -171,9 +171,22 @@ class AgentManager:
         shared_dir_name = self.runtime.shared_dir_name
         setup_shared_state(worktree_path, self.paths.coral_dir, shared_dir_name)
 
+        # Register agent with gateway if active (before settings so we have the key)
+        if self._gateway and agent_id not in self._gateway_keys:
+            proxy_key = self._gateway.register_agent(agent_id, worktree_path)
+            self._gateway_keys[agent_id] = proxy_key
+
+        gateway_url = self._gateway.url if self._gateway else None
+        gateway_api_key = self._gateway_keys.get(agent_id)
+
         # Runtime-specific: write permission settings per worktree
         if shared_dir_name == ".claude":
-            setup_claude_settings(worktree_path, coral_dir=self.paths.coral_dir, research=self.config.agents.research)
+            setup_claude_settings(
+                worktree_path, coral_dir=self.paths.coral_dir,
+                research=self.config.agents.research,
+                gateway_url=gateway_url,
+                gateway_api_key=gateway_api_key,
+            )
         elif shared_dir_name == ".opencode":
             setup_opencode_settings(worktree_path, coral_dir=self.paths.coral_dir, research=self.config.agents.research)
 
@@ -195,14 +208,7 @@ class AgentManager:
         )
         (worktree_path / instruction_file).write_text(coral_md)
 
-        # Register agent with gateway if active
-        if self._gateway and agent_id not in self._gateway_keys:
-            proxy_key = self._gateway.register_agent(agent_id, worktree_path)
-            self._gateway_keys[agent_id] = proxy_key
-
         # Start agent
-        gateway_url = self._gateway.url if self._gateway else None
-        gateway_api_key = self._gateway_keys.get(agent_id)
         handle = self.runtime.start(
             worktree_path=worktree_path,
             coral_md_path=worktree_path / instruction_file,

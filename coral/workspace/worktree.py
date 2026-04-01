@@ -160,11 +160,20 @@ def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: st
                 dst.symlink_to(src.resolve())
 
 
-def setup_claude_settings(worktree_path: Path, coral_dir: Path, *, research: bool = True) -> None:
-    """Write Claude Code settings.json with permissions.
+def setup_claude_settings(
+    worktree_path: Path,
+    coral_dir: Path,
+    *,
+    research: bool = True,
+    gateway_url: str | None = None,
+    gateway_api_key: str | None = None,
+) -> None:
+    """Write Claude Code settings.json with permissions and gateway env.
 
     Grants the agent all tool permissions via allow rules (replacing
-    --dangerously-skip-permissions).
+    --dangerously-skip-permissions).  When a gateway is configured, sets
+    ANTHROPIC_BASE_URL and ANTHROPIC_API_KEY in the settings ``env`` so
+    they override the user's global ``~/.claude/settings.json``.
     """
     claude_dir = worktree_path / ".claude"
     claude_dir.mkdir(exist_ok=True)
@@ -204,6 +213,21 @@ def setup_claude_settings(worktree_path: Path, coral_dir: Path, *, research: boo
             "deny": deny_rules,
         },
     }
+
+    # Route agent traffic through gateway by overriding env in settings.
+    # Claude Code reads env vars from settings, not the OS environment,
+    # so process-level env vars have no effect.
+    if gateway_url or gateway_api_key:
+        env: dict[str, str] = {}
+        if gateway_url:
+            env["ANTHROPIC_BASE_URL"] = gateway_url
+        if gateway_api_key:
+            env["ANTHROPIC_API_KEY"] = gateway_api_key
+        # Clear custom headers so the agent doesn't send them to the
+        # local gateway — LiteLLM handles upstream headers via its own
+        # config.  Without this, headers from the user's global settings
+        env["ANTHROPIC_CUSTOM_HEADERS"] = ""
+        settings["env"] = env
 
     settings_path = claude_dir / "settings.json"
     # Always overwrite — each agent needs its own copy

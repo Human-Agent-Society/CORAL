@@ -145,13 +145,19 @@ class CoralGatewayMiddleware:
                 body_parts.append(message.get("body", b""))
             return message
 
-        # Add CORAL headers to the request and replace auth with master key
+        # Add CORAL headers to the request and replace auth with master key.
+        # The Anthropic SDK sends "x-api-key" while OpenAI SDK sends
+        # "Authorization: Bearer ...".  Replace both so the proxy key
+        # from the agent is swapped for the LiteLLM master key.
         new_headers = []
         for raw_name, raw_value in scope.get("headers", []):
             name = raw_name.decode("latin-1").lower() if isinstance(raw_name, bytes) else raw_name.lower()
             if name == "authorization" and self.master_key:
                 # Replace agent's proxy key with the LiteLLM master key
                 new_headers.append((raw_name, f"Bearer {self.master_key}".encode("latin-1")))
+            elif name == "x-api-key" and self.master_key:
+                # Anthropic SDK auth header — replace with master key
+                new_headers.append((raw_name, self.master_key.encode("latin-1")))
             else:
                 new_headers.append((raw_name, raw_value))
 
