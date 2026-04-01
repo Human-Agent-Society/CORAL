@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import uvicorn
 import logging
 import secrets
 import socket
@@ -10,6 +12,10 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from coral.gateway.middleware import CoralGatewayMiddleware
+from litellm.proxy.proxy_server import app as litellm_app
+from litellm.proxy.proxy_server import initialize
+
 
 logger = logging.getLogger(__name__)
 
@@ -59,24 +65,11 @@ class GatewayManager:
 
     def start(self) -> None:
         """Initialize LiteLLM, add middleware, and start uvicorn in a thread."""
-        import asyncio
-
-        import uvicorn
-
-        from coral.gateway.middleware import CoralGatewayMiddleware
-
         # Fail fast if port is already in use (e.g. stale gateway from previous run)
         self._check_port_available()
 
         logger.info(f"Starting gateway on port {self.port}")
         logger.info(f"LiteLLM config: {self.config_path}")
-
-        # Import and initialize LiteLLM proxy app
-        from litellm.proxy.proxy_server import app as litellm_app
-
-        # Initialize LiteLLM with config
-        # We run the async initialize in a temporary event loop
-        from litellm.proxy.proxy_server import initialize
 
         loop = asyncio.new_event_loop()
         try:
@@ -103,7 +96,7 @@ class GatewayManager:
             app=middleware,
             host="0.0.0.0",
             port=self.port,
-            log_level="warning",
+            log_level="info",
             lifespan="off",
         )
         server = uvicorn.Server(config)
@@ -151,8 +144,8 @@ class GatewayManager:
             sock.close()
 
     def _wait_healthy(self) -> None:
-        """Poll /health until 200 or timeout."""
-        health_url = f"{self.url}/health"
+        """Poll /health/readiness until 200 or timeout."""
+        health_url = f"{self.url}/health/readiness"
         deadline = time.monotonic() + HEALTH_CHECK_TIMEOUT
         while time.monotonic() < deadline:
             try:
