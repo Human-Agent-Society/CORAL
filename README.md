@@ -32,6 +32,7 @@ Want self-improving AI without the configuration overhead? Try Coral.
 
 ### 🔥 News!
 
+- **[2026-04-03]** Paper is released! Check out [Arxiv](https://arxiv.org/pdf/2604.01658).
 - **[2026-03-18]** CORAL is released! Check out our [blog post](https://human-agent-society.github.io/CORAL/).
 
 ![Demo](assets/demo.gif)
