@@ -341,7 +341,7 @@ def setup_codex_settings(
             'wire_api = "responses"',
             'env_key = "OPENAI_API_KEY"',
         ]
-    
+
     lines += [
         '\n[tools]',
         f'web_search = "{web_search}"',
