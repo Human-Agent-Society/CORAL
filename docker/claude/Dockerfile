@@ -27,6 +27,18 @@ COPY coral/ coral/
 RUN uv sync --no-dev
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Ensure agent venvs survive login-shell PATH resets (/etc/profile on
+# Debian sets PATH absolutely).  /etc/profile sources /etc/profile.d/*.sh
+# afterwards, so we re-inject both the CORAL venv and the per-agent
+# VIRTUAL_ENV here.
+RUN printf '#!/bin/sh\n\
+if [ -n "$VIRTUAL_ENV" ] && [ -d "$VIRTUAL_ENV/bin" ]; then\n\
+    PATH="$VIRTUAL_ENV/bin:$PATH"\n\
+fi\n\
+if [ -d /app/.venv/bin ]; then\n\
+    PATH="/app/.venv/bin:$PATH"\n\
+fi\n' > /etc/profile.d/coral-venv.sh && chmod +x /etc/profile.d/coral-venv.sh
+
 # Entrypoint copies mounted credentials into a writable ~/.claude,
 # then runs coral. Host's ~/.claude is mounted at /claude-config (ro).
 ENV CORAL_IN_DOCKER=1
