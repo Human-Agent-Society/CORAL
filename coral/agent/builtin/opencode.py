@@ -114,7 +114,14 @@ class OpenCodeRuntime:
         logger.info(f"Command: {' '.join(cmd)}")
 
         agent_env = _clean_env()
-        agent_env["UV_PROJECT_ENVIRONMENT"] = str(worktree_path / ".venv")
+        worktree_venv = str(worktree_path / ".venv")
+        agent_env["UV_PROJECT_ENVIRONMENT"] = worktree_venv
+        # Set VIRTUAL_ENV so login shells (which reset PATH) can restore it
+        # via /etc/profile.d/coral-venv.sh in Docker containers.
+        agent_env["VIRTUAL_ENV"] = worktree_venv
+        # Prepend .venv/bin to PATH for non-login shells
+        venv_bin = str(worktree_path / ".venv" / "bin")
+        agent_env["PATH"] = venv_bin + ":" + agent_env.get("PATH", "")
 
         # Route through gateway if configured
         if gateway_url:

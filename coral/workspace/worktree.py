@@ -290,6 +290,14 @@ def setup_opencode_settings(
                 "npm": "@ai-sdk/openai",
                 "name": "openai",
                 "options": provider_options,
+                "models": {
+                    "gpt-5.4": {
+                        "name": "gpt-5.4"
+                    },
+                    "claude-opus-4-6": {
+                        "name": "claude-opus-4-6"
+                    }
+                }
             },
         }
 
@@ -322,18 +330,22 @@ def setup_codex_settings(
         'approval_policy = "never"',
         'sandbox_mode = "danger-full-access"',
         'personality = "pragmatic"',
-        '\n[tools]',
-        f'web_search = "{web_search}"',
     ]
 
     if gateway_url:
         lines += [
+            'model_provider = "litellm"\n',
             '[model_providers.litellm]',
             'name = "LiteLLM Proxy"',
             f'open_base_url = "{gateway_url}/v1"',
             'wire_api = "responses"',
             'env_key = "OPENAI_API_KEY"',
         ]
+
+    lines += [
+        '\n[tools]',
+        f'web_search = "{web_search}"',
+    ]
 
     config_toml = "\n".join(lines) + "\n"
 
