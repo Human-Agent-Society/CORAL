@@ -25,6 +25,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock* README* ./
 COPY coral/ coral/
 RUN uv sync --no-dev
+ENV PATH="/app/.venv/bin:$PATH"
 
 ENV CORAL_IN_DOCKER=1
 COPY docker/opencode/entrypoint.sh /docker-entrypoint.sh

@@ -279,7 +279,7 @@ def find_coral_dir(task: str | None = None, run: str | None = None) -> Path:
 
     # Docker shortcut: run dir is mounted at /run, no results/ tree exists
     if in_docker():
-        docker_coral = Path("/run/.coral")
+        docker_coral = Path("/app/run/.coral")
         if docker_coral.is_dir():
             return docker_coral
 

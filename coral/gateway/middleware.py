@@ -228,6 +228,8 @@ def _is_api_path(path: str) -> bool:
         "/chat/completions",
         "/v1/completions",
         "/completions",
+        "/v1/responses",
+        "/responses",
     )
     return any(path.startswith(p) for p in api_prefixes)
 
@@ -253,6 +255,7 @@ def _assemble_response(data: bytes) -> Any:
     finish_reason = None
     usage = None
     response_id = None
+    status = None
 
     for line in raw.splitlines():
         line = line.strip()
@@ -271,13 +274,31 @@ def _assemble_response(data: bytes) -> Any:
         if not model and chunk.get("model"):
             model = chunk["model"]
 
-        for choice in chunk.get("choices", []):
-            delta = choice.get("delta", {})
-            text = delta.get("content", "")
+        chunk_type = chunk.get("type", "")
+
+        # OpenAI Responses API streaming format
+        if chunk_type == "response.output_text.delta":
+            text = chunk.get("delta", "")
             if text:
                 content_parts.append(text)
-            if choice.get("finish_reason"):
-                finish_reason = choice["finish_reason"]
+        elif chunk_type == "response.completed":
+            response_obj = chunk.get("response", {})
+            if not response_id and response_obj.get("id"):
+                response_id = response_obj["id"]
+            if not model and response_obj.get("model"):
+                model = response_obj["model"]
+            status = response_obj.get("status")
+            if response_obj.get("usage"):
+                usage = response_obj["usage"]
+        # Chat Completions streaming format
+        else:
+            for choice in chunk.get("choices", []):
+                delta = choice.get("delta", {})
+                text = delta.get("content", "")
+                if text:
+                    content_parts.append(text)
+                if choice.get("finish_reason"):
+                    finish_reason = choice["finish_reason"]
 
         if chunk.get("usage"):
             usage = chunk["usage"]
@@ -291,6 +312,8 @@ def _assemble_response(data: bytes) -> Any:
         assembled["content"] = "".join(content_parts)
     if finish_reason:
         assembled["finish_reason"] = finish_reason
+    if status:
+        assembled["status"] = status
     if usage:
         assembled["usage"] = usage
 

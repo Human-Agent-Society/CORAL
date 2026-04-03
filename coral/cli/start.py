@@ -162,7 +162,7 @@ def _build_docker_cmd(
         "sudo", "docker", "run", "-d",
         "--name", container_name,
         "-v", f"{config_dir}:/task:ro",
-        "-v", f"{host_run_dir}:/run:rw",
+        "-v", f"{host_run_dir}:/app/run:rw",
         "-v", f"{repo_path}:/repo:rw",
     ]
 
@@ -255,7 +255,7 @@ def _start_in_docker(args: argparse.Namespace, config: CoralConfig) -> None:
     )
     docker_cmd.extend([
         "start", "--config", f"/task/{config_path.name}",
-        "workspace.run_dir=/run", "workspace.repo_path=/repo", "run.session=local",
+        "workspace.run_dir=/app/run", "workspace.repo_path=/repo", "run.session=local",
     ])
     docker_cmd.extend(getattr(args, "overrides", []))
 
@@ -473,7 +473,7 @@ def _resume_in_docker(args: argparse.Namespace, config: CoralConfig, coral_dir: 
     )
     docker_cmd.extend([
         "resume",
-        "workspace.run_dir=/run", "workspace.repo_path=/repo", "run.session=local",
+        "workspace.run_dir=/app/run", "workspace.repo_path=/repo", "run.session=local",
     ])
     instruction = getattr(args, "instruction", None)
     if instruction:

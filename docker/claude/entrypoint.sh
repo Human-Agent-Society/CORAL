@@ -16,4 +16,4 @@ if [ -d /claude-config ]; then
         cp -a "$d" "/root/.claude/$name" 2>/dev/null || true
     done
 fi
-exec uv run coral "$@"
+exec coral "$@"

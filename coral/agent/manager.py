@@ -33,6 +33,7 @@ from coral.workspace import (
     create_agent_worktree,
     create_project,
     setup_claude_settings,
+    setup_codex_settings,
     setup_opencode_settings,
     setup_gitignore,
     setup_shared_state,
@@ -188,7 +189,19 @@ class AgentManager:
                 gateway_api_key=gateway_api_key,
             )
         elif shared_dir_name == ".opencode":
-            setup_opencode_settings(worktree_path, coral_dir=self.paths.coral_dir, research=self.config.agents.research)
+            setup_opencode_settings(
+                worktree_path, coral_dir=self.paths.coral_dir,
+                research=self.config.agents.research,
+                gateway_url=gateway_url,
+                gateway_api_key=gateway_api_key,
+            )
+        elif shared_dir_name == ".codex":
+            setup_codex_settings(
+                worktree_path, coral_dir=self.paths.coral_dir,
+                research=self.config.agents.research,
+                gateway_url=gateway_url,
+                gateway_api_key=gateway_api_key,
+            )
 
         # Seed local heartbeat config from task YAML if not already present
         if not read_agent_heartbeat(self.paths.coral_dir, agent_id):

@@ -234,11 +234,20 @@ def setup_claude_settings(
     settings_path.write_text(json.dumps(settings, indent=2) + "\n")
 
 
-def setup_opencode_settings(worktree_path: Path, coral_dir: Path, *, research: bool = True) -> None:
+def setup_opencode_settings(
+    worktree_path: Path,
+    coral_dir: Path,
+    *,
+    research: bool = True,
+    gateway_url: str | None = None,
+    gateway_api_key: str | None = None,
+) -> None:
     """Write OpenCode opencode.json with scoped permissions.
 
     Allows access to the agent's worktree and shared public state,
     but denies access to .coral/private/ (grader data, answer keys).
+    When a gateway is configured, patches the provider's baseURL so
+    agent traffic routes through the LiteLLM proxy.
     """
     opencode_dir = worktree_path / ".opencode"
     opencode_dir.mkdir(exist_ok=True)
@@ -249,6 +258,7 @@ def setup_opencode_settings(worktree_path: Path, coral_dir: Path, *, research: b
     settings: dict = {
         "$schema": "https://opencode.ai/config.json",
         "permission": {
+            "*": "allow",
             "external_directory": {
                 public_pattern: "allow",
             },
@@ -271,8 +281,64 @@ def setup_opencode_settings(worktree_path: Path, coral_dir: Path, *, research: b
         },
     }
 
+    if gateway_url:
+        provider_options: dict[str, str] = {"baseURL": gateway_url}
+        if gateway_api_key:
+            provider_options["apiKey"] = gateway_api_key
+        settings["provider"] = {
+            "openai": {
+                "npm": "@ai-sdk/openai",
+                "name": "openai",
+                "options": provider_options,
+            },
+        }
+
     settings_path = opencode_dir / "opencode.json"
     settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+
+
+def setup_codex_settings(
+    worktree_path: Path,
+    coral_dir: Path,
+    *,
+    research: bool = True,
+    gateway_url: str | None = None,
+    gateway_api_key: str | None = None,
+) -> None:
+    """Write Codex CLI config.toml with sandbox, approval, and web search settings.
+
+    Sets the agent to full-auto mode (no approval prompts, workspace-write
+    sandbox) and toggles web_search based on the *research* flag.  When a
+    gateway is configured, sets ``openai_base_url`` so the agent routes
+    traffic through the LiteLLM proxy.
+    """
+    codex_dir = worktree_path / ".codex"
+    codex_dir.mkdir(exist_ok=True)
+
+    web_search = "live" if research else "disabled"
+
+    lines = [
+        'model = "gpt-5.4"',
+        'approval_policy = "never"',
+        'sandbox_mode = "danger-full-access"',
+        'personality = "pragmatic"',
+        '\n[tools]',
+        f'web_search = "{web_search}"',
+    ]
+
+    if gateway_url:
+        lines += [
+            '[model_providers.litellm]',
+            'name = "LiteLLM Proxy"',
+            f'open_base_url = "{gateway_url}/v1"',
+            'wire_api = "responses"',
+            'env_key = "OPENAI_API_KEY"',
+        ]
+
+    config_toml = "\n".join(lines) + "\n"
+
+    settings_path = codex_dir / "config.toml"
+    settings_path.write_text(config_toml)
 
 
 def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:

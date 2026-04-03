@@ -25,6 +25,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock* README* ./
 COPY coral/ coral/
 RUN uv sync --no-dev
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Entrypoint copies mounted credentials into a writable ~/.claude,
 # then runs coral. Host's ~/.claude is mounted at /claude-config (ro).
