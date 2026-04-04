@@ -147,6 +147,7 @@ class Attempt:
     feedback: str = ""
     shared_state_hash: str | None = None
     parent_shared_state_hash: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         d = {
@@ -163,6 +164,8 @@ class Attempt:
             d["shared_state_hash"] = self.shared_state_hash
         if self.parent_shared_state_hash is not None:
             d["parent_shared_state_hash"] = self.parent_shared_state_hash
+        if self.metadata:
+            d["metadata"] = self.metadata
         return d
 
     @classmethod
@@ -178,4 +181,5 @@ class Attempt:
             feedback=data.get("feedback", ""),
             shared_state_hash=data.get("shared_state_hash"),
             parent_shared_state_hash=data.get("parent_shared_state_hash"),
+            metadata=data.get("metadata", {}),
         )
