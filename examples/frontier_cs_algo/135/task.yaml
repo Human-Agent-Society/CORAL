@@ -17,8 +17,6 @@ task:
     \ annealing, beam search, greedy + local search.\n                - Check the\
     \ scoring formula in the statement — some problems score relative to a baseline.\n\
     \                - Test your solution locally before submitting."
-  files:
-  - solution.cpp
   tips: '- Your score is 0-100 based on solution quality across 3 test cases.
 
     - Invalid or crashing solutions score 0.

@@ -60,8 +60,6 @@ task:
 
     Simply return the optimized Evolved class, do not provide explanations.
 
-  files:
-    - "initial_program.py"
 
 grader:
   timeout: 360

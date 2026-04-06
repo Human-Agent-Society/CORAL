@@ -28,10 +28,6 @@ task:
     - Allowing f to take negative values for better C3 bounds
     - Multi-start optimization to escape local minima
     - Learning rate schedules with warmup
-  files:
-    - "initial_program.py"
-  seed:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
     - The evaluator verifies: shape matches n_points, integral is non-zero, recomputes C3 independently.

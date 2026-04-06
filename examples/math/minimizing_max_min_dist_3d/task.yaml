@@ -21,10 +21,6 @@ task:
     - Force-directed methods (repulsion between close points)
     - Known polyhedra and geometric constructions for 14 points
     - Gradient descent on smooth objective formulations
-  files:
-    - "initial_program.py"
-  seed:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
     - The evaluator checks: shape is (14, 3), computes pairwise distances via scipy.spatial.distance.pdist.

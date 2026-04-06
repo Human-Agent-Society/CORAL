@@ -9,7 +9,6 @@ def test_generate_coral_md_has_required_sections():
         task=TaskConfig(
             name="Kernel Optimization",
             description="Optimize the kernel for speed.",
-            files=["kernel_builder.py"],
             tips="Profile first!",
         ),
         grader=GraderConfig(type="kernel_builder"),
@@ -21,7 +20,6 @@ def test_generate_coral_md_has_required_sections():
     # Task info
     assert "Kernel Optimization" in md
     assert "Optimize the kernel for speed" in md
-    assert "kernel_builder.py" in md
 
     # Tips
     assert "Profile first!" in md
@@ -78,7 +76,6 @@ def test_generate_coral_md_single_agent():
         task=TaskConfig(
             name="Solo Task",
             description="Optimize alone.",
-            files=["target.py"],
             tips="Be thorough.",
         ),
         grader=GraderConfig(type="function"),
@@ -90,7 +87,6 @@ def test_generate_coral_md_single_agent():
     # Core content present
     assert "Solo Task" in md
     assert "Optimize alone." in md
-    assert "target.py" in md
     assert "Be thorough." in md
     assert "agent-1" in md
     assert "fully autonomous" in md

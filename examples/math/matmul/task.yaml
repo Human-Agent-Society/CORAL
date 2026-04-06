@@ -34,10 +34,6 @@ task:
     - Different initialization strategies and learning rate schedules
     - Constraint enforcement to keep solutions in a valid space
     - Grid-based search in the space of half-integer or integer decompositions
-  files:
-    - "initial_program.py"
-  seed:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
     - The evaluator checks EXACT equality of the reconstructed tensor vs ground truth — approximate solutions score 0.

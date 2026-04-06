@@ -31,7 +31,7 @@ def test_full_workspace_creation():
 
         # Create project
         config = CoralConfig(
-            task=TaskConfig(name="optimize", description="Make it fast", files=["main.py"], tips="Profile first"),
+            task=TaskConfig(name="optimize", description="Make it fast", tips="Profile first"),
             grader=GraderConfig(type="function"),
             agents=AgentConfig(count=2),
             workspace=WorkspaceConfig(results_dir=str(base / "results"), repo_path=str(repo)),
@@ -109,7 +109,6 @@ def test_coral_md_generation():
         task=TaskConfig(
             name="Kernel Optimization",
             description="Optimize the VLIW kernel for minimum cycle count.",
-            files=["kernel_builder.py", "helpers.py"],
             tips="- Use SIMD vectorization\n- Minimize memory stalls",
         ),
         grader=GraderConfig(type="kernel_builder"),
@@ -121,10 +120,6 @@ def test_coral_md_generation():
     # Must contain task info
     assert "Kernel Optimization" in md
     assert "VLIW kernel" in md
-
-    # Must list key files
-    assert "kernel_builder.py" in md
-    assert "helpers.py" in md
 
     # Must include tips
     assert "SIMD vectorization" in md

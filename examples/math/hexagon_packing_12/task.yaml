@@ -19,10 +19,6 @@ task:
 
     Your score is based on how close 1/outer_hex_side_length is to the best known result
     (1/3.9419123 ~ 0.2537).
-  files:
-    - "initial_program.py"
-  seed:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
     - The evaluator uses the Separating Axis Theorem (SAT) for disjointness checks.

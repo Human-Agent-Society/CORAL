@@ -16,7 +16,7 @@ from coral.config import (
 
 def test_config_roundtrip():
     config = CoralConfig(
-        task=TaskConfig(name="test", description="A test", files=["main.py"], tips="Be fast"),
+        task=TaskConfig(name="test", description="A test", tips="Be fast"),
         grader=GraderConfig(type="function", module="my_module", args={"k": 1}),
         agents=AgentConfig(count=2, model="opus"),
     )
@@ -26,7 +26,6 @@ def test_config_roundtrip():
         restored = CoralConfig.from_yaml(f.name)
 
     assert restored.task.name == "test"
-    assert restored.task.files == ["main.py"]
     assert restored.grader.type == "function"
     assert restored.agents.count == 2
     assert restored.agents.model == "opus"

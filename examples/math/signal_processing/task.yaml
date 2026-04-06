@@ -36,10 +36,6 @@ task:
     - Exponential moving averages with adaptive weighting
     - Savitzky-Golay filtering for trend preservation
     - Median filtering for impulse noise rejection
-  files:
-    - "initial_program.py"
-  seed:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 600s. Each of 5 test signals has a 10s per-signal timeout.
     - The evaluator generates 5 test signals with different characteristics and noise levels.

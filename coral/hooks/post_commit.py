@@ -180,7 +180,7 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
         id=config.task.name,
         name=config.task.name,
         description=config.task.description,
-        metadata={"files": config.task.files},
+        metadata={},
     )
 
     # Run evaluation with timeout

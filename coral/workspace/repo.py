@@ -130,34 +130,6 @@ def copy_seed_directory(seed_dir: Path, repo_dir: Path) -> None:
     _commit_staged_changes(repo_dir, "Add seed files")
 
 
-def copy_seed_files(seed_paths: list[str], repo_dir: Path, config_dir: Path) -> None:
-    """Copy seed files/directories into the repo.
-
-    Paths in seed_paths are resolved relative to config_dir.
-    Files are copied to the repo root. Directories are copied recursively.
-    """
-    for seed_path_str in seed_paths:
-        src = Path(seed_path_str)
-        if not src.is_absolute():
-            src = (config_dir / src).resolve()
-
-        if not src.exists():
-            logger.warning(f"Seed path not found, skipping: {src}")
-            continue
-
-        dst = repo_dir / src.name
-        if src.is_dir():
-            if dst.exists():
-                shutil.rmtree(dst)
-            shutil.copytree(src, dst)
-            logger.info(f"Seeded directory: {src.name}/")
-        else:
-            shutil.copy2(src, dst)
-            logger.info(f"Seeded file: {src.name}")
-
-    _commit_staged_changes(repo_dir, "Add seed files")
-
-
 def copy_private_data(private_paths: list[str], coral_dir: Path, config_dir: Path) -> None:
     """Copy private grader data into .coral/ (hidden from agent worktrees).
 
