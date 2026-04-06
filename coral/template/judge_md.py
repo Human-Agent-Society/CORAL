@@ -296,7 +296,7 @@ def _parse_guidance_into_criteria(runtime_guidance: str) -> list[dict[str, str]]
             directive = m.group(1).strip()
             if directive:
                 criteria.append({
-                    "name": f"[LOCKED] {directive[:80]}",
+                    "name": f"[USER] {directive[:80]}",
                     "description": directive,
                 })
     return criteria

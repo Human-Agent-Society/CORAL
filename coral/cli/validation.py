@@ -11,20 +11,26 @@ from pathlib import Path
 from coral.config import CoralConfig
 
 
-def validate_task(task_dir: Path) -> list[str]:
-    """Validate a task directory. Returns a list of error strings (empty = valid)."""
+def validate_task(task_dir: Path, config_path: Path | None = None) -> list[str]:
+    """Validate a task directory. Returns a list of error strings (empty = valid).
+
+    Args:
+        task_dir: Directory containing the task config and eval/.
+        config_path: Explicit path to the config YAML. If not provided,
+                     looks for ``task.yaml`` in *task_dir*.
+    """
     errors: list[str] = []
 
-    # 1. task.yaml exists and parses
-    task_yaml = task_dir / "task.yaml"
+    # 1. Config exists and parses
+    task_yaml = config_path or (task_dir / "task.yaml")
     if not task_yaml.exists():
-        errors.append(f"task.yaml not found in {task_dir}")
+        errors.append(f"Config not found: {task_yaml}")
         return errors  # Can't continue without config
 
     try:
         config = CoralConfig.from_yaml(task_yaml)
     except Exception as e:
-        errors.append(f"task.yaml parse error: {e}")
+        errors.append(f"Config parse error ({task_yaml.name}): {e}")
         return errors
 
     # 2. eval/grader.py exists (if no legacy grader.type is set)

@@ -84,6 +84,13 @@ class FileWatcher:
         else:
             state["eval_count"] = 0
 
+        # Rubric: track current.md mtime for evolution detection
+        rubric_file = self.coral_dir / "public" / "rubrics" / "current.md"
+        if rubric_file.exists():
+            state["rubric_mtime"] = rubric_file.stat().st_mtime
+        else:
+            state["rubric_mtime"] = 0
+
         return state
 
     async def run(self) -> None:
@@ -132,6 +139,12 @@ class FileWatcher:
                 self._broadcast({
                     "event": "eval:update",
                     "data": {"count": new_state["eval_count"]},
+                })
+
+            if new_state["rubric_mtime"] > self._state.get("rubric_mtime", 0):
+                self._broadcast({
+                    "event": "rubric:update",
+                    "data": {"mtime": new_state["rubric_mtime"]},
                 })
 
             self._state = new_state

@@ -78,7 +78,7 @@ When the agent meets every criterion, you must raise the bar or encourage the ag
    - **Agent notes:** ideas or concerns the agent raised that aren't yet captured in criteria
    - **Excellence dimensions:** what separates good from exceptional work for this task?
 2. **Self-check for bias.** Before finalizing new criteria, ask: "Do my criteria only reward one conclusion, or do they reward rigorous reasoning regardless of the conclusion reached?" Criteria should evaluate whether the agent considered alternatives and counterarguments — not whether it agreed with your view. Phrase criteria as "analyzes whether X" not "explains why X."
-3. **Retire up to 1 trivially-easy criterion** if you are near {max_criteria} active criteria, to make room for harder ones. **Never retire `[LOCKED]` criteria** — these are system-enforced and cannot be modified.
+3. **Retire up to 1 trivially-easy criterion** if you are near {max_criteria} active criteria, to make room for harder ones. **Never retire `[USER]` criteria** — these are user-defined and cannot be modified.
 4. **Score the output against your new criteria** in this same evaluation — include them in `criteria_scores` alongside the existing criteria.
 5. Include all new criteria in `rubric_evolution.new_criteria`.
 

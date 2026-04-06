@@ -450,11 +450,11 @@ class AgentJudgeGrader(TaskGrader):
         version_num = (current.version + 1) if current else 1
 
         # Apply refinements (update existing criteria by name)
-        # Skip [LOCKED] criteria — they cannot be modified
+        # Skip [USER] criteria — they are user-defined and cannot be modified
         refined_names = set()
         for item in refined_raw:
             name = item.get("name", "")
-            if not name or name.startswith("[LOCKED]"):
+            if not name or name.startswith("[USER]"):
                 continue
             refined_names.add(name)
             for i, r in enumerate(active):
@@ -466,10 +466,10 @@ class AgentJudgeGrader(TaskGrader):
                     )
                     break
 
-        # Apply retirements — but protect [LOCKED] criteria from removal
+        # Apply retirements — but protect [USER] criteria from removal
         retired_names = {r.get("name", "") for r in retired_raw}
-        locked_names = {r.name for r in active if r.name.startswith("[LOCKED]")}
-        retired_names -= locked_names  # never retire locked criteria
+        user_names = {r.name for r in active if r.name.startswith("[USER]")}
+        retired_names -= user_names  # never retire user-defined criteria
         newly_retired = [r for r in active if r.name in retired_names]
         active = [r for r in active if r.name not in retired_names]
         retired.extend(newly_retired)
