@@ -12,10 +12,6 @@ task:
     where BENCHMARK = 0.027835571458482138.
 
     A score of 1.0 means matching the best known result; above 1.0 is a new record.
-  files:
-    - "initial_program.py"
-  seed:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
     - The evaluator checks all C(14,3) = 364 triangles formed by point triples.

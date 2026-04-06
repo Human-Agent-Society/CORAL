@@ -392,8 +392,6 @@ def cmd_start(args: argparse.Namespace) -> None:
         print(f"[coral] Max turns:  {config.agents.max_turns}")
         print(f"[coral] Results:    {config.workspace.results_dir}")
         print(f"[coral] Repo path:  {config.workspace.repo_path}")
-        if config.task.seed:
-            print(f"[coral] Seed files: {config.task.seed}")
         print()
 
     manager = AgentManager(config, verbose=verbose, config_dir=config_path.parent)

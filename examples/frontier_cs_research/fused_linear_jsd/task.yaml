@@ -5,8 +5,6 @@ task:
     \n            Write your solution in `solution.py`.\nNOTE: This problem requires\
     \ GPU (CUDA) for evaluation.\nDocker image: andylizf/triton-tlx:tlx-nv-cu122\n\
     \n            Your score will be 0-100 based on solution quality.\n"
-  files:
-  - solution.py
   tips: '- Read statement.md carefully for the exact interface and scoring formula.
 
     - Evaluation timeout: 1800s.

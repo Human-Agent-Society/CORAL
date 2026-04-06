@@ -16,9 +16,7 @@ class TaskConfig:
 
     name: str = MISSING
     description: str = MISSING
-    files: list[str] = field(default_factory=list)
     tips: str = ""
-    seed: list[str] = field(default_factory=list)  # files/dirs to copy into workspace
 
 
 @dataclass

@@ -24,10 +24,6 @@ task:
     - Multi-start local optimization with perturbation
     - Gradient descent on a smooth penalty formulation
     - Quasi-Newton methods (L-BFGS-B) with constraint handling
-  files:
-    - "initial_program.py"
-  seed:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
     - The evaluator checks: all circles within the unit square, no overlaps, and measures sum of radii.

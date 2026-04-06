@@ -22,8 +22,6 @@ task:
     - Analytical insights about the optimal h structure
     - Hybrid approaches combining gradient-based and non-gradient methods
     - Binary/step function approximations with careful regularization
-  files:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 1100s. If your solution takes longer, it scores as a timeout — reduce complexity or n_points.
     - More n_points gives finer discretization but slower eval. Balance accuracy vs speed.

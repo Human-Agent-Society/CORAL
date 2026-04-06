@@ -17,10 +17,6 @@ task:
       4. sum(radii) is maximized
 
     Your score is based on how close your sum of radii is to the best known result (2.3658321334167627).
-  files:
-    - "initial_program.py"
-  seed:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
     - The evaluator computes the minimum circumscribing rectangle and checks its perimeter <= 4.

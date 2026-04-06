@@ -4,8 +4,6 @@ task:
     \ from the Frontier-CS benchmark.\n            Read the full problem statement\
     \ in `statement.md`.\n\n            Write your solution in `solution.cpp`.\nDocker\
     \ image: gcc:13\n\n            Your score will be 0-100 based on solution quality.\n"
-  files:
-  - solution.cpp
   tips: '- Read statement.md carefully for the exact interface and scoring formula.
 
     - Evaluation timeout: 600s.

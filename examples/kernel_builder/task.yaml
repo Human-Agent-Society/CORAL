@@ -28,10 +28,6 @@ task:
     3. Loop unrolling: Reduce loop overhead
     4. Memory access patterns: Use vload/vstore for contiguous access
     5. Instruction scheduling: Avoid dependencies, maximize ILP
-  files:
-    - "kernel_builder.py"
-  seed:
-    - "kernel_builder.py"
   tips: |
     - Eval timeout is 120s. The kernel itself should run in under a second.
     - Correctness is mandatory — incorrect output scores 0.

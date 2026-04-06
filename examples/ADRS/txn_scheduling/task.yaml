@@ -28,8 +28,6 @@ task:
 
     Score: 1,000,000 / (1 + total_makespan) — lower total makespan gives higher score.
 
-  files:
-    - "initial_program.py"
 
 grader:
   timeout: 600

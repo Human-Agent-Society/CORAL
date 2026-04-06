@@ -17,7 +17,6 @@ from coral.workspace.repo import (
     copy_eval_to_private,
     copy_private_data,
     copy_seed_directory,
-    copy_seed_files,
 )
 
 logger = logging.getLogger(__name__)
@@ -137,15 +136,10 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     # Auto-copy eval/ to .coral/private/eval/ (if present in task directory)
     copy_eval_to_private(task_source_dir, coral_dir)
 
-    # Auto-detect and copy seed/ (if present in task directory and no explicit seed paths)
-    if not config.task.seed:
-        seed_dir = task_source_dir / "seed"
-        if seed_dir.is_dir():
-            copy_seed_directory(seed_dir, repo_dir)
-
-    # Copy explicit seed files into the repo
-    if config.task.seed:
-        copy_seed_files(config.task.seed, repo_dir, config_dir or Path.cwd())
+    # Auto-copy seed/ into repo (if present in task directory)
+    seed_dir = task_source_dir / "seed"
+    if seed_dir.is_dir():
+        copy_seed_directory(seed_dir, repo_dir)
 
     # Copy private grader data into .coral/ (hidden from agents)
     if config.grader.private:
