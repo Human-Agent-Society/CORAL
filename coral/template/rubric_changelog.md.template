@@ -1,0 +1,24 @@
+# Rubric Evolution Changelog
+
+**Task:** {task_name}
+**Grader:** dynamic_rubric_judge
+**Started:** {start_time}
+
+This file tracks all changes to the evaluation rubrics over time.
+Each version records what criteria were added, refined, or retired, and why.
+
+---
+
+## How to Read This Changelog
+
+- **Version N** — A snapshot of the rubric at that point in time.
+- **Trigger** — What caused the rubric to evolve:
+  - `initial` — First-ever rubric generation
+  - `periodic` — Scheduled evolution (every N evals)
+  - `plateau` — Score stagnation triggered re-evaluation
+- **Active Criteria** — Currently used for scoring.
+- **Retired Criteria** — No longer scored but preserved for history.
+
+---
+
+<!-- Entries are appended below automatically by the dynamic rubric grader -->

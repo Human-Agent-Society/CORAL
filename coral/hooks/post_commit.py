@@ -9,6 +9,7 @@ import subprocess
 import traceback
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from coral.config import CoralConfig
 from coral.grader.loader import load_grader
@@ -185,6 +186,7 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
 
     # Run evaluation with timeout
     eval_timeout = config.grader.timeout  # 0 = no limit
+    attempt_metadata: dict[str, Any] = {}
 
     try:
         result = _run_grader_with_timeout(str(config_path), str(coral_dir), str(workdir_path), [task], eval_timeout)
@@ -198,6 +200,11 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
                 if s.explanation:
                     parts.append(f"{name}: {s.explanation}")
         feedback = "\n".join(parts)
+        # Extract rubric metadata from dynamic rubric graders
+        rubric_meta = result.scores.pop("_rubric_meta", None)
+        if rubric_meta is not None and rubric_meta.metadata:
+            attempt_metadata["rubric_version"] = rubric_meta.metadata.get("rubric_version")
+            attempt_metadata["criteria_count"] = rubric_meta.metadata.get("criteria_count")
         # score is None when grader returns fail() — treat as crashed
         if score is None:
             status = "crashed"
@@ -253,6 +260,7 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
         timestamp=datetime.now(UTC).isoformat(),
         feedback=feedback,
         parent_shared_state_hash=parent_shared_state_hash,
+        metadata=attempt_metadata,
     )
 
     # Checkpoint shared state and record the hash

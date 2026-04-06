@@ -8,6 +8,8 @@ from coral.config import CoralConfig
 
 _TEMPLATE_PATH = Path(__file__).parent / "coral.md.template"
 _SINGLE_TEMPLATE_PATH = Path(__file__).parent / "coral_single.md.template"
+_RUBRIC_TEMPLATE_PATH = Path(__file__).parent / "coral_rubric.md.template"
+_RUBRIC_SINGLE_TEMPLATE_PATH = Path(__file__).parent / "coral_rubric_single.md.template"
 
 
 def generate_coral_md(
@@ -24,7 +26,12 @@ def generate_coral_md(
         single_agent: If True, use simplified single-agent template (no sharing references)
         shared_dir: Name of the shared state directory (e.g. ".claude", ".codex", ".opencode")
     """
-    template_path = _SINGLE_TEMPLATE_PATH if single_agent else _TEMPLATE_PATH
+    is_dynamic_rubric = config.grader.type in ("dynamic_rubric_judge", "agent_judge")
+    has_rubrics = bool(config.task.rubrics) or is_dynamic_rubric
+    if has_rubrics:
+        template_path = _RUBRIC_SINGLE_TEMPLATE_PATH if single_agent else _RUBRIC_TEMPLATE_PATH
+    else:
+        template_path = _SINGLE_TEMPLATE_PATH if single_agent else _TEMPLATE_PATH
     template = template_path.read_text()
 
     # Build optional sections
@@ -76,7 +83,26 @@ def generate_coral_md(
         research_back_reference = ""
         repeat_research_hint = "research new techniques, "
 
-    return template.format(
+    # Build rubrics section for rubric templates
+    rubrics_section = ""
+    if has_rubrics:
+        rubrics_lines = []
+        for i, r in enumerate(config.task.rubrics, 1):
+            rubrics_lines.append(f"{i}. **{r.name}** (weight: {r.weight}): {r.description}")
+        rubrics_section = "\n".join(rubrics_lines)
+        if is_dynamic_rubric:
+            dynamic_note = (
+                "\n\n> **Dynamic Rubrics:** This task uses auto-generated evaluation criteria "
+                "that evolve over time. Check `{shared_dir}/rubrics/current.md` for the active "
+                "rubric and version. Your rubric version is shown in each eval result."
+            ).format(shared_dir=shared_dir)
+            rubrics_section = (rubrics_section + dynamic_note) if rubrics_section else dynamic_note
+
+    # Eval timeout: grader timeout + buffer for git operations
+    grader_timeout = config.grader.timeout or 300
+    eval_timeout = grader_timeout + 60  # extra margin for commit + overhead
+
+    format_kwargs = dict(
         task_name=config.task.name,
         task_description=config.task.description,
         files_section=files_section,
@@ -93,7 +119,13 @@ def generate_coral_md(
         knowledge_step_num=step_offset + 4,
         research_back_reference=research_back_reference,
         repeat_research_hint=repeat_research_hint,
+        eval_timeout=eval_timeout,
     )
+
+    if has_rubrics:
+        format_kwargs["rubrics_section"] = rubrics_section
+
+    return template.format(**format_kwargs)
 
 
 def _get_score_direction(config: CoralConfig) -> str:
