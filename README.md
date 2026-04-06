@@ -88,6 +88,9 @@ uv run coral start -c task.yaml run.ui=true              # also launch web dashb
 uv run coral start -c task.yaml run.session=local         # skip tmux, run inline
 uv run coral start -c task.yaml run.session=docker        # run inside Docker container
 
+# warm-start: research phase before coding (agents do literature review first)
+uv run coral start -c task.yaml agents.warmstart.enabled=true agents.research=true
+
 # stop and resume
 uv run coral stop                                        # stop anytime
 uv run coral resume                                      # pick up where you left off
@@ -111,6 +114,7 @@ Each agent runs in its own git worktree branch. Shared state (attempts, notes, s
 | **Shared state** | `.coral/` directory with attempts, notes, and skills — symlinked into every worktree |
 | **Eval loop** | Agents call `uv run coral eval -m "..."` to stage, commit, and grade in one shot |
 | **CLI orchestration** | 17+ commands: `start`, `stop`, `status`, `eval`, `log`, `ui`, and more |
+| **Warm-start** | Optional research phase — agents do literature review via web search before coding, writing findings to shared notes |
 | **Web dashboard** | `uv run coral ui` — real-time leaderboard, attempt diffs, agent monitoring |
 
 ### Quick Start
