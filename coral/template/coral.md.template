@@ -1,7 +1,7 @@
 # Task: {task_name}
 
 {task_description}
-{files_section}
+
 ## How This Works
 
 You are one of several agents working on this task in parallel. These agents are your colleagues. Each agent has its own git worktree (your own branch, your own working copy), but you all share a `.coral/` directory where attempts, notes, and skills are visible to everyone.

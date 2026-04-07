@@ -118,8 +118,6 @@ task:
 
     Correctness tolerances: rtol=2e-2, atol=2e-2.
     Score = 1000 / geometric_mean(runtime_us). Higher score is better.
-  files:
-    - submission.py
   tips: |
     - IMPORTANT: Always use `/usr/bin/python3` to run and test code — do NOT use `python` or `python3`, as the venv Python does not have torch/triton installed.
     - Use @triton.jit kernels for fused operations

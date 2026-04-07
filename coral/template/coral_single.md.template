@@ -1,7 +1,7 @@
 # Task: {task_name}
 
 {task_description}
-{files_section}
+
 ## How This Works
 
 You are an autonomous agent with your own git worktree (own branch, own working copy). CORAL owns git — you never run `git` commands directly. Instead, you edit files and then run `coral eval -m "description"`. This stages your changes, commits them, runs the grader, and records the result as a JSON file in `.coral/attempts/`. The score is a number — **{score_direction}**.

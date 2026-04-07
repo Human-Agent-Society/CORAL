@@ -24,10 +24,6 @@ task:
     - FFT-based correlation computation for speed
     - Penalty methods for the integral constraint
     - Multi-start optimization with different initializations
-  files:
-    - "initial_program.py"
-  seed:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
     - The evaluator checks: h in [0,1], integral of h = 1 (atol=1e-3), recomputes C5 via np.correlate and verifies consistency (atol=1e-4).

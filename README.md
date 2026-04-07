@@ -88,6 +88,9 @@ uv run coral start -c task.yaml run.ui=true              # also launch web dashb
 uv run coral start -c task.yaml run.session=local         # skip tmux, run inline
 uv run coral start -c task.yaml run.session=docker        # run inside Docker container
 
+# warm-start: research phase before coding (agents do literature review first)
+uv run coral start -c task.yaml agents.warmstart.enabled=true agents.research=true
+
 # stop and resume
 uv run coral stop                                        # stop anytime
 uv run coral resume                                      # pick up where you left off
@@ -112,6 +115,8 @@ Each agent runs in its own git worktree branch. Shared state (attempts, notes, s
 | **Eval loop** | Agents call `uv run coral eval -m "..."` to stage, commit, and grade in one shot |
 | **CLI orchestration** | 17+ commands: `start`, `stop`, `status`, `eval`, `log`, `ui`, and more |
 | **Web dashboard** | `uv run coral ui` — real-time leaderboard, attempt diffs, agent monitoring |
+
+**Warm-start (optional):** Agents do a literature review via web search before coding, writing findings to shared notes. Enable with `agents.warmstart.enabled=true`.
 
 ### Quick Start
 
@@ -427,4 +432,4 @@ This project is released under MIT [LICENSE](LICENSE).
 
 ### Acknowledgement
 
-We thank the [TNT Accelerator](https://www.tnt.so/) for their generous support of various API credits that have helped during the development of Coral. We would also like to thank many of the inspiring prior works such as [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve), [autoresearch](https://github.com/karpathy/autoresearch), [TTT Discover](https://arxiv.org/abs/2503.08951),  etc., that have led to the ideation of Coral.
+We thank the [TNT Accelerator](https://www.tnt.so/) for their generous support of various API credits that have helped during the development of Coral. We would also like to thank many of the inspiring prior works such as [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve), [autoresearch](https://github.com/karpathy/autoresearch), [TTT Discover](https://arxiv.org/abs/2601.16175),  etc., that have led to the ideation of Coral.

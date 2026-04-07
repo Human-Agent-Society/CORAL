@@ -62,8 +62,6 @@ task:
 
     **Environment:** GPU 0 is a H200 available for use.
 
-  files:
-    - "solution.py"
   tips: |
     - Metric is classification accuracy (higher is better, 0–1 scale)
     - Kaggle leaderboard (2288 teams): top score 0.82815, gold ≥ 0.821, silver ≥ 0.814, bronze ≥ 0.810. You are aiming to beat the top score.

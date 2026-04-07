@@ -25,10 +25,6 @@ task:
     - Varying discretization resolution
     - Smart initialization strategies
     - Learning rate schedules with warmup
-  files:
-    - "initial_program.py"
-  seed:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
     - The evaluator verifies: f is non-negative, shape matches n_points, recomputes C1 independently.

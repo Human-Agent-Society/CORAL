@@ -33,8 +33,6 @@ task:
     a baseline.
 
     - Test your solution locally before submitting.'
-  files:
-  - solution.cpp
   tips: '- Your score is 0-100 based on solution quality across 1 test cases.
 
     - Invalid or crashing solutions score 0.

@@ -26,10 +26,6 @@ task:
     - Multiple restarts with small perturbations around known good solutions
     - Careful numerical root-finding after optimization
     - Using scipy.special.hermite for polynomial construction
-  files:
-    - "initial_program.py"
-  seed:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
     - The evaluator uses sympy for exact symbolic verification of P(0)=0, positivity at +inf, and root finding.

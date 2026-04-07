@@ -12,8 +12,6 @@ task:
     Your score will be 0-100 based on solution quality.
 
     '
-  files:
-  - solution.py
   tips: '- Read statement.md carefully for the exact interface and scoring formula.
 
     - Evaluation timeout: 3600s.

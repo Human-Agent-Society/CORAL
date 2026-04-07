@@ -10,13 +10,14 @@ from coral.config import (
     GraderConfig,
     RunConfig,
     TaskConfig,
+    WarmStartConfig,
     WorkspaceConfig,
 )
 
 
 def test_config_roundtrip():
     config = CoralConfig(
-        task=TaskConfig(name="test", description="A test", files=["main.py"], tips="Be fast"),
+        task=TaskConfig(name="test", description="A test", tips="Be fast"),
         grader=GraderConfig(type="function", module="my_module", args={"k": 1}),
         agents=AgentConfig(count=2, model="opus"),
     )
@@ -26,7 +27,6 @@ def test_config_roundtrip():
         restored = CoralConfig.from_yaml(f.name)
 
     assert restored.task.name == "test"
-    assert restored.task.files == ["main.py"]
     assert restored.grader.type == "function"
     assert restored.agents.count == 2
     assert restored.agents.model == "opus"
@@ -206,3 +206,58 @@ def test_to_dict_excludes_task_dir():
     config.task_dir = "/some/path"
     d = config.to_dict()
     assert "task_dir" not in d
+
+
+# --- Warm-start config tests ---
+
+
+def test_warmstart_config_defaults():
+    data = {
+        "task": {"name": "t", "description": "d"},
+    }
+    config = CoralConfig.from_dict(data)
+    assert config.agents.warmstart.enabled is False
+    assert config.agents.warmstart.research_turns == 15
+
+
+def test_warmstart_config_from_yaml():
+    data = {
+        "task": {"name": "t", "description": "d"},
+        "agents": {
+            "warmstart": {
+                "enabled": True,
+                "research_turns": 20,
+            },
+        },
+    }
+    config = CoralConfig.from_dict(data)
+    assert config.agents.warmstart.enabled is True
+    assert config.agents.warmstart.research_turns == 20
+
+
+def test_warmstart_config_roundtrip():
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+        agents=AgentConfig(
+            warmstart=WarmStartConfig(enabled=True, research_turns=20),
+        ),
+    )
+
+    with tempfile.NamedTemporaryFile(suffix=".yaml", mode="w", delete=False) as f:
+        config.to_yaml(f.name)
+        restored = CoralConfig.from_yaml(f.name)
+
+    assert restored.agents.warmstart.enabled is True
+    assert restored.agents.warmstart.research_turns == 20
+
+
+def test_warmstart_dotlist_override():
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+    )
+    merged = CoralConfig.merge_dotlist(config, [
+        "agents.warmstart.enabled=true",
+        "agents.warmstart.research_turns=10",
+    ])
+    assert merged.agents.warmstart.enabled is True
+    assert merged.agents.warmstart.research_turns == 10

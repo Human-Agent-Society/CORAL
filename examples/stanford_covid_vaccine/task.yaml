@@ -57,8 +57,6 @@ task:
 
     **Environment:** GPU 0 is a H200 available for use.
 
-  files:
-    - "solution.py"
   tips: |
     - Metric is MCRMSE (lower is better) over 3 scored columns: reactivity, deg_Mg_pH10, deg_Mg_50C
     - NOTE: This eval uses an MLEBench re-split (10% of original training data as test), NOT the original Kaggle private test set. Scores are not directly comparable to the Kaggle leaderboard.

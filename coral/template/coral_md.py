@@ -35,11 +35,6 @@ def generate_coral_md(
     template = template_path.read_text()
 
     # Build optional sections
-    files_section = ""
-    if config.task.files:
-        files_list = "\n".join(f"- `{f}`" for f in config.task.files)
-        files_section = f"\n## Key Files\n{files_list}\n"
-
     tips_section = ""
     if config.task.tips:
         tips_section = f"\n## Tips\n{config.task.tips}\n"
@@ -105,7 +100,6 @@ def generate_coral_md(
     format_kwargs = dict(
         task_name=config.task.name,
         task_description=config.task.description,
-        files_section=files_section,
         tips_section=tips_section,
         score_direction=score_direction,
         agent_id=agent_id,

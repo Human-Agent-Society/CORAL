@@ -24,10 +24,6 @@ task:
     - Genetic algorithms exploring set compositions
     - Greedy construction with local search refinement
     - Multi-start approaches with different random seeds
-  files:
-    - "initial_program.py"
-  seed:
-    - "initial_program.py"
   tips: |
     - Eval timeout is 600s. If your solution takes longer, it scores as a timeout.
     - The evaluator checks: U is a 1D array, contains 0, all non-negative integers, recomputes C6 and verifies consistency.
