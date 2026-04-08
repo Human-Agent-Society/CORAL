@@ -1,0 +1,64 @@
+task:
+  name: "Antibiotic Drug Design"
+  description: |
+    Design novel small-molecule antibiotics effective against Klebsiella
+    pneumoniae with good safety profiles and drug-like properties.
+
+    This is a multi-objective molecular optimization problem from the SAGA
+    framework's antibiotic design task. The goal is to generate molecules
+    (as SMILES strings) that balance antibacterial activity, structural novelty,
+    safety, and drug-likeness.
+
+    **Your program** (`solution.py`) must define a `run()` function that returns
+    a list of SMILES strings representing candidate drug molecules. Return at
+    least 50 and up to 200 molecules.
+
+    **Scoring (tiered — always works with rdkit, improves with ML models):**
+    - Always available: QED drug-likeness, novelty vs known antibiotics,
+      PAINS/antibiotic motifs filter
+    - With MiniMol models: K. pneumoniae activity prediction (0-1)
+    - With ChemProp models: toxicity safety prediction (0-1)
+
+    **Data:**
+    - `data/starter_molecules.smi` — 30 diverse drug-like molecules to seed optimization
+    - Agents may generate molecules from scratch or evolve from starters
+
+    **Optimization approaches to consider:**
+    - Genetic algorithms with SMILES mutation (atom swaps, ring changes)
+    - Fragment-based design (combine molecular fragments)
+    - Scaffold hopping (modify core structure while preserving pharmacophore)
+    - Property-guided search (optimize QED, LogP, MW constraints)
+    - LLM-guided molecular design
+
+  tips: |
+    - Molecules must be valid SMILES parseable by RDKit
+    - Molecules failing PAINS/antibiotic motifs filter are excluded
+    - Novelty: 1 - max Tanimoto similarity to ~3500 known antibiotics
+    - QED: Quantitative Estimate of Drug-likeness (0-1, >0.5 is drug-like)
+    - Starter molecules in data/starter_molecules.smi are NOT antibiotics
+    - RDKit is required (installed via workspace.setup)
+    - Eval timeout is 600s — model loading takes ~30-60s if ML models present
+    - To enable ML scoring, install minimol/chemprop and place model checkpoints
+      in eval/scorers/model_data/
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "solution.py"
+    top_k: 10
+
+agents:
+  count: 1
+  runtime: claude_code
+  model: claude-opus-4-6
+
+workspace:
+  results_dir: "./results"
+  setup:
+    - "uv pip install rdkit-pypi numpy"
+
+run:
+  verbose: false
+  ui: false
+  session: tmux
