@@ -300,16 +300,15 @@ uv run ruff format .
 ⭐ 如果觉得 CORAL 对有帮助的话，欢迎给我们的 GitHub Repo 点个 Star。也可以考虑引用我们：
 
 ```bibtex
-@misc{coral2026,
-  title  = {Evolve Like Coral: Towards Autonomous Multi-Agent Evolution},
-  author = {Qu, Ao and Yan, Yihao and Zheng, Han and Zhou, Zijian and
-            Ong, Shao Yong and Hong, Fenglu and Zhu, Jiacheng and
-            Low, Bryan Kian Hsiang and Zhao, Jinhua and Liang, Paul Pu},
+@article{coral2026,
+  title  = {CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery},
+  author = {Qu, Ao and Zheng, Han and Zhou, Zijian and Yan, Yihao and Tang, Yihong and Ong, Shao Yong and Hong, Fenglu and Zhou, Kaichen and Jiang, Chonghe and Kong, Minwei and Zhu, Jiacheng and Jiang, Xuan and Li, Sirui and Wu, Cathy and Low, Bryan Kian Hsiang and Zhao, Jinhua and Liang, Paul Pu},
+  journal = {arXiv preprint arXiv:2604.01658},
   year   = {2026},
-  url    = {https://human-agent-society.github.io/CORAL/}
+  url    = {https://arxiv.org/pdf/2604.01658}
 }
 ```
 
 ### 致谢
 
-我们感谢 [TNT Accelerator](https://www.tnt.so/) 提供的慷慨支持，包括在开发过程中给予帮助的各种 API 积分。也要感谢许多如 [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve)、[autoresearch](https://github.com/karpathy/autoresearch)、[TTT Discover](https://arxiv.org/abs/2503.08951) 等的十分有启发性的工作，这些工作为 Coral 的诞生奠定了基础。
+我们感谢 [TNT Accelerator](https://www.tnt.so/) 提供的慷慨支持，包括在开发过程中给予帮助的各种 API 积分。也要感谢许多如 [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve)、[autoresearch](https://github.com/karpathy/autoresearch)、[TTT Discover](https://arxiv.org/abs/2601.16175) 等的十分有启发性的工作，这些工作为 Coral 的诞生奠定了基础。

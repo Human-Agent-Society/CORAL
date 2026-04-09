@@ -54,6 +54,14 @@ class GatewayConfig:
 
 
 @dataclass
+class WarmStartConfig:
+    """Warm-start configuration: optional research phase before the main coding loop."""
+
+    enabled: bool = False
+    research_turns: int = 15  # max turns for the research phase
+
+
+@dataclass
 class AgentConfig:
     """Agent spawning configuration."""
 
@@ -61,6 +69,7 @@ class AgentConfig:
     runtime: str = "claude_code"
     model: str = "sonnet"
     gateway: GatewayConfig = field(default_factory=GatewayConfig)
+    warmstart: WarmStartConfig = field(default_factory=WarmStartConfig)
     runtime_options: dict[str, Any] = field(default_factory=dict)
     max_turns: int = 200
     timeout: int = 3600

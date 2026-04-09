@@ -100,12 +100,12 @@ def _parse_note_file(path: Path) -> dict[str, Any]:
 
 
 def _collect_from_dir(directory: Path) -> list[dict[str, Any]]:
-    """Collect note entries from a single directory."""
+    """Collect note entries from a directory, including subdirectories."""
     if not directory.is_dir():
         return []
 
     md_files = sorted(
-        f for f in directory.glob("*.md") if f.name != "notes.md"
+        f for f in directory.rglob("*.md") if f.name != "notes.md"
     )
 
     if md_files:

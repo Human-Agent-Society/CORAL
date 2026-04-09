@@ -117,6 +117,8 @@ The starting codebase that gets copied into each agent's git worktree. This is w
 | [ADRS](#adrs) | 5 systems optimization problems (scheduling, placement, etc.) | Maximize |
 | [frontier_cs_algo](#frontier_cs_algo) | 172 algorithmic competition problems (C++) | Maximize |
 | [frontier_cs_research](#frontier_cs_research) | 127 research-level CS problems (Python) | Maximize |
+| [dna_design](#dna_design) | Design cell-type-specific DNA enhancer sequences (SAGA) | Maximize |
+| [drug_design](#drug_design) | Design novel small-molecule antibiotics (SAGA) | Maximize |
 
 ## Details
 
@@ -191,6 +193,22 @@ Predict mRNA degradation rates at each base position. Scored by Mean Columnwise 
 ### frontier_cs_research
 
 127 research-level CS problems with multiple variants (e.g. scheduling under different availability/deadline/overhead configurations). Solutions in Python with 1800s timeouts.
+
+### dna_design
+
+Design 200bp DNA enhancer sequences highly active in HepG2 (liver) cells while minimizing off-target activity. Adapted from the [SAGA](https://github.com/btyu/SAGA) benchmark ([Du et al., 2025](https://arxiv.org/abs/2512.21782)).
+
+- **Agents**: 1
+- **Timeout**: 600s
+- **Scoring**: GC content + diversity (always); Enformer-based expression prediction (optional)
+
+### drug_design
+
+Design novel small-molecule antibiotics against K. pneumoniae with drug-like properties. Adapted from the [SAGA](https://github.com/btyu/SAGA) benchmark ([Du et al., 2025](https://arxiv.org/abs/2512.21782)).
+
+- **Agents**: 1
+- **Timeout**: 600s
+- **Scoring**: QED + novelty + PAINS filter (always); MiniMol activity + ChemProp toxicity (optional)
 
 ## Writing Your Own
 

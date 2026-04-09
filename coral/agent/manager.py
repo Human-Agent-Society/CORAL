@@ -16,6 +16,7 @@ from typing import Any
 from coral.agent.heartbeat import HeartbeatRunner
 from coral.agent.registry import get_runtime
 from coral.agent.runtime import AgentHandle, AgentRuntime
+from coral.agent.warmstart import WarmStartRunner
 from coral.config import CoralConfig
 from coral.hub.heartbeat import (
     DEFAULT_PROMPTS,
@@ -84,23 +85,35 @@ class AgentManager:
             write_global_heartbeat(self.paths.coral_dir, default_global_actions(self.config))
             logger.info("Seeded global heartbeat config")
 
-        # 3. For each agent: create worktree, generate CLAUDE.md, spawn runtime
+        # 3. Warm-start research phase (optional)
+        agent_ids = [f"agent-{i + 1}" for i in range(self.config.agents.count)]
+        warmstart = WarmStartRunner(self.config, self.runtime.shared_dir_name)
+        research_sessions: dict[str, str] = {}
+
+        if warmstart.enabled:
+            research_sessions = self._run_warmstart_research(warmstart, agent_ids)
+
+        # 4. For each agent: create worktree, generate CLAUDE.md, spawn runtime
         handles = []
-        for i in range(self.config.agents.count):
-            agent_id = f"agent-{i + 1}"
+        for i, agent_id in enumerate(agent_ids):
             if i > 0 and self.config.agents.stagger_seconds > 0:
                 logger.info(f"Staggering {agent_id} by {self.config.agents.stagger_seconds}s")
                 time.sleep(self.config.agents.stagger_seconds)
-            handle = self._setup_and_start_agent(agent_id)
+            handle = self._setup_and_start_agent(
+                agent_id,
+                resume_session_id=research_sessions.get(agent_id),
+                prompt=warmstart.main_prompt() if warmstart.enabled else None,
+                prompt_source="warmstart:main" if warmstart.enabled else None,
+            )
             handles.append(handle)
 
         self.handles = handles
         self._running = True
 
-        # 4. Write PID file
+        # 5. Write PID file
         self._write_pid_file()
 
-        # 5. Register atexit handler as safety net for unexpected exits
+        # 6. Register atexit handler as safety net for unexpected exits
         atexit.register(self._atexit_cleanup)
 
         return handles
@@ -143,11 +156,54 @@ class AgentManager:
         self._gateway = gateway
         logger.info(f"Gateway running at {gateway.url}")
 
+    def _run_warmstart_research(
+        self, warmstart: WarmStartRunner, agent_ids: list[str],
+    ) -> dict[str, str]:
+        """Run the warm-start research phase. Returns {agent_id: session_id}."""
+        assert self.paths is not None
+
+        research_prompt = warmstart.research_prompt()
+        research_turns = warmstart.research_turns
+
+        if self.verbose:
+            print(f"\n[coral] Warm-start: research phase ({research_turns} turns)...\n")
+        logger.info(f"Warm-start: starting research phase ({research_turns} turns)")
+
+        research_handles = []
+        for i, agent_id in enumerate(agent_ids):
+            if i > 0 and self.config.agents.stagger_seconds > 0:
+                time.sleep(self.config.agents.stagger_seconds)
+            handle = self._setup_and_start_agent(
+                agent_id,
+                prompt=research_prompt,
+                prompt_source="warmstart:research",
+                max_turns=research_turns,
+            )
+            research_handles.append(handle)
+
+        # Wait for all research agents to finish
+        warmstart.wait_for_research(research_handles)
+
+        # Extract session IDs for resumption in the main phase
+        sessions: dict[str, str] = {}
+        for handle in research_handles:
+            sid = self.runtime.extract_session_id(handle.log_path)
+            if sid:
+                sessions[handle.agent_id] = sid
+            handle.stop()
+
+        if self.verbose:
+            print(f"[coral] Warm-start: research complete. {len(sessions)} session(s) captured.\n")
+        logger.info(f"Warm-start: research complete. {len(sessions)} session(s) captured.")
+
+        return sessions
+
     def _setup_and_start_agent(
         self, agent_id: str,
         resume_session_id: str | None = None,
         prompt: str | None = None,
         prompt_source: str | None = None,
+        max_turns: int | None = None,
     ) -> AgentHandle:
         """Set up a single agent and start it."""
         assert self.paths is not None
@@ -227,7 +283,7 @@ class AgentManager:
             coral_md_path=worktree_path / instruction_file,
             model=self.config.agents.model,
             runtime_options=self.config.agents.runtime_options,
-            max_turns=self.config.agents.max_turns,
+            max_turns=max_turns if max_turns is not None else self.config.agents.max_turns,
             verbose=self.verbose,
             log_dir=self.paths.coral_dir / "public" / "logs",
             resume_session_id=resume_session_id,

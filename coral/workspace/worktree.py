@@ -317,7 +317,7 @@ def setup_codex_settings(
 
     Sets the agent to full-auto mode (no approval prompts, workspace-write
     sandbox) and toggles web_search based on the *research* flag.  When a
-    gateway is configured, sets ``openai_base_url`` so the agent routes
+    gateway is configured, sets ``base_url`` so the agent routes
     traffic through the LiteLLM proxy.
     """
     codex_dir = worktree_path / ".codex"
@@ -337,7 +337,7 @@ def setup_codex_settings(
             'model_provider = "litellm"\n',
             '[model_providers.litellm]',
             'name = "LiteLLM Proxy"',
-            f'open_base_url = "{gateway_url}/v1"',
+            f'base_url = "{gateway_url}/v1"',
             'wire_api = "responses"',
             'env_key = "OPENAI_API_KEY"',
         ]
