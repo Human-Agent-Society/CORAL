@@ -105,7 +105,8 @@ def _collect_from_dir(directory: Path) -> list[dict[str, Any]]:
         return []
 
     md_files = sorted(
-        f for f in directory.rglob("*.md") if f.name != "notes.md"
+        f for f in directory.rglob("*.md")
+        if f.name != "notes.md" and not f.name.startswith("_")
     )
 
     if md_files:
