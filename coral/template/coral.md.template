@@ -93,7 +93,10 @@ You are part of a team. When you learn something — whether a success or a fail
 
 **Important:** `{shared_dir}/` points to the shared public directory visible to all agents. Write notes and skills there **directly** — do NOT `git add` or `git commit` anything under `{shared_dir}/` or `.coral/`. Just write the files. They're immediately visible to everyone.
 
-**Write notes** when you discover something other agents should know:
+**Write notes** when you discover something other agents should know.
+
+**Naming rule:** Use short, descriptive, topic-based filenames in kebab-case — e.g. `gradient-clipping-helps.md`, `batch-size-vs-lr-tradeoff.md`, `greedy-packing-baseline.md`. **Never** include agent IDs, eval numbers, or attempt hashes in filenames (e.g. `reflection-agent3-eval12.md` is bad). Authorship belongs in the `creator` frontmatter field, not the filename. The name should tell any agent what the note is about without opening it.
+
 ```
 cat > {shared_dir}/notes/your-finding.md << 'EOF'
 ---

@@ -1,6 +1,6 @@
 ---
 name: organize-files
-description: Organize the shared notes directory when it becomes hard to navigate. Use when there are >20 flat files in notes/, when you see duplicate or near-duplicate titles, when you see meaningless titles, when naming is inconsistent (spaces, uppercase, agent IDs in filenames), when you can't find a note you're looking for, when you don't know where to save a new note, or after a consolidate or warmstart that brought in many files at once. Also use for post-consolidation structural cleanup.
+description: Organize the shared notes directory when it becomes hard to navigate. Use when there are >10 flat files in notes/, when you see duplicate or near-duplicate titles, when you see meaningless titles, when naming is inconsistent (spaces, uppercase, agent IDs in filenames), when you can't find a note you're looking for, when you don't know where to save a new note, or after a consolidate or warmstart that brought in many files at once. Also use for post-consolidation structural cleanup.
 ---
 
 # Organize Files
@@ -19,7 +19,7 @@ The goal is findability. A well-organized notes directory means agents spend les
 
 Use this skill when you notice any of:
 
-- **>20 flat `.md` files** in the top level of `notes/` — a flat list this large is hard to scan
+- **>10 flat `.md` files** in the top level of `notes/` — a flat list this large is hard to scan
 - **3+ files with similar titles** — likely duplicates or near-duplicates that should be merged
 - **Inconsistent naming** — spaces in filenames, uppercase, agent IDs (`agent1-reflection-12.md`), bare dates (`2026-03-15.md`)
 - **Post-consolidate cleanup** — after `consolidate` creates synthesis documents, the source notes often benefit from reorganization
@@ -30,12 +30,6 @@ Use this skill when you notice any of:
 - You **can't find a note** you know exists — the structure isn't working
 - You **don't know where to save** a new note — the categories aren't clear
 - Another agent asks where something is or reports difficulty finding information
-
-### When NOT to Use
-
-- **<10 notes** — too few to benefit from organization overhead
-- **Active writing burst** — if you or other agents are actively creating notes right now, wait until the burst settles (the move script refuses files <5 minutes old for this reason)
-- **Already well-organized** — if the audit shows clean naming and logical structure, don't reorganize for the sake of it
 
 ---
 
@@ -372,8 +366,7 @@ Or trigger manually when you notice the notes directory is hard to navigate.
 For repeat use — the compact version of this skill:
 
 1. Run `bash scripts/audit.sh` — understand current state
-2. Count top-level files — if <10, probably fine
-3. Identify thematic clusters — group mentally by topic
+2. Identify thematic clusters — group mentally by topic
 4. Plan directory structure — 3-5 top-level categories, min 3 files each
 5. Run `python scripts/find_duplicates.py` — check for near-duplicates
 6. Merge confirmed duplicates — originals to `_archive/`

@@ -97,7 +97,8 @@ Notes about what you've discovered — things that help you (or future agents) m
 - Patterns in what scores well vs. poorly
 - Debugging tips, gotchas, or surprising behavior
 
-Write notes as individual files in `{shared_dir}/notes/`:
+Write notes as individual files in `{shared_dir}/notes/`. Use short, descriptive, topic-based filenames in kebab-case — e.g. `gradient-clipping-helps.md`, `batch-size-vs-lr-tradeoff.md`. **Never** include agent IDs, eval numbers, or attempt hashes in filenames. Authorship belongs in the `creator` frontmatter field, not the filename.
+
 ```
 cat > {shared_dir}/notes/your-finding.md << 'EOF'
 ---
