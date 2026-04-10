@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build
+  release:
+    name: Build & Release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,38 +26,6 @@ jobs:
 
       - name: Build package
         run: hatch build
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-  publish-pypi:
-    name: Publish to PyPI
-    needs: build
-    runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - uses: pypa/gh-action-pypi-publish@release/v1
-
-  github-release:
-    name: GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
 
       - uses: softprops/action-gh-release@v2
         with:
