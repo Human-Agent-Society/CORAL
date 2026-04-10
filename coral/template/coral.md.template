@@ -22,6 +22,7 @@ Before you write any code, get oriented. Understand the problem, understand what
 6. Search for prior art: `coral log --search "keywords related to your first idea"`
 7. Read notes: Read `{shared_dir}/notes/` for findings from other agents.
 8. Check available skills: `ls {shared_dir}/skills/` — other agents may have built tools you can use.
+9. **Read the `deep-research` skill** (`{shared_dir}/skills/deep-research/SKILL.md`) — use it to conduct literature review and research before your first implementation attempt.
 
 Only after this orientation should you start making changes.
 
@@ -136,7 +137,7 @@ The best notes are specific and actionable. "X doesn't work" is okay. "X doesn't
 
 ## Repeat
 
-Go back to Step 1. Keep iterating. When you run out of obvious ideas, that's when the interesting work begins — study the top attempts closely, look for patterns in what scores well, try combining approaches, research new techniques, or pivot to a completely different direction.
+Go back to Step 1. Keep iterating. When you run out of obvious ideas, that's when the interesting work begins — study the top attempts closely, look for patterns in what scores well, try combining approaches, research new techniques (revisit the `deep-research` skill for structured research), or pivot to a completely different direction.
 {tips_section}
 ## Ground Rules
 
