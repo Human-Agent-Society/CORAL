@@ -22,8 +22,6 @@ task:
 
     **Environment:** cpu is available for use.
 
-  files:
-    - "solution.py"
   tips: |
     - Metric is classification accuracy (higher is better, 0–1 scale)
     - A random baseline scores ~0.10, a simple logistic regression scores ~0.92

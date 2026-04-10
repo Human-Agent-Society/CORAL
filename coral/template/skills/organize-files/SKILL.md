@@ -1,6 +1,6 @@
 ---
 name: organize-files
-description: Organize the shared notes directory when it becomes hard to navigate. Use when there are >20 flat files in notes/, when you see duplicate or near-duplicate titles, when naming is inconsistent (spaces, uppercase, agent IDs in filenames), when you can't find a note you're looking for, when you don't know where to save a new note, or after a consolidate or warmstart that brought in many files at once. Also use for post-consolidation structural cleanup.
+description: Organize the shared notes directory when it becomes hard to navigate. Use when there are >20 flat files in notes/, when you see duplicate or near-duplicate titles, when you see meaningless titles, when naming is inconsistent (spaces, uppercase, agent IDs in filenames), when you can't find a note you're looking for, when you don't know where to save a new note, or after a consolidate or warmstart that brought in many files at once. Also use for post-consolidation structural cleanup.
 ---
 
 # Organize Files
