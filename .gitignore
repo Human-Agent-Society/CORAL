@@ -60,12 +60,9 @@ Thumbs.db
 # Project specific
 *.log
 .env
-scripts/tmp_*/
 *.out
 
 # Project runs (ephemeral agent workspaces)
-erdos_project/
-autoresearch/
 results/
 test_claude_code/
 
@@ -74,15 +71,9 @@ scripts/
 
 # OpenCode local installation and generated files
 .opencode/
-coral/artifacts/openevolve/symbolic_regression/problems/
-coral/artifacts/openevolve/symbolic_regression/dataset/
-kernelbench_results*
-scripts/harbor_tasks/
-scripts/skillsbench/
 
 # Generated plots
 *.png
 !assets/*.png
 !blog/*.png
-results/examples/ADRS/eplb/eval/expert-load.json
 examples/ADRS/eplb/eval/expert-load.json

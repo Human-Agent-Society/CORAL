@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "coral"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Orchestration system for autonomous coding agents"
 readme = "README.md"
 license = "MIT"
@@ -66,8 +66,11 @@ coral = "coral.cli:main"
 Homepage = "https://github.com/Human-Agent-Society/CORAL"
 Repository = "https://github.com/Human-Agent-Society/CORAL"
 
-[tool.hatch.metadata]
-allow-direct-references = true
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "coral/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["coral"]
