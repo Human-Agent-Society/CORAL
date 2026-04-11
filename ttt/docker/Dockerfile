@@ -1,4 +1,4 @@
-# Build on top of a forge/slime base image which already includes:
+# Build on top of a SLIME base image which already includes:
 # SGLang, Megatron-LM, flash-attn, TransformerEngine, apex, DeepEP, Ray, uv, etc.
 #
 # Build from the CORAL repo root:
@@ -23,7 +23,7 @@ ENV PIP_BREAK_SYSTEM_PACKAGES=1
 ENV UV_BREAK_SYSTEM_PACKAGES=1
 
 # =========================
-# Install vanilla Megatron-LM (the forge base image has an incompatible fork)
+# Install vanilla Megatron-LM
 # =========================
 ARG MEGATRON_COMMIT=3714d81d418c9f1bca4594fc35f9e8289f652862
 RUN git clone https://github.com/NVIDIA/Megatron-LM.git /opt/megatron-lm && \
