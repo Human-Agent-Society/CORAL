@@ -40,7 +40,9 @@ dependencies = [
 
 [project.optional-dependencies]
 ttt = [
-    "rllm[verl] @ git+https://github.com/rllm-org/rllm.git",
+    "httpx>=0.27",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
 ]
 dev = [
     "pytest>=8.0.0",

@@ -1,160 +1,162 @@
 # ttt — Test-Time Training for CORAL
 
-This module integrates CORAL with [rLLM](https://github.com/rllm-org/rllm) to enable test-time training (TTT). CORAL is treated as a monolithic agent environment: the RL training loop spawns CORAL agents, collects the LLM call traces they produce, and uses score improvement as the reward signal.
+This module integrates CORAL with [SLIME](https://github.com/THUDM/slime) (an SGLang-native RL post-training framework) to enable test-time training (TTT) of coding agents. CORAL agents solve tasks while their LLM call traces are intercepted, scored by CORAL's eval system, and fed back as RL reward signals to improve the underlying policy.
+
+The design is inspired by [OpenClaw-RL](https://github.com/Gen-Verse/OpenClaw-RL), which pioneered fully-async RL training of agents from live interaction traces. The key difference is the reward signal: OpenClaw-RL uses a PRM (Process Reward Model) to score each turn, while CORAL TTT uses eval-based outcome reward — the improvement in CORAL eval score between commits.
 
 ## Architecture
 
 ```
-rllm AgentTrainer
-  │
-  ├── trainer.py          Hydra entrypoint, wires config + datasets
-  │
-  ├── generator.py        Spawns CORAL agents, collects trajectories
-  │     │
-  │     ├── coral start   First call: launches agents via CLI subprocess
-  │     ├── coral resume  Subsequent calls: resumes agents from saved sessions
-  │     ├── poll           Waits for N new eval attempts (by commit_hash)
-  │     ├── coral stop    Pauses agents, saves sessions for next resume
-  │     ├── gateway JSONL  Reads LLM call traces from .coral/public/gateway/requests.jsonl
-  │     └── Episode        Returns trajectories + attempt metadata
-  │
-  └── evaluator.py        Computes reward = score - parent_score
-        │
-        └── reads parent attempt JSON from .coral/public/attempts/<parent_hash>.json
+┌──────────────────────────────────────────────────────────────────┐
+│  SLIME train_async.py  (Megatron actor + SGLang rollout engine) │
+│                                                                  │
+│  ┌──────────────┐    weight sync     ┌───────────────────┐       │
+│  │ Actor (train)│ ◄════════════════► │ SGLang (inference)│       │
+│  └──────┬───────┘                    └────────┬──────────┘       │
+│         │ reads samples                       │ serves /v1/chat  │
+│         ▼                                     ▼                  │
+│  ┌─────────────────────────────────────────────────────┐         │
+│  │  CoralAPIServer  (FastAPI proxy, :30000)             │         │
+│  │  - forwards requests to SGLang                      │         │
+│  │  - extracts per-token logprobs                      │         │
+│  │  - creates SLIME Sample objects                     │         │
+│  │  - buffers samples per-agent until eval score       │         │
+│  │  - assigns reward = score_improvement on eval       │         │
+│  │  - submits scored samples to SLIME data buffer      │         │
+│  └──────────────────────────┬──────────────────────────┘         │
+└─────────────────────────────┼────────────────────────────────────┘
+                              │ OpenAI-compat API
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  CORAL  (agent orchestration)                                    │
+│                                                                  │
+│  ┌──────────────┐   litellm    ┌────────────┐   eval    ┌─────┐ │
+│  │ Coding Agent │ ──gateway──► │ API Server │ ◄──────── │Eval │ │
+│  │ (opencode)   │              │ (logprobs) │           │Score│ │
+│  └──────────────┘              └────────────┘           └─────┘ │
+│        │                                                         │
+│        └──► git commit ──► coral eval ──► .coral/attempts/*.json │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## How it works
 
-### 1. Trainer (`trainer.py`)
+### 1. CoralAPIServer (`coral_api_server.py`)
 
-The entrypoint. Uses Hydra to load rLLM's unified config and accepts a CORAL `task.yaml` path via `+task_yaml=...`.
+A FastAPI proxy that sits between CORAL's litellm gateway and SGLang. For every chat completion request:
 
-- Loads the task YAML and creates a repeated `Dataset` from its `task` section (the dataset is just the same task config repeated — CORAL agents work on the same task across all training steps).
-- Sets defaults: `total_epochs=9999` (effectively infinite), `train_batch_size=1`, `val_batch_size=1`.
-- Wires the `task_yaml` path into the generator module's `_coral_state` so the generator knows which config to pass to `coral start`.
-- Creates an rLLM `AgentTrainer` with the tinker backend, passing the generator and evaluator.
+1. Forwards the request to SGLang with `logprobs=True`.
+2. Extracts per-token log-probabilities from the response.
+3. Tokenizes the prompt and response using the model's chat template.
+4. Creates a SLIME `Sample` with `prompt`, `response`, `tokens`, `rollout_log_probs`, and `loss_mask`.
+5. Buffers the sample under the originating agent's ID (resolved via `X-Coral-Agent-Id` header or gateway log fingerprinting).
+6. When `report_eval_score()` is called (by the eval monitor), assigns `reward = score - parent_score` to all buffered samples for that agent and submits them to SLIME's data buffer.
 
-### 2. Generator (`generator.py`)
+Supports both streaming and non-streaming requests. Samples with zero improvement get `loss_mask = [0, ...]` so the policy doesn't train on no-change commits.
 
-The generator is an `@rllm.rollout`-decorated function called once per training step. Instead of making direct LLM calls, it orchestrates a full CORAL agent run:
+### 2. Rollout Worker (`coral_rollout.py`)
 
-**On-policy routing:**
+Bridges CoralAPIServer with SLIME's training loop via the `generate_rollout_coral()` function (registered as SLIME's rollout function).
 
-Before starting or resuming agents, the generator writes a `.litellm_rllm.yaml` config that routes CORAL's gateway to `config.base_url` — the rLLM inference server serving the current policy weights. This is passed as a CORAL CLI override (`agents.gateway.config=...`). The request chain becomes:
+- **`AsyncRolloutWorker`** — manages the CoralAPIServer instance, CORAL agent subprocess, and an eval monitor thread.
+- **Eval monitor** — polls `.coral/public/attempts/` for new eval results, computes `improvement = score - parent_score`, and calls `report_eval_score()` on the API server to assign rewards.
+- **Pause/resume** — submission is paused during weight updates (SLIME sync) and resumed when the new policy is loaded.
+- **Drain loop** — `_drain_output_queue()` waits until `rollout_batch_size` scored samples are collected before returning them to SLIME for the training step.
 
-```
-CORAL agent → CORAL gateway (logs traces) → rLLM inference server (on-policy model)
-```
+### 3. Training script (`run_coral_rl.sh`)
 
-If `config.base_url` is empty (e.g. standalone testing), the generator falls back to whatever upstream is defined in the task YAML's original `litellm_config.yaml`.
+Orchestrates the full training run:
 
-**First call — `coral start`:**
-1. Generates the on-policy gateway config from `config.base_url`.
-2. Launches `coral start --config task.yaml run.session=local agents.gateway.config=...` as a background subprocess.
-3. Discovers the `.coral` directory by reading `results_dir` and `task.name` from the YAML, then following the `latest` symlink.
-4. Initializes tracking state: `seen_hashes` (set of processed attempt commit hashes), `trace_offset` (line offset into the gateway JSONL).
+1. Auto-detects model architecture from HF checkpoint config and sources the corresponding SLIME model script.
+2. Starts Ray head node for distributed training.
+3. Launches `train_async.py` with actor GPUs (Megatron training) and rollout GPUs (SGLang inference).
+4. Supports full-parameter training (Megatron backend with tensor/sequence/context parallelism) and LoRA training (FSDP backend).
+5. GRPO advantage estimation with KL loss, configurable clip ranges, and optional W&B logging.
 
-**Subsequent calls — `coral resume`:**
-1. Regenerates the on-policy gateway config (in case `config.base_url` changed).
-2. Launches `coral resume --task <slug> run.session=local agents.gateway.config=...` as a background subprocess.
-3. Agents resume from their saved sessions (Claude Code session IDs persisted in `.coral/public/sessions.json`).
+### Reward signal
 
-**Every call then:**
-1. **Polls for N new evals** — watches `.coral/public/attempts/` for new `<commit_hash>.json` files not in `seen_hashes`. Configurable via `N_EVALS` (default: 1). Polls every 5 seconds with a 600-second timeout.
-2. **Stops agents** — runs `coral stop`, which sends SIGTERM to the manager process. This gracefully shuts down agents and saves their sessions for the next resume.
-3. **Reads new attempts** — loads the attempt JSON files for the new commit hashes, which contain `score`, `parent_hash`, `agent_id`, `status`, etc.
-4. **Collects gateway traces** — reads new lines from `.coral/public/gateway/requests.jsonl` (incremental, starting from `trace_offset`). Each JSONL entry contains a full LLM request/response pair logged by CORAL's gateway middleware.
-5. **Converts to rllm Trajectories** — groups JSONL entries by `agent_id`. Each entry becomes an rllm `Step` with `chat_completions` (the request messages + assistant response), `model_response`, and `action` fields. Steps are grouped into `Trajectory` objects (one per agent).
-6. **Returns an `Episode`** with the trajectories and metadata (`coral_dir`, `new_commit_hashes`, `new_attempts`).
+**Outcome-based reward via eval score improvement.**
 
-An `atexit` handler ensures `coral stop` is called if the training process exits unexpectedly.
-
-### 3. Evaluator (`evaluator.py`)
-
-The evaluator is an `@rllm.evaluator`-decorated function that computes the RL reward from CORAL's eval results.
-
-**Reward signal: score improvement over parent commit.**
-
-For the latest attempt in this training step:
-1. Reads `score` from the attempt dict.
-2. Reads `parent_hash` and looks up the parent attempt's JSON file at `.coral/public/attempts/<parent_hash>.json`.
+When a CORAL agent commits code and runs `coral eval`, the eval monitor:
+1. Reads the new attempt's `score` from `.coral/public/attempts/<hash>.json`.
+2. Reads the parent attempt's score via `parent_hash`.
 3. Computes `improvement = score - parent_score`.
-4. If no parent exists (first attempt), `parent_score` defaults to 0.
+4. Assigns improvement as reward to all LLM call traces (samples) generated by that agent since the last eval.
 
-This reward structure incentivizes the agent to make changes that improve the eval score relative to the previous commit, rather than rewarding absolute score (which could lead to reward hacking).
-
-The evaluator assigns the improvement as `traj.reward` on every trajectory in the episode and emits `latest_score` and `improvement` as signals for logging.
+This incentivizes changes that improve eval scores relative to the previous commit, avoiding reward hacking from absolute scores.
 
 ## File layout
 
 ```
 ttt/
-  __init__.py       Package marker
-  trainer.py        Hydra entrypoint, dataset + config setup
-  generator.py      CORAL agent orchestration, trajectory collection
-  evaluator.py      Reward computation (score improvement)
-  README.md         This file
+  coral_api_server.py   FastAPI proxy: SGLang forwarding, logprob extraction, sample creation
+  coral_rollout.py      SLIME rollout function: agent lifecycle, eval monitoring, reward assignment
+  run_coral_rl.sh       Training launcher: Ray, SLIME train_async.py, model/GPU config
+  run_coral_rl_docker.sh  Docker wrapper for run_coral_rl.sh
+  docker/
+    Dockerfile          Builds on SLIME base image, adds CORAL + opencode
+    entrypoint.sh       Container entrypoint
+  slime/                SLIME framework (vendored, see acknowledgments)
+  examples/
+    circle_packing/     Example task: pack 26 circles into a unit square
+  README.md             This file
 ```
 
 ## Usage
 
+### Bare metal
+
 ```bash
-# Install the ttt extra (pulls rllm + tinker)
-uv sync --extra ttt
+# Set your task config
+export CORAL_TASK_YAML=ttt/examples/circle_packing/task.yaml
 
-# Run training with a CORAL task config
-python -m ttt.trainer +task_yaml=examples/circle_packing/task.yaml
+# Full-parameter training (8 GPUs: 4 actor + 4 rollout)
+./ttt/run_coral_rl.sh
 
-# With overrides
-python -m ttt.trainer \
-  +task_yaml=examples/circle_packing/task.yaml \
-  +repeat=5000 \
-  rllm.trainer.total_epochs=100 \
-  data.train_batch_size=1
+# Customize GPU allocation and model
+NUM_GPUS=4 ACTOR_GPUS=2 ROLLOUT_GPUS=2 \
+  HF_CKPT=Qwen/Qwen3-30B-A3B-Thinking-2507 \
+  ./ttt/run_coral_rl.sh
+
+# LoRA training (FSDP backend)
+USE_LORA=1 ./ttt/run_coral_rl.sh
+```
+
+### Docker
+
+```bash
+# Build (from repo root)
+docker build -t coral-ttt -f ttt/docker/Dockerfile .
+
+# Run
+CORAL_TASK_YAML=/app/ttt/examples/circle_packing/task.yaml \
+  ./ttt/run_coral_rl_docker.sh
+
+# With custom model and LoRA
+HF_CKPT=/path/to/model USE_LORA=1 ./ttt/run_coral_rl_docker.sh
 ```
 
 ## Key configuration
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `+task_yaml` | **required** | Path to a CORAL task YAML config |
-| `+repeat` | `1000` | How many times to repeat the task config in the dataset |
-| `rllm.trainer.total_epochs` | `9999` | Number of training epochs (effectively infinite) |
-| `data.train_batch_size` | `1` | Training batch size (one CORAL run per step) |
-| `data.val_batch_size` | `1` | Validation batch size |
-| `N_EVALS` | `1` | Number of eval attempts to collect per training step (set in `generator.py`) |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CORAL_TASK_YAML` | **required** | Path to CORAL task YAML config |
+| `NUM_GPUS` | `8` | Total GPUs available |
+| `ACTOR_GPUS` | `4` | GPUs for Megatron actor (training) |
+| `ROLLOUT_GPUS` | `4` | GPUs for SGLang rollout (inference) |
+| `HF_CKPT` | `Qwen/Qwen3-30B-A3B-Thinking-2507` | HuggingFace model checkpoint |
+| `USE_LORA` | `0` | Set to `1` for LoRA training with FSDP backend |
+| `ROLLOUT_BATCH_SIZE` | `16` (`4` in Docker) | Samples to collect per training step |
+| `LR` | `1e-5` | Learning rate |
+| `KL_LOSS_COEF` | `0.0` | KL divergence loss coefficient |
+| `USE_WANDB` | `0` | Set to `1` to enable W&B logging |
+| `WANDB_PROJECT` | `coral_rl` | W&B project name |
+| `CONTEXT_LENGTH` | `131072` | Maximum context length for SGLang |
 
-## Data flow
+## Acknowledgments
 
-```
-task.yaml
-  │
-  ▼
-trainer.py ──► Dataset([task_data] * repeat)
-  │
-  ▼
-generator() is called per training step with config.base_url
-  │
-  ├─► write .litellm_rllm.yaml pointing to config.base_url (on-policy model)
-  ├─► coral start / coral resume  (background subprocess, gateway routes to rLLM)
-  │     │
-  │     ▼
-  │   CORAL agents run, make LLM calls through gateway → rLLM server
-  │     │
-  │     ├─► .coral/public/gateway/requests.jsonl     (LLM call traces)
-  │     └─► .coral/public/attempts/<hash>.json        (eval results)
-  │
-  ├─► poll for N new attempt files (by commit_hash)
-  ├─► coral stop
-  ├─► read gateway JSONL ──► rllm Trajectory/Step objects
-  └─► return Episode(trajectories, metadata={coral_dir, new_attempts, ...})
-        │
-        ▼
-evaluator() computes reward
-  │
-  ├─► attempt.score - parent_attempt.score = improvement
-  └─► EvalOutput(reward=improvement)
-        │
-        ▼
-rllm training loop uses reward for RL policy update
-```
+This module builds on two external projects:
+
+- **[SLIME](https://github.com/THUDM/slime)** — the SGLang-native RL post-training framework that provides the training loop (Megatron actor + SGLang rollout), data buffer, and async training infrastructure. Vendored under `ttt/slime/`. Licensed under Apache 2.0.
+
+- **[OpenClaw-RL](https://github.com/Gen-Verse/OpenClaw-RL)** — the fully-async agent RL framework whose architecture (intercept agent LLM calls, collect logprobs, train in background) inspired the CoralAPIServer design. The key adaptation is replacing OpenClaw-RL's PRM-based per-turn scoring with CORAL's eval-based outcome reward.
