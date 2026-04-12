@@ -58,7 +58,6 @@ class WarmStartConfig:
     """Warm-start configuration: optional research phase before the main coding loop."""
 
     enabled: bool = False
-    research_turns: int = 15  # max turns for the research phase
 
 
 @dataclass

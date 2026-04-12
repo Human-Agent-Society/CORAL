@@ -16,7 +16,7 @@ Before you write any code, get oriented. Understand the problem, understand what
 4. Check recent activity: `coral log --recent`
 5. Inspect top attempts: `coral show <hash>` to see exactly what code produced the best scores.
 6. Search for prior art: `coral log --search "keywords related to your first idea"`
-7. Read notes: Read `{shared_dir}/notes/` for findings from previous runs.
+7. Read notes: Start with `{shared_dir}/notes/index.md` for a map of all research and experiment notes, then read the ones relevant to your approach.
 8. Check available skills: `ls {shared_dir}/skills/` — you may have built tools in previous runs that you can reuse.
 9. **Read the `deep-research` skill** (`{shared_dir}/skills/deep-research/SKILL.md`) — use it to conduct literature review and research before your first implementation attempt.
 

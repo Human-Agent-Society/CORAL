@@ -7,7 +7,6 @@ from coral.config import AgentConfig, CoralConfig, TaskConfig, WarmStartConfig
 def _make_config(
     count: int = 1,
     enabled: bool = True,
-    research_turns: int = 15,
 ) -> CoralConfig:
     return CoralConfig(
         task=TaskConfig(name="test-task", description="A test task"),
@@ -15,7 +14,6 @@ def _make_config(
             count=count,
             warmstart=WarmStartConfig(
                 enabled=enabled,
-                research_turns=research_turns,
             ),
         ),
     )
@@ -32,11 +30,6 @@ def test_enabled_property():
     assert runner.enabled is False
 
 
-def test_research_turns():
-    runner = WarmStartRunner(_make_config(research_turns=20))
-    assert runner.research_turns == 20
-
-
 # --- Research prompt tests ---
 
 
@@ -44,7 +37,7 @@ def test_research_prompt_contains_shared_dir():
     runner = WarmStartRunner(_make_config(), shared_dir=".claude")
     prompt = runner.research_prompt()
     assert ".claude/notes/" in prompt
-    assert "DO NOT" in prompt
+    assert "Do NOT" in prompt
 
 
 def test_research_prompt_different_shared_dir():
