@@ -77,3 +77,7 @@ scripts/
 !assets/*.png
 !blog/*.png
 examples/ADRS/eplb/eval/expert-load.json
+
+
+# exceptions
+!ttt/slime/scripts/
