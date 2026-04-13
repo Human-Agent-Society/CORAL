@@ -116,7 +116,7 @@ Each agent runs in its own git worktree branch. Shared state (attempts, notes, s
 | **CLI orchestration** | 17+ commands: `start`, `stop`, `status`, `eval`, `log`, `ui`, and more |
 | **Web dashboard** | `uv run coral ui` — real-time leaderboard, attempt diffs, agent monitoring |
 
-**Warm-start (optional):** Agents do a literature review via web search before coding, writing findings to shared notes. Enable with `agents.warmstart.enabled=true`.
+**Deep research:** Agents come with a bundled `deep-research` skill that guides structured literature review — web search, saving raw sources, writing research notes, and building an index. It runs automatically during warm-start (`agents.warmstart.enabled=true`), and agents can also invoke it mid-run when pivoting to a new approach. Requires `agents.research=true` for web search.
 
 ### Quick Start
 
