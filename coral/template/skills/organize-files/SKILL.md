@@ -22,7 +22,11 @@ notes/
 ├── index.md          ← table of contents (research + experiments only)
 ├── raw/              ← immutable sources (DON'T touch)
 ├── research/         ← deep-research findings (organize within)
+│   ├── <topic>/      ← group by topic or theme
+│   └── ...
 ├── experiments/      ← eval reflections and results (organize within)
+│   ├── <approach>/   ← group by approach or technique
+│   └── ...
 ├── _synthesis/       ← consolidate owns this (DON'T touch)
 ├── _connections.md   ← consolidate owns this
 ├── _open-questions.md
