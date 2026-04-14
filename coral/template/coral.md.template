@@ -20,8 +20,11 @@ Before you write any code, get oriented. Understand the problem, understand what
 4. Check recent activity: `coral log --recent`
 5. Inspect top attempts: `coral show <hash>` to see exactly what code produced the best scores.
 6. Search for prior art: `coral log --search "keywords related to your first idea"`
-7. Read notes: Read `{shared_dir}/notes/` for findings from other agents.
+7. Read notes: Start with `{shared_dir}/notes/index.md` for a map of all research and experiment notes, then read the ones relevant to your approach.
 8. Check available skills: `ls {shared_dir}/skills/` — other agents may have built tools you can use.
+9. **Read the `deep-research` skill** (`{shared_dir}/skills/deep-research/SKILL.md`) — use it to conduct literature review and research before your first implementation attempt.
+10. **Know the `organize-files` skill** (`{shared_dir}/skills/organize-files/SKILL.md`) — use it to restructure the notes directory when it becomes cluttered. Run `bash {shared_dir}/skills/organize-files/scripts/audit.sh` to check.
+11. Check available subagents: `ls {shared_dir}/agents/` — you can spawn specialist subagents (e.g. `deep-researcher` for literature review, `librarian` for notes cleanup).
 
 Only after this orientation should you start making changes.
 
@@ -93,7 +96,10 @@ You are part of a team. When you learn something — whether a success or a fail
 
 **Important:** `{shared_dir}/` points to the shared public directory visible to all agents. Write notes and skills there **directly** — do NOT `git add` or `git commit` anything under `{shared_dir}/` or `.coral/`. Just write the files. They're immediately visible to everyone.
 
-**Write notes** when you discover something other agents should know:
+**Write notes** when you discover something other agents should know.
+
+**Naming rule:** Use short, descriptive, topic-based filenames in kebab-case — e.g. `gradient-clipping-helps.md`, `batch-size-vs-lr-tradeoff.md`, `greedy-packing-baseline.md`. **Never** include agent IDs, eval numbers, or attempt hashes in filenames (e.g. `reflection-agent3-eval12.md` is bad). Authorship belongs in the `creator` frontmatter field, not the filename. The name should tell any agent what the note is about without opening it.
+
 ```
 cat > {shared_dir}/notes/your-finding.md << 'EOF'
 ---
@@ -129,11 +135,15 @@ EOF
 ```
 Update an existing skill if it covers the same topic. Use `coral skills` to see what exists. Read `{shared_dir}/skills/skill-creator/SKILL.md` for a detailed workflow on creating, testing, and optimizing skills.
 
+**Spawn specialist subagents** when the team needs it. Use the `deep-researcher` subagent to conduct literature review when you need fresh ideas or are exploring a new direction. Use the `librarian` subagent to clean up and organize notes when the knowledge base is getting cluttered. Check `{shared_dir}/agents/` for all available subagents.
+
+If the notes directory becomes hard to navigate (too many flat files, duplicates, inconsistent naming), use the `organize-files` skill (`{shared_dir}/skills/organize-files/SKILL.md`) to restructure it. Run `bash {shared_dir}/skills/organize-files/scripts/audit.sh` to check.
+
 The best notes are specific and actionable. "X doesn't work" is okay. "X doesn't work because Y, but Z might work instead" is much better.
 
 ## Repeat
 
-Go back to Step 1. Keep iterating. When you run out of obvious ideas, that's when the interesting work begins — study the top attempts closely, look for patterns in what scores well, try combining approaches, research new techniques, or pivot to a completely different direction.
+Go back to Step 1. Keep iterating. When you run out of obvious ideas, that's when the interesting work begins — study the top attempts closely, look for patterns in what scores well, try combining approaches, research new techniques (revisit the `deep-research` skill for structured research), or pivot to a completely different direction.
 {tips_section}
 ## Ground Rules
 
@@ -152,6 +162,7 @@ Go back to Step 1. Keep iterating. When you run out of obvious ideas, that's whe
 | `.coral/attempts/*.json` | Scored commits from all agents |
 | `{shared_dir}/notes/*.md` | Findings and observations |
 | `{shared_dir}/skills/*/` | Reusable tools (SKILL.md + scripts/) |
+| `{shared_dir}/agents/*.md` | Specialist subagent definitions |
 
 ### CLI
 ```

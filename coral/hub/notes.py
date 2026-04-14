@@ -96,6 +96,7 @@ def _parse_note_file(path: Path) -> dict[str, Any]:
         "creator": meta.get("creator", ""),
         "filename": path.name,
         "_mtime": os.path.getmtime(path),
+        "_path": path,  # full path, used to compute relative path later
     }
 
 
@@ -105,7 +106,8 @@ def _collect_from_dir(directory: Path) -> list[dict[str, Any]]:
         return []
 
     md_files = sorted(
-        f for f in directory.rglob("*.md") if f.name != "notes.md"
+        f for f in directory.rglob("*.md")
+        if f.name != "notes.md" and not f.name.startswith("_")
     )
 
     if md_files:
@@ -158,6 +160,24 @@ def list_notes(coral_dir: str | Path) -> list[dict[str, Any]]:
                 entries.append(e)
 
     entries.sort(key=_sort_key)
+
+    # Add relative path and category for UI grouping, clean up internal fields
+    for entry in entries:
+        entry.pop("_mtime", None)
+        full_path = entry.pop("_path", None)
+        if full_path:
+            rel = str(full_path.relative_to(notes_dir))
+            entry["relative_path"] = rel
+            # Categorize by top-level directory
+            parts = rel.split(os.sep)
+            if len(parts) > 1:
+                entry["category"] = parts[0]  # raw, research, experiments, etc.
+            else:
+                entry["category"] = "other"
+        else:
+            entry["relative_path"] = entry.get("filename", "")
+            entry["category"] = "other"
+
     return entries
 
 

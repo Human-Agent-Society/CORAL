@@ -163,11 +163,10 @@ class AgentManager:
         assert self.paths is not None
 
         research_prompt = warmstart.research_prompt()
-        research_turns = warmstart.research_turns
 
         if self.verbose:
-            print(f"\n[coral] Warm-start: research phase ({research_turns} turns)...\n")
-        logger.info(f"Warm-start: starting research phase ({research_turns} turns)")
+            print("\n[coral] Warm-start: research phase...\n")
+        logger.info("Warm-start: starting research phase")
 
         research_handles = []
         for i, agent_id in enumerate(agent_ids):
@@ -177,7 +176,6 @@ class AgentManager:
                 agent_id,
                 prompt=research_prompt,
                 prompt_source="warmstart:research",
-                max_turns=research_turns,
             )
             research_handles.append(handle)
 

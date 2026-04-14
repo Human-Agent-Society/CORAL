@@ -16,8 +16,11 @@ Before you write any code, get oriented. Understand the problem, understand what
 4. Check recent activity: `coral log --recent`
 5. Inspect top attempts: `coral show <hash>` to see exactly what code produced the best scores.
 6. Search for prior art: `coral log --search "keywords related to your first idea"`
-7. Read notes: Read `{shared_dir}/notes/` for findings from previous runs.
+7. Read notes: Start with `{shared_dir}/notes/index.md` for a map of all research and experiment notes, then read the ones relevant to your approach.
 8. Check available skills: `ls {shared_dir}/skills/` — you may have built tools in previous runs that you can reuse.
+9. **Read the `deep-research` skill** (`{shared_dir}/skills/deep-research/SKILL.md`) — use it to conduct literature review and research before your first implementation attempt.
+10. **Know the `organize-files` skill** (`{shared_dir}/skills/organize-files/SKILL.md`) — use it to restructure the notes directory when it becomes cluttered. Run `bash {shared_dir}/skills/organize-files/scripts/audit.sh` to check.
+11. Check available subagents: `ls {shared_dir}/agents/` — you can spawn specialist subagents (e.g. `deep-researcher` for literature review, `librarian` for notes cleanup).
 
 Only after this orientation should you start making changes.
 
@@ -97,7 +100,8 @@ Notes about what you've discovered — things that help you (or future agents) m
 - Patterns in what scores well vs. poorly
 - Debugging tips, gotchas, or surprising behavior
 
-Write notes as individual files in `{shared_dir}/notes/`:
+Write notes as individual files in `{shared_dir}/notes/`. Use short, descriptive, topic-based filenames in kebab-case — e.g. `gradient-clipping-helps.md`, `batch-size-vs-lr-tradeoff.md`. **Never** include agent IDs, eval numbers, or attempt hashes in filenames. Authorship belongs in the `creator` frontmatter field, not the filename.
+
 ```
 cat > {shared_dir}/notes/your-finding.md << 'EOF'
 ---
@@ -139,9 +143,13 @@ EOF
 
 Update an existing skill if it covers the same topic rather than creating a duplicate. Use `coral skills` to see what exists. Read `{shared_dir}/skills/skill-creator/SKILL.md` for a detailed workflow on creating, testing, and optimizing skills.
 
+**Spawn specialist subagents** when needed. Use the `deep-researcher` subagent to conduct literature review when you need fresh ideas or are exploring a new direction. Use the `librarian` subagent to clean up and organize notes when the knowledge base is getting cluttered. Check `{shared_dir}/agents/` for all available subagents.
+
+If the notes directory becomes hard to navigate, use the `organize-files` skill (`{shared_dir}/skills/organize-files/SKILL.md`) to restructure it.
+
 ## Repeat
 
-Go back to Step {plan_step_num}. Keep iterating. When you run out of obvious ideas, that's when the interesting work begins — study the top attempts closely, look for patterns in what scores well, try combining approaches, {repeat_research_hint}or pivot to a completely different direction.
+Go back to Step {plan_step_num}. Keep iterating. When you run out of obvious ideas, that's when the interesting work begins — study the top attempts closely, look for patterns in what scores well, try combining approaches, {repeat_research_hint}revisit the `deep-research` skill for structured literature review, or pivot to a completely different direction.
 {tips_section}
 ## Ground Rules
 
@@ -159,6 +167,7 @@ Go back to Step {plan_step_num}. Keep iterating. When you run out of obvious ide
 | `.coral/attempts/*.json` | Scored commits (your history) |
 | `{shared_dir}/notes/*.md` | Findings and observations |
 | `{shared_dir}/skills/*/` | Reusable skills (SKILL.md + scripts/ + examples/) |
+| `{shared_dir}/agents/*.md` | Specialist subagent definitions |
 
 ### CLI
 ```

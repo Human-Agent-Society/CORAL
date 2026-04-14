@@ -81,3 +81,4 @@ examples/ADRS/eplb/eval/expert-load.json
 
 # exceptions
 !ttt/slime/scripts/
+!coral/template/skills/*/scripts/

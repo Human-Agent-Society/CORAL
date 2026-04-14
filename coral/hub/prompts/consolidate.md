@@ -85,21 +85,13 @@ Update `notes/_open-questions.md`:
 
 **Step 5: Organize structure (if needed)**
 
-If the notes folder is disorganized, reorganize into a hierarchy:
+If the notes folder is disorganized (too many flat files, duplicates, naming issues), use the `organize-files` skill to restructure it:
 
 ```
-notes/
-  architecture/
-    attention/
-    normalization/
-  optimization/
-    learning-rate/
-    regularization/
-  debugging/
-  _synthesis/
-  _connections.md
-  _open-questions.md
+bash {shared_dir}/skills/organize-files/scripts/audit.sh
 ```
+
+If the audit shows problems, follow the full process in `{shared_dir}/skills/organize-files/SKILL.md`. The skill provides scripts for deduplication, safe moves with frontmatter tracking, and index regeneration. Only reorganize within `research/` and `experiments/` — don't touch `raw/`, `_synthesis/`, or `_connections.md`.
 
 **Step 6: Extract skills**
 

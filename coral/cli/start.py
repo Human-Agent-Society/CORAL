@@ -551,6 +551,12 @@ def cmd_resume(args: argparse.Namespace) -> None:
                 file=sys.stderr,
             )
             sys.exit(1)
+        except PermissionError:
+            print(
+                f"Error: Manager already running (PID {pid}). Stop it first with 'coral stop'.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
         except ProcessLookupError:
             pass
 
@@ -639,7 +645,7 @@ def _stop_one(coral_dir: Path) -> None:
                 time.sleep(0.5)
                 try:
                     os.kill(pid, 0)
-                except ProcessLookupError:
+                except (ProcessLookupError, PermissionError):
                     print("Manager stopped.")
                     return
             print("Manager didn't stop gracefully. Force killing...")
@@ -712,6 +718,9 @@ def cmd_status(args: argparse.Namespace) -> None:
         pid = int(pid_file.read_text().strip())
         try:
             os.kill(pid, 0)
+            manager_alive = True
+            print(f"Manager: RUNNING (PID {pid})")
+        except PermissionError:
             manager_alive = True
             print(f"Manager: RUNNING (PID {pid})")
         except ProcessLookupError:

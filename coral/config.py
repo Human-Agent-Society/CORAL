@@ -58,7 +58,6 @@ class WarmStartConfig:
     """Warm-start configuration: optional research phase before the main coding loop."""
 
     enabled: bool = False
-    research_turns: int = 15  # max turns for the research phase
 
 
 @dataclass
@@ -78,6 +77,7 @@ class AgentConfig:
             HeartbeatActionConfig(name="reflect", every=1),
             HeartbeatActionConfig(name="consolidate", every=10, is_global=True),
             HeartbeatActionConfig(name="pivot", every=5, trigger="plateau"),
+            HeartbeatActionConfig(name="lint_wiki", every=10, is_global=True),
         ]
     )
     research: bool = True  # enable web search / literature review step in workflow
