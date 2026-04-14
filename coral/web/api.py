@@ -237,7 +237,7 @@ def _enumerate_runs(results_dir: Path, current_coral_dir: Path) -> dict:
                     pid = int(pid_file.read_text().strip())
                     os.kill(pid, 0)
                     status = "running"
-                except (ProcessLookupError, ValueError):
+                except (ProcessLookupError, PermissionError, ValueError):
                     pass
             if status == "stopped" and is_docker_run_alive(coral_dir):
                 status = "running"
@@ -335,7 +335,7 @@ async def get_status(request: Request) -> JSONResponse:
             manager_pid = int(pid_file.read_text().strip())
             os.kill(manager_pid, 0)
             manager_alive = True
-        except (ProcessLookupError, ValueError):
+        except (ProcessLookupError, PermissionError, ValueError):
             pass
     is_docker = not manager_alive and is_docker_run_alive(coral_dir)
     if is_docker:
@@ -383,7 +383,7 @@ async def get_status(request: Request) -> JSONResponse:
                         os.kill(pid, 0)
                         any_agent_alive = True
                         break
-                    except ProcessLookupError:
+                    except (ProcessLookupError, PermissionError):
                         pass
             except (ValueError, OSError):
                 pass
@@ -404,7 +404,7 @@ async def get_status(request: Request) -> JSONResponse:
             try:
                 os.kill(agent_pid, 0)
                 status = "active"
-            except ProcessLookupError:
+            except (ProcessLookupError, PermissionError):
                 status = "stopped"
         elif any_agent_alive or is_docker:
             # Container or agent.pids says something is running but no per-agent mapping
