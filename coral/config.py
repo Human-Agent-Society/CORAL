@@ -77,6 +77,7 @@ class AgentConfig:
             HeartbeatActionConfig(name="reflect", every=1),
             HeartbeatActionConfig(name="consolidate", every=10, is_global=True),
             HeartbeatActionConfig(name="pivot", every=5, trigger="plateau"),
+            HeartbeatActionConfig(name="lint_wiki", every=10, is_global=True),
         ]
     )
     research: bool = True  # enable web search / literature review step in workflow

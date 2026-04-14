@@ -43,6 +43,7 @@ def slugify(name: str) -> str:
 
 
 _SEED_SKILLS_DIR = Path(__file__).parent.parent / "template" / "skills"
+_SEED_AGENTS_DIR = Path(__file__).parent.parent / "template" / "agents"
 
 
 def create_project(config: CoralConfig, config_dir: Path | None = None) -> ProjectPaths:
@@ -61,6 +62,7 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
                 │   │   ├── notes/
                 │   │   ├── change_summary.md
                 │   │   ├── skills/
+                │   │   ├── agents/
                 │   │   ├── attempts/
                 │   │   ├── logs/
                 │   │   └── settings.json
@@ -93,6 +95,7 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     (coral_dir / "public" / "attempts").mkdir(parents=True, exist_ok=True)
     (coral_dir / "public" / "logs").mkdir(parents=True, exist_ok=True)
     (coral_dir / "public" / "skills").mkdir(parents=True, exist_ok=True)
+    (coral_dir / "public" / "agents").mkdir(parents=True, exist_ok=True)
     (coral_dir / "public" / "notes").mkdir(parents=True, exist_ok=True)
     (coral_dir / "public" / "heartbeat").mkdir(parents=True, exist_ok=True)
     (coral_dir / "private").mkdir(parents=True, exist_ok=True)
@@ -110,6 +113,16 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
                 if not dst.exists():
                     shutil.copytree(skill_dir, dst)
                     logger.info(f"Seeded skill: {skill_dir.name}")
+
+    # Seed bundled agent templates from coral/template/agents/
+    seed_agents_dir = _SEED_AGENTS_DIR
+    if seed_agents_dir.is_dir():
+        for agent_file in seed_agents_dir.iterdir():
+            if agent_file.is_file():
+                dst = coral_dir / "public" / "agents" / agent_file.name
+                if not dst.exists():
+                    shutil.copy2(agent_file, dst)
+                    logger.info(f"Seeded agent template: {agent_file.name}")
 
     # Save config
     config.to_yaml(coral_dir / "config.yaml")

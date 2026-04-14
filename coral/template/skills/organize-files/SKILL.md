@@ -45,6 +45,13 @@ bash .coral/public/skills/organize-files/scripts/audit.sh
 
 Or manually: `ls -R {shared_dir}/notes/` and count files per directory.
 
+Also check for content-level issues:
+- **Contradictions** — do any notes claim opposite things? Update or flag them in `_open-questions.md`.
+- **Stale info** — research notes that experiments have disproven. Update with actual results.
+- **Orphan pages** — notes not listed in `index.md`. Add them.
+- **Missing cross-references** — related notes that don't link to each other.
+- **Gaps** — techniques mentioned but never researched, or researched but never tried.
+
 ### 2. Plan
 
 Write out your target structure before moving anything. Organize **within** `research/` and `experiments/` — add subdirectories by topic when a dir has 5+ files:

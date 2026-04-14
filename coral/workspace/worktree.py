@@ -145,6 +145,7 @@ def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: st
     shared_items = [
         "notes",
         "skills",
+        "agents",
         "attempts",
         "logs",
         "heartbeat",
