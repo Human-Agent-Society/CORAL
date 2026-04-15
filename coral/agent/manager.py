@@ -749,6 +749,34 @@ class AgentManager:
                     self.handles[i] = self._restart_agent(i, prompt=prompt)
                     self._write_agent_pids()
 
+            # Check for stalled agents (alive but no output for > timeout)
+            timeout = self.config.agents.timeout
+            if timeout > 0:
+                for i, handle in enumerate(self.handles):
+                    if handle.alive and self._running:
+                        try:
+                            age = time.time() - handle.log_path.stat().st_mtime
+                        except OSError:
+                            continue
+                        if age > timeout:
+                            logger.warning(
+                                f"Agent {handle.agent_id} stalled "
+                                f"({int(age)}s since last output), restarting"
+                            )
+                            if self.verbose:
+                                print(
+                                    f"[coral] {handle.agent_id} stalled "
+                                    f"({int(age)}s with no output), restarting..."
+                                )
+                            self.handles[i] = self._interrupt_and_resume(
+                                i,
+                                "You were automatically restarted because you "
+                                "produced no output for an extended period. "
+                                "Continue working on the task.",
+                                prompt_source="timeout",
+                            )
+                            self._write_agent_pids()
+
             # Interruptible sleep
             if self._stop_event.wait(timeout=check_interval):
                 break
