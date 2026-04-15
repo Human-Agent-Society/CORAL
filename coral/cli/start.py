@@ -393,7 +393,7 @@ def cmd_start(args: argparse.Namespace) -> None:
         print(f"[coral] Results:    {config.workspace.results_dir}")
         print(f"[coral] Repo path:  {config.workspace.repo_path}")
         if config.agents.warmstart.enabled:
-            print(f"[coral] Warm-start: research_turns={config.agents.warmstart.research_turns}")
+            print(f"[coral] Warm-start: enabled")
         print()
 
     manager = AgentManager(config, verbose=verbose, config_dir=config_path.parent)
