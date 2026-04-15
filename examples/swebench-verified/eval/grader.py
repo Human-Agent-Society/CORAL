@@ -1,6 +1,6 @@
 """SWE-bench grader — evaluates a solver agent via the harbor CLI.
 
-Runs `harbor run -d swe-bench-verified` with the agent's solve.py as a custom
+Runs `harbor run -d swebench-verified@1.0` with the agent's solve.py as a custom
 harbor agent, then parses the job result JSON for the pass rate.
 
 Uses tiered evaluation:
@@ -23,8 +23,8 @@ from coral.types import ScoreBundle
 
 class Grader(TaskGrader):
     def evaluate(self) -> ScoreBundle:
-        dataset = self.args.get("dataset", "swe-bench-verified")
-        n_concurrent = int(self.args.get("n_concurrent", 4))
+        dataset = self.args.get("dataset", "swebench-verified@1.0")
+        n_concurrent = int(self.args.get("n_concurrent", 5))
         tier1_size = int(self.args.get("tier1_size", 5))
         tier1_threshold = float(self.args.get("tier1_threshold", 0.3))
         tier2_size = int(self.args.get("tier2_size", 30))
@@ -71,7 +71,7 @@ class Grader(TaskGrader):
             job_dir.mkdir(parents=True, exist_ok=True)
             job_name = f"eval_{tier_name.lower().replace(' ', '_')}_{int(time.time())}"
 
-            result, elapsed = self._run_harbor(
+            harbor_result = self._run_harbor(
                 harbor_cmd=harbor_cmd,
                 dataset=dataset,
                 job_dir=job_dir,
@@ -82,11 +82,11 @@ class Grader(TaskGrader):
                 verifier_timeout_multiplier=verifier_timeout_multiplier,
             )
 
-            if isinstance(result, ScoreBundle):
+            if isinstance(harbor_result, ScoreBundle):
                 # Error from _run_harbor
-                return result
+                return harbor_result
 
-            pass_rate, feedback = result
+            pass_rate, feedback = harbor_result
 
             # Early stop check (skip for final tier)
             if threshold > 0 and pass_rate < threshold:
