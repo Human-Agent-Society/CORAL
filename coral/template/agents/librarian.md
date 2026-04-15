@@ -8,7 +8,6 @@ tools:
   Edit: true
   Glob: true
   Grep: true
-model: inherit
 skills:
   organize-files: true
   skill-creator: true

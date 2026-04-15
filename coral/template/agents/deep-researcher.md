@@ -10,7 +10,6 @@ tools:
   Grep: true
   WebSearch: true
   WebFetch: true
-model: inherit
 skills:
   deep-research: true
 ---
