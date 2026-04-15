@@ -2,16 +2,16 @@
 name: librarian
 description: "Knowledge librarian — spawn to organize notes, deduplicate findings, and consolidate reusable patterns into skills. Use proactively when the notes directory has grown large, contains duplicates, or is hard to navigate."
 tools:
-  - Bash
-  - Read
-  - Write
-  - Edit
-  - Glob
-  - Grep
+  Bash: true
+  Read: true
+  Write: true
+  Edit: true
+  Glob: true
+  Grep: true
 model: inherit
 skills:
-  - organize-files
-  - skill-creator
+  organize-files: true
+  skill-creator: true
 ---
 
 You are the **knowledge librarian**. Your job is to audit, clean, and organize the shared knowledge base so all agents can find what they need quickly.
