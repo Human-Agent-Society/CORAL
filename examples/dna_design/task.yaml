@@ -47,6 +47,7 @@ agents:
 
 workspace:
   results_dir: "./results"
+  repo_path: "./examples/dna_design/seed"
   setup:
     - "uv pip install numpy"
 

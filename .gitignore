@@ -69,9 +69,6 @@ autoresearch/
 results/
 test_claude_code/
 
-# Dev artifacts
-scripts/
-
 # OpenCode local installation and generated files
 .opencode/
 

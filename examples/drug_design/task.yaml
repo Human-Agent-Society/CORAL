@@ -55,6 +55,7 @@ agents:
 
 workspace:
   results_dir: "./results"
+  repo_path: "./examples/drug_design/seed"
   setup:
     - "uv pip install rdkit-pypi numpy"
 

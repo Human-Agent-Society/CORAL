@@ -1,0 +1,55 @@
+# CORAL task: SWE-bench meta-solver optimization
+# Agents optimize solve.py (a Harbor agent) to maximize the solve rate.
+
+task:
+  name: "swebench-verified"
+  description: |
+    Optimize a solver agent (solve.py) that fixes real GitHub bugs.
+
+    Your solve.py exports a SolverAgent (a Harbor agent based on Terminus2) that
+    receives a SWE-bench instance and must fix the bug in the repository.
+
+    The grader evaluates your solver via `harbor run` using tiered eval:
+      - Tier 1:  5 instances — must pass ≥30% to continue
+      - Tier 2: 30 instances — must pass ≥70% to continue
+      - Tier 3: all instances
+
+    Each instance is tested by applying your changes, then running the hidden
+    fail-to-pass tests. Your score is the fraction of instances solved.
+
+    DO NOT TRY TO peek the test cases. You are not going to get any information from them.
+    Focus on improving the general problem solving capability of the solver, making it more
+    robust and generalizable.
+
+  tips: |
+    - Start by understanding the baseline solve.py and Terminus2 architecture
+    - The solver is a Harbor agent that interacts via terminal (tmux)
+    - Improve the prompt, add repo exploration, multi-step reasoning
+    - Common failure modes: empty patch, patch doesn't apply, wrong files changed
+
+grader:
+  timeout: 14400
+  direction: maximize
+  args:
+    dataset: "swebench-verified@1.0"
+    n_concurrent: 4
+    tier1_size: 5
+    tier1_threshold: 0.3
+    tier2_size: 30
+    tier2_threshold: 0.7
+
+agents:
+  count: 1
+  runtime: claude_code
+  model: claude-opus-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/swebench-verified/seed"
+  setup:
+    - "uv pip install anthropic"
+
+run:
+  verbose: false
+  ui: false
+  session: local

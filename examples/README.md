@@ -119,6 +119,8 @@ The starting codebase that gets copied into each agent's git worktree. This is w
 | [frontier_cs_research](#frontier_cs_research) | 127 research-level CS problems (Python) | Maximize |
 | [dna_design](#dna_design) | Design cell-type-specific DNA enhancer sequences (SAGA) | Maximize |
 | [drug_design](#drug_design) | Design novel small-molecule antibiotics (SAGA) | Maximize |
+| [harbor/swebench-verified](#harborswebench-verified) | Optimize a solver program across 500 SWE-bench instances | Maximize |
+| [harbor/terminal-bench](#harborterminal-bench) | Optimize a solver agent for terminal/shell tasks via Harbor | Maximize |
 
 ## Details
 
@@ -209,6 +211,26 @@ Design novel small-molecule antibiotics against K. pneumoniae with drug-like pro
 - **Agents**: 1
 - **Timeout**: 600s
 - **Scoring**: QED + novelty + PAINS filter (always); MiniMol activity + ChemProp toxicity (optional)
+
+### harbor/swebench-verified
+
+Meta-solver optimization: agents improve a `solve.py` that wraps a Terminus2-based Harbor agent for fixing real GitHub bugs. The grader calls `harbor run -d swe-bench-verified` with the solver as a custom agent, using tiered evaluation (5 → 30 → all). Harbor handles repo setup, patch application, and test execution.
+
+- **Agents**: 1
+- **Timeout**: 14400s (4h for full eval)
+- **Scoring**: Fraction of instances solved (pass rate)
+- **Setup**: `uv pip install anthropic`; requires Harbor CLI (`uvx harbor`)
+- **Baseline**: Terminus2 agent architecture (tmux-based multi-turn interaction)
+
+### harbor/terminal-bench
+
+Meta-solver optimization: agents improve a `solve.py` that wraps a Terminus2-based Harbor agent for completing terminal/shell tasks in Docker containers. The grader calls `harbor run -d terminal-bench@2.0` with the solver as a custom agent, and parses the job results.
+
+- **Agents**: 1
+- **Timeout**: 7200s (2h)
+- **Scoring**: Pass rate across terminal-bench tasks
+- **Setup**: `uv pip install anthropic`; requires Harbor CLI (`uvx harbor`)
+- **Baseline**: Terminus2 agent architecture (tmux-based multi-turn interaction)
 
 ## Writing Your Own
 

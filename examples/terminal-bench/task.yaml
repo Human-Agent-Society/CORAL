@@ -1,0 +1,52 @@
+# CORAL task: terminal-bench meta-solver optimization
+# Agents optimize solve.py to maximize the pass rate on terminal-bench tasks.
+# The grader runs `harbor run` directly to evaluate the solver.
+
+task:
+  name: "terminal-bench"
+  description: |
+    Optimize a solver agent (solve.py) that completes terminal/shell tasks.
+
+    Your solve.py implements a Harbor agent (SolverAgent class) that receives
+    a natural language instruction and executes commands in a Docker container
+    to complete the task. A verifier checks if the task was completed correctly.
+
+    The grader runs `harbor run -d terminal-bench@2.0` with your solver as the
+    agent and returns the pass rate across all tasks.
+
+    DO NOT TRY TO peek the test cases. You are not going to get any information from them.
+    Focus on the improving the general problem solving capability of the solver, making it more
+    robust and generalizable.
+
+  tips: |
+    - Start by understanding the baseline solve.py and the Terminus2 agent architecture
+    - The agent interacts via tmux sessions in Docker containers
+    - Improve prompting, multi-turn reasoning, error recovery
+    - Common failures: wrong paths, missing packages, incorrect syntax
+    - Test locally: harbor run -d terminal-bench@2.0 --agent-import-path "solve:SolverAgent" -l 5
+
+grader:
+  timeout: 7200
+  direction: maximize
+  args:
+    dataset: "terminal-bench@2.0"
+    n_concurrent: 4
+    n_tasks: 0
+    agent_timeout_multiplier: 1.0
+    verifier_timeout_multiplier: 1.0
+
+agents:
+  count: 1
+  runtime: claude_code
+  model: claude-opus-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/terminal-bench/seed"
+  setup:
+    - "uv pip install anthropic"
+
+run:
+  verbose: false
+  ui: false
+  session: local
