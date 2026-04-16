@@ -19,6 +19,8 @@ The `examples/` directory includes task configurations for several benchmarks:
 | `mnist` | ML classification |
 | `spaceship_titanic` | Kaggle competition (classification) |
 | `stanford_covid_vaccine` | mRNA degradation prediction |
+| `swebench-verified` | Meta-solver optimization over SWE-bench Verified (Harbor) |
+| `terminal-bench` | Meta-solver optimization over terminal-bench (Harbor) |
 
 ## Running a benchmark
 
@@ -42,4 +44,48 @@ Benchmark graders follow the same `TaskGrader` pattern. For example, the circle 
 3. Computes `sum_radii / best_known_result` as the score
 
 See [Writing a Custom Grader](/guides/custom-grader) for the full guide.
+
+## Harbor-based benchmarks (SWE-bench, terminal-bench)
+
+SWE-bench Verified and terminal-bench are evaluated via [Harbor](https://github.com/corca-ai/harbor), which runs each instance inside its own Docker container. CORAL does **not** ship them as Python extras — they are regular example tasks that shell out to `uvx harbor run` from their grader.
+
+> **Docker-in-Docker is not supported.** Harbor spawns Docker containers, so CORAL itself must run on the host machine (not inside a container) when using these benchmarks.
+
+### Meta-solver pattern
+
+Both tasks follow a meta-solver optimization pattern: agents iteratively improve a `solve.py` (a Terminus2-based Harbor agent) to maximize the pass rate across the benchmark's instances. The seed directory already contains a working baseline.
+
+### Tiered evaluation
+
+Every `coral eval` runs **one tier** based on the agent's best previous score, which avoids redundantly re-running cheap tiers:
+
+| Tier | Instances | Advances when best score ≥ |
+|------|-----------|----------------------------|
+| 1    | 5         | 0.3                        |
+| 2    | 30        | 0.7                        |
+| 3    | all       | —                          |
+
+Tier sizes and thresholds are configurable via `grader.args.tier1_size`, `tier1_threshold`, `tier2_size`, `tier2_threshold` in the task's `task.yaml`.
+
+### Running
+
+```bash
+# SWE-bench Verified (~500 instances at tier 3)
+coral start -c examples/swebench-verified/task.yaml
+
+# terminal-bench
+coral start -c examples/terminal-bench/task.yaml
+```
+
+Each run writes detailed agent trajectories, terminal recordings, and verifier output to `harbor_logs/` in the worktree — useful for understanding why specific instances failed.
+
+### Local smoke test
+
+To test the baseline solver outside of CORAL:
+
+```bash
+uvx harbor run -d terminal-bench@2.0 \
+  --agent-import-path "solve:SolverAgent" \
+  -l 5
+```
 
