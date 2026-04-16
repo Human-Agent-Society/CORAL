@@ -221,6 +221,7 @@ Meta-solver optimization: agents improve a `solve.py` that wraps a Terminus2-bas
 - **Scoring**: Fraction of instances solved (pass rate)
 - **Setup**: `uv pip install anthropic`; requires Harbor CLI (`uvx harbor`)
 - **Baseline**: Terminus2 agent architecture (tmux-based multi-turn interaction)
+- **Note**: Harbor runs Docker containers, so CORAL must run on the host (no Docker-in-Docker)
 
 ### terminal-bench
 
@@ -231,6 +232,7 @@ Meta-solver optimization: agents improve a `solve.py` that wraps a Terminus2-bas
 - **Scoring**: Pass rate across terminal-bench tasks
 - **Setup**: `uv pip install anthropic`; requires Harbor CLI (`uvx harbor`)
 - **Baseline**: Terminus2 agent architecture (tmux-based multi-turn interaction)
+- **Note**: Harbor runs Docker containers, so CORAL must run on the host (no Docker-in-Docker)
 
 ## Writing Your Own
 
