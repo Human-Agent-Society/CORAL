@@ -26,6 +26,7 @@ ENV UV_BREAK_SYSTEM_PACKAGES=1
 # Install vanilla Megatron-LM
 # =========================
 ARG MEGATRON_COMMIT=3714d81d418c9f1bca4594fc35f9e8289f652862
+RUN pip install pybind11 setuptools wheel
 RUN git clone https://github.com/NVIDIA/Megatron-LM.git /opt/megatron-lm && \
     cd /opt/megatron-lm && git checkout ${MEGATRON_COMMIT} && \
     pip install -e . --no-deps --no-build-isolation
@@ -56,6 +57,12 @@ RUN cd ttt/slime && pip install -e . --no-deps --no-build-isolation
 COPY pyproject.toml README* ./
 COPY coral/ coral/
 COPY ttt/ ttt/
+# hatch-vcs reads version from git tags, but .git isn't copied into the image.
+# Patch pyproject.toml to use a static version for the Docker build.
+RUN sed -i 's|dynamic = \["version"\]|version = "0.1.0"|' pyproject.toml \
+    && sed -i '/\[tool.hatch.version\]/,/^$/d' pyproject.toml \
+    && sed -i '/\[tool.hatch.build.hooks.vcs\]/,/^$/d' pyproject.toml \
+    && sed -i 's|"hatch-vcs",||' pyproject.toml || true
 RUN pip install hatchling editables \
     && pip install -e . --no-deps --no-build-isolation \
     && pip install httpx fastapi uvicorn pylatexenc "litellm[proxy]" accelerate peft
