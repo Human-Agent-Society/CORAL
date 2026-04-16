@@ -2,6 +2,12 @@
 
 Runs `harbor run -d terminal-bench@2.0` with the agent's solve.py as a custom
 harbor agent, then parses the job result JSON for the pass rate.
+
+Uses tiered evaluation — each `coral eval` runs ONE tier based on the best
+score seen so far:
+  - best < tier1_threshold (0.3) → Tier 1 (5 instances)
+  - best < tier2_threshold (0.7) → Tier 2 (30 instances)
+  - best ≥ tier2_threshold       → Tier 3 (all instances)
 """
 
 from __future__ import annotations
@@ -17,10 +23,30 @@ from coral.types import ScoreBundle
 
 
 class Grader(TaskGrader):
+    def _get_best_score(self) -> float | None:
+        """Read the best score from previous attempts."""
+        coral_dir = Path(self.private_dir).parent
+        attempts_dir = coral_dir / "public" / "attempts"
+        if not attempts_dir.exists():
+            return None
+        best = None
+        for f in attempts_dir.glob("*.json"):
+            try:
+                data = json.loads(f.read_text())
+                score = data.get("score")
+                if score is not None and (best is None or score > best):
+                    best = score
+            except (json.JSONDecodeError, OSError):
+                continue
+        return best
+
     def evaluate(self) -> ScoreBundle:
         dataset = self.args.get("dataset", "terminal-bench@2.0")
         n_concurrent = int(self.args.get("n_concurrent", 4))
-        n_tasks = int(self.args.get("n_tasks", 0))  # 0 = all
+        tier1_size = int(self.args.get("tier1_size", 5))
+        tier1_threshold = float(self.args.get("tier1_threshold", 0.3))
+        tier2_size = int(self.args.get("tier2_size", 30))
+        tier2_threshold = float(self.args.get("tier2_threshold", 0.7))
         agent_timeout_multiplier = float(self.args.get("agent_timeout_multiplier", 1.0))
         verifier_timeout_multiplier = float(self.args.get("verifier_timeout_multiplier", 1.0))
 
@@ -49,17 +75,60 @@ class Grader(TaskGrader):
                 feedback="Install harbor (`uvx harbor --version` to verify) or ensure `uvx` is available.",
             )
 
-        # Save harbor output inside agent's workspace so they can inspect logs
+        # Determine which tier to run based on best previous score
+        best_score = self._get_best_score()
+        if best_score is None or best_score < tier1_threshold:
+            n_tasks, tier_name = tier1_size, "Tier 1"
+        elif best_score < tier2_threshold:
+            n_tasks, tier_name = tier2_size, "Tier 2"
+        else:
+            n_tasks, tier_name = 0, "Tier 3 (full)"
+
         job_dir = Path(self.codebase_path) / "harbor_logs"
         job_dir.mkdir(parents=True, exist_ok=True)
-        job_name = f"eval_{int(time.time())}"
+        job_name = f"eval_{tier_name.lower().replace(' ', '_')}_{int(time.time())}"
 
-        # Build harbor run command
+        start = time.time()
+        harbor_result = self._run_harbor(
+            harbor_cmd=harbor_cmd,
+            dataset=dataset,
+            job_dir=job_dir,
+            job_name=job_name,
+            n_tasks=n_tasks,
+            n_concurrent=n_concurrent,
+            agent_timeout_multiplier=agent_timeout_multiplier,
+            verifier_timeout_multiplier=verifier_timeout_multiplier,
+        )
+
+        if isinstance(harbor_result, ScoreBundle):
+            return harbor_result
+
+        pass_rate, feedback = harbor_result
+        elapsed = time.time() - start
+        explanation = (
+            f"{tier_name}: {pass_rate:.1%} pass rate in {elapsed:.0f}s"
+        )
+        return self.score(pass_rate, explanation, feedback=feedback)
+
+    def _run_harbor(
+        self,
+        harbor_cmd: list[str],
+        dataset: str,
+        job_dir: Path,
+        job_name: str,
+        n_tasks: int,
+        n_concurrent: int,
+        agent_timeout_multiplier: float,
+        verifier_timeout_multiplier: float,
+    ) -> tuple[float, str] | ScoreBundle:
+        """Run harbor and return (pass_rate, feedback) or a ScoreBundle on error."""
+        import os
+
         cmd = [
             *harbor_cmd,
             "run",
             "-d", dataset,
-            "--agent-import-path", f"solve:SolverAgent",
+            "--agent-import-path", "solve:SolverAgent",
             "-o", str(job_dir),
             "--job-name", job_name,
             "-n", str(n_concurrent),
@@ -70,13 +139,10 @@ class Grader(TaskGrader):
         if n_tasks > 0:
             cmd.extend(["-l", str(n_tasks)])
 
-        # Run harbor with PYTHONPATH set so it can import solve.py
-        import os
         env = {**os.environ, "PYTHONPATH": self.codebase_path}
-
-        start = time.time()
         timeout = self.timeout or 7200
 
+        start = time.time()
         try:
             result = subprocess.run(
                 cmd,
@@ -89,11 +155,10 @@ class Grader(TaskGrader):
         except subprocess.TimeoutExpired:
             return self.fail(
                 f"Harbor run timed out after {timeout}s",
-                feedback=f"Evaluation timed out after {timeout}s. Try reducing n_tasks.",
+                feedback=f"Evaluation timed out after {timeout}s.",
             )
 
         elapsed = time.time() - start
-
         # Parse results
         result_path = job_dir / job_name / "result.json"
         if not result_path.exists():
@@ -109,18 +174,17 @@ class Grader(TaskGrader):
         except json.JSONDecodeError as e:
             return self.fail(f"Failed to parse result.json: {e}")
 
-        # Extract stats
         return self._parse_job_result(job_result, job_dir / job_name, elapsed)
 
     def _parse_job_result(
         self, job_result: dict, job_dir: Path, elapsed: float
-    ) -> ScoreBundle:
-        """Parse harbor job result.json and return a score."""
+    ) -> tuple[float, str]:
+        """Parse harbor job result.json and return (pass_rate, feedback)."""
         n_trials = job_result.get("n_trials", 0)
         n_errors = job_result.get("n_errors", 0)
 
         if n_trials == 0:
-            return self.fail("No trials completed")
+            return (0.0, "No trials completed")
 
         # Aggregate pass rate from evals
         evals = job_result.get("evals", {})
@@ -184,12 +248,7 @@ class Grader(TaskGrader):
         lines.append(f"Full harbor logs (agent trajectories, terminal recordings, verifier output): `{job_dir}`")
 
         feedback = "\n".join(lines)
-        explanation = (
-            f"Pass rate: {total_passed}/{total_trials} ({overall_rate:.1%}), "
-            f"{n_errors} errors, {elapsed:.0f}s"
-        )
-
-        return self.score(overall_rate, explanation, feedback=feedback)
+        return (overall_rate, feedback)
 
     def _collect_trial_failures(self, job_dir: Path, max_show: int = 10) -> list[str]:
         """Collect failure details from individual trial result files."""

@@ -17,15 +17,21 @@ task:
     Each instance is tested by applying your changes, then running the hidden
     fail-to-pass tests. Your score is the fraction of instances solved.
 
+    The grader runs `uvx harbor run -d terminal-bench@2.0` with your solver as the
+    agent and returns the pass rate across all tasks.
+
     DO NOT TRY TO peek the test cases. You are not going to get any information from them.
-    Focus on improving the general problem solving capability of the solver, making it more
+    Focus on the improving the general problem solving capability of the solver, making it more
     robust and generalizable.
 
   tips: |
-    - Start by understanding the baseline solve.py and Terminus2 architecture
+    - Start by understanding the baseline solve.py and Harbor agent architecture
     - The solver is a Harbor agent that interacts via terminal (tmux)
     - Improve the prompt, add repo exploration, multi-step reasoning
     - Common failure modes: empty patch, patch doesn't apply, wrong files changed
+    - Before fixing a method, the solver should search for parent/sibling class implementations of the same method to reuse established error-handling patterns (e.g. try/except vs narrow None check)
+    - The solver should verify semantic correctness of fixes, not just that errors/crashes disappear — a fix that silences an exception but produces wrong results will still fail the hidden tests
+    - Prefer robust, general fixes over minimal point fixes — a try/except catching multiple exception types beats an `if x is None` guard that misses other bad inputs
 
 grader:
   timeout: 14400
