@@ -32,6 +32,7 @@ task:
     - Before fixing a method, the solver should search for parent/sibling class implementations of the same method to reuse established error-handling patterns (e.g. try/except vs narrow None check)
     - The solver should verify semantic correctness of fixes, not just that errors/crashes disappear — a fix that silences an exception but produces wrong results will still fail the hidden tests
     - Prefer robust, general fixes over minimal point fixes — a try/except catching multiple exception types beats an `if x is None` guard that misses other bad inputs
+    - After each eval, check harbor_logs/ for detailed agent trajectories, terminal recordings, and verifier output to understand why specific instances failed
 
 grader:
   timeout: 14400

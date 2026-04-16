@@ -98,6 +98,7 @@ class Grader(TaskGrader):
             n_concurrent=n_concurrent,
             agent_timeout_multiplier=agent_timeout_multiplier,
             verifier_timeout_multiplier=verifier_timeout_multiplier,
+            tier_name=tier_name,
         )
 
         if isinstance(harbor_result, ScoreBundle):
@@ -120,6 +121,7 @@ class Grader(TaskGrader):
         n_concurrent: int,
         agent_timeout_multiplier: float,
         verifier_timeout_multiplier: float,
+        tier_name: str = "",
     ) -> tuple[float, str] | ScoreBundle:
         """Run harbor and return (pass_rate, feedback) or a ScoreBundle on error."""
         import os
@@ -174,10 +176,10 @@ class Grader(TaskGrader):
         except json.JSONDecodeError as e:
             return self.fail(f"Failed to parse result.json: {e}")
 
-        return self._parse_job_result(job_result, job_dir / job_name, elapsed)
+        return self._parse_job_result(job_result, job_dir / job_name, elapsed, tier_name)
 
     def _parse_job_result(
-        self, job_result: dict, job_dir: Path, elapsed: float
+        self, job_result: dict, job_dir: Path, elapsed: float, tier_name: str = "",
     ) -> tuple[float, str]:
         """Parse harbor job result.json and return (pass_rate, feedback)."""
         n_trials = job_result.get("n_trials", 0)
@@ -227,7 +229,7 @@ class Grader(TaskGrader):
 
         # Build feedback
         lines = [
-            f"## Terminal-bench Results: {overall_rate:.1%} pass rate",
+            f"## Terminal-bench Results ({tier_name}): {overall_rate:.1%} pass rate",
             f"Completed {n_trials} trials in {elapsed:.0f}s "
             f"({n_errors} errors)",
             "",
@@ -235,11 +237,20 @@ class Grader(TaskGrader):
         for detail in reward_details:
             lines.append(f"- {detail}")
 
+        # Per-task results
+        task_results = self._collect_task_results(job_dir)
+        if task_results:
+            lines.append("")
+            lines.append("### Per-task results")
+            for task_name, passed in task_results:
+                status = "PASS" if passed else "FAIL"
+                lines.append(f"- `{task_name}`: {status}")
+
         # Per-trial failure details from trial result files
         failure_lines = self._collect_trial_failures(job_dir, max_show=10)
         if failure_lines:
             lines.append("")
-            lines.append("### Failed trials")
+            lines.append("### Failure details")
             lines.extend(failure_lines)
 
         # Point agent to the logs
@@ -249,6 +260,32 @@ class Grader(TaskGrader):
 
         feedback = "\n".join(lines)
         return (overall_rate, feedback)
+
+    def _collect_task_results(self, job_dir: Path) -> list[tuple[str, bool]]:
+        """Collect per-task pass/fail results from trial result files."""
+        results = []
+        for trial_dir in sorted(job_dir.iterdir()):
+            if not trial_dir.is_dir():
+                continue
+            result_file = trial_dir / "result.json"
+            if not result_file.exists():
+                continue
+            try:
+                trial_result = json.loads(result_file.read_text())
+                task_name = trial_result.get("task_name", trial_dir.name)
+                exception = trial_result.get("exception_info")
+                if exception:
+                    results.append((task_name, False))
+                    continue
+                verifier = trial_result.get("verifier_result")
+                if verifier and verifier.get("rewards"):
+                    passed = any(float(v) > 0 for v in verifier["rewards"].values())
+                    results.append((task_name, passed))
+                else:
+                    results.append((task_name, False))
+            except (json.JSONDecodeError, OSError):
+                continue
+        return results
 
     def _collect_trial_failures(self, job_dir: Path, max_show: int = 10) -> list[str]:
         """Collect failure details from individual trial result files."""
