@@ -141,7 +141,7 @@ class Attempt:
     agent_id: str
     title: str
     score: float | None
-    status: str  # "improved" | "baseline" | "regressed" | "reverted" | "crashed" | "timeout"
+    status: str  # "pending" | "improved" | "baseline" | "regressed" | "reverted" | "crashed" | "timeout"
     parent_hash: str | None
     timestamp: str
     feedback: str = ""

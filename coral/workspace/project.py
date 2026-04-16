@@ -65,7 +65,7 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
                 │   │   ├── agents/
                 │   │   ├── attempts/
                 │   │   ├── logs/
-                │   │   └── settings.json
+                │   │   └── settings.local.json
                 │   ├── private/
                 │   └── config.yaml
                 ├── repo/                # cloned from source
