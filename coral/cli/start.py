@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from coral.cli._helpers import (
+    docker_cmd,
     find_coral_dir,
     find_tmux_session,
     has_docker,
@@ -139,7 +140,7 @@ def _ensure_docker_image(config: CoralConfig) -> str:
         sys.exit(1)
     print(f"Building Docker image '{image}' ...")
     result = subprocess.run(
-        ["sudo", "docker", "build", "-f", str(dockerfile), "-t", image, "."],
+        [*docker_cmd(), "build", "-f", str(dockerfile), "-t", image, "."],
         cwd=str(coral_pkg),
     )
     if result.returncode != 0:
@@ -159,7 +160,7 @@ def _build_docker_cmd(
 ) -> list[str]:
     """Build the `docker run` command with standard mounts and env vars."""
     cmd: list[str] = [
-        "sudo", "docker", "run", "-d",
+        *docker_cmd(), "run", "-d",
         "--name", container_name,
         "-v", f"{config_dir}:/task:ro",
         "-v", f"{host_run_dir}:/app/run:rw",
