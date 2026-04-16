@@ -792,15 +792,13 @@ class CoralAPIServer:
         score: float,
         keep: bool,
     ) -> None:
-        """Distillation mode: keep or discard pending samples based on eval success.
+        """Distillation mode: keep or discard pending samples.
 
         keep=True:  Submit all pending samples with loss_mask=1 (SFT data).
-                    These may include reflection + corrected trajectory if the
-                    agent previously failed and recovered.
-        keep=False: Discard all pending samples (loss_mask=0). The agent will
-                    reflect and retry via CORAL heartbeat. The reflection
-                    responses are new samples that will be kept if the next
-                    eval succeeds.
+                    Only called when eval improved — these samples contain
+                    correct rationales (diagnosis + actions that worked).
+        keep=False: Discard all pending samples. The rationale was wrong —
+                    the eval didn't improve. Don't train on wrong reasoning.
         """
         self._reconcile_unknown_samples()
 
@@ -825,10 +823,8 @@ class CoralAPIServer:
             self._sample_fingerprints.pop(s.index, None)
 
         if keep:
-            # SFT data: train on these samples
             for s in samples:
                 s.reward = {"score": score}
-                # loss_mask already set to [1]*response_length at creation
             for s in samples:
                 self.output_queue.put((s.group_index, [s]))
             logger.info(
@@ -836,14 +832,9 @@ class CoralAPIServer:
                 len(samples), agent_id,
             )
         else:
-            # Discard: zero out loss mask so these don't train
-            for s in samples:
-                s.reward = {"score": 0.0}
-                s.loss_mask = [0] * s.response_length
-            # Don't submit to queue — just drop them
             logger.info(
-                "[Coral] distill: discarded %d samples for agent=%s (score=%.4f)",
-                len(samples), agent_id, score,
+                "[Coral] distill: discarded %d samples for agent=%s (wrong rationale)",
+                len(samples), agent_id,
             )
 
     # ---------------------------------------------------- eval score metrics

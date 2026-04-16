@@ -36,6 +36,7 @@ DEFAULT_PROMPTS: dict[str, str] = {
     "consolidate": _load_prompt("consolidate"),
     "pivot": _load_prompt("pivot"),
     "lint_wiki": _load_prompt("lint_wiki"),
+    "diagnose": _load_prompt("diagnose"),
 }
 
 # Which built-in actions default to global scope
@@ -44,6 +45,7 @@ DEFAULT_GLOBAL: dict[str, bool] = {
     "consolidate": True,
     "pivot": False,
     "lint_wiki": True,
+    "diagnose": False,
 }
 
 # Which built-in actions use plateau trigger instead of interval
@@ -52,6 +54,7 @@ DEFAULT_TRIGGER: dict[str, str] = {
     "consolidate": "interval",
     "pivot": "plateau",
     "lint_wiki": "interval",
+    "diagnose": "interval",
 }
 
 # Protected actions: reflect is always local, consolidate is always global

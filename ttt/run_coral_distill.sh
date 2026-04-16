@@ -50,7 +50,20 @@ REF_LOAD=${REF_LOAD:-${HF_CKPT}}
 SAVE_CKPT=${SAVE_CKPT:-"${REPO_ROOT}/ckpt/coral-distill"}
 
 # --- Distillation config ---
-# Minimum score for a trajectory to be kept as SFT data (0.0 = any non-zero)
+# IMPORTANT: Your task.yaml should include the 'diagnose' heartbeat action
+# for self-distillation to capture rationales:
+#   agents:
+#     heartbeat:
+#       - name: reflect
+#         every: 1
+#       - name: diagnose
+#         every: 1
+#       - name: consolidate
+#         every: 10
+#         global: true
+#       - name: pivot
+#         every: 5
+#         trigger: plateau
 export DISTILL_MIN_SCORE=${DISTILL_MIN_SCORE:-0.0}
 
 # --- SGLang ---
@@ -71,28 +84,56 @@ export SERVED_MODEL_NAME
 export CORAL_RECORD_ENABLED="${CORAL_RECORD_ENABLED:-1}"
 export CORAL_RECORD_FILE="${CORAL_RECORD_FILE:-${REPO_ROOT}/results/coral_distill_record.jsonl}"
 
-# --- Source model config for architecture flags ---
-_model_type=""
-_lower_ckpt=$(echo "${HF_CKPT}" | tr '[:upper:]' '[:lower:]')
-case "${_lower_ckpt}" in
-  *qwen3.5*) _model_type="qwen3_5" ;;
-  *qwen3*moe*|*qwen3*a3b*|*qwen3*a22b*|*qwen3*a32b*|*qwen3*a12b*) _model_type="qwen3_moe" ;;
-  *qwen3*) _model_type="qwen3" ;;
-  *qwen2*) _model_type="qwen2" ;;
-  *llama*) _model_type="llama" ;;
-  *glm*moe*|*glm*a12b*|*glm*a32b*) _model_type="glm_moe" ;;
-  *glm*) _model_type="glm" ;;
-  *moonlight*|*kimi*k2*) _model_type="qwen3_moe" ;;
-  *mimo*) _model_type="mimo" ;;
-  *deepseek*v3*|*deepseek*r2*) _model_type="deepseek_v3" ;;
-esac
+# --- Auto-detect model config ---
+# Auto-detect rotary_base from model config if not explicitly set.
+if [ -z "${MODEL_ARGS_ROTARY_BASE:-}" ] && [ -f "${HF_CKPT}/config.json" ]; then
+    _rope_theta=$(python3 -c "import json; print(int(json.load(open('${HF_CKPT}/config.json')).get('rope_theta', 0)))" 2>/dev/null || true)
+    if [ -n "${_rope_theta}" ] && [ "${_rope_theta}" != "0" ]; then
+        export MODEL_ARGS_ROTARY_BASE="${_rope_theta}"
+        echo "Auto-detected rotary_base=${MODEL_ARGS_ROTARY_BASE} from model config"
+    fi
+fi
+
+# Source model config script. Set MODEL_SCRIPT to override auto-detection.
+if [ -z "${MODEL_SCRIPT:-}" ]; then
+    _model_type=$(python3 -c "
+import json, sys
+try:
+    cfg = json.load(open('${HF_CKPT}/config.json'))
+    mt = cfg.get('model_type', '')
+    ne = cfg.get('num_experts', 0) or 0
+    nh = cfg.get('num_hidden_layers', 0)
+    hs = cfg.get('hidden_size', 0)
+    print(f'{mt}:{ne}:{nh}:{hs}')
+except Exception:
+    print('unknown:0:0:0')
+" 2>/dev/null || echo "unknown:0:0:0")
+    IFS=: read -r _mt _ne _nh _hs <<< "${_model_type}"
+    case "${_mt}" in
+        qwen3_moe)   MODEL_SCRIPT="${SLIME_ROOT}/scripts/models/qwen3-30B-A3B.sh" ;;
+        qwen3)
+            if [ "${_nh}" = "64" ]; then
+                MODEL_SCRIPT="${SLIME_ROOT}/scripts/models/qwen3-32B.sh"
+            elif [ "${_hs}" = "5120" ]; then
+                MODEL_SCRIPT="${SLIME_ROOT}/scripts/models/qwen3-14B.sh"
+            elif [ "${_hs}" = "4096" ]; then
+                MODEL_SCRIPT="${SLIME_ROOT}/scripts/models/qwen3-8B.sh"
+            elif [ "${_hs}" = "2560" ]; then
+                MODEL_SCRIPT="${SLIME_ROOT}/scripts/models/qwen3-4B.sh"
+            else
+                MODEL_SCRIPT="${SLIME_ROOT}/scripts/models/qwen3-4B.sh"
+            fi
+            ;;
+        *)           MODEL_SCRIPT="${SLIME_ROOT}/scripts/models/qwen3-30B-A3B.sh" ;;
+    esac
+fi
 
 MODEL_ARGS=()
-if [ -n "${_model_type}" ]; then
-  _config_script="${SLIME_ROOT}/scripts/models/${_model_type}.sh"
-  if [ -f "${_config_script}" ]; then
-    source "${_config_script}"
-  fi
+if [ -f "${MODEL_SCRIPT}" ]; then
+    echo "Sourcing model config: ${MODEL_SCRIPT}"
+    source "${MODEL_SCRIPT}"
+else
+    echo "WARNING: Model script not found: ${MODEL_SCRIPT}"
 fi
 
 # --- Checkpoint ---

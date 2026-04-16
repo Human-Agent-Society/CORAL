@@ -1,10 +1,10 @@
-"""CORAL Self-Distillation — collect successful trajectories + reflections for SFT.
+"""CORAL Self-Distillation — STaR-style SFT on improving trajectories.
 
-Replaces RL-based training with self-distillation:
-- Successful eval trajectories → SFT data (teaches correct tool use)
-- Failed evals → agent reflects via CORAL heartbeat → retries → if success,
-  the reflection + corrected trajectory both become SFT data
-- Model learns from its own successes and self-corrections
+Replaces RL (GRPO) with self-distillation:
+- Eval improved → trajectory + diagnosis rationale → SFT data
+- Eval stalled → discard (wrong rationale, don't train on it)
+- Agent self-diagnoses every eval via diagnose heartbeat
+- Only correct rationales (ones that led to improvement) are trained on
 
 Usage:
     Set CORAL_TASK_YAML environment variable, then SLIME calls
@@ -169,14 +169,13 @@ def _read_attempt(attempts_dir: Path, commit_hash: str) -> dict | None:
 
 
 class DistillWorker:
-    """Collects SFT training data from CORAL agent trajectories.
+    """STaR-style SFT data collection from CORAL agent trajectories.
 
-    Unlike AsyncRolloutWorker (RL), this worker:
-    - Keeps only successful trajectories (score > 0) as SFT data
-    - Discards failed trajectories (the agent will reflect and retry
-      via CORAL's heartbeat; the reflection + corrected trajectory
-      both become SFT data on the next successful eval)
-    - Tracks failure→success transitions per agent for metrics
+    Scoring (follows STaR — only train on correct rationales):
+    - improvement > 0: keep trajectory as SFT data. The diagnosis
+      heartbeat captured why the change worked — correct rationale.
+    - improvement <= 0: discard trajectory. The diagnosis was wrong
+      reasoning — don't train on it. Agent retries with fresh diagnosis.
     """
 
     def __init__(self, args, data_buffer):
@@ -187,10 +186,6 @@ class DistillWorker:
         self.worker_thread = None
         self._submission_enabled = threading.Event()
         self._submission_enabled.set()
-
-        # Minimum score to consider a trajectory as SFT data.
-        # 0.0 means any non-None score counts (even very low scores).
-        self._min_score = float(os.getenv("DISTILL_MIN_SCORE", "0.0"))
 
         self._server = CoralAPIServer(
             args=args,
@@ -207,10 +202,17 @@ class DistillWorker:
 
         # Distillation metrics
         self._total_evals = 0
-        self._successful_evals = 0
-        self._failed_evals = 0
-        self._recovery_count = 0  # failure → success transitions
-        self._agent_last_failed: dict[str, bool] = {}
+        self._improved_evals = 0
+        self._stalled_evals = 0
+        self._recovery_count = 0  # stalled → improved transitions
+        self._agent_was_stalled: dict[str, bool] = {}  # tracks stall state per agent
+
+        # Sample logger: writes JSONL with every keep/discard decision
+        log_dir = Path("/tmp") / "ttt_logs"
+        log_dir.mkdir(exist_ok=True)
+        self._sample_log_path = log_dir / "distill_samples.jsonl"
+        self._sample_log = open(self._sample_log_path, "a", buffering=1)
+        logger.info("Distill sample log: %s", self._sample_log_path)
 
     async def continuous_worker_loop(self):
         while self.running:
@@ -319,52 +321,106 @@ class DistillWorker:
         parent_score: float,
         feedback: str,
     ) -> None:
-        """Decide whether to keep or discard trajectory based on eval result.
+        """STaR-style scoring: only train on rationales that led to improvement.
 
-        Success (score > min_score): keep all pending samples → SFT data.
-        These include the reflection + corrected trajectory if the agent
-        previously failed and then recovered.
+        improved (score > parent_score):
+          Submit current pending trajectory as SFT data. This trajectory
+          contains the diagnosis from the heartbeat ("I did X, it worked
+          because Y") — a correct rationale leading to a correct outcome.
+          Discard any stashed samples from previous stalls (those were
+          wrong rationales that didn't lead to improvement).
 
-        Failure (score <= min_score): discard pending samples. The agent will
-        reflect and retry via CORAL's heartbeat mechanism. Those reflection
-        responses are captured as new samples and will be kept if the
-        next eval succeeds.
+        not improved (score <= parent_score):
+          Discard all pending samples. The diagnosis from this eval
+          ("I think X caused the problem") is likely wrong reasoning —
+          it didn't lead to improvement. Don't train on it.
+          The agent will get a fresh diagnosis prompt on the next
+          heartbeat and try again.
         """
         self._total_evals += 1
-        was_failed = self._agent_last_failed.get(agent_id, False)
-        is_success = score > self._min_score
+        improvement = score - parent_score
+        # First eval (no parent) with any positive score counts as improvement
+        is_first_eval = (parent_score == 0.0 and score > 0.0)
+        improved = improvement > 0 or is_first_eval
 
-        if is_success:
-            self._successful_evals += 1
-            if was_failed:
+        # Snapshot pending samples for logging before they get popped
+        with self._server._pending_lock:
+            pending = self._server._pending_samples.get(agent_id, [])
+            sample_previews = self._preview_samples(pending)
+
+        if improved:
+            self._improved_evals += 1
+
+            # Track recovery (was stalled, now improved)
+            if self._agent_was_stalled.get(agent_id, False):
                 self._recovery_count += 1
-                logger.info(
-                    "[Distill] RECOVERY: agent=%s recovered from failure, "
-                    "score=%.4f — reflection + correction → SFT data",
-                    agent_id, score,
-                )
-            self._agent_last_failed[agent_id] = False
+            self._agent_was_stalled[agent_id] = False
 
-            # Keep: submit all pending samples as SFT data
+            # Submit current trajectory as SFT data.
             self._server.report_eval_score_distill(agent_id, score, keep=True)
 
+            self._log_sample(
+                agent_id=agent_id, score=score, parent_score=parent_score,
+                keep=True, feedback=feedback, samples=sample_previews,
+            )
+
             logger.info(
-                "[Distill] SUCCESS: agent=%s score=%.4f — %d total / %d success / %d recovery",
-                agent_id, score,
-                self._total_evals, self._successful_evals, self._recovery_count,
+                "[Distill] IMPROVED: agent=%s %.4f→%.4f (+%.4f) — "
+                "%d evals / %d improved / %d recoveries",
+                agent_id, parent_score, score, improvement,
+                self._total_evals, self._improved_evals, self._recovery_count,
             )
         else:
-            self._failed_evals += 1
-            self._agent_last_failed[agent_id] = True
+            self._stalled_evals += 1
+            self._agent_was_stalled[agent_id] = True
 
-            # Discard: drop pending samples, agent will reflect and retry
+            # Discard: wrong rationale, didn't lead to improvement.
             self._server.report_eval_score_distill(agent_id, score, keep=False)
 
-            logger.info(
-                "[Distill] FAIL: agent=%s score=%.4f feedback='%s' — "
-                "discarding, waiting for reflection + retry",
-                agent_id, score, feedback[:100],
+            self._log_sample(
+                agent_id=agent_id, score=score, parent_score=parent_score,
+                keep=False, feedback=feedback, samples=sample_previews,
             )
+
+            logger.info(
+                "[Distill] STALLED: agent=%s %.4f→%.4f (no improvement) — "
+                "discarding samples (wrong rationale), feedback='%s'",
+                agent_id, parent_score, score, feedback[:100],
+            )
+
+    def _preview_samples(self, samples: list, max_len: int = 500) -> list[dict]:
+        """Create truncated previews of samples for logging."""
+        previews = []
+        for s in samples:
+            previews.append({
+                "index": s.index,
+                "prompt_tail": (s.prompt or "")[-max_len:],
+                "response_head": (s.response or "")[:max_len],
+                "response_length": s.response_length,
+                "loss_mask_sum": sum(s.loss_mask) if s.loss_mask else 0,
+            })
+        return previews
+
+    def _log_sample(
+        self, agent_id: str, score: float, parent_score: float,
+        keep: bool, feedback: str, samples: list[dict],
+    ) -> None:
+        """Write a JSONL entry for each eval decision."""
+        entry = {
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "agent_id": agent_id,
+            "score": score,
+            "parent_score": parent_score,
+            "improvement": score - parent_score,
+            "keep": keep,
+            "feedback": feedback[:200],
+            "num_samples": len(samples),
+            "samples": samples[:3],  # log up to 3 sample previews
+        }
+        try:
+            self._sample_log.write(json.dumps(entry) + "\n")
+        except Exception:
+            pass
 
     def pause_submission(self):
         if self._submission_enabled.is_set():
@@ -410,11 +466,16 @@ class DistillWorker:
         if self.worker_thread and self.worker_thread.is_alive():
             self.worker_thread.join(timeout=5)
 
+        # Close sample log
+        if hasattr(self, "_sample_log") and self._sample_log:
+            self._sample_log.close()
+
         # Print final stats
         print(
             f"[Distill] Final stats: {self._total_evals} evals, "
-            f"{self._successful_evals} success, {self._failed_evals} failed, "
-            f"{self._recovery_count} recoveries (reflect→retry→success)",
+            f"{self._improved_evals} improved, {self._stalled_evals} stalled, "
+            f"{self._recovery_count} recoveries\n"
+            f"[Distill] Sample log: {self._sample_log_path}",
             flush=True,
         )
 
@@ -489,8 +550,8 @@ def generate_distill_data(args, rollout_id, data_buffer, evaluation=False):
 
     extra_metrics = {
         "distill/total_evals": worker._total_evals,
-        "distill/successful_evals": worker._successful_evals,
-        "distill/failed_evals": worker._failed_evals,
+        "distill/improved_evals": worker._improved_evals,
+        "distill/stalled_evals": worker._stalled_evals,
         "distill/recovery_count": worker._recovery_count,
     }
 
