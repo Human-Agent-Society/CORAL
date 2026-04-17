@@ -14,6 +14,7 @@ set -ex
 
 export PYTHONUNBUFFERED=1
 export PYTHONFAULTHANDLER=1
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
 # --- Paths ---
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
@@ -66,9 +67,11 @@ SAVE_CKPT=${SAVE_CKPT:-"${REPO_ROOT}/ckpt/coral-distill"}
 #         trigger: plateau
 export DISTILL_MIN_SCORE=${DISTILL_MIN_SCORE:-0.0}
 
-# --- SGLang ---
+# --- SGLang / parallelism ---
 TP=${TP:-4}
 CP=${CP:-1}
+EP=${EP:-1}
+ETP=${ETP:-1}
 CONTEXT_LENGTH=${CONTEXT_LENGTH:-131072}
 MEM_FRACTION_STATIC=${MEM_FRACTION_STATIC:-0.85}
 REASONING_PARSER=${REASONING_PARSER:-qwen3}
@@ -140,7 +143,7 @@ fi
 CKPT_ARGS=(
    --hf-checkpoint "${HF_CKPT}"
    --ref-load "${REF_LOAD}"
-   --save-checkpoint "${SAVE_CKPT}"
+   --save "${SAVE_CKPT}"
    --save-interval 10
 )
 if [ "${USE_LORA}" != "1" ]; then
@@ -185,8 +188,9 @@ else
      --sequence-parallel
      --pipeline-model-parallel-size 1
      --context-parallel-size "${CP}"
-     --expert-model-parallel-size 1
-     --expert-tensor-parallel-size 1
+     --expert-model-parallel-size "${EP}"
+     --expert-tensor-parallel-size "${ETP}"
+     --use-distributed-optimizer
 
      --recompute-granularity full
      --recompute-method uniform
@@ -252,9 +256,9 @@ CUSTOM_ARGS=(
 
 if [ "${USE_LORA}" != "1" ]; then
   MISC_ARGS=(
+     --bf16
      --attention-dropout 0.0
      --hidden-dropout 0.0
-     --accumulate-allreduce-grads-in-fp32
      --attention-softmax-in-fp32
      --attention-backend flash
   )

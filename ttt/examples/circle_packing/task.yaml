@@ -41,16 +41,25 @@ grader:
 agents:
   count: 1
   runtime: opencode
-  model: sglang/qwen3-4b
+  model: sglang/qwen3-30b-a3b
   gateway:
     enabled: true
     config: "./seed/litellm_config.yaml"
+  heartbeat:
+    - name: reflect
+      every: 1
+    - name: diagnose
+      every: 1
+    - name: consolidate
+      every: 10
+      global: true
+    - name: pivot
+      every: 5
+      trigger: plateau
 
 workspace:
   results_dir: "./results"
   repo_path: "./ttt/examples/circle_packing/seed"
-  setup:
-    - "uv pip install numpy scipy"
 
 run:
   verbose: false

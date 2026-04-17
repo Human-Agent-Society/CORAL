@@ -1,7 +1,7 @@
 model_list:
-  - model_name: "qwen3-4b"
+  - model_name: "qwen3-30b-a3b"
     litellm_params:
-      model: "hosted_vllm/qwen3-4b"
+      model: "hosted_vllm/qwen3-30b-a3b"
       api_base: "http://127.0.0.1:30000/v1"
       api_key: "EMPTY"
       drop_params: true
