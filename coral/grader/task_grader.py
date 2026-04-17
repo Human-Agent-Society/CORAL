@@ -48,6 +48,30 @@ class TaskGrader(ABC):
         """Eval timeout in seconds, from grader config. None means no limit."""
         return self.config.timeout or None
 
+    @property
+    def eval_logs_dir(self) -> Path:
+        """Per-attempt directory for eval artifacts that should outlive the grader.
+
+        The grader runs in an isolated checkout that the daemon force-removes
+        after each eval (see coral/grader/daemon.py:_remove_worktree), so
+        anything written under self.codebase_path is lost. Use this dir for
+        subprocess logs, terminal recordings, traces, etc. the agent should
+        be able to inspect after the eval finishes.
+
+        Path: .coral/public/eval_logs/<checkout_dir_name>/
+        (= attempt commit hash when invoked by the grader daemon)
+
+        Symlinked into each agent worktree at `<worktree>/.claude/eval_logs/`
+        by setup_shared_state.
+        """
+        d = (
+            Path(self.private_dir).parent
+            / "public" / "eval_logs"
+            / Path(self.codebase_path).name
+        )
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
     @abstractmethod
     def evaluate(self) -> float | ScoreBundle:
         """Implement this. Return a numeric score or a ScoreBundle."""

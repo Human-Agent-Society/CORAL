@@ -149,6 +149,10 @@ def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: st
         "attempts",
         "logs",
         "heartbeat",
+        # Per-attempt eval artifacts (subprocess logs, terminal recordings,
+        # verifier output, etc.) that the grader writes via TaskGrader.eval_logs_dir.
+        # Lives outside the grader checkout so it survives daemon cleanup.
+        "eval_logs",
     ]
     for item in shared_items:
         src = coral_public / item

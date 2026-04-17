@@ -98,6 +98,7 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     (coral_dir / "public" / "agents").mkdir(parents=True, exist_ok=True)
     (coral_dir / "public" / "notes").mkdir(parents=True, exist_ok=True)
     (coral_dir / "public" / "heartbeat").mkdir(parents=True, exist_ok=True)
+    (coral_dir / "public" / "eval_logs").mkdir(parents=True, exist_ok=True)
     (coral_dir / "private").mkdir(parents=True, exist_ok=True)
     agents_dir.mkdir(parents=True, exist_ok=True)
 
