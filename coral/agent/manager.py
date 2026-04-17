@@ -5,6 +5,7 @@ from __future__ import annotations
 import atexit
 import json
 import logging
+import multiprocessing
 import os
 import signal
 import threading
@@ -35,8 +36,8 @@ from coral.workspace import (
     create_project,
     setup_claude_settings,
     setup_codex_settings,
-    setup_opencode_settings,
     setup_gitignore,
+    setup_opencode_settings,
     setup_shared_state,
     setup_worktree_env,
     write_agent_id,
@@ -66,6 +67,8 @@ class AgentManager:
         self._agent_evals_since_improvement: dict[str, int] = {}
         self._gateway: Any | None = None
         self._gateway_keys: dict[str, str] = {}  # agent_id -> proxy key
+        self._grader_proc: multiprocessing.Process | None = None
+        self._grader_stop_event: Any | None = None  # multiprocessing.Event
 
     def start_all(self) -> list[AgentHandle]:
         """Create workspace structure and spawn all agents."""
@@ -79,6 +82,11 @@ class AgentManager:
 
         # 1b. Start gateway if configured
         self._start_gateway_if_enabled()
+
+        # 1c. Start grader daemon. Agents' `coral eval` writes pending attempts;
+        #     the daemon picks them up, grades inside an isolated worktree,
+        #     and writes the score back. Must be running before agents start.
+        self._start_grader_daemon()
 
         # 2. Seed global heartbeat config if not already present
         if not read_global_heartbeat(self.paths.coral_dir):
@@ -117,6 +125,91 @@ class AgentManager:
         atexit.register(self._atexit_cleanup)
 
         return handles
+
+    def _start_grader_daemon(self) -> None:
+        """Spawn the grader daemon subprocess. Idempotent.
+
+        Before spawning, kills any stale daemon from a prior run whose PID is
+        still recorded in .coral/public/grader_daemon.pid — otherwise two
+        daemons would race for the same pending attempts.
+        """
+        assert self.paths is not None
+
+        if self._grader_proc is not None and self._grader_proc.is_alive():
+            return
+
+        # Best-effort cleanup of a stale daemon from a previous run.
+        pid_file = self.paths.coral_dir / "public" / "grader_daemon.pid"
+        if pid_file.exists():
+            try:
+                stale_pid = int(pid_file.read_text().strip())
+                os.kill(stale_pid, signal.SIGTERM)
+                logger.info(f"Killed stale grader daemon PID {stale_pid}")
+            except (ValueError, ProcessLookupError, PermissionError, OSError):
+                pass  # PID gone or unkillable — just move on
+            try:
+                pid_file.unlink()
+            except OSError:
+                pass
+
+        # Lazy import — tests and CLI-only paths should not trigger grader import.
+        from coral.grader.daemon import run_daemon
+
+        stop_event = multiprocessing.Event()
+        proc = multiprocessing.Process(
+            target=run_daemon,
+            args=(str(self.paths.coral_dir), stop_event),
+            name="coral-grader-daemon",
+            daemon=False,  # explicit: we manage its lifecycle
+        )
+        proc.start()
+        self._grader_proc = proc
+        self._grader_stop_event = stop_event
+        try:
+            pid_file.write_text(str(proc.pid))
+        except OSError:
+            pass
+        logger.info(f"Grader daemon started (PID {proc.pid})")
+        if self.verbose:
+            print(f"[coral] Grader daemon running (PID {proc.pid})")
+
+    def _stop_grader_daemon(self, timeout: float = 10.0) -> None:
+        """Signal the grader daemon to stop, then wait and fall back to SIGTERM/SIGKILL."""
+        proc = self._grader_proc
+        if proc is None:
+            return
+
+        if self._grader_stop_event is not None:
+            try:
+                self._grader_stop_event.set()
+            except Exception:
+                pass
+
+        try:
+            proc.join(timeout=timeout)
+            if proc.is_alive():
+                logger.warning("Grader daemon ignored stop event; sending SIGTERM")
+                proc.terminate()
+                proc.join(timeout=5)
+            if proc.is_alive():
+                logger.warning("Grader daemon ignored SIGTERM; sending SIGKILL")
+                proc.kill()
+                proc.join(timeout=5)
+        finally:
+            try:
+                proc.close()
+            except Exception:
+                pass
+            self._grader_proc = None
+            self._grader_stop_event = None
+            if self.paths is not None:
+                pid_file = self.paths.coral_dir / "public" / "grader_daemon.pid"
+                try:
+                    if pid_file.exists():
+                        pid_file.unlink()
+                except OSError:
+                    pass
+            logger.info("Grader daemon stopped")
 
     def _start_gateway_if_enabled(self) -> None:
         """Start the LiteLLM gateway if configured."""
@@ -352,6 +445,9 @@ class AgentManager:
         # Start gateway if configured
         self._start_gateway_if_enabled()
 
+        # Start grader daemon (must be up before resumed agents submit evals).
+        self._start_grader_daemon()
+
         # Kill any leftover agent processes from a previous run so they
         # don't hold session locks and block the new agents.
         self._kill_old_agent_processes()
@@ -483,6 +579,9 @@ class AgentManager:
             if handle.alive:
                 handle.stop()
         self._cleanup_pid_file()
+        # Stop grader daemon before the gateway so any in-flight grade can
+        # finish its LLM call (if the grader uses the gateway).
+        self._stop_grader_daemon()
         # Stop gateway after all agents are down
         if self._gateway:
             self._gateway.stop()
@@ -504,6 +603,11 @@ class AgentManager:
             })
         return statuses
 
+    def grader_daemon_alive(self) -> bool:
+        """Whether the grader daemon subprocess is currently running."""
+        proc = self._grader_proc
+        return bool(proc and proc.is_alive())
+
     def _get_seen_attempts(self) -> set[str]:
         """Get the set of attempt filenames currently in .coral/public/attempts/."""
         assert self.paths is not None
@@ -511,6 +615,29 @@ class AgentManager:
         if not attempts_dir.exists():
             return set()
         return {f.name for f in attempts_dir.glob("*.json")}
+
+    def _filter_scored(self, new_files: set[str]) -> set[str]:
+        """Return only those filenames whose attempt status is not 'pending'.
+
+        Pending attempts are grader-in-progress: the monitor loop must skip
+        them (not trigger heartbeat, not advance plateau counters) until the
+        grader daemon finalizes them. Malformed files are also skipped and
+        will be retried next tick.
+        """
+        assert self.paths is not None
+        attempts_dir = self.paths.coral_dir / "public" / "attempts"
+        scored: set[str] = set()
+        for fname in new_files:
+            path = attempts_dir / fname
+            try:
+                data = json.loads(path.read_text())
+            except (json.JSONDecodeError, OSError):
+                # Transient read (e.g. mid-rename on some filesystems) — retry next tick.
+                continue
+            status = data.get("status")
+            if status and status != "pending":
+                scored.add(fname)
+        return scored
 
     def _read_latest_attempt(self, new_files: set[str]) -> dict[str, Any] | None:
         """Read the most recent attempt from a set of new attempt filenames."""
@@ -628,9 +755,14 @@ class AgentManager:
             current_attempts = self._get_seen_attempts()
             new_attempts = current_attempts - seen_attempts
 
-            if new_attempts:
-                seen_attempts = current_attempts
-                attempt_data = self._read_latest_attempt(new_attempts)
+            # Pending attempts (grader daemon hasn't scored them yet) are kept
+            # on the re-check list — we neither mark them as seen nor trigger
+            # heartbeat until they transition to a terminal status.
+            scored_new = self._filter_scored(new_attempts)
+            seen_attempts = seen_attempts | scored_new
+
+            if scored_new:
+                attempt_data = self._read_latest_attempt(scored_new)
 
                 if attempt_data:
                     committing_agent_id = attempt_data.get("agent_id")
@@ -862,6 +994,13 @@ class AgentManager:
                         handle.process.kill()
                     except Exception:
                         pass
+        # Kill grader daemon too if still running.
+        proc = self._grader_proc
+        if proc is not None and proc.is_alive():
+            try:
+                proc.kill()
+            except Exception:
+                pass
         if self._gateway:
             self._gateway.stop()
             self._gateway = None

@@ -208,11 +208,14 @@ def setup_claude_settings(
     if not research:
         deny_rules.extend(["WebSearch", "WebFetch"])
 
+    permissions: dict = {
+        "defaultMode": "auto",
+        "allow": allow_rules,
+        "deny": deny_rules,
+    }
+
     settings: dict = {
-        "permissions": {
-            "allow": allow_rules,
-            "deny": deny_rules,
-        },
+        "permissions": permissions,
     }
 
     # Route agent traffic through gateway by overriding env in settings.
@@ -230,7 +233,7 @@ def setup_claude_settings(
         env["ANTHROPIC_CUSTOM_HEADERS"] = ""
         settings["env"] = env
 
-    settings_path = claude_dir / "settings.json"
+    settings_path = claude_dir / "settings.local.json"
     # Always overwrite — each agent needs its own copy
     settings_path.write_text(json.dumps(settings, indent=2) + "\n")
 

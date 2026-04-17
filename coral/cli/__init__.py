@@ -54,6 +54,7 @@ _VISIBLE_COMMANDS = [
     "runs",
     "ui",
     "eval",
+    "wait",
     "diff",
     "revert",
     "checkout",
@@ -117,6 +118,7 @@ Dashboard:
 
 Agent Internals:
   eval            Stage, commit, and evaluate changes
+  wait            Wait for a submitted eval's score
   diff            Show uncommitted changes
   revert          Undo the last commit
   checkout        Reset to a previous attempt
@@ -335,8 +337,18 @@ Run 'coral <command> --help' for details on any command."""
     p_eval = sub.add_parser(
         "eval",
         help="Stage, commit, and evaluate changes",
-        description="Stage all changes, commit with a message, and run the grader.",
-        epilog='Examples:\n  coral eval -m "Optimized inner loop"',
+        description=(
+            "Stage all changes, commit with a message, and submit for grading.\n"
+            "By default blocks until the grader daemon returns a score.\n"
+            "Use --no-wait to return immediately with a pending status and\n"
+            "poll later via `coral wait <hash>`."
+        ),
+        epilog=(
+            'Examples:\n'
+            '  coral eval -m "Optimized inner loop"\n'
+            '  coral eval -m "Try variant A" --no-wait\n'
+            '  coral eval -m "Heavy benchmark" --timeout 1800'
+        ),
         formatter_class=_CommandHelpFormatter,
     )
     p_eval.add_argument(
@@ -344,6 +356,37 @@ Run 'coral <command> --help' for details on any command."""
     )
     p_eval.add_argument("--agent", help="Agent ID (default: read from .coral_agent_id)")
     p_eval.add_argument("--workdir", help="Working directory (default: cwd)")
+    p_eval.add_argument(
+        "--wait",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Wait for grader to return a score (default). Use --no-wait to return immediately.",
+    )
+    p_eval.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help="Seconds to wait for grader (default: derived from grader.timeout).",
+    )
+
+    p_wait = sub.add_parser(
+        "wait",
+        help="Wait for a submitted eval's score",
+        description=(
+            "Block until the grader daemon finalizes a previously submitted\n"
+            "attempt (e.g. one submitted with `coral eval --no-wait`)."
+        ),
+        epilog="Examples:\n  coral wait abc123\n  coral wait abc123 --timeout 600",
+        formatter_class=_CommandHelpFormatter,
+    )
+    p_wait.add_argument("hash", help="Commit hash or prefix of the attempt to wait on")
+    p_wait.add_argument("--workdir", help="Working directory (default: cwd)")
+    p_wait.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        help="Seconds to wait (default: derived from grader.timeout).",
+    )
 
     p_diff = sub.add_parser(
         "diff",
@@ -425,7 +468,7 @@ Run 'coral <command> --help' for details on any command."""
 
     # Lazy imports for fast startup
     from coral.cli.author import cmd_init, cmd_validate
-    from coral.cli.eval import cmd_checkout, cmd_diff, cmd_eval, cmd_revert
+    from coral.cli.eval import cmd_checkout, cmd_diff, cmd_eval, cmd_revert, cmd_wait
     from coral.cli.heartbeat import cmd_heartbeat
     from coral.cli.query import cmd_log, cmd_notes, cmd_runs, cmd_show, cmd_skills
     from coral.cli.start import cmd_resume, cmd_start, cmd_status, cmd_stop
@@ -437,6 +480,7 @@ Run 'coral <command> --help' for details on any command."""
         "stop": cmd_stop,
         "status": cmd_status,
         "eval": cmd_eval,
+        "wait": cmd_wait,
         "revert": cmd_revert,
         "checkout": cmd_checkout,
         "diff": cmd_diff,
