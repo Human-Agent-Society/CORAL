@@ -25,5 +25,12 @@ class SolverAgent(Terminus2):
         kwargs.setdefault("llm_kwargs", {})
         if "api_key" not in kwargs["llm_kwargs"]:
             kwargs["llm_kwargs"]["api_key"] = DEFAULT_API_KEY
+        if kwargs.get("model_info") is None:
+            kwargs["model_info"] = {
+                "max_input_tokens": 160000,
+                "max_output_tokens": 32768,
+                "input_cost_per_token": 0.0,
+                "output_cost_per_token": 0.0,
+            }
         super().__init__(*args, **kwargs)
 
