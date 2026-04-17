@@ -24,6 +24,7 @@ RUN npm install -g @anthropic-ai/claude-code
 WORKDIR /app
 COPY pyproject.toml uv.lock* README* ./
 COPY coral/ coral/
+RUN printf '\n[tool.uv]\nextra-build-variables = { coral = { SETUPTOOLS_SCM_PRETEND_VERSION_FOR_CORAL = "0.3.1" } }\n' >> pyproject.toml
 RUN uv sync --no-dev
 ENV PATH="/app/.venv/bin:$PATH"
 
