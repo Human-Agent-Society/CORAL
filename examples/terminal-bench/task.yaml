@@ -14,6 +14,23 @@ task:
     The grader runs `uvx harbor run -d terminal-bench@2.0` with your solver as the
     agent and returns the pass rate across all tasks.
 
+    Tiered evaluation — each `coral eval` runs ONE tier, chosen by your best
+    previous *raw* pass rate:
+      - Tier 1:  5 tasks  (weight 1×)   — raw pass ≥30% → promote
+      - Tier 2: 30 tasks  (weight 10×)  — raw pass ≥70% → promote
+      - Tier 3: all tasks (weight 100×)
+
+    The score recorded on the leaderboard is `tier_weight × pass_rate`, so:
+      - Max possible at Tier 1: 1.0  (1 × 100%)
+      - Max possible at Tier 2: 10.0 (10 × 100%)
+      - Max possible at Tier 3: 100.0 (100 × 100%)
+
+    This means any Tier 3 attempt with pass rate >0.10 outranks any Tier 2
+    attempt, and any Tier 2 attempt with pass rate >0.10 outranks any Tier 1
+    attempt — confidence dominates magnitude. Don't compare scores across
+    tiers as if they were the same metric. The raw pass rate is preserved
+    in attempt metadata (`raw_score`).
+
     DO NOT TRY TO peek the test cases. You are not going to get any information from them.
     Focus on the improving the general problem solving capability of the solver, making it more
     robust and generalizable.

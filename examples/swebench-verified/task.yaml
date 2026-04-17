@@ -10,15 +10,25 @@ task:
     receives a SWE-bench instance and must fix the bug in the repository.
 
     The grader evaluates your solver via `harbor run` using tiered eval:
-      - Tier 1:  5 instances — must pass ≥30% to continue
-      - Tier 2: 30 instances — must pass ≥70% to continue
-      - Tier 3: all instances
+      - Tier 1:  5 instances  (weight 1×)   — raw pass ≥30% → promote
+      - Tier 2: 30 instances  (weight 10×)  — raw pass ≥70% → promote
+      - Tier 3: all instances (weight 100×)
+
+    Each `coral eval` runs ONE tier, chosen by your best previous *raw* pass
+    rate. The score recorded on the leaderboard is `tier_weight × pass_rate`,
+    so:
+      - Max possible at Tier 1: 1.0  (1 × 100%)
+      - Max possible at Tier 2: 10.0 (10 × 100%)
+      - Max possible at Tier 3: 100.0 (100 × 100%)
+
+    This means any Tier 3 attempt with pass rate >0.10 outranks any Tier 2
+    attempt, and any Tier 2 attempt with pass rate >0.10 outranks any Tier 1
+    attempt — confidence dominates magnitude. Don't compare scores across
+    tiers as if they were the same metric. The raw pass rate is preserved
+    in attempt metadata (`raw_score`).
 
     Each instance is tested by applying your changes, then running the hidden
-    fail-to-pass tests. Your score is the fraction of instances solved.
-
-    The grader runs `uvx harbor run -d terminal-bench@2.0` with your solver as the
-    agent and returns the pass rate across all tasks.
+    fail-to-pass tests. Your raw score is the fraction of instances solved.
 
     DO NOT TRY TO peek the test cases. You are not going to get any information from them.
     Focus on the improving the general problem solving capability of the solver, making it more
