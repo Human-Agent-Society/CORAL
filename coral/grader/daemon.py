@@ -248,6 +248,7 @@ def _grade_one(
     score: float | None = None
     status = "crashed"
     feedback = ""
+    metadata: dict = {}
 
     try:
         _add_isolated_worktree(repo_dir, attempt.commit_hash, checkout_path)
@@ -257,6 +258,7 @@ def _grade_one(
             )
             score = bundle.aggregated
             feedback = _build_feedback(bundle)
+            metadata = dict(getattr(bundle, "metadata", None) or {})
             status = _compute_status(
                 score, attempt.agent_id, attempt.commit_hash, coral_dir, minimize,
             )
@@ -283,6 +285,7 @@ def _grade_one(
         feedback=feedback,
         shared_state_hash=attempt.shared_state_hash,
         parent_shared_state_hash=attempt.parent_shared_state_hash,
+        metadata=metadata,
     )
     write_attempt(str(coral_dir), finalized)
     count = increment_eval_count(coral_dir)

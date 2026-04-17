@@ -154,9 +154,10 @@ class TaskGrader(ABC):
 
     def score(
         self, value: float | None, explanation: str = "", feedback: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> ScoreBundle:
         """Return a single-score bundle."""
-        return self.bundle(value, explanation, feedback=feedback)
+        return self.bundle(value, explanation, feedback=feedback, metadata=metadata)
 
     def fail(self, explanation: str = "", feedback: str | None = None) -> ScoreBundle:
         """Return a bundle with a null score (evaluation failed)."""
@@ -164,6 +165,7 @@ class TaskGrader(ABC):
 
     def bundle(
         self, value: float | None, explanation: str = "", feedback: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> ScoreBundle:
         """Create a ScoreBundle from a score value and explanation."""
         s = Score(
@@ -175,6 +177,7 @@ class TaskGrader(ABC):
             scores={"eval": s},
             aggregated=value,
             feedback=feedback,
+            metadata=metadata or {},
         )
 
     # --- Internal: called by the framework ---

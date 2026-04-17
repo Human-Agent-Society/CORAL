@@ -88,6 +88,7 @@ class ScoreBundle:
     aggregated: float | None = None
     is_public: bool = True
     feedback: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def get(self, name: str) -> Score | None:
         return self.scores.get(name)
@@ -120,6 +121,8 @@ class ScoreBundle:
         }
         if self.feedback is not None:
             d["feedback"] = self.feedback
+        if self.metadata:
+            d["metadata"] = self.metadata
         return d
 
     @classmethod
@@ -130,6 +133,7 @@ class ScoreBundle:
             aggregated=data.get("aggregated"),
             is_public=data.get("is_public", True),
             feedback=data.get("feedback"),
+            metadata=data.get("metadata", {}),
         )
 
 
@@ -147,6 +151,7 @@ class Attempt:
     feedback: str = ""
     shared_state_hash: str | None = None
     parent_shared_state_hash: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         d = {
@@ -163,6 +168,8 @@ class Attempt:
             d["shared_state_hash"] = self.shared_state_hash
         if self.parent_shared_state_hash is not None:
             d["parent_shared_state_hash"] = self.parent_shared_state_hash
+        if self.metadata:
+            d["metadata"] = self.metadata
         return d
 
     @classmethod
@@ -178,4 +185,5 @@ class Attempt:
             feedback=data.get("feedback", ""),
             shared_state_hash=data.get("shared_state_hash"),
             parent_shared_state_hash=data.get("parent_shared_state_hash"),
+            metadata=data.get("metadata", {}),
         )

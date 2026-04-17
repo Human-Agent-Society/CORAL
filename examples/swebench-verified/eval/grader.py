@@ -4,10 +4,14 @@ Runs `harbor run -d swebench-verified@1.0` with the agent's solve.py as a custom
 harbor agent, then parses the job result JSON for the pass rate.
 
 Uses tiered evaluation — each `coral eval` runs ONE tier based on the best
-score seen so far:
-  - best < tier1_threshold (0.3) → Tier 1 (5 instances)
-  - best < tier2_threshold (0.7) → Tier 2 (30 instances)
-  - best ≥ tier2_threshold       → Tier 3 (all instances)
+raw pass rate seen so far:
+  - best < tier1_threshold (0.3) → Tier 1 (5 instances), weight 1
+  - best < tier2_threshold (0.7) → Tier 2 (30 instances), weight 10
+  - best ≥ tier2_threshold       → Tier 3 (all instances), weight 100
+
+The score returned is `tier_weight * pass_rate`, so higher-tier results
+naturally dominate the leaderboard regardless of pass rate. The raw pass
+rate is preserved in metadata for tier promotion decisions.
 """
 
 from __future__ import annotations
@@ -19,25 +23,23 @@ import time
 from pathlib import Path
 
 from coral.grader import TaskGrader
+from coral.hub.attempts import read_attempts
 from coral.types import ScoreBundle
 
 
 class Grader(TaskGrader):
-    def _get_best_score(self) -> float | None:
-        """Read the best score from previous attempts."""
+    def _get_best_raw_score(self) -> float | None:
+        """Best raw pass rate from previous attempts (drives tier promotion).
+
+        Reads `metadata.raw_score` rather than `score`, since `score` is
+        weighted by tier and cannot be compared against the raw thresholds.
+        """
         coral_dir = Path(self.private_dir).parent
-        attempts_dir = coral_dir / "public" / "attempts"
-        if not attempts_dir.exists():
-            return None
         best = None
-        for f in attempts_dir.glob("*.json"):
-            try:
-                data = json.loads(f.read_text())
-                score = data.get("score")
-                if score is not None and (best is None or score > best):
-                    best = score
-            except (json.JSONDecodeError, OSError):
-                continue
+        for a in read_attempts(coral_dir):
+            raw = a.metadata.get("raw_score")
+            if raw is not None and (best is None or raw > best):
+                best = raw
         return best
 
     def evaluate(self) -> ScoreBundle:
@@ -75,14 +77,14 @@ class Grader(TaskGrader):
                 feedback="Install harbor (`uvx harbor --version` to verify) or ensure `uvx` is available.",
             )
 
-        # Determine which tier to run based on best previous score
-        best_score = self._get_best_score()
+        # Determine which tier to run based on best previous raw score
+        best_score = self._get_best_raw_score()
         if best_score is None or best_score < tier1_threshold:
-            n_tasks, tier_name = tier1_size, "Tier 1"
+            n_tasks, tier_name, tier_weight = tier1_size, "Tier 1", 1
         elif best_score < tier2_threshold:
-            n_tasks, tier_name = tier2_size, "Tier 2"
+            n_tasks, tier_name, tier_weight = tier2_size, "Tier 2", 10
         else:
-            n_tasks, tier_name = 0, "Tier 3 (full)"
+            n_tasks, tier_name, tier_weight = 0, "Tier 3 (full)", 100
 
         job_dir = Path(self.codebase_path) / "harbor_logs"
         job_dir.mkdir(parents=True, exist_ok=True)
@@ -106,8 +108,12 @@ class Grader(TaskGrader):
 
         pass_rate, feedback = harbor_result
         elapsed = time.time() - start
-        explanation = f"{tier_name}: {pass_rate:.1%} pass rate in {elapsed:.0f}s"
-        return self.score(pass_rate, explanation, feedback=feedback)
+        weighted_score = tier_weight * pass_rate
+        explanation = f"{tier_name}: {pass_rate:.1%} pass rate in {elapsed:.0f}s (score={weighted_score:.2f})"
+        return self.score(
+            weighted_score, explanation, feedback=feedback,
+            metadata={"tier_weight": tier_weight, "raw_score": pass_rate},
+        )
 
     def _run_harbor(
         self,
