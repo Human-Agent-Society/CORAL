@@ -24,7 +24,12 @@ RUN npm install -g @openai/codex
 WORKDIR /app
 COPY pyproject.toml uv.lock* README* ./
 COPY coral/ coral/
-RUN printf '\n[tool.uv]\nextra-build-variables = { coral = { SETUPTOOLS_SCM_PRETEND_VERSION_FOR_CORAL = "0.3.1" } }\n' >> pyproject.toml
+RUN sed -i \
+        -e 's/"hatchling", "hatch-vcs"/"hatchling"/' \
+        -e 's/dynamic = \["version"\]/version = "0.3.1"/' \
+        -e '/^\[tool\.hatch\.version\]$/,+1d' \
+        -e '/^\[tool\.hatch\.build\.hooks\.vcs\]$/,+1d' \
+        pyproject.toml
 RUN uv sync --no-dev
 ENV PATH="/app/.venv/bin:$PATH"
 
