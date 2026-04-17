@@ -341,17 +341,19 @@ class Grader(TaskGrader):
         except Exception:
             pass
         # Prefer uvx (installs/runs from PyPI in an isolated env)
-        if shutil.which("uvx"):
+        uvx_path = shutil.which("uvx")
+        if uvx_path:
             try:
                 result = subprocess.run(
-                    ["uvx", "harbor", "--version"],
+                    [uvx_path, "harbor", "--version"],
                     capture_output=True,
                     timeout=60,
                 )
                 if result.returncode == 0:
-                    return [*prefix, "uvx", "harbor"]
+                    return [*prefix, uvx_path, "harbor"]
             except Exception:
                 pass
-        if shutil.which("harbor"):
-            return [*prefix, "harbor"]
+        harbor_path = shutil.which("harbor")
+        if harbor_path:
+            return [*prefix, harbor_path]
         return None
