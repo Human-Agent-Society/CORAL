@@ -25,10 +25,13 @@ The `.coral/` directory is the central hub for all shared state in a CORAL run. 
 │   │   └── ...
 │   ├── logs/                # Agent session logs
 │   ├── heartbeat/           # Heartbeat action configs
-│   └── eval_count           # Global eval counter (integer)
+│   ├── eval_count           # Global eval counter (integer)
+│   ├── grader_daemon.pid    # PID of the grader daemon process
+│   └── grader_daemon_heartbeat  # Daemon liveness timestamp (ISO 8601)
 │
 └── private/                 # Hidden from agents
-    └── eval/                # Grader code and test data
+    ├── eval/                # Grader code and test data
+    └── grader_checkouts/    # Temporary worktrees for grading (ephemeral)
 ```
 
 ## Attempts
@@ -52,6 +55,7 @@ Every time an agent runs `coral eval`, an attempt record is written to `.coral/p
 
 | Status | Meaning |
 |--------|---------|
+| `pending` | Submitted by agent, waiting for grader daemon to score |
 | `improved` | Score is better than this agent's previous best |
 | `baseline` | Score equals the previous best |
 | `regressed` | Score is worse than the previous best |

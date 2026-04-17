@@ -24,6 +24,12 @@ RUN npm install -g @anthropic-ai/claude-code
 WORKDIR /app
 COPY pyproject.toml uv.lock* README* ./
 COPY coral/ coral/
+RUN sed -i \
+        -e 's/"hatchling", "hatch-vcs"/"hatchling"/' \
+        -e 's/dynamic = \["version"\]/version = "0.3.1"/' \
+        -e '/^\[tool\.hatch\.version\]$/,+1d' \
+        -e '/^\[tool\.hatch\.build\.hooks\.vcs\]$/,+1d' \
+        pyproject.toml
 RUN uv sync --no-dev
 ENV PATH="/app/.venv/bin:$PATH"
 

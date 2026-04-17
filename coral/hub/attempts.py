@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -16,10 +18,70 @@ def _attempts_dir(coral_dir: str | Path) -> Path:
 
 
 def write_attempt(coral_dir: str | Path, attempt: Attempt) -> Path:
-    """Write an attempt record to JSON."""
+    """Write an attempt record to JSON atomically (tmp + rename).
+
+    Readers (monitor loop, grader daemon, `coral wait`) may poll these files
+    concurrently with writes. Using tmp + rename guarantees readers see either
+    the old complete file or the new complete file, never a partial write.
+    """
     path = _attempts_dir(coral_dir) / f"{attempt.commit_hash}.json"
-    path.write_text(json.dumps(attempt.to_dict(), indent=2))
+    payload = json.dumps(attempt.to_dict(), indent=2)
+    # Write to a temp file in the same directory (same filesystem -> atomic rename).
+    fd, tmp_path = tempfile.mkstemp(
+        prefix=f".{attempt.commit_hash}.",
+        suffix=".json.tmp",
+        dir=path.parent,
+    )
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(payload)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, path)
+    except Exception:
+        # Clean up temp file on any failure so we don't leak .tmp files.
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
     return path
+
+
+def read_attempt(coral_dir: str | Path, commit_hash: str) -> Attempt | None:
+    """Read a single attempt by commit hash. Returns None if missing or malformed."""
+    path = _attempts_dir(coral_dir) / f"{commit_hash}.json"
+    if not path.exists():
+        return None
+    try:
+        return Attempt.from_dict(json.loads(path.read_text()))
+    except (json.JSONDecodeError, KeyError, OSError):
+        return None
+
+
+def increment_eval_count(coral_dir: str | Path) -> int:
+    """Increment the global eval counter at .coral/public/eval_count and return the new value."""
+    counter_file = Path(coral_dir) / "public" / "eval_count"
+    count = 0
+    if counter_file.exists():
+        try:
+            count = int(counter_file.read_text().strip())
+        except ValueError:
+            pass
+    count += 1
+    counter_file.write_text(str(count))
+    return count
+
+
+def read_eval_count(coral_dir: str | Path) -> int:
+    """Read the global eval counter (0 if missing)."""
+    counter_file = Path(coral_dir) / "public" / "eval_count"
+    if not counter_file.exists():
+        return 0
+    try:
+        return int(counter_file.read_text().strip())
+    except ValueError:
+        return 0
 
 
 def read_attempts(coral_dir: str | Path) -> list[Attempt]:

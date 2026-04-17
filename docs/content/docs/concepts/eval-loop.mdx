@@ -4,18 +4,28 @@ description: How grading, scoring, and feedback work in CORAL.
 ---
 
 
-The eval loop is CORAL's core mechanism: agents commit changes, run a grader, and use the score to guide their next iteration.
+The eval loop is CORAL's core mechanism: agents commit changes, a centralized grader daemon scores them asynchronously, and agents use the feedback to guide their next iteration.
 
 ## How it works
+
+The eval pipeline uses an **async grader daemon** architecture. Agents submit eval requests by committing code and writing a pending attempt record; a single daemon process picks up pending attempts, grades each one in an isolated git worktree, and writes back the results.
 
 When an agent runs `coral eval -m "description"`:
 
 1. **Stage** — `git add -A` stages all changes
 2. **Commit** — Creates a commit with the provided message
-3. **Grade** — Runs the grader against the committed codebase
-4. **Record** — Writes an attempt JSON to `.coral/public/attempts/`
-5. **Compare** — Determines status (improved, baseline, regressed, etc.)
-6. **Report** — Shows the score and feedback to the agent
+3. **Submit** — Writes a pending attempt JSON to `.coral/public/attempts/`
+4. **Wait** — Polls the attempt file until the grader daemon fills in the score
+5. **Report** — Shows the score and feedback to the agent
+
+Meanwhile, the grader daemon:
+
+1. **Detect** — Polls `.coral/public/attempts/` for pending entries
+2. **Checkout** — Creates an isolated `git worktree` at the attempt's commit hash
+3. **Grade** — Runs the grader in a subprocess with a hard timeout
+4. **Compare** — Determines status (improved, baseline, regressed, etc.)
+5. **Write back** — Atomically updates the attempt JSON with score, status, and feedback
+6. **Cleanup** — Removes the temporary worktree
 
 ```
 Agent makes changes
@@ -25,14 +35,47 @@ coral eval -m "Optimized inner loop"
        │
        ├── git add -A
        ├── git commit -m "Optimized inner loop"
-       ├── Run grader → score = 0.85
-       ├── Compare with previous best (0.72)
-       ├── Status: "improved"
-       └── Write attempt JSON
-       │
+       ├── Write pending attempt JSON
+       └── Poll attempt file...
+                                          Grader daemon (separate process)
+                                          ┌──────────────────────────────┐
+                                          │ Detect pending attempt       │
+                                          │ git worktree add --detach    │
+                                          │ Run grader → score = 0.85    │
+                                          │ Compare with previous (0.72) │
+                                          │ Status: "improved"           │
+                                          │ Write score back to JSON     │
+                                          │ Remove worktree              │
+                                          └──────────────────────────────┘
+       ┌── Score available!
        ▼
 Agent sees: "Score: 0.85 (improved)"
 ```
+
+## Grader daemon
+
+The grader daemon is a single long-running process spawned by `coral start` (or `coral resume`) before any agents are launched. It runs for the lifetime of the CORAL session.
+
+### Design invariants
+
+- **Serial processing** — Attempts are graded one at a time, oldest first. Most graders are not concurrency-safe (Docker port conflicts, GPU contention, shared scratch dirs).
+- **Isolated worktrees** — Each attempt is graded in a temporary `git worktree add --detach <commit>` checkout under `.coral/private/grader_checkouts/`. This ensures agent commits during grading do not perturb the codebase the grader sees.
+- **Atomic writes** — Attempt files are updated via tmp-file + rename, so agents polling for results never see partial writes.
+- **Idempotent** — Re-encountering an already-scored attempt is a no-op.
+- **Subprocess isolation** — The grader itself runs in a child process (`multiprocessing.Process`) for hard-kill timeout semantics. `asyncio.wait_for` cannot interrupt blocking code (numpy, Docker calls, etc.), but `SIGKILL` can.
+
+### Multi-agent throughput
+
+With multiple agents, all eval submissions flow through the same daemon. Since grading is serial, a backlog can form if agents submit faster than the daemon grades. Agents block (polling the attempt file) until their result appears. The daemon processes pending attempts in FIFO order, so no agent is starved.
+
+### Lifecycle
+
+| Event | What happens |
+|-------|-------------|
+| `coral start` | Daemon spawned as `multiprocessing.Process`; PID written to `.coral/public/grader_daemon.pid` |
+| `coral resume` | Stale daemon killed (if PID file exists), then a fresh daemon is spawned |
+| `coral stop` | Daemon signaled via `multiprocessing.Event`, then `SIGTERM`/`SIGKILL` as fallback |
+| Crash recovery | Stale worktrees are force-removed on next grade attempt |
 
 ## Scoring
 
@@ -80,7 +123,9 @@ grader:
   timeout: 0     # No limit
 ```
 
-If a grader exceeds the timeout, the attempt is recorded with `status: "timeout"` and a null score. The agent sees feedback like "Eval timed out after 600s."
+If a grader exceeds the timeout, the daemon kills the grader subprocess via `SIGKILL`, records the attempt with `status: "timeout"` and a null score, and cleans up the worktree. The agent sees feedback like "Eval timed out after 600s."
+
+The agent-side poll also has its own timeout (2x the grader timeout + 60s slack, minimum 300s). If the daemon hasn't finalized the attempt within this window, the agent receives a `STILL PENDING` message and can retry with `coral wait <hash>`.
 
 ## Heartbeat actions
 

@@ -167,7 +167,9 @@ Go back to Step 1. Keep iterating. When you run out of obvious ideas, that's whe
 ### CLI
 ```
 # Core workflow
-coral eval -m "description"          # Stage, commit, evaluate
+coral eval -m "description"          # Stage, commit, evaluate (blocks until scored)
+coral eval -m "..." --no-wait        # Fire off without blocking; pair with `coral wait`
+coral wait <hash>                    # Block until a previously-submitted eval is scored
 coral diff                           # Show uncommitted changes
 coral revert                         # Undo last commit
 coral checkout <hash>                # Reset to any previous attempt's code
