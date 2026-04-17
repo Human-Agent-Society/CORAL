@@ -14,22 +14,30 @@ CORAL follows a simple loop: **spawn agents → agents read instructions → com
 │                                         │
 │  1. Create .coral/ shared state         │
 │  2. Create per-agent git worktrees      │
-│  3. Generate CORAL.md instructions      │
-│  4. Spawn agent subprocesses            │
+│  3. Spawn grader daemon                 │
+│  4. Generate CORAL.md instructions      │
+│  5. Spawn agent subprocesses            │
 └────────────────────┬────────────────────┘
                      │
-          ┌──────────▼───────────┐
-          │     Agent Loop       │
-          │                      │
-          │  Read CORAL.md       │
-          │  Research approaches │
-          │  Edit code           │
-          │  coral eval -m "..." │
-          │  See score/feedback  │
-          │  Share notes/skills  │
-          │  Repeat              │
-          └──────────────────────┘
+      ┌──────────────┼──────────────┐
+      │              │              │
+      ▼              ▼              ▼
+┌──────────┐  ┌──────────┐  ┌─────────────────┐
+│ Agent 1  │  │ Agent 2  │  │ Grader Daemon   │
+│          │  │          │  │                 │
+│ Edit code│  │ Edit code│  │ Poll pending    │
+│ commit   │  │ commit   │  │ git worktree    │
+│ write    │  │ write    │  │ run grader      │
+│ pending  │  │ pending  │  │ write score     │
+│ poll...  │  │ poll...  │  │ cleanup         │
+└──────────┘  └──────────┘  └─────────────────┘
+      │              │              ▲
+      └──────────────┴──────────────┘
+           .coral/public/attempts/
+           (pending → scored JSONs)
 ```
+
+Agents and the grader daemon communicate **entirely through the filesystem** — there is no RPC, no sockets, no message queue. Agents write pending attempt JSON files; the daemon reads them, grades, and writes back the results. Agents poll the same files until the score appears.
 
 ## Directory layout
 
@@ -45,9 +53,12 @@ results/<task-name>/<timestamp>/
 │   │   ├── skills/            # Reusable tools/scripts
 │   │   ├── logs/              # Agent session logs
 │   │   ├── heartbeat/         # Heartbeat action configs
-│   │   └── eval_count         # Global eval counter
+│   │   ├── eval_count         # Global eval counter
+│   │   ├── grader_daemon.pid  # Daemon process ID
+│   │   └── grader_daemon_heartbeat  # Daemon liveness timestamp
 │   └── private/               # Hidden from agents
-│       └── eval/              # Grader code and test data
+│       ├── eval/              # Grader code and test data
+│       └── grader_checkouts/  # Ephemeral worktrees for grading
 │
 └── agents/
     ├── agent-1/               # Git worktree for agent 1
