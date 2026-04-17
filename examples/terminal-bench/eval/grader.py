@@ -329,18 +329,33 @@ class Grader(TaskGrader):
 
     def _find_harbor_cmd(self) -> list[str] | None:
         """Find how to invoke the harbor CLI."""
+        # try to see if docker requires sudo
+        prefix = []
+        try:
+            result = subprocess.run(
+                ["docker", "ps"],
+                capture_output=True,
+                timeout=60,
+            )
+            if result.returncode != 0:
+                # docker needs sudo to run
+                prefix.append("sudo")
+        except Exception:
+            pass
         # Prefer uvx (installs/runs from PyPI in an isolated env)
-        if shutil.which("uvx"):
+        uvx_path = shutil.which("uvx")
+        if uvx_path:
             try:
                 result = subprocess.run(
-                    ["uvx", "harbor", "--version"],
+                    [uvx_path, "harbor", "--version"],
                     capture_output=True,
                     timeout=60,
                 )
                 if result.returncode == 0:
-                    return ["uvx", "harbor"]
+                    return [*prefix, uvx_path, "harbor"]
             except Exception:
                 pass
-        if shutil.which("harbor"):
-            return ["harbor"]
+        harbor_path = shutil.which("harbor")
+        if harbor_path:
+            return [*prefix, harbor_path]
         return None
