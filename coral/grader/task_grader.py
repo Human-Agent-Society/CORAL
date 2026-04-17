@@ -72,6 +72,23 @@ class TaskGrader(ABC):
         d.mkdir(parents=True, exist_ok=True)
         return d
 
+    def eval_logs_worktree_path(self, abs_path: Path) -> Path:
+        """Return an eval_logs absolute path as `eval_logs/<...>` (runtime-agnostic).
+
+        The grader's eval_logs dir is symlinked into each agent worktree under
+        the runtime's shared state dir (e.g. `.claude/eval_logs/`,
+        `.codex/eval_logs/`, ...). Print the no-prefix form so agents on any
+        runtime can prepend their own shared dir to access it via Read.
+
+        Falls back to the original absolute path if it isn't under eval_logs/.
+        """
+        parts = Path(abs_path).parts
+        try:
+            idx = parts.index("eval_logs")
+        except ValueError:
+            return Path(abs_path)
+        return Path(*parts[idx:])
+
     @abstractmethod
     def evaluate(self) -> float | ScoreBundle:
         """Implement this. Return a numeric score or a ScoreBundle."""

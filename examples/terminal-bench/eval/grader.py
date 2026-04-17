@@ -88,7 +88,7 @@ class Grader(TaskGrader):
 
         # Persist harbor logs in the per-attempt eval_logs dir so they survive
         # the grader-checkout cleanup (coral/grader/daemon.py:_remove_worktree).
-        # Symlinked into each agent worktree at `.claude/eval_logs/<hash>/harbor_logs/`.
+        # Symlinked into each agent worktree at `<shared_dir>/eval_logs/<hash>/harbor_logs/`.
         job_dir = self.eval_logs_dir / "harbor_logs"
         job_dir.mkdir(parents=True, exist_ok=True)
         job_name = f"eval_{tier_name.lower().replace(' ', '_')}_{int(time.time())}"
@@ -262,17 +262,14 @@ class Grader(TaskGrader):
             lines.append("### Failure details")
             lines.extend(failure_lines)
 
-        # Point agent to the logs (worktree-relative path so Read works;
-        # `.claude/eval_logs/` is symlinked to `.coral/public/eval_logs/`
-        # in every agent worktree by setup_shared_state).
-        try:
-            idx = job_dir.parts.index("eval_logs")
-            logs_path = Path(".claude", *job_dir.parts[idx:])
-        except ValueError:
-            logs_path = job_dir
+        # Point agent to the logs (no shared-dir prefix — runtime-agnostic).
+        # eval_logs/ is symlinked into each worktree's shared state dir
+        # (.claude/, .codex/, .opencode/, .kiro/) by setup_shared_state, so
+        # the agent prepends their own shared-dir to access via Read.
+        logs_path = self.eval_logs_worktree_path(job_dir)
         lines.append("")
         lines.append("### Logs")
-        lines.append(f"Full harbor logs (agent trajectories, terminal recordings, verifier output): `{logs_path}/`")
+        lines.append(f"Full harbor logs (agent trajectories, terminal recordings, verifier output): `{logs_path}/` (under your shared state dir)")
 
         feedback = "\n".join(lines)
         return (overall_rate, feedback)
