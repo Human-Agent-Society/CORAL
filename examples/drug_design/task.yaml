@@ -42,6 +42,11 @@ task:
       in eval/scorers/model_data/
 
 grader:
+  entrypoint: "drug_design_grader.grader:Grader"
+  setup:
+    # Drop `[ml]` if you don't have torch/minimol/chemprop + checkpoints; the
+    # grader will fall back to the rdkit-only scoring tier.
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

@@ -21,12 +21,13 @@ task:
     - "data/"
 
 grader:
-  type: function
-  module: eval.grader
+  entrypoint: "my_task_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 300
   direction: maximize
   private:
-    - "eval/test_data.csv"
+    - "answers/test_data.csv"
   args:
     program_file: "solution.py"
 
@@ -68,22 +69,29 @@ workspace:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `type` | string | `""` | Grader type. Leave empty to auto-discover from `eval/grader.py` |
-| `module` | string | `""` | Python module path for custom graders |
+| `entrypoint` | string | `""` | Setuptools-style `module.path:ClassName`. Recommended. Empty falls back to the deprecated `eval/grader.py` discovery. |
+| `setup` | list[string] | `[]` | Shell commands run inside `.coral/private/grader_venv/` at `coral start` / `coral validate` time (typically `uv pip install -e ./grader`). |
 | `timeout` | int | `300` | Eval timeout in seconds (0 = no limit) |
 | `direction` | string | `"maximize"` | `"maximize"` or `"minimize"` — which direction is better |
 | `private` | list[string] | `[]` | Files copied to `.coral/private/` (hidden from agents) |
-| `args` | dict | `{}` | Extra arguments passed to the grader |
+| `args` | dict | `{}` | Extra arguments passed to the grader (accessible as `self.args`) |
 
-### Auto-discovery
+The legacy `grader.type` and `grader.module` fields have been removed.
+Tasks that still set them fail to load with a migration error pointing at
+`grader.entrypoint`.
 
-When `type` is empty and `module` is empty, CORAL looks for `eval/grader.py` in your task directory and expects a `Grader` class inheriting from `TaskGrader`.
+### Loading your grader
 
-### Built-in grader types
+When `grader.entrypoint` is set, CORAL bootstraps a venv at
+`.coral/private/grader_venv/`, runs every command in `grader.setup`
+inside it, and spawns a worker subprocess from that venv whenever an
+attempt needs grading.
 
-| Type | Description |
-|------|-------------|
-| `function` | Wraps a callable `(codebase_path, tasks) -> Score\|float\|bool` |
+When `grader.entrypoint` is empty, CORAL falls back to auto-discovering
+`eval/grader.py` from the task directory. This still works but emits a
+`DeprecationWarning` on load — see
+[Writing a Custom Grader](/guides/custom-grader#migrating-from-gradertype--gradermodule)
+for the migration guide.
 
 ## `agents` section
 

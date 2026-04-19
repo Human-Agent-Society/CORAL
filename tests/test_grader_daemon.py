@@ -11,6 +11,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 import yaml
 
 from coral.grader.daemon import (
@@ -24,12 +25,17 @@ from coral.hooks.post_commit import submit_eval
 from coral.hub.attempts import read_attempt, write_attempt
 from coral.types import Attempt
 
+# The fixture below uses the deprecated eval/grader.py loading path on
+# purpose (it's the simplest way to wire a TaskGrader without standing up a
+# real grader venv). Silence the DeprecationWarning for the whole module.
+pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
+
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
 
 def _init_repo_and_coral(base_dir: Path, score: float = 0.5) -> Path:
-    """Create a git repo with .coral/config.yaml using a simple function grader."""
+    """Create a git repo with .coral/ wired up to a minimal eval/grader.py."""
     repo = base_dir / "repo"
     repo.mkdir()
     subprocess.run(["git", "init", str(repo)], capture_output=True, check=True)
@@ -44,7 +50,7 @@ def _init_repo_and_coral(base_dir: Path, score: float = 0.5) -> Path:
 
     (repo / "main.py").write_text("print('hello')\n")
     (repo / ".gitignore").write_text(
-        ".coral/\n.coral_dir\n.claude/\n.coral_agent_id\nCLAUDE.md\ntest_grader_mod.py\n"
+        ".coral/\n.coral_dir\n.claude/\n.coral_agent_id\nCLAUDE.md\n"
     )
     subprocess.run(
         ["git", "-C", str(repo), "add", "main.py", ".gitignore"],
@@ -57,22 +63,21 @@ def _init_repo_and_coral(base_dir: Path, score: float = 0.5) -> Path:
 
     coral_dir = repo / ".coral"
     (coral_dir / "public" / "attempts").mkdir(parents=True)
-    (coral_dir / "private").mkdir()
+    eval_dir = coral_dir / "private" / "eval"
+    eval_dir.mkdir(parents=True)
 
     (repo / ".coral_dir").write_text(str(coral_dir.resolve()))
 
-    grader_module = repo / "test_grader_mod.py"
-    grader_module.write_text(
-        "def grade(codebase_path, tasks):\n"
-        f"    return {score!r}\n"
+    (eval_dir / "grader.py").write_text(
+        "from coral.grader.task_grader import TaskGrader\n"
+        "class Grader(TaskGrader):\n"
+        "    def evaluate(self):\n"
+        f"        return {score!r}\n"
     )
 
     config = {
         "task": {"name": "daemon_test", "description": "Daemon test"},
         "grader": {
-            "type": "function",
-            "module": "test_grader_mod",
-            "args": {"func_name": "grade"},
             "timeout": 60,
         },
         "agents": {"count": 1},
@@ -246,15 +251,15 @@ def test_grader_sees_committed_code_not_working_tree():
     with tempfile.TemporaryDirectory() as d:
         repo = _init_repo_and_coral(Path(d))
         # Grader reports sentinel = content of main.py at checkout time.
-        (repo / "test_grader_mod.py").write_text(
-            "def grade(codebase_path, tasks):\n"
-            "    import os\n"
-            "    with open(os.path.join(codebase_path, 'main.py')) as f:\n"
-            "        content = f.read()\n"
-            "    # Map known contents to numeric scores.\n"
-            "    return 1.0 if 'COMMITTED' in content else 0.0\n"
+        (repo / ".coral" / "private" / "eval" / "grader.py").write_text(
+            "import os\n"
+            "from coral.grader.task_grader import TaskGrader\n"
+            "class Grader(TaskGrader):\n"
+            "    def evaluate(self):\n"
+            "        with open(os.path.join(self.codebase_path, 'main.py')) as f:\n"
+            "            content = f.read()\n"
+            "        return 1.0 if 'COMMITTED' in content else 0.0\n"
         )
-        sys.path.insert(0, str(repo))
         try:
             (repo / "main.py").write_text("# COMMITTED\nprint('x')\n")
             pending = submit_eval(
@@ -272,7 +277,7 @@ def test_grader_sees_committed_code_not_working_tree():
                 "not the agent's live working tree."
             )
         finally:
-            sys.path.pop(0)
+            pass
 
 
 # --------------------------------------------------------------------------- #

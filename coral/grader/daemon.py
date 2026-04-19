@@ -77,9 +77,18 @@ def _run_grader_with_timeout(
     multiprocessing + SIGKILL is the only reliable way to interrupt
     synchronous blocking code (numpy, Docker calls, etc.) on timeout.
     asyncio.wait_for can't.
+
+    For entrypoint-based graders we skip the multiprocessing wrapper —
+    SubprocessGrader already shells out to its own venv and applies the
+    same timeout via subprocess.run, so doubling up would just add a
+    no-op layer.
     """
+    config = CoralConfig.from_yaml(config_path)
+    if config.grader.entrypoint:
+        grader = load_grader(config, coral_dir=coral_dir)
+        return asyncio.run(grader.grade(codebase_path, tasks))
+
     if timeout <= 0:
-        config = CoralConfig.from_yaml(config_path)
         grader = load_grader(config, coral_dir=coral_dir)
         return asyncio.run(grader.grade(codebase_path, tasks))
 

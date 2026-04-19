@@ -104,21 +104,6 @@ def generate_coral_md(
 
 def _get_score_direction(config: CoralConfig) -> str:
     """Return a human-readable description of what 'better' means for this grader."""
-    # Type-specific descriptions for builtin graders
-    if config.grader.type:
-        type_directions = {
-            "kernel_builder": "lower cycle count is better (score 0-1, higher = faster kernel)",
-            "swebench": "higher is better (pass rate across tasks, 0-1)",
-            "terminalbench": "higher is better (pass rate across tasks, 0-1)",
-            "erdos": "higher is better (score = benchmark/c5_bound, >1.0 means new record)",
-            "spaceship_titanic": "higher is better (classification accuracy, 0-1 scale; 0.50 = naive, 0.80+ = strong)",
-            "function": "higher is better (0-1 scale) unless the task description says otherwise",
-            "kernel_engineering": "higher is better (1000/runtime_us — lower kernel runtime = higher score)",
-        }
-        if config.grader.type in type_directions:
-            return type_directions[config.grader.type]
-
-    # Use direction from config
     if config.grader.direction == "minimize":
         return "lower is better"
     return "higher is better"

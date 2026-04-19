@@ -8,24 +8,40 @@ To run any example:
 coral start --config examples/<name>/task.yaml
 ```
 
+Tasks marked **packaged grader** below ship the grader as a standalone Python
+package — CORAL bootstraps a fresh venv at `.coral/private/grader_venv/`,
+installs the package via `grader.setup`, and runs evaluation in a worker
+subprocess from there. No extra install step is required for the user.
+
 ## Task Structure
 
-Every task directory follows the same layout:
+Tasks come in two layouts. New tasks should use the **packaged grader**
+form; the **legacy `eval/grader.py`** form still works but emits a
+`DeprecationWarning` on load.
+
+### Packaged grader (recommended)
 
 ```
 my_task/
-├── task.yaml              # Task configuration (required)
+├── task.yaml              # references grader.entrypoint + grader.setup
+├── seed/                  # initial codebase given to agents
+│   └── solution.py
+└── grader/                # standalone Python package
+    ├── pyproject.toml
+    └── src/my_task_grader/
+        ├── __init__.py
+        └── grader.py      # class Grader(TaskGrader): ...
+```
+
+### Legacy (deprecated)
+
+```
+my_task/
+├── task.yaml
 ├── eval/
-│   ├── grader.py          # Grading logic (required. Entrypoint defined in grader.args.program_file)
-│   ├── xxx.py             # Other helper tools (Optional)
-│   └── answers/           # Ground-truth data, if needed
-│       └── ...
-└── seed/                  # Initial codebase given to agents
-    ├── solution.py        # Starter code the agents will modify
-    ├── Dockerfile         # Your custom dockerfile for your task (Optinoal)
-    ├── opencode.json      # Your custom opencode config (Optional)
-    └── data/              # Any input data (datasets, configs, etc. Optional)
-        └── ...
+│   └── grader.py          # auto-discovered by CORAL (deprecated)
+└── seed/
+    └── solution.py
 ```
 
 ### `task.yaml`
@@ -41,13 +57,14 @@ task:
     - Eval timeout is 120s.
 
 grader:
+  entrypoint: "my_task_grader.grader:Grader"   # required (or use legacy eval/grader.py)
+  setup:                                        # shell commands run in .coral/private/grader_venv/
+    - "uv pip install -e ./grader"
   timeout: 300                       # Max seconds per evaluation (default: 300)
   direction: maximize                # "maximize" or "minimize" (default: maximize)
-  type: ""                           # Grader type; empty = auto-discover from eval/grader.py
-  module: ""                         # Python module path for custom graders
-  args:                              # Arbitrary kwargs passed to the grader
+  args:                              # Arbitrary kwargs accessible as self.args inside the grader
     program_file: "solution.py"
-  private:                           # Files/dirs copied to .coral/ (hidden from agents)
+  private:                           # Files/dirs copied to .coral/private/ (hidden from agents)
     - "answers/"
 
 agents:
@@ -94,13 +111,39 @@ run:
   docker_image: ""                   # Custom docker image; empty = auto-build from docker/<runtime>/ (default: "")
 ```
 
-### `eval/grader.py`
+### `grader/` (packaged)
 
-Contains the grading logic. Typically a `TaskGrader` subclass that implements an `evaluate()` method. The grader receives the codebase path and task list, runs the agent's solution, and returns a `ScoreBundle`.
+A standalone Python package consumed by `grader.entrypoint`. Inherits from
+`TaskGrader` and implements `evaluate()`. CORAL installs it into
+`.coral/private/grader_venv/` so its dependencies stay separate from CORAL's
+and from each agent's worktree env.
+
+### `eval/grader.py` (legacy)
+
+Same `TaskGrader` API, but auto-discovered from the task's `eval/`
+directory instead of via an entrypoint. Triggers a `DeprecationWarning`
+on load. New tasks should prefer the packaged form.
 
 ### `seed/`
 
 The starting codebase that gets copied into each agent's git worktree. This is what agents see when they begin working. It should contain starter code (with a function signature the grader expects) and any data files the solution needs at runtime.
+
+## Migrated examples
+
+The following examples already ship as packaged graders and serve as
+reference implementations:
+
+- `erdos/grader/` — minimal package, single grader file, numpy dep
+- `drug_design/grader/` — package with bundled scorer modules + reference
+  data files; demonstrates `[ml]` optional-deps for heavy dependencies
+
+To inspect or hack on either, the package can be installed standalone for
+local development:
+
+```bash
+uv pip install -e ./examples/erdos/grader
+uv pip install -e ./examples/drug_design/grader[ml]
+```
 
 ## Examples Overview
 

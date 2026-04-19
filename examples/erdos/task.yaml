@@ -33,6 +33,9 @@ task:
     - You will get a score based on the C₅ value you achieve; closer to 1 means closer to the SOTA solution and the goal is to surpass 1!
 
 grader:
+  entrypoint: "erdos_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 1100
   direction: maximize
   args:

@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+import pytest
 import yaml
 
 from coral.grader.daemon import process_pending_once
@@ -13,6 +14,10 @@ from coral.hooks.post_commit import (
     submit_eval,
 )
 from coral.workspace import setup_claude_settings
+
+# These tests deliberately use the deprecated eval/grader.py loading path —
+# silence the warning suite-wide.
+pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
 
 
 def _submit_and_grade(message: str, agent_id: str, workdir: str):
@@ -41,7 +46,7 @@ def _submit_and_grade(message: str, agent_id: str, workdir: str):
 
 
 def _setup_repo_with_config(base_dir: Path) -> Path:
-    """Create a git repo with .coral/config.yaml and return repo_path."""
+    """Create a git repo with .coral/config.yaml wired to eval/grader.py."""
     repo = base_dir / "repo"
     repo.mkdir()
     subprocess.run(["git", "init", str(repo)], capture_output=True, check=True)
@@ -50,28 +55,30 @@ def _setup_repo_with_config(base_dir: Path) -> Path:
 
     # Create a file and .gitignore, then make an initial commit
     (repo / "hello.py").write_text("print('hello')\n")
-    (repo / ".gitignore").write_text(".coral/\n.coral_dir\n.claude/\n.coral_agent_id\nCLAUDE.md\ntest_grader_module.py\n")
+    (repo / ".gitignore").write_text(".coral/\n.coral_dir\n.claude/\n.coral_agent_id\nCLAUDE.md\n")
     subprocess.run(["git", "-C", str(repo), "add", "hello.py", ".gitignore"], capture_output=True)
     subprocess.run(["git", "-C", str(repo), "commit", "-m", "Initial"], capture_output=True, check=True)
 
-    # Set up .coral directory with config
+    # Set up .coral directory with config + eval/grader.py
     coral_dir = repo / ".coral"
     coral_dir.mkdir()
     (coral_dir / "public" / "attempts").mkdir(parents=True)
+    eval_dir = coral_dir / "private" / "eval"
+    eval_dir.mkdir(parents=True)
 
     # Write .coral_dir breadcrumb (as write_coral_dir does)
     (repo / ".coral_dir").write_text(str(coral_dir.resolve()))
 
-    # Write a config that uses a simple function grader
-    grader_module = repo / "test_grader_module.py"
-    grader_module.write_text(
-        "def grade(codebase_path, tasks):\n"
-        "    return 0.75\n"
+    (eval_dir / "grader.py").write_text(
+        "from coral.grader.task_grader import TaskGrader\n"
+        "class Grader(TaskGrader):\n"
+        "    def evaluate(self):\n"
+        "        return 0.75\n"
     )
 
     config = {
         "task": {"name": "test_task", "description": "A test"},
-        "grader": {"type": "function", "module": "test_grader_module", "args": {"func_name": "grade"}},
+        "grader": {},
         "agents": {"count": 1},
         "sharing": {"attempts": True, "notes": True, "skills": True},
         "workspace": {"base_dir": str(repo), "repo_path": str(repo)},

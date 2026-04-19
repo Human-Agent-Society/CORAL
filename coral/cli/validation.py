@@ -27,15 +27,23 @@ def validate_task(task_dir: Path) -> list[str]:
         errors.append(f"task.yaml parse error: {e}")
         return errors
 
-    # 2. eval/grader.py exists (if no legacy grader.type is set)
+    # 2. Either grader.entrypoint is set OR eval/grader.py exists (deprecated path).
     eval_dir = task_dir / "eval"
     grader_py = eval_dir / "grader.py"
     has_eval_grader = grader_py.exists()
+    has_entrypoint = bool(config.grader.entrypoint)
 
-    if not has_eval_grader and not config.grader.type:
+    if not has_eval_grader and not has_entrypoint:
         errors.append(
-            "eval/grader.py not found and no grader.type specified in task.yaml. "
-            "Either create eval/grader.py or set grader.type for a legacy builtin."
+            "No grader configured. Set grader.entrypoint = "
+            "'your_pkg.module:Grader' in task.yaml (and grader.setup to install "
+            "the package), or create eval/grader.py (deprecated)."
+        )
+
+    if has_entrypoint and ":" not in config.grader.entrypoint:
+        errors.append(
+            f"grader.entrypoint must be 'module.path:ClassName', "
+            f"got {config.grader.entrypoint!r}"
         )
 
     # 3. grader.py exports a Grader class that inherits from TaskGrader

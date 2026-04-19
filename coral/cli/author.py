@@ -34,6 +34,11 @@ def cmd_init(args: argparse.Namespace) -> None:
         f"  files: []\n"
         f"\n"
         f"grader:\n"
+        f"  # Quick start: this scaffold ships an eval/grader.py (deprecated path).\n"
+        f"  # For a real task, package your grader and switch to:\n"
+        f"  #   entrypoint: \"my_pkg.grader:Grader\"\n"
+        f"  #   setup: [\"uv pip install -e ./grader\"]\n"
+        f"  # See docs/guides/custom-grader for the migration guide.\n"
         f"  timeout: 300\n"
         f"  direction: maximize\n"
         f"\n"
@@ -75,8 +80,8 @@ def cmd_validate(args: argparse.Namespace) -> None:
     import shutil
     import tempfile
 
-    from coral.config import CoralConfig
     from coral.cli.validation import validate_task
+    from coral.config import CoralConfig
 
     task_dir = Path(args.path).resolve()
 
@@ -127,6 +132,14 @@ def cmd_validate(args: argparse.Namespace) -> None:
                     shutil.copytree(src, dst)
                 else:
                     shutil.copy2(src, dst)
+
+        # Bootstrap the grader's isolated venv for the entrypoint path. The
+        # legacy eval/grader.py path runs in-process and skips this step.
+        if config.grader.entrypoint:
+            from coral.workspace.grader_env import setup_grader_env
+
+            print("Setting up grader venv (.coral/private/grader_venv)...")
+            setup_grader_env(coral_dir, config.grader, task_dir)
 
         from coral.grader.loader import load_grader
         from coral.types import Task

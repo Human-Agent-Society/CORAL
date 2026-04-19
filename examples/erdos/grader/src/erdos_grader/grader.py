@@ -8,7 +8,6 @@ The program file must define a run() function returning (h_values, c5_bound, n_p
 
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 import textwrap

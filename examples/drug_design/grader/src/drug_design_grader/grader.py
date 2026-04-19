@@ -9,12 +9,14 @@ Scoring tiers:
   - With MiniMol models: adds K. pneumoniae activity prediction
   - With ChemProp models: adds toxicity safety prediction
 
-All scorer code and reference data are bundled in eval/. No external
-SAGA dependency.
+Reference data and scorer modules ship inside the package via
+importlib.resources, so the grader does not depend on the legacy
+.coral/private/eval/ layout.
 """
 
 from __future__ import annotations
 
+import importlib.resources
 import json
 import os
 import textwrap
@@ -35,8 +37,8 @@ class Grader(TaskGrader):
         if not os.path.exists(program_path):
             return self.fail(f"Program file ({program_file}) not found")
 
-        scorer_dir = str(self.read_eval_path("scorers"))
-        data_dir = str(self.read_eval_path("data"))
+        scorer_dir = str(importlib.resources.files("drug_design_grader.scorers"))
+        data_dir = str(importlib.resources.files("drug_design_grader.data"))
 
         try:
             result = _run_evaluation(

@@ -387,14 +387,14 @@ def cmd_start(args: argparse.Namespace) -> None:
     if verbose:
         print(f"[coral] Config:     {args.config}")
         print(f"[coral] Task:       {config.task.name}")
-        print(f"[coral] Grader:     {config.grader.type or 'auto (eval/grader.py)'}")
+        print(f"[coral] Grader:     {config.grader.entrypoint or 'eval/grader.py (deprecated)'}")
         print(f"[coral] Agents:     {config.agents.count}")
         print(f"[coral] Model:      {config.agents.model}")
         print(f"[coral] Max turns:  {config.agents.max_turns}")
         print(f"[coral] Results:    {config.workspace.results_dir}")
         print(f"[coral] Repo path:  {config.workspace.repo_path}")
         if config.agents.warmstart.enabled:
-            print(f"[coral] Warm-start: enabled")
+            print("[coral] Warm-start: enabled")
         print()
 
     manager = AgentManager(config, verbose=verbose, config_dir=config_path.parent)

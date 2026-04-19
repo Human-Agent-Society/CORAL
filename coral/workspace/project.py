@@ -159,6 +159,14 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     if config.grader.private:
         copy_private_data(config.grader.private, coral_dir, config_dir or Path.cwd())
 
+    # Bootstrap the grader's isolated venv at .coral/private/grader_venv/ and
+    # run any user-supplied install steps. Skipped when the task is still on the
+    # legacy eval/grader.py (in-process) path.
+    if config.grader.entrypoint:
+        from coral.workspace.grader_env import setup_grader_env
+
+        setup_grader_env(coral_dir, config.grader, config_dir or Path.cwd())
+
     return ProjectPaths(
         results_dir=results_dir,
         task_dir=task_dir,

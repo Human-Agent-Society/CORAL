@@ -42,9 +42,23 @@ coral start -c examples/circle_packing/task.yaml
 
 **What agents work on**: Generating counterexamples or proofs for combinatorial conjectures.
 
+This example uses the new entrypoint-based grader layout — the grader lives
+at `examples/erdos/grader/` as a standalone Python package and `task.yaml`
+points at it via:
+
+```yaml
+grader:
+  entrypoint: "erdos_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+```
+
 ```bash
 coral start -c examples/erdos/task.yaml
 ```
+
+`coral start` will create `.coral/private/grader_venv/`, install the grader
+package into it, and spawn worker subprocesses from there during evaluation.
 
 ## Kernel Builder
 

@@ -4,11 +4,15 @@ description: Build evaluation logic for your CORAL tasks.
 ---
 
 
-Graders evaluate agent submissions and return scores. CORAL provides `TaskGrader` as the standard base class for writing graders.
+Graders evaluate agent submissions and return scores. CORAL loads a grader
+from a Python entrypoint string and runs it inside an isolated venv that the
+framework manages, so your grader's dependencies stay separate from CORAL's
+own and from the agent's worktree.
 
-## Basic grader
+## Quick start (deprecated path)
 
-Create `eval/grader.py` in your task directory:
+The fastest way to scaffold a new task — `coral init my-task` — drops a
+`task.yaml` plus an `eval/grader.py` file you can edit:
 
 ```python
 from coral.grader import TaskGrader
@@ -16,16 +20,81 @@ from coral.types import ScoreBundle
 
 class Grader(TaskGrader):
     def evaluate(self) -> float | ScoreBundle:
-        # Return a numeric score (higher is better by default)
         result = self.run_program("solution.py")
         return float(result.stdout.strip())
 ```
 
-That's it. CORAL auto-discovers `eval/grader.py` and looks for a `Grader` class.
+This auto-discovery path still works but emits a `DeprecationWarning` on
+load. Once your grader is non-trivial, migrate it to a package (next
+section). The same `TaskGrader` API applies in both setups.
+
+## Recommended: package your grader
+
+Wrap your grader in a small Python package so CORAL can install it via
+`uv pip install` into the grader venv. The repo's `examples/erdos/grader/`
+is a minimal reference.
+
+### Layout
+
+```
+my-task/
+├── task.yaml
+├── seed/
+│   └── solution.py
+└── grader/
+    ├── pyproject.toml
+    └── src/my_task_grader/
+        ├── __init__.py        # from .grader import Grader
+        └── grader.py          # class Grader(TaskGrader): ...
+```
+
+`pyproject.toml`:
+
+```toml
+[project]
+name = "my-task-grader"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["coral", "numpy"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/my_task_grader"]
+```
+
+### Wire it up in `task.yaml`
+
+```yaml
+grader:
+  entrypoint: "my_task_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 300
+  direction: maximize
+  args:
+    program_file: "solution.py"
+```
+
+When `coral start` (or `coral validate`) runs, it:
+
+1. Creates `.coral/private/grader_venv/` via `uv venv`.
+2. Editable-installs `coral` into that venv so your package's `coral`
+   dependency resolves locally.
+3. Runs every shell command under `grader.setup` with `VIRTUAL_ENV` /
+   `PATH` pointed at the grader venv.
+4. Spawns a worker subprocess in that venv whenever an attempt needs
+   grading and ships the result back as JSON.
+
+The venv lives inside `.coral/private/`, which is denied to agents by the
+worktree permission rules — your grader source stays hidden.
 
 ## TaskGrader helpers
 
-`TaskGrader` provides several helper methods:
+`TaskGrader` provides several helper methods. They behave the same whether
+your grader runs from a package or from `eval/grader.py`.
 
 ### `run_program(filename, *args, timeout=300)`
 
@@ -38,20 +107,15 @@ print(result.stderr)    # captured stderr
 print(result.returncode)  # exit code
 ```
 
-### `read_eval(relative_path)`
+### `read_eval(relative_path)` / `read_eval_path(relative_path)`
 
-Read a file from the private `eval/` directory (hidden from agents):
-
-```python
-expected = self.read_eval("expected_output.txt")
-```
-
-### `read_eval_path(relative_path)`
-
-Get the absolute path to an eval file:
+These read from the legacy private `eval/` directory. When your grader
+ships as a package, prefer `importlib.resources` to load bundled data:
 
 ```python
-data_path = self.read_eval_path("test_data.csv")
+import importlib.resources
+
+data_dir = str(importlib.resources.files("my_task_grader.data"))
 ```
 
 ### `score(value, explanation="")`
@@ -83,8 +147,6 @@ Inside `evaluate()`, you have access to:
 
 ## Handling errors
 
-Handle errors to provide clear feedback:
-
 ```python
 class Grader(TaskGrader):
     def evaluate(self) -> float | ScoreBundle:
@@ -115,38 +177,64 @@ grader:
 
 ## Private files
 
-Files listed in `grader.private` are copied to `.coral/private/` and hidden from agents. Use this for test data, expected outputs, or reference implementations:
+Files listed in `grader.private` are copied to `.coral/private/` and hidden
+from agents. Use this for test data, expected outputs, or reference
+implementations that don't fit inside your grader package:
 
 ```yaml
 grader:
   private:
-    - "eval/test_cases.json"
-    - "eval/reference_output.txt"
+    - "answers/test_cases.json"
+    - "answers/reference_output.txt"
 ```
 
-Access them in your grader:
+Access them in your grader via `self.private_dir`:
 
 ```python
-test_data = self.read_eval("test_cases.json")
+expected = (Path(self.private_dir) / "answers" / "test_cases.json").read_text()
 ```
 
 ## Grader timeout
-
-Configure how long evals can run:
 
 ```yaml
 grader:
   timeout: 600   # 10 minutes
 ```
 
-If the grader exceeds this timeout, the process is killed and the attempt is recorded as `timeout`.
+If the grader exceeds this timeout, the worker subprocess is killed and the
+attempt is recorded as a failure with a "timed out" explanation.
 
 ## Validating your grader
-
-Always test before launching agents:
 
 ```bash
 coral validate my-task
 ```
 
-This runs the grader against your seed code and shows the score. Fix any issues before running `coral start`.
+This builds the grader venv, runs `grader.setup`, then evaluates the seed
+code against your grader and prints the result. Fix any issues before
+running `coral start`.
+
+## Migrating from `grader.type` / `grader.module`
+
+These fields have been removed. Tasks that still set them will fail to load
+with a clear migration error. Replace the legacy block:
+
+```yaml
+# old (no longer accepted)
+grader:
+  type: function
+  module: my_module
+  args: {func_name: grade}
+```
+
+with the entrypoint form:
+
+```yaml
+grader:
+  entrypoint: "my_pkg.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+```
+
+If you were using `FunctionGrader` to wrap a plain callable, rewrite it as a
+small `TaskGrader` subclass and ship it inside your grader package.
