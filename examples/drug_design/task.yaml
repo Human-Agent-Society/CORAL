@@ -62,9 +62,9 @@ workspace:
   results_dir: "./results"
   repo_path: "./examples/drug_design/seed"
   setup:
-    - "uv pip install rdkit-pypi numpy"
+    - "uv pip install rdkit numpy"
 
 run:
   verbose: false
   ui: false
-  session: tmux
+  session: local
