@@ -182,8 +182,12 @@ task:
     评分器计算往返欧氏距离，返回 -distance 作为得分（越短越高）。
 
 grader:
-  type: function
-  module: eval.grader
+  # 快速开始走自动发现的 eval/grader.py（会触发 DeprecationWarning）。
+  # 生产任务建议把 grader 打包,改用 entrypoint:
+  #   entrypoint: "tsp_grader.grader:Grader"
+  #   setup: ["uv pip install -e ./grader"]
+  # 迁移指南见 docs/guides/custom-grader。
+  timeout: 300
 
 agents:
   count: 1

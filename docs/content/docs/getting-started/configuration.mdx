@@ -12,13 +12,7 @@ Every CORAL task is defined by a `task.yaml` file. This page documents all avail
 task:
   name: "my-task"
   description: "Optimize solution.py to maximize accuracy."
-  files:
-    - "solution.py"
-    - "utils.py"
   tips: "numpy and scipy are available. Timeout is 300s."
-  seed:
-    - "solution.py"
-    - "data/"
 
 grader:
   entrypoint: "my_task_grader.grader:Grader"
@@ -61,9 +55,7 @@ workspace:
 |-------|------|---------|-------------|
 | `name` | string | *required* | Task identifier |
 | `description` | string | *required* | What agents should do — included in CORAL.md |
-| `files` | list[string] | `[]` | Key files agents should focus on |
 | `tips` | string | `""` | Additional hints shown to agents |
-| `seed` | list[string] | `[]` | Files/directories copied into each agent's workspace |
 
 ## `grader` section
 
