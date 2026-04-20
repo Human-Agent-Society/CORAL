@@ -31,7 +31,6 @@ def cmd_init(args: argparse.Namespace) -> None:
         f'  name: "{task_name}"\n'
         f"  description: |\n"
         f"    Describe your task here.\n"
-        f"  files: []\n"
         f"\n"
         f"grader:\n"
         f"  # Quick start: this scaffold ships an eval/grader.py (deprecated path).\n"

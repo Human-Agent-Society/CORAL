@@ -30,8 +30,6 @@ Edit `my-task/task.yaml`:
 task:
   name: my-task
   description: "Optimize the function in solution.py to run as fast as possible."
-  files:
-    - "solution.py"
 
 grader:
   direction: maximize
@@ -118,3 +116,11 @@ Each agent autonomously:
 6. Repeats until stopped
 
 Check [Concepts](/concepts) to understand the full architecture, or [CLI Reference](/cli/reference) for all available commands.
+
+## Graduating from `eval/grader.py`
+
+The `eval/grader.py` form scaffolded above is a deprecated quick-start
+path — it auto-loads in-process and emits a `DeprecationWarning`. Once
+your grader is non-trivial or you want to share it across tasks, package
+it and switch `task.yaml` to use `grader.entrypoint` instead. See
+[Writing a Custom Grader → Recommended: package your grader](/guides/custom-grader#recommended-package-your-grader).
