@@ -195,8 +195,12 @@ task:
     and returns -distance as the score (shorter = higher).
 
 grader:
-  type: function
-  module: eval.grader
+  # Quick-start uses auto-discovered eval/grader.py (emits DeprecationWarning).
+  # For production tasks, package the grader and switch to:
+  #   entrypoint: "tsp_grader.grader:Grader"
+  #   setup: ["uv pip install -e ./grader"]
+  # See docs/guides/custom-grader for the migration walkthrough.
+  timeout: 300
 
 agents:
   count: 1

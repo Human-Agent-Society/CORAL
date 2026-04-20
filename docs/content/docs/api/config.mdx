@@ -54,8 +54,8 @@ class TaskConfig:
 ```python
 @dataclass
 class GraderConfig:
-    type: str              # Grader type (empty = auto-discover)
-    module: str            # Python module path
+    entrypoint: str        # "module.path:ClassName" — empty falls back to eval/grader.py (deprecated)
+    setup: list[str]       # Shell commands run in .coral/private/grader_venv/ at start time
     timeout: int           # Eval timeout in seconds (default: 300)
     args: dict[str, Any]   # Extra grader arguments
     private: list[str]     # Files hidden from agents
