@@ -493,6 +493,10 @@ def cmd_resume(args: argparse.Namespace) -> None:
     run = getattr(args, "run", None)
     if task or run or in_docker():
         coral_dir = find_coral_dir(task, run)
+    elif (Path.cwd() / ".coral_dir").exists():
+        # Agent in a worktree: lock to the current run via the breadcrumb
+        # instead of showing all stopped runs in a picker.
+        coral_dir = find_coral_dir(None, None)
     else:
         coral_dir = pick_run(status_filter="stopped", allow_cancel=True)
     if coral_dir is None:
@@ -686,6 +690,10 @@ def cmd_stop(args: argparse.Namespace) -> None:
         run = getattr(args, "run", None)
         if task or run:
             coral_dir = find_coral_dir(task, run)
+        elif (Path.cwd() / ".coral_dir").exists() or in_docker():
+            # Agent in a worktree (or Docker run): lock to the current run
+            # via the breadcrumb instead of showing all running runs.
+            coral_dir = find_coral_dir(None, None)
         else:
             coral_dir = pick_run(status_filter="running", allow_cancel=True)
         if coral_dir is None:
@@ -705,6 +713,10 @@ def cmd_status(args: argparse.Namespace) -> None:
     run = getattr(args, "run", None)
     if task or run:
         coral_dir = find_coral_dir(task, run)
+    elif (Path.cwd() / ".coral_dir").exists() or in_docker():
+        # Agent in a worktree (or Docker run): lock to the current run
+        # via the .coral_dir breadcrumb instead of showing all runs.
+        coral_dir = find_coral_dir(None, None)
     else:
         coral_dir = pick_run()
 
