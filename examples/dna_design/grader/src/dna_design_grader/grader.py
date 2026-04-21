@@ -7,11 +7,13 @@ Scoring tiers:
   - Always available (no ML): GC content stability + population diversity
   - With Enformer model: adds HepG2/K562/SKNSH expression prediction
 
-All scorer code is bundled in eval/scorers/. No external SAGA dependency.
+Scorer modules ship inside the package via importlib.resources, so the
+grader does not depend on the legacy .coral/private/eval/ layout.
 """
 
 from __future__ import annotations
 
+import importlib.resources
 import json
 import os
 import textwrap
@@ -32,8 +34,7 @@ class Grader(TaskGrader):
         if not os.path.exists(program_path):
             return self.fail(f"Program file ({program_file}) not found")
 
-        # Path to bundled scorer modules inside .coral/private/eval/
-        scorer_dir = str(self.read_eval_path("scorers"))
+        scorer_dir = str(importlib.resources.files("dna_design_grader.scorers"))
 
         try:
             result = _run_evaluation(

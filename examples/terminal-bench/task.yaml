@@ -47,6 +47,9 @@ task:
     - After each eval, check the harbor logs path printed in the eval feedback (under your runtime's shared dir, e.g. `.claude/eval_logs/<commit_hash>/harbor_logs/`) for detailed agent trajectories, terminal recordings, and verifier output to understand why specific tasks failed
 
 grader:
+  entrypoint: "terminal_bench_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 7200
   direction: maximize
   args:

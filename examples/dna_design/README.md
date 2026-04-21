@@ -25,7 +25,8 @@ sequences (strings of A, T, G, C), each exactly 200 bases long.
 # Basic (GC + diversity scoring only)
 coral start -c examples/dna_design/task.yaml
 
-# Full scoring requires Enformer model checkpoint in eval/scorers/model_data/
+# Full scoring requires Enformer model checkpoint in
+# grader/src/dna_design_grader/scorers/model_data/
 ```
 
 ## Files
@@ -33,11 +34,14 @@ coral start -c examples/dna_design/task.yaml
 ```
 examples/dna_design/
 ├── README.md
-├── task.yaml                    # Task config
+├── task.yaml                                         # Task config
 ├── seed/
-│   └── solution.py              # Starter solution
-└── eval/
-    ├── grader.py                # TaskGrader implementation
-    └── scorers/
-        └── enhancer.py          # Enformer-based scoring
+│   └── solution.py                                   # Starter solution
+└── grader/                                           # Grader package (entrypoint)
+    ├── pyproject.toml
+    └── src/dna_design_grader/
+        ├── __init__.py
+        ├── grader.py                                 # TaskGrader implementation
+        └── scorers/
+            └── enhancer.py                           # Enformer-based scoring
 ```

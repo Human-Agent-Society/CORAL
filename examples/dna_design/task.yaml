@@ -31,9 +31,14 @@ task:
     - With Enformer model: composite = HepG2 - 0.3*(K562+SKNSH) + diversity + gc
     - Without model: composite = gc_bonus + diversity_bonus
     - The eval timeout is 600s — model loading takes ~30-60s
-    - To enable full scoring, install grelu + place Enformer checkpoint in eval/scorers/model_data/
+    - To enable full scoring, install grelu + place Enformer checkpoint in grader/src/dna_design_grader/scorers/model_data/
 
 grader:
+  entrypoint: "dna_design_grader.grader:Grader"
+  setup:
+    # Drop `[ml]` if you don't have torch/grelu + Enformer checkpoint; the
+    # grader will fall back to GC-content + diversity proxy scoring.
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:
