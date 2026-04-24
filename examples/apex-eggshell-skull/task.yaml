@@ -26,8 +26,8 @@ grader:
   direction: maximize
   args:
     files: ["memorandum.docx"]
-    model: minimax/MiniMax-M2.7
-    runtime: opencode
+    model: opus
+    runtime: claude_code
     judge_max_turns: 30
     max_criteria: 15
     min_criteria: 3

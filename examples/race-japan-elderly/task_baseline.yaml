@@ -23,7 +23,7 @@ grader:
   args:
     files:
     - report.md
-    judge_model: gpt-4o-mini
+    judge_model: claude-opus-4-6
     reference_files:
     - reference_article.md
     feedback_level: score_only
