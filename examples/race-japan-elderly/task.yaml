@@ -133,8 +133,8 @@ grader:
       weight: 1.0
 agents:
   count: 1
-  runtime: opencode
-  model: minimax/MiniMax-M2.7
+  runtime: claude_code
+  model: claude-sonnet-4-6
   timeout: 1800
 workspace:
   repo_path: ./examples/race-japan-elderly/repo
