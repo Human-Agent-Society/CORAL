@@ -377,7 +377,7 @@ def cmd_start(args: argparse.Namespace) -> None:
 
     task_dir = config_path.parent
     config.task_dir = task_dir
-    errors = validate_task(task_dir, config_path=config_path)
+    errors = validate_task(task_dir)
     if errors:
         print("Task validation errors:", file=sys.stderr)
         for err in errors:

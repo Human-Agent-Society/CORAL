@@ -149,8 +149,6 @@ def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: st
         "attempts",
         "logs",
         "heartbeat",
-        "rubrics",
-        "guidance",
         # Per-attempt eval artifacts (subprocess logs, terminal recordings,
         # verifier output, etc.) that the grader writes via TaskGrader.eval_logs_dir.
         # Lives outside the grader checkout so it survives daemon cleanup.
@@ -158,8 +156,6 @@ def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: st
     ]
     for item in shared_items:
         src = coral_public / item
-        # Ensure the source directory exists (rubrics/guidance are created on demand)
-        src.mkdir(parents=True, exist_ok=True)
         dst = shared_dir / item
         if not dst.exists() and not dst.is_symlink():
             try:
