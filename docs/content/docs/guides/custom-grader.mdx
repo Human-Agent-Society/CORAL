@@ -9,6 +9,11 @@ from a Python entrypoint string and runs it inside an isolated venv that the
 framework manages, so your grader's dependencies stay separate from CORAL's
 own and from the agent's worktree.
 
+> For open-ended tasks where you'd rather have an LLM judge score against a
+> rubric than write a programmatic grader, see [Rubric Judges](/guides/rubric-judge).
+> Two reusable judge grader packages ship under `examples/` — static and
+> dynamic rubric — and the rest of this page applies unchanged.
+
 ## Quick start (deprecated path)
 
 The fastest way to scaffold a new task — `coral init my-task` — drops a

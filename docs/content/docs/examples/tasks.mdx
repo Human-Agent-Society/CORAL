@@ -108,6 +108,51 @@ coral start -c examples/spaceship_titanic/task.yaml
 coral start -c examples/stanford_covid_vaccine/task.yaml
 ```
 
+## Rubric-judged tasks
+
+Three examples use LLM rubric judges instead of programmatic graders. They share the same architecture — a grader package spawns a Claude Code judge agent that scores the worker's output against a weighted list of PASS/FAIL criteria. See [Rubric Judges](/guides/rubric-judge) for the full pattern.
+
+### Japan Elderly Market Analysis 2050 (RACE)
+
+**Goal**: Write a market-size analysis report for Japan's elderly demographic, covering population projections, consumption patterns, and consumer willingness through 2050.
+
+**Grader**: `race_japan_grader` — static 25-criterion rubric, Claude Code judge, fact-checks against a reference article bundled inside the grader package.
+
+Four yamls exercise different experimental conditions:
+
+| Config | Rubric visible to agent? | Feedback level |
+|--------|--------------------------|----------------|
+| `task.yaml` | Yes (baked into `task.description`) | `full` — per-criterion verdict + rationale |
+| `task_baseline.yaml` | No — hidden under `grader.args.rubrics` | `score_only` |
+| `task_aggregate_only.yaml` | Yes | `aggregate_only` — score + N/25 passed |
+| `task_agent_judge.yaml` | No — dynamic rubric via `apex_judge` | `full` |
+
+```bash
+coral start -c examples/race-japan-elderly/task.yaml
+```
+
+### Eggshell Skull Legal Memorandum (APEX)
+
+**Goal**: Draft a legal memo analyzing whether the eggshell skull rule applies to a wrongful-death complaint. Source materials ship as .docx / .pdf and are read via Archipelago MCP servers.
+
+**Grader**: `apex_judge` — **dynamic rubric**. The judge auto-generates its own PASS/FAIL criteria on the first eval and evolves them when scores plateau.
+
+```bash
+export ARCHIPELAGO_PATH=/path/to/archipelago
+python examples/apex-eggshell-skull/download_apex_data.py
+coral start -c examples/apex-eggshell-skull/task.yaml
+```
+
+### Frontier BU Forecast (APEX)
+
+**Goal**: Quantitative forecasting — estimate the size of Frontier's business units in 2035, assuming constant growth rates and market shares.
+
+**Grader**: reuses the same `apex_judge` package from eggshell-skull via `grader.setup: ["uv pip install -e ../apex-eggshell-skull/grader"]`, so two tasks share one judge implementation.
+
+```bash
+coral start -c examples/apex-frontier-bu/task.yaml
+```
+
 ## Creating your own
 
 To create a new task from scratch:

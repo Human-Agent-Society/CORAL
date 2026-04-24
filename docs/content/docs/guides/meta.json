@@ -1,4 +1,4 @@
 {
   "title": "Guides",
-  "pages": ["index", "custom-grader", "multi-agent", "web-dashboard", "benchmarks"]
+  "pages": ["index", "custom-grader", "rubric-judge", "multi-agent", "web-dashboard", "benchmarks"]
 }
