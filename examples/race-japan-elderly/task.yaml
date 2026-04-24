@@ -40,82 +40,6 @@ task:
     - Scores are continuous (0-10), not binary pass/fail.
     - Focus on data-driven analysis with quantitative projections.
     - If previous attempts scored low on a dimension, prioritize that area.
-  rubrics:
-  - name: Detailed Elderly Population Projections (2020-2050)
-    description: Assesses the thoroughness and granularity of Japanese elderly population projections through 2050. This includes coverage of the entire period, use of recognized demographic data/methods, and segmentation by relevant age cohorts (e.g., 65-74, 75-84, 85+), which are crucial for understanding diverse needs within the elderly demographic.
-    weight: 1.0
-  - name: Thoroughness of Analysis for Specified Consumption Categories (Clothing, Food, Housing, Transportation)
-    description: Evaluates the depth of coverage for *each* of the explicitly requested consumption categories (clothing, food, housing, transportation). This includes current market status, spending patterns, and specific characteristics relevant to the elderly for each sector, as well as the interrelation between these categories.
-    weight: 1.0
-  - name: 'Breadth of Coverage: Inclusion of Other Significant Elderly Consumption Categories'
-    description: Assesses whether the report expands beyond the mandated categories to cover other significant areas of elderly consumption (e.g., healthcare, leisure, technology, financial services, personal care), reflecting a comprehensive understanding of 'various aspects' of their potential market.
-    weight: 1.0
-  - name: Depth of Examination of Current Elderly Consumer Willingness and Influencing Factors
-    description: Evaluates the extent to which the report analyzes current factors influencing elderly consumer willingness across key categories. This includes discussion of income levels, savings, health status, existing preferences, cultural nuances, and purchasing power specific to the Japanese elderly.
-    weight: 1.0
-  - name: Comprehensive Exploration of Potential Future Changes in Elderly Consumption Habits (to 2050)
-    description: Assesses the thoroughness in identifying and discussing potential drivers of change in elderly consumption habits up to 2050. This includes impacts of technological advancements, evolving health and longevity trends, changing family structures, social norms, and economic shifts on their future needs and spending patterns.
-    weight: 1.0
-  - name: Completeness and Integration of Market Size Estimations (2020-2050)
-    description: Checks if the report provides quantitative market size projections for the analyzed consumption categories, consistently across the 2020-2050 timeframe. Assesses if these estimations are clearly derived from and logically integrated with the population projections and analyses of current/future consumption habits.
-    weight: 1.0
-  - name: Range and Relevance of Data Sources and Contextual Factors
-    description: Evaluates the breadth of credible and appropriate data sources (e.g., official Japanese government statistics, demographic studies, academic research, reputable market research reports) used to support projections and analyses. Also assesses if key contextual factors (e.g., pension systems, healthcare policies, long-term care infrastructure, societal views on aging in Japan) influencing the elderly market are adequately considered and integrated.
-    weight: 1.0
-  - name: Depth and Originality in Projecting Changes to Elderly Consumption Habits and Drivers
-    description: Assesses the ability to foresee, analyze, and justify significant and potentially non-obvious shifts in how and why elderly individuals will consume across clothing, food, housing, and transportation over the 2020-2050 period. This includes identifying novel or impactful drivers (e.g., tech adoption, healthspan changes, sustainability concerns) beyond simple extrapolations of current trends.
-    weight: 1.0
-  - name: Logical Rigor and Sophistication in Synthesizing Diverse Factors for Market Sizing
-    description: Evaluates the strength, coherence, and justification of the analytical framework used to integrate population projections, assessed consumer willingness, and projected consumption habit changes into quantitative market size estimates for each specified sector. Insight is shown by a transparent, robust methodology that handles uncertainty appropriately.
-    weight: 1.0
-  - name: Nuanced Analysis and Segmentation of Elderly Consumer Willingness
-    description: Assesses if the report provides a deep, evidence-based understanding of the factors influencing elderly consumer willingness to spend. This includes consideration of heterogeneity within the elderly demographic (e.g., by age sub-cohorts, health status, income levels, urban/rural differences) and how willingness might evolve or vary across different consumption categories.
-    weight: 1.0
-  - name: Insightful Interpretation of Population Projections and their Impact on Consumption Potential
-    description: Evaluates if the report critically engages with the provided population projections, going beyond merely stating numbers. This includes discussing inherent uncertainties, demographic shifts within the elderly cohort (e.g., changing dependency ratios, household structures), and their specific, logically-derived implications for consumption potential in the target sectors.
-    weight: 1.0
-  - name: Strategic Value and Forward-Looking Nature of Conclusions
-    description: Assesses whether the market size analysis culminates in conclusions that offer significant strategic value, such as identifying overlooked market opportunities, emerging needs, potential disruptive trends, or key challenges for businesses and policymakers. The emphasis is on the foresight and actionability of the insights derived from the overall analysis.
-    weight: 1.0
-  - name: Direct Provision of Elderly Population Projection (Japan, 2020-2050)
-    description: Assesses if the report directly answers the question regarding the projected number of elderly people in Japan, adhering to the specified 2020-2050 timeframe and geographical focus of Japan.
-    weight: 1.0
-  - name: Coverage of All Specified Consumption Potential Sectors
-    description: 'Evaluates if the analysis of consumption potential explicitly covers all four listed sectors: clothing, food, housing, and transportation, as required by the task.'
-    weight: 1.0
-  - name: Utilization of All Mandated Analytical Bases for Market Analysis
-    description: 'Checks if the market size analysis is explicitly grounded in all three required inputs: population projections, elderly consumer willingness, and potential changes in consumption habits.'
-    weight: 1.0
-  - name: Delivery of 'Market Size Analysis Report' for Elderly Demographic
-    description: Determines if the final output is structured and presented as a 'market size analysis report' specifically for the elderly demographic, fulfilling the primary deliverable instruction.
-    weight: 1.0
-  - name: Consistent Adherence to Overall Task Scope (Japan, 2020-2050, Elderly)
-    description: Ensures the entire report—including discussions, data, and conclusions—remains strictly focused on the elderly demographic in Japan and the 2020-2050 timeframe, avoiding irrelevant content or scope creep.
-    weight: 1.0
-  - name: Overall Structure and Navigability
-    description: Assesses if the report has a clear, logical structure (e.g., introduction, population projections, consumption analysis by sector, market size synthesis, conclusion) with distinct, well-labeled heading levels. This is crucial for guiding the reader through the multi-faceted analysis from demographic data to market forecasts across clothing, food, housing, and transportation.
-    weight: 1.0
-  - name: Clarity, Precision, and Professionalism of Language
-    description: Evaluates if the language is fluent, grammatically correct, unambiguous, and uses precise terminology (e.g., 'elderly demographic,' 'consumption potential,' 'market size,' 'CAGR'). A professional tone suitable for a market analysis report is expected, ensuring accurate conveyance of findings.
-    weight: 1.0
-  - name: Clarity of Quantitative Data Presentation in Text
-    description: Evaluates how clearly numerical data (e.g., population figures for 2020-2050, consumption values, market sizes for specific sectors) are presented and contextualized within the narrative text. Data should be easy to grasp and directly support the analysis of elderly consumption trends.
-    weight: 1.0
-  - name: Effectiveness and Clarity of Visualizations (Charts, Tables)
-    description: Assesses if charts (e.g., population projection graphs, market share pies) and tables (e.g., detailed market size breakdowns by year/sector) are used effectively to illustrate trends and comparisons. Visuals must be well-designed, clearly labeled (titles, axes, units, legends), and directly support the report's claims about the elderly market.
-    weight: 1.0
-  - name: Paragraph Cohesion and Smooth Transitions
-    description: Assesses if each paragraph focuses on a single, clear idea and if transitions between paragraphs and sections (e.g., moving from population analysis to consumer willingness, or between different consumption categories) are smooth and logical, aiding comprehension of the analytical flow.
-    weight: 1.0
-  - name: Audience Adaptation and Explanation of Terms
-    description: Evaluates if the level of detail, terminology (e.g., related to Japanese demographics, consumer economics, specific market segments), and explanations are appropriate for an audience needing a market size analysis. Specialized concepts should be defined or contextualized to ensure broad understanding without oversimplification.
-    weight: 1.0
-  - name: Conciseness and Focus
-    description: Evaluates if the report is free of unnecessary jargon, redundancy, and overly verbose explanations. Information should be presented efficiently, maintaining focus on the core task of analyzing market size for the elderly demographic without extraneous details.
-    weight: 1.0
-  - name: Formatting, Layout, and Visual Appeal
-    description: Assesses if the document's layout (margins, spacing), font choices, paragraphing, and use of lists or bullet points contribute to a professional appearance and ease of prolonged reading, which is important for a potentially dense, data-rich report.
-    weight: 1.0
 grader:
   entrypoint: race_japan_grader.grader:Grader
   setup:
@@ -131,6 +55,82 @@ grader:
     reference_files:
     - reference_article.md
     feedback_level: full
+    rubrics:
+    - name: Detailed Elderly Population Projections (2020-2050)
+      description: Assesses the thoroughness and granularity of Japanese elderly population projections through 2050. This includes coverage of the entire period, use of recognized demographic data/methods, and segmentation by relevant age cohorts (e.g., 65-74, 75-84, 85+), which are crucial for understanding diverse needs within the elderly demographic.
+      weight: 1.0
+    - name: Thoroughness of Analysis for Specified Consumption Categories (Clothing, Food, Housing, Transportation)
+      description: Evaluates the depth of coverage for *each* of the explicitly requested consumption categories (clothing, food, housing, transportation). This includes current market status, spending patterns, and specific characteristics relevant to the elderly for each sector, as well as the interrelation between these categories.
+      weight: 1.0
+    - name: 'Breadth of Coverage: Inclusion of Other Significant Elderly Consumption Categories'
+      description: Assesses whether the report expands beyond the mandated categories to cover other significant areas of elderly consumption (e.g., healthcare, leisure, technology, financial services, personal care), reflecting a comprehensive understanding of 'various aspects' of their potential market.
+      weight: 1.0
+    - name: Depth of Examination of Current Elderly Consumer Willingness and Influencing Factors
+      description: Evaluates the extent to which the report analyzes current factors influencing elderly consumer willingness across key categories. This includes discussion of income levels, savings, health status, existing preferences, cultural nuances, and purchasing power specific to the Japanese elderly.
+      weight: 1.0
+    - name: Comprehensive Exploration of Potential Future Changes in Elderly Consumption Habits (to 2050)
+      description: Assesses the thoroughness in identifying and discussing potential drivers of change in elderly consumption habits up to 2050. This includes impacts of technological advancements, evolving health and longevity trends, changing family structures, social norms, and economic shifts on their future needs and spending patterns.
+      weight: 1.0
+    - name: Completeness and Integration of Market Size Estimations (2020-2050)
+      description: Checks if the report provides quantitative market size projections for the analyzed consumption categories, consistently across the 2020-2050 timeframe. Assesses if these estimations are clearly derived from and logically integrated with the population projections and analyses of current/future consumption habits.
+      weight: 1.0
+    - name: Range and Relevance of Data Sources and Contextual Factors
+      description: Evaluates the breadth of credible and appropriate data sources (e.g., official Japanese government statistics, demographic studies, academic research, reputable market research reports) used to support projections and analyses. Also assesses if key contextual factors (e.g., pension systems, healthcare policies, long-term care infrastructure, societal views on aging in Japan) influencing the elderly market are adequately considered and integrated.
+      weight: 1.0
+    - name: Depth and Originality in Projecting Changes to Elderly Consumption Habits and Drivers
+      description: Assesses the ability to foresee, analyze, and justify significant and potentially non-obvious shifts in how and why elderly individuals will consume across clothing, food, housing, and transportation over the 2020-2050 period. This includes identifying novel or impactful drivers (e.g., tech adoption, healthspan changes, sustainability concerns) beyond simple extrapolations of current trends.
+      weight: 1.0
+    - name: Logical Rigor and Sophistication in Synthesizing Diverse Factors for Market Sizing
+      description: Evaluates the strength, coherence, and justification of the analytical framework used to integrate population projections, assessed consumer willingness, and projected consumption habit changes into quantitative market size estimates for each specified sector. Insight is shown by a transparent, robust methodology that handles uncertainty appropriately.
+      weight: 1.0
+    - name: Nuanced Analysis and Segmentation of Elderly Consumer Willingness
+      description: Assesses if the report provides a deep, evidence-based understanding of the factors influencing elderly consumer willingness to spend. This includes consideration of heterogeneity within the elderly demographic (e.g., by age sub-cohorts, health status, income levels, urban/rural differences) and how willingness might evolve or vary across different consumption categories.
+      weight: 1.0
+    - name: Insightful Interpretation of Population Projections and their Impact on Consumption Potential
+      description: Evaluates if the report critically engages with the provided population projections, going beyond merely stating numbers. This includes discussing inherent uncertainties, demographic shifts within the elderly cohort (e.g., changing dependency ratios, household structures), and their specific, logically-derived implications for consumption potential in the target sectors.
+      weight: 1.0
+    - name: Strategic Value and Forward-Looking Nature of Conclusions
+      description: Assesses whether the market size analysis culminates in conclusions that offer significant strategic value, such as identifying overlooked market opportunities, emerging needs, potential disruptive trends, or key challenges for businesses and policymakers. The emphasis is on the foresight and actionability of the insights derived from the overall analysis.
+      weight: 1.0
+    - name: Direct Provision of Elderly Population Projection (Japan, 2020-2050)
+      description: Assesses if the report directly answers the question regarding the projected number of elderly people in Japan, adhering to the specified 2020-2050 timeframe and geographical focus of Japan.
+      weight: 1.0
+    - name: Coverage of All Specified Consumption Potential Sectors
+      description: 'Evaluates if the analysis of consumption potential explicitly covers all four listed sectors: clothing, food, housing, and transportation, as required by the task.'
+      weight: 1.0
+    - name: Utilization of All Mandated Analytical Bases for Market Analysis
+      description: 'Checks if the market size analysis is explicitly grounded in all three required inputs: population projections, elderly consumer willingness, and potential changes in consumption habits.'
+      weight: 1.0
+    - name: Delivery of 'Market Size Analysis Report' for Elderly Demographic
+      description: Determines if the final output is structured and presented as a 'market size analysis report' specifically for the elderly demographic, fulfilling the primary deliverable instruction.
+      weight: 1.0
+    - name: Consistent Adherence to Overall Task Scope (Japan, 2020-2050, Elderly)
+      description: Ensures the entire report—including discussions, data, and conclusions—remains strictly focused on the elderly demographic in Japan and the 2020-2050 timeframe, avoiding irrelevant content or scope creep.
+      weight: 1.0
+    - name: Overall Structure and Navigability
+      description: Assesses if the report has a clear, logical structure (e.g., introduction, population projections, consumption analysis by sector, market size synthesis, conclusion) with distinct, well-labeled heading levels. This is crucial for guiding the reader through the multi-faceted analysis from demographic data to market forecasts across clothing, food, housing, and transportation.
+      weight: 1.0
+    - name: Clarity, Precision, and Professionalism of Language
+      description: Evaluates if the language is fluent, grammatically correct, unambiguous, and uses precise terminology (e.g., 'elderly demographic,' 'consumption potential,' 'market size,' 'CAGR'). A professional tone suitable for a market analysis report is expected, ensuring accurate conveyance of findings.
+      weight: 1.0
+    - name: Clarity of Quantitative Data Presentation in Text
+      description: Evaluates how clearly numerical data (e.g., population figures for 2020-2050, consumption values, market sizes for specific sectors) are presented and contextualized within the narrative text. Data should be easy to grasp and directly support the analysis of elderly consumption trends.
+      weight: 1.0
+    - name: Effectiveness and Clarity of Visualizations (Charts, Tables)
+      description: Assesses if charts (e.g., population projection graphs, market share pies) and tables (e.g., detailed market size breakdowns by year/sector) are used effectively to illustrate trends and comparisons. Visuals must be well-designed, clearly labeled (titles, axes, units, legends), and directly support the report's claims about the elderly market.
+      weight: 1.0
+    - name: Paragraph Cohesion and Smooth Transitions
+      description: Assesses if each paragraph focuses on a single, clear idea and if transitions between paragraphs and sections (e.g., moving from population analysis to consumer willingness, or between different consumption categories) are smooth and logical, aiding comprehension of the analytical flow.
+      weight: 1.0
+    - name: Audience Adaptation and Explanation of Terms
+      description: Evaluates if the level of detail, terminology (e.g., related to Japanese demographics, consumer economics, specific market segments), and explanations are appropriate for an audience needing a market size analysis. Specialized concepts should be defined or contextualized to ensure broad understanding without oversimplification.
+      weight: 1.0
+    - name: Conciseness and Focus
+      description: Evaluates if the report is free of unnecessary jargon, redundancy, and overly verbose explanations. Information should be presented efficiently, maintaining focus on the core task of analyzing market size for the elderly demographic without extraneous details.
+      weight: 1.0
+    - name: Formatting, Layout, and Visual Appeal
+      description: Assesses if the document's layout (margins, spacing), font choices, paragraphing, and use of lists or bullet points contribute to a professional appearance and ease of prolonged reading, which is important for a potentially dense, data-rich report.
+      weight: 1.0
 agents:
   count: 1
   runtime: opencode

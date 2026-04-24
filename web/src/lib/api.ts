@@ -155,38 +155,6 @@ export interface RunsResponse {
   tasks: TaskRuns[];
 }
 
-export interface RubricCriterion {
-  name: string;
-  weight: number;
-  description: string;
-}
-
-export interface RubricVersion {
-  version: number;
-  criteria_count: number;
-  total_weight: number;
-  evolution_notes: string;
-  created_at: string;
-  criteria: RubricCriterion[];
-  retired: string[];
-}
-
-export interface JudgeStatus {
-  persistent: boolean;
-  session_id: string | null;
-  total_evals: number;
-  crash_count: number;
-  successful_evals: number;
-}
-
-export interface RubricData {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  current: Record<string, any> | null;
-  versions: RubricVersion[];
-  latest_scores: Record<string, string>;
-  judge: JudgeStatus;
-}
-
 export interface TaskConfig {
   task: {
     name: string;
@@ -220,7 +188,6 @@ export const api = {
   skill: (name: string) => get<SkillDetail>(`/skills/${name}`),
   logs: (agentId: string, signal?: AbortSignal) => get<LogData>(`/logs/${agentId}`, signal),
   logsList: () => get<Record<string, Array<{ path: string; index: number; size_bytes: number; modified: number }>>>("/logs"),
-  rubric: () => get<RubricData>("/rubric"),
   status: () => get<RunStatus>("/status"),
   runs: () => get<RunsResponse>("/runs"),
   switchRun: (task: string, run: string) =>

@@ -33,7 +33,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from coral.config import CoralConfig, GraderConfig, RubricItem
+from coral.config import CoralConfig, GraderConfig
+
+from apex_judge.rubric_item import RubricItem
 from coral.grader.task_grader import TaskGrader
 from coral.types import Score, ScoreBundle
 

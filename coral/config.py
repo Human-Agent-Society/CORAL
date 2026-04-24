@@ -11,24 +11,12 @@ from omegaconf import MISSING, OmegaConf
 
 
 @dataclass
-class RubricItem:
-    """A single evaluation criterion with name, description, and weight."""
-
-    name: str = MISSING
-    description: str = ""
-    weight: float = 1.0
-
-
-@dataclass
 class TaskConfig:
     """Task definition within a CORAL project."""
 
     name: str = MISSING
     description: str = MISSING
     tips: str = ""
-    seed: list[str] = field(default_factory=list)  # files/dirs to copy into workspace
-    rubrics: list[RubricItem] = field(default_factory=list)
-    evaluation_guidance: str = ""
 
 
 @dataclass

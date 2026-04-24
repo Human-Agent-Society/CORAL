@@ -260,13 +260,6 @@ def _format_initial_rubric_instructions(config: CoralConfig) -> str:
         "Include the new criteria in `rubric_evolution.new_criteria` in your output.",
     ]
 
-    if config.task.rubrics:
-        lines.append("")
-        lines.append("### Seed Criteria (use as starting point)")
-        lines.append("")
-        for i, r in enumerate(config.task.rubrics, 1):
-            lines.append(f"{i}. **{r.name}** (weight: {r.weight}): {r.description}")
-
     return "\n".join(lines)
 
 

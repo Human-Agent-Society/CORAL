@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from coral.config import RubricItem
+from apex_judge.rubric_item import RubricItem
 
 _TEMPLATES_DIR = Path(__file__).parent / "templates"
 

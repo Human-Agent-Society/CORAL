@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { api, type Attempt, type TaskConfig, type RunStatus, type RubricData, type Note, type Skill, type LogData, type LogEntry } from "../lib/api";
+import { api, type Attempt, type TaskConfig, type RunStatus, type Note, type Skill, type LogData, type LogEntry } from "../lib/api";
 import { useSSE } from "../hooks/useSSE";
 import { useReplay } from "../hooks/useReplay";
 import ScoreChart from "../components/ScoreChart";
 import ChartModal from "../components/ChartModal";
 import AttemptRow from "../components/AttemptRow";
 import StatusBadge from "../components/StatusBadge";
-import RubricPanel from "../components/RubricPanel";
 import ReplayBar from "../components/ReplayBar";
 
 type SortKey = "score" | "agent_id" | "timestamp";
@@ -17,7 +16,6 @@ export default function Overview() {
   const [status, setStatus] = useState<RunStatus | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
-  const [rubric, setRubric] = useState<RubricData | null>(null);
   const [agentLogs, setAgentLogs] = useState<Record<string, LogData>>({});
   const [sortKey, setSortKey] = useState<SortKey>("score");
   const [sortAsc, setSortAsc] = useState(false);
@@ -32,7 +30,6 @@ export default function Overview() {
     api.status().then(setStatus).catch(() => {});
     api.notes().then(setNotes).catch(() => {});
     api.skills().then(setSkills).catch(() => {});
-    api.rubric().then(setRubric).catch(() => {});
   };
 
   const refreshLogs = () => {
@@ -55,7 +52,6 @@ export default function Overview() {
       api.skills().then(setSkills).catch(() => {});
     },
     "log:update": refreshLogs,
-    "rubric:update": () => api.rubric().then(setRubric).catch(() => {}),
   });
 
   const replay = useReplay(attempts);
@@ -473,9 +469,6 @@ export default function Overview() {
                 </div>
               </div>
             )}
-
-            {/* Rubric & Judge Status */}
-            {rubric && <RubricPanel rubric={rubric} />}
 
             {/* Recent Agent Logs — last 3 entries per agent */}
             {status && status.agents.length > 0 && (

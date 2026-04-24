@@ -13,8 +13,9 @@ Config args (read from ``grader.args`` in task.yaml):
 - ``reference_files``: Reference docs the judge cross-checks claims against.
   Resolved from the grader package's ``references/`` directory first, then
   from ``.coral/private/``.
-- ``rubrics``: Hidden rubrics (take precedence over ``task.rubrics``). Used by
-  the baseline condition to keep criteria out of CORAL.md.
+- ``rubrics``: Rubric criteria — list of ``{name, description, weight}`` dicts.
+  Stored under ``grader.args`` so they never leak into ``TaskConfig`` and the
+  framework can stay oblivious to them.
 - ``files``: Agent output files to evaluate (default: all ``*.md`` in the
   codebase except ``CORAL.md``).
 - ``feedback_level``: ``full`` | ``aggregate_only`` | ``score_only`` —
@@ -28,9 +29,11 @@ import logging
 import time
 from pathlib import Path
 
-from coral.config import CoralConfig, GraderConfig, RubricItem
+from coral.config import CoralConfig, GraderConfig
 from coral.grader.task_grader import TaskGrader
 from coral.types import Score, ScoreBundle
+
+from race_japan_grader.rubric_item import RubricItem
 
 logger = logging.getLogger(__name__)
 
@@ -44,33 +47,28 @@ class StrictRubricJudgeGrader(TaskGrader):
         self._task_description_from_config: str = ""
 
     def _load_rubrics_from_config(self) -> None:
-        """Prefer ``grader.args.rubrics`` (hidden), then ``task.rubrics``."""
+        """Load rubrics from ``grader.args.rubrics`` (only source of truth)."""
         if self._rubrics:
             return
 
-        private_rubrics = self.config.args.get("rubrics") or []
-        if private_rubrics:
-            self._rubrics = [
-                RubricItem(
-                    name=r["name"],
-                    description=r.get("description", ""),
-                    weight=float(r.get("weight", 1.0)),
-                )
-                for r in private_rubrics
-            ]
+        raw_rubrics = self.config.args.get("rubrics") or []
+        self._rubrics = [
+            RubricItem(
+                name=r["name"],
+                description=r.get("description", ""),
+                weight=float(r.get("weight", 1.0)),
+            )
+            for r in raw_rubrics
+        ]
 
         config_path = Path(self.private_dir).parent / "config.yaml"
-        if not config_path.exists():
-            logger.warning(f"No config.yaml at {config_path}; rubrics list is empty.")
-            return
-        try:
-            full = CoralConfig.from_yaml(config_path)
-        except Exception as exc:
-            logger.warning(f"Could not load {config_path}: {exc}")
-            return
-        if not self._rubrics:
-            self._rubrics = list(full.task.rubrics)
-        self._task_description_from_config = full.task.description or ""
+        if config_path.exists():
+            try:
+                full = CoralConfig.from_yaml(config_path)
+            except Exception as exc:
+                logger.warning(f"Could not load {config_path}: {exc}")
+            else:
+                self._task_description_from_config = full.task.description or ""
 
     def evaluate(self) -> ScoreBundle:
         """Spawn the judge agent, wait for its evaluation.json, parse, redact."""
@@ -81,7 +79,7 @@ class StrictRubricJudgeGrader(TaskGrader):
         if not self._rubrics:
             return self.fail(
                 "No rubric criteria configured",
-                feedback="No rubric criteria configured in task.rubrics or grader.args.rubrics.",
+                feedback="No rubric criteria configured in grader.args.rubrics.",
             )
 
         runtime_name = self.config.args.get("runtime", "claude_code")
