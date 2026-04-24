@@ -88,6 +88,7 @@ class ScoreBundle:
     aggregated: float | None = None
     is_public: bool = True
     feedback: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def get(self, name: str) -> Score | None:
         return self.scores.get(name)
@@ -120,6 +121,8 @@ class ScoreBundle:
         }
         if self.feedback is not None:
             d["feedback"] = self.feedback
+        if self.metadata:
+            d["metadata"] = self.metadata
         return d
 
     @classmethod
@@ -130,6 +133,7 @@ class ScoreBundle:
             aggregated=data.get("aggregated"),
             is_public=data.get("is_public", True),
             feedback=data.get("feedback"),
+            metadata=data.get("metadata", {}),
         )
 
 
@@ -141,7 +145,7 @@ class Attempt:
     agent_id: str
     title: str
     score: float | None
-    status: str  # "improved" | "baseline" | "regressed" | "reverted" | "crashed" | "timeout"
+    status: str  # "pending" | "improved" | "baseline" | "regressed" | "reverted" | "crashed" | "timeout"
     parent_hash: str | None
     timestamp: str
     feedback: str = ""

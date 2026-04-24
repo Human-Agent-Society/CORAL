@@ -1,23 +1,37 @@
-"""Eval implementation: git-add, git-commit, grade, write attempt JSON, print score."""
+"""Eval submission: git-add, git-commit, write pending attempt, optionally wait.
+
+The grading itself happens asynchronously in the grader daemon
+(coral/grader/daemon.py). `submit_eval` only stages+commits, writes a
+pending attempt record, and optionally polls for the final score.
+"""
 
 from __future__ import annotations
 
 import json
 import logging
-import multiprocessing
 import subprocess
-import traceback
+import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 from coral.config import CoralConfig
-from coral.grader.loader import load_grader
-from coral.hub.attempts import get_agent_attempts, write_attempt
+from coral.hub.attempts import (
+    increment_eval_count,
+    read_attempt,
+    read_eval_count,
+    write_attempt,
+)
 from coral.hub.checkpoint import checkpoint
-from coral.types import Attempt, Task
+from coral.types import Attempt
+
+# Legacy alias — external tests/hooks may still import the underscore-prefixed
+# name. Prefer `coral.hub.attempts.increment_eval_count` directly.
+_increment_eval_count = increment_eval_count
 
 logger = logging.getLogger(__name__)
+
+# How often submit_eval(wait=True) polls the attempt file for score updates.
+_POLL_INTERVAL_SEC = 0.2
 
 
 def _git_add_and_commit(message: str, workdir: str) -> str:
@@ -65,81 +79,6 @@ def _get_parent_hash(commit_hash: str, cwd: str) -> str | None:
     return None
 
 
-def _increment_eval_count(coral_dir: Path) -> int:
-    """Increment and return the eval counter for this run."""
-    counter_file = coral_dir / "public" / "eval_count"
-    count = 0
-    if counter_file.exists():
-        try:
-            count = int(counter_file.read_text().strip())
-        except ValueError:
-            pass
-    count += 1
-    counter_file.write_text(str(count))
-    return count
-
-
-def _grader_worker(config_path: str, coral_dir: str, codebase_path: str, tasks: list, result_queue):
-    """Run grader.grade() in a child process. Puts result or exception into queue.
-
-    Re-loads the grader from config inside the child to avoid pickling
-    dynamically-imported modules across process boundaries.
-    """
-    import asyncio
-    try:
-        config = CoralConfig.from_yaml(config_path)
-        grader = load_grader(config, coral_dir=coral_dir)
-        result = asyncio.run(grader.grade(codebase_path, tasks))
-        result_queue.put(("ok", result))
-    except Exception as e:
-        result_queue.put(("error", e, traceback.format_exc()))
-
-
-def _run_grader_with_timeout(config_path: str, coral_dir: str, codebase_path: str, tasks: list, timeout: int):
-    """Run grader in a separate process with a hard timeout.
-
-    Uses multiprocessing so we can kill blocking synchronous code (numpy, etc.)
-    that asyncio.wait_for can't interrupt. The grader is re-loaded from config
-    inside the child process to avoid pickle issues with dynamic imports.
-    """
-    if timeout <= 0:
-        # No timeout — run directly
-        import asyncio
-        config = CoralConfig.from_yaml(config_path)
-        grader = load_grader(config, coral_dir=coral_dir)
-        return asyncio.run(grader.grade(codebase_path, tasks))
-
-    result_queue: multiprocessing.Queue = multiprocessing.Queue()
-    proc = multiprocessing.Process(
-        target=_grader_worker,
-        args=(config_path, coral_dir, codebase_path, tasks, result_queue),
-    )
-    try:
-        proc.start()
-        proc.join(timeout=timeout)
-
-        if proc.is_alive():
-            # Timed out — kill the process
-            proc.kill()
-            proc.join(timeout=5)
-            raise TimeoutError(f"Grader timed out after {timeout}s")
-
-        if result_queue.empty():
-            raise RuntimeError("Grader process exited without returning a result")
-
-        status, *payload = result_queue.get_nowait()
-        if status == "ok":
-            return payload[0]
-        else:
-            # Re-raise the exception from the child process
-            exc, tb_str = payload
-            raise RuntimeError(f"Grader failed: {exc}\n{tb_str}")
-    finally:
-        result_queue.close()
-        result_queue.join_thread()
-        proc.close()
-
-
 def _find_coral_dir(workdir: Path) -> Path | None:
     """Find the shared .coral directory from the .coral_dir breadcrumb file."""
     coral_dir_file = workdir / ".coral_dir"
@@ -151,22 +90,51 @@ def _find_coral_dir(workdir: Path) -> Path | None:
     return None
 
 
-def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
-    """Stage changes, commit with message, run evaluation, and return an Attempt record.
+def _poll_until_graded(
+    coral_dir: Path,
+    commit_hash: str,
+    timeout: float,
+) -> Attempt:
+    """Poll the attempt file until status != 'pending' or timeout elapses.
 
-    This is the core of `coral eval -m "description"`.
+    Raises TimeoutError if no grader finalizes the attempt within `timeout` seconds.
     """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        attempt = read_attempt(coral_dir, commit_hash)
+        if attempt is not None and attempt.status != "pending":
+            return attempt
+        time.sleep(_POLL_INTERVAL_SEC)
+    raise TimeoutError(
+        f"Grader did not finalize attempt {commit_hash[:12]} within {timeout:.0f}s "
+        f"(is the grader daemon running?)"
+    )
 
+
+def submit_eval(
+    message: str,
+    agent_id: str,
+    workdir: str = ".",
+    wait: bool = True,
+    poll_timeout: float | None = None,
+) -> Attempt:
+    """Stage changes, commit with message, write a pending attempt record.
+
+    If ``wait`` is True (default), also polls the attempt file until the
+    grader daemon finalizes it (score populated, status != "pending") and
+    returns the final Attempt. If False, returns immediately with a pending
+    Attempt — the caller (or a future `coral wait` invocation) is responsible
+    for observing the final result.
+
+    This is the core of `coral eval -m "description"` on the agent side.
+    The grader itself runs asynchronously in `coral.grader.daemon`.
+    """
     workdir_path = Path(workdir).resolve()
 
-    # Find .coral directory by walking up from the worktree.
-    # Layout: results/<task>/<timestamp>/.coral/ with worktrees under
-    # results/<task>/<timestamp>/agents/<agent-id>/
     coral_dir = _find_coral_dir(workdir_path)
     if coral_dir is None:
         raise FileNotFoundError(f"No .coral directory found from {workdir_path}")
 
-    # Load config
     config_path = coral_dir / "config.yaml"
     if not config_path.exists():
         raise FileNotFoundError(f"No config.yaml found at {config_path}")
@@ -176,69 +144,10 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
     commit_hash = _git_add_and_commit(message, str(workdir_path))
     parent_hash = _get_parent_hash(commit_hash, str(workdir_path))
 
-    # Create task from config
-    task = Task(
-        id=config.task.name,
-        name=config.task.name,
-        description=config.task.description,
-        metadata={},
-    )
+    # Checkpoint shared state at submission time (captures agent's current notes/skills).
+    shared_state_hash = checkpoint(str(coral_dir), agent_id, message)
 
-    # Run evaluation with timeout
-    eval_timeout = config.grader.timeout  # 0 = no limit
-    attempt_metadata: dict[str, Any] = {}
-
-    try:
-        result = _run_grader_with_timeout(str(config_path), str(coral_dir), str(workdir_path), [task], eval_timeout)
-        score = result.aggregated
-        # Build feedback from bundle-level feedback + per-score explanations
-        parts = []
-        if result.feedback:
-            parts.append(result.feedback)
-        if result.scores:
-            for name, s in result.scores.items():
-                if s.explanation:
-                    parts.append(f"{name}: {s.explanation}")
-        feedback = "\n".join(parts)
-        # Extract rubric metadata from dynamic rubric graders
-        rubric_meta = result.scores.pop("_rubric_meta", None)
-        if rubric_meta is not None and rubric_meta.metadata:
-            attempt_metadata["rubric_version"] = rubric_meta.metadata.get("rubric_version")
-            attempt_metadata["criteria_count"] = rubric_meta.metadata.get("criteria_count")
-        # score is None when grader returns fail() — treat as crashed
-        if score is None:
-            status = "crashed"
-        else:
-            # Compare against this agent's previous best score
-            prev_attempts = get_agent_attempts(str(coral_dir), agent_id)
-            prev_scores = [a.score for a in prev_attempts if a.score is not None]
-            minimize = config.grader.direction == "minimize"
-            if minimize:
-                prev_best = min(prev_scores) if prev_scores else None
-            else:
-                prev_best = max(prev_scores) if prev_scores else None
-            if prev_best is None:
-                status = "improved"
-            elif minimize and score < prev_best:
-                status = "improved"
-            elif not minimize and score > prev_best:
-                status = "improved"
-            elif score == prev_best:
-                status = "baseline"
-            else:
-                status = "regressed"
-    except TimeoutError:
-        logger.error(f"Evaluation timed out after {eval_timeout}s")
-        score = None
-        status = "timeout"
-        feedback = f"Eval timed out after {eval_timeout}s."
-    except Exception as e:
-        logger.error(f"Evaluation failed: {e}")
-        score = None
-        status = "crashed"
-        feedback = str(e)
-
-    # Look up parent attempt's shared state hash
+    # Look up parent attempt's shared state hash for provenance chain.
     parent_shared_state_hash = None
     if parent_hash:
         parent_attempt_file = coral_dir / "public" / "attempts" / f"{parent_hash}.json"
@@ -249,28 +158,45 @@ def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
             except (json.JSONDecodeError, OSError):
                 pass
 
-    # Create attempt record
+    # Write pending record. The grader daemon will observe this and fill in
+    # score/status/feedback asynchronously.
     attempt = Attempt(
         commit_hash=commit_hash,
         agent_id=agent_id,
         title=message,
-        score=score,
-        status=status,
+        score=None,
+        status="pending",
         parent_hash=parent_hash,
         timestamp=datetime.now(UTC).isoformat(),
-        feedback=feedback,
+        feedback="",
+        shared_state_hash=shared_state_hash,
         parent_shared_state_hash=parent_shared_state_hash,
-        metadata=attempt_metadata,
     )
-
-    # Checkpoint shared state and record the hash
-    attempt.shared_state_hash = checkpoint(str(coral_dir), agent_id, message)
-
-    # Write to shared state
     write_attempt(str(coral_dir), attempt)
 
-    # Track eval count
-    eval_count = _increment_eval_count(coral_dir)
-    attempt._eval_count = eval_count  # type: ignore[attr-defined]
+    if not wait:
+        return attempt
 
-    return attempt
+    # Block until grader daemon finalizes. We give it plenty of slack above the
+    # grader's own per-eval timeout so the daemon has room to finish + write back.
+    if poll_timeout is None:
+        grader_timeout = config.grader.timeout if config.grader.timeout > 0 else 0
+        # 2x the grader budget + 60s slack, with a floor of 300s for fast graders.
+        poll_timeout = max(grader_timeout * 2 + 60, 300) if grader_timeout else 3600
+
+    final = _poll_until_graded(coral_dir, commit_hash, poll_timeout)
+
+    # Attach eval_count for display by cmd_eval (best-effort; daemon bumps this).
+    try:
+        final._eval_count = read_eval_count(coral_dir)  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
+    return final
+
+
+# Backward-compat alias: older callers / hooks may still import `run_eval`.
+# Same semantics as submit_eval(wait=True).
+def run_eval(message: str, agent_id: str, workdir: str = ".") -> Attempt:
+    """Deprecated. Prefer `submit_eval`. Synchronous (waits for grader)."""
+    return submit_eval(message=message, agent_id=agent_id, workdir=workdir, wait=True)

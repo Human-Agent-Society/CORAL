@@ -40,14 +40,37 @@ The reference article is stored in `eval/reference_article.md` and copied to
 `.coral/private/` at runtime via `grader.private`. The agent **cannot access**
 the reference — only the grader process reads it from `.coral/private/`.
 
+## Grader
+
+The grader ships as a standalone Python package under [`grader/`](grader/) and
+is wired into each task.yaml via:
+
+```yaml
+grader:
+  entrypoint: "race_japan_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+```
+
+CORAL creates an isolated venv at `.coral/private/grader_venv/` at launch time
+and runs the setup commands there, so the grader's heavy deps (OpenAI client,
+etc.) never leak into the agent workspace.
+
 ## How to Run
 
 ```bash
-# Condition E (rubric-guided — agent sees 25 criteria across 4 dimensions)
+# Condition E — rubric-guided. Agent sees all 25 criteria in CORAL.md.
 coral start -c examples/race-japan-elderly/task.yaml
 
-# Condition A (baseline — agent doesn't see criteria)
+# Condition A — baseline. Same grader + rubrics, but the rubrics live under
+# grader.args.rubrics and are NOT surfaced to the agent.
 coral start -c examples/race-japan-elderly/task_baseline.yaml
+
+# Aggregate-only feedback — agent sees dimension scores but not per-criterion detail.
+coral start -c examples/race-japan-elderly/task_aggregate_only.yaml
+
+# Agent judge — 1st-party apex_judge grader with auto-evolving rubrics (no reference article).
+coral start -c examples/race-japan-elderly/task_agent_judge.yaml
 ```
 
 ## Files
@@ -55,8 +78,13 @@ coral start -c examples/race-japan-elderly/task_baseline.yaml
 ```
 examples/race-japan-elderly/
 ├── README.md
-├── task.yaml                           # Condition E
-├── task_baseline.yaml                  # Condition A
+├── task.yaml                           # Condition E (rubric-guided)
+├── task_baseline.yaml                  # Condition A (rubrics hidden)
+├── task_aggregate_only.yaml            # Dimension-level feedback only
+├── task_agent_judge.yaml               # Dynamic rubric via apex_judge
+├── grader/                             # race_japan_grader package
+│   ├── pyproject.toml
+│   └── src/race_japan_grader/
 ├── eval/
 │   └── reference_article.md            # Reference article (hidden from agents)
 └── repo/

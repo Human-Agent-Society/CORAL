@@ -138,6 +138,53 @@ def has_docker() -> bool:
     return shutil.which("docker") is not None
 
 
+def _docker_needs_sudo() -> bool:
+    """Return True if docker requires sudo to run.
+
+    Returns False if docker works without sudo. Returns True if docker
+    requires sudo and passwordless sudo is available. Exits with an error
+    if docker requires sudo but sudo needs a password.
+    """
+    try:
+        result = subprocess.run(
+            ["docker", "info"],
+            capture_output=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return False
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+
+    # Docker without sudo failed — try non-interactive sudo
+    try:
+        result = subprocess.run(
+            ["sudo", "-n", "docker", "info"],
+            capture_output=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return True
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+
+    print(
+        "Error: Docker requires sudo, but sudo requires a password.\n"
+        "Either run with passwordless sudo or add your user to the docker group:\n"
+        "  sudo usermod -aG docker $USER\n"
+        "Then log out and back in for the change to take effect.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def docker_cmd() -> list[str]:
+    """Return the base docker command, prefixed with sudo if needed."""
+    if _docker_needs_sudo():
+        return ["sudo", "docker"]
+    return ["docker"]
+
+
 def in_docker() -> bool:
     """Check if we're already running inside a Docker container."""
     if os.environ.get("CORAL_IN_DOCKER") == "1":
@@ -148,7 +195,7 @@ def in_docker() -> bool:
 def is_docker_container_running(container_name: str) -> bool:
     """Check if a Docker container is currently running."""
     result = subprocess.run(
-        ["sudo", "docker", "inspect", "-f", "{{.State.Running}}", container_name],
+        [*docker_cmd(), "inspect", "-f", "{{.State.Running}}", container_name],
         capture_output=True,
         text=True,
     )
@@ -188,12 +235,12 @@ def kill_docker_container(coral_dir: Path) -> None:
             container_name = marker.read_text().strip()
             if container_name:
                 stopped = subprocess.run(
-                    ["sudo", "docker", "stop", container_name],
+                    [*docker_cmd(), "stop", container_name],
                     capture_output=True,
                 ).returncode == 0
                 # Always try rm (container may already be stopped)
                 subprocess.run(
-                    ["sudo", "docker", "rm", container_name],
+                    [*docker_cmd(), "rm", container_name],
                     capture_output=True,
                 )
                 if stopped:

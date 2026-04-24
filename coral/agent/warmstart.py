@@ -44,10 +44,6 @@ class WarmStartRunner:
     def enabled(self) -> bool:
         return self.ws.enabled
 
-    @property
-    def research_turns(self) -> int:
-        return self.ws.research_turns
-
     def research_prompt(self) -> str:
         """Return the research-phase prompt, formatted with the agent's shared dir."""
         if RESEARCH_PROMPT_TEMPLATE:

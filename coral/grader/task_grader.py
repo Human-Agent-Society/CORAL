@@ -48,6 +48,47 @@ class TaskGrader(ABC):
         """Eval timeout in seconds, from grader config. None means no limit."""
         return self.config.timeout or None
 
+    @property
+    def eval_logs_dir(self) -> Path:
+        """Per-attempt directory for eval artifacts that should outlive the grader.
+
+        The grader runs in an isolated checkout that the daemon force-removes
+        after each eval (see coral/grader/daemon.py:_remove_worktree), so
+        anything written under self.codebase_path is lost. Use this dir for
+        subprocess logs, terminal recordings, traces, etc. the agent should
+        be able to inspect after the eval finishes.
+
+        Path: .coral/public/eval_logs/<checkout_dir_name>/
+        (= attempt commit hash when invoked by the grader daemon)
+
+        Symlinked into each agent worktree at `<worktree>/.claude/eval_logs/`
+        by setup_shared_state.
+        """
+        d = (
+            Path(self.private_dir).parent
+            / "public" / "eval_logs"
+            / Path(self.codebase_path).name
+        )
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    def eval_logs_worktree_path(self, abs_path: Path) -> Path:
+        """Return an eval_logs absolute path as `eval_logs/<...>` (runtime-agnostic).
+
+        The grader's eval_logs dir is symlinked into each agent worktree under
+        the runtime's shared state dir (e.g. `.claude/eval_logs/`,
+        `.codex/eval_logs/`, ...). Print the no-prefix form so agents on any
+        runtime can prepend their own shared dir to access it via Read.
+
+        Falls back to the original absolute path if it isn't under eval_logs/.
+        """
+        parts = Path(abs_path).parts
+        try:
+            idx = parts.index("eval_logs")
+        except ValueError:
+            return Path(abs_path)
+        return Path(*parts[idx:])
+
     @abstractmethod
     def evaluate(self) -> float | ScoreBundle:
         """Implement this. Return a numeric score or a ScoreBundle."""
@@ -154,9 +195,10 @@ class TaskGrader(ABC):
 
     def score(
         self, value: float | None, explanation: str = "", feedback: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> ScoreBundle:
         """Return a single-score bundle."""
-        return self.bundle(value, explanation, feedback=feedback)
+        return self.bundle(value, explanation, feedback=feedback, metadata=metadata)
 
     def fail(self, explanation: str = "", feedback: str | None = None) -> ScoreBundle:
         """Return a bundle with a null score (evaluation failed)."""
@@ -164,6 +206,7 @@ class TaskGrader(ABC):
 
     def bundle(
         self, value: float | None, explanation: str = "", feedback: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> ScoreBundle:
         """Create a ScoreBundle from a score value and explanation."""
         s = Score(
@@ -175,6 +218,7 @@ class TaskGrader(ABC):
             scores={"eval": s},
             aggregated=value,
             feedback=feedback,
+            metadata=metadata or {},
         )
 
     # --- Internal: called by the framework ---

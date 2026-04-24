@@ -35,6 +35,8 @@ export interface Note {
   body: string;
   creator?: string;
   filename?: string;
+  relative_path?: string;
+  category?: string;
   index: number;
 }
 

@@ -18,7 +18,11 @@ from coral.config import (
 def test_config_roundtrip():
     config = CoralConfig(
         task=TaskConfig(name="test", description="A test", tips="Be fast"),
-        grader=GraderConfig(type="function", module="my_module", args={"k": 1}),
+        grader=GraderConfig(
+            entrypoint="my_pkg.grader:Grader",
+            setup=["uv pip install -e ./my_pkg"],
+            args={"k": 1},
+        ),
         agents=AgentConfig(count=2, model="opus"),
     )
 
@@ -27,7 +31,9 @@ def test_config_roundtrip():
         restored = CoralConfig.from_yaml(f.name)
 
     assert restored.task.name == "test"
-    assert restored.grader.type == "function"
+    assert restored.grader.entrypoint == "my_pkg.grader:Grader"
+    assert restored.grader.setup == ["uv pip install -e ./my_pkg"]
+    assert restored.grader.args == {"k": 1}
     assert restored.agents.count == 2
     assert restored.agents.model == "opus"
 
@@ -35,12 +41,32 @@ def test_config_roundtrip():
 def test_config_from_dict():
     data = {
         "task": {"name": "t", "description": "d"},
-        "grader": {"type": "kernel_builder"},
+        "grader": {"entrypoint": "kernel_builder.grader:Grader"},
     }
     config = CoralConfig.from_dict(data)
     assert config.task.name == "t"
-    assert config.grader.type == "kernel_builder"
+    assert config.grader.entrypoint == "kernel_builder.grader:Grader"
     assert config.agents.count == 1  # default
+
+
+def test_legacy_grader_type_rejected():
+    """Removed grader.type field raises a ValueError with migration guidance."""
+    data = {
+        "task": {"name": "t", "description": "d"},
+        "grader": {"type": "function"},
+    }
+    with pytest.raises(ValueError, match="grader.type"):
+        CoralConfig.from_dict(data)
+
+
+def test_legacy_grader_module_rejected():
+    """Removed grader.module field raises a ValueError with migration guidance."""
+    data = {
+        "task": {"name": "t", "description": "d"},
+        "grader": {"module": "my.module"},
+    }
+    with pytest.raises(ValueError, match="grader.module"):
+        CoralConfig.from_dict(data)
 
 
 def test_agent_runtime_options_roundtrip():
@@ -217,7 +243,6 @@ def test_warmstart_config_defaults():
     }
     config = CoralConfig.from_dict(data)
     assert config.agents.warmstart.enabled is False
-    assert config.agents.warmstart.research_turns == 15
 
 
 def test_warmstart_config_from_yaml():
@@ -226,20 +251,18 @@ def test_warmstart_config_from_yaml():
         "agents": {
             "warmstart": {
                 "enabled": True,
-                "research_turns": 20,
             },
         },
     }
     config = CoralConfig.from_dict(data)
     assert config.agents.warmstart.enabled is True
-    assert config.agents.warmstart.research_turns == 20
 
 
 def test_warmstart_config_roundtrip():
     config = CoralConfig(
         task=TaskConfig(name="t", description="d"),
         agents=AgentConfig(
-            warmstart=WarmStartConfig(enabled=True, research_turns=20),
+            warmstart=WarmStartConfig(enabled=True),
         ),
     )
 
@@ -248,7 +271,6 @@ def test_warmstart_config_roundtrip():
         restored = CoralConfig.from_yaml(f.name)
 
     assert restored.agents.warmstart.enabled is True
-    assert restored.agents.warmstart.research_turns == 20
 
 
 def test_warmstart_dotlist_override():
@@ -257,7 +279,5 @@ def test_warmstart_dotlist_override():
     )
     merged = CoralConfig.merge_dotlist(config, [
         "agents.warmstart.enabled=true",
-        "agents.warmstart.research_turns=10",
     ])
     assert merged.agents.warmstart.enabled is True
-    assert merged.agents.warmstart.research_turns == 10

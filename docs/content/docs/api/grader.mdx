@@ -1,10 +1,12 @@
 ---
 title: Grader API
-description: GraderInterface protocol, BaseGrader, and TaskGrader.
+description: GraderInterface protocol, BaseGrader, TaskGrader, and SubprocessGrader.
 ---
 
 
-CORAL's grading system has three layers: a protocol, an abstract base class, and the recommended task grader.
+CORAL's grading system has three layers: a protocol, an abstract base class,
+and the recommended task grader. A separate `SubprocessGrader` is the
+runtime CORAL spawns when your task uses `grader.entrypoint`.
 
 ## GraderInterface
 
@@ -32,7 +34,8 @@ Any object with a matching `grade()` method satisfies the protocol.
 
 Module: `coral.grader.base`
 
-Abstract base class with helper methods. Use this if you need full control over scoring.
+Abstract base class with helper methods. Use this if you need full control
+over scoring.
 
 ```python
 from coral.grader.base import BaseGrader
@@ -81,8 +84,8 @@ class Grader(TaskGrader):
 |--------|-------------|
 | `evaluate()` | Abstract — implement this. Return `float` or `ScoreBundle` |
 | `run_program(filename, *args, timeout=300)` | Run a file from the agent's codebase |
-| `read_eval(relative_path)` | Read a file from `eval/` (private directory) |
-| `read_eval_path(relative_path)` | Get absolute path to an eval file |
+| `read_eval(relative_path)` | Read a file from `eval/` (legacy private directory) |
+| `read_eval_path(relative_path)` | Get absolute path to an eval file (legacy) |
 | `score(value, explanation)` | Return a single-score bundle |
 | `fail(explanation)` | Return a failed evaluation (null score) |
 | `bundle(value, explanation)` | Create a ScoreBundle directly |
@@ -101,23 +104,33 @@ class Grader(TaskGrader):
 - **`float`** — automatically wrapped in a ScoreBundle
 - **`ScoreBundle`** — returned as-is (use `self.score()` or `self.fail()`)
 
-## FunctionGrader
+## GraderConfig fields
 
-Module: `coral.grader.builtin.function_grader`
+Configured under `grader:` in `task.yaml`.
 
-Wraps any callable as a grader. Configured via `task.yaml`:
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `entrypoint` | `str` | `""` | Required. Setuptools-style `module.path:ClassName` resolved inside the grader venv. Empty falls back to the deprecated `eval/grader.py` discovery. |
+| `setup` | `list[str]` | `[]` | Shell commands run once in the grader venv at `coral start` / `coral validate` time. Typically a single `uv pip install -e ./grader`. |
+| `timeout` | `int` | `300` | Eval timeout in seconds (`0` = no limit). |
+| `args` | `dict` | `{}` | Free-form kwargs accessible inside the grader as `self.args`. |
+| `private` | `list[str]` | `[]` | Extra files / directories copied to `.coral/private/` (hidden from agents). |
+| `direction` | `str` | `"maximize"` | `"maximize"` or `"minimize"` — which direction makes a score better. |
 
-```yaml
-grader:
-  type: function
-  module: eval.grader
-  args:
-    func_name: grade
-```
+The legacy `grader.type` and `grader.module` fields have been removed. See
+the [migration section](/docs/guides/custom-grader#migrating-from-gradertype--gradermodule)
+of the Writing a Custom Grader guide.
 
-The module must define a function matching:
+## SubprocessGrader (runtime)
 
-```python
-def grade(codebase_path: str, tasks: list) -> float | bool | Score:
-    ...
-```
+Module: `coral.grader.subprocess_grader`
+
+You don't usually construct this directly — `coral.grader.loader.load_grader`
+returns one whenever `grader.entrypoint` is set. It implements
+`GraderInterface` by spawning a worker subprocess in
+`.coral/private/grader_venv/bin/python` and exchanging JSON over
+stdin/stdout.
+
+Errors raised inside the worker are returned as
+`{"error": ..., "traceback": ...}` and re-raised in the parent process so
+you see the original Python traceback.

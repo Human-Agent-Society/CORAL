@@ -116,7 +116,7 @@ Each agent runs in its own git worktree branch. Shared state (attempts, notes, s
 | **CLI orchestration** | 17+ commands: `start`, `stop`, `status`, `eval`, `log`, `ui`, and more |
 | **Web dashboard** | `uv run coral ui` — real-time leaderboard, attempt diffs, agent monitoring |
 
-**Warm-start (optional):** Agents do a literature review via web search before coding, writing findings to shared notes. Enable with `agents.warmstart.enabled=true`.
+**Deep research:** Agents come with a bundled `deep-research` skill that guides structured literature review — web search, saving raw sources, writing research notes, and building an index. It runs automatically during warm-start (`agents.warmstart.enabled=true`), and agents can also invoke it mid-run when pivoting to a new approach. Requires `agents.research=true` for web search.
 
 ### Quick Start
 
@@ -195,8 +195,12 @@ task:
     and returns -distance as the score (shorter = higher).
 
 grader:
-  type: function
-  module: eval.grader
+  # Quick-start uses auto-discovered eval/grader.py (emits DeprecationWarning).
+  # For production tasks, package the grader and switch to:
+  #   entrypoint: "tsp_grader.grader:Grader"
+  #   setup: ["uv pip install -e ./grader"]
+  # See docs/guides/custom-grader for the migration walkthrough.
+  timeout: 300
 
 agents:
   count: 1
@@ -413,6 +417,9 @@ uv run pytest tests/ -v
 uv run ruff check .
 uv run ruff format .
 ```
+
+> [!IMPORTANT]
+> **Docker requirement:** Some built-in graders (e.g. SWE-bench, terminal-bench) use [Harbor](https://github.com/corca-ai/harbor) to run evaluations inside Docker containers. CORAL itself must **not** run inside Docker in this case, as Docker-in-Docker (DinD) is not supported. Run CORAL directly on the host machine.
 
 This project is released under MIT [LICENSE](LICENSE).
 

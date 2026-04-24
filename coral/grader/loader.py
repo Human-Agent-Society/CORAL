@@ -1,37 +1,83 @@
-"""Convention-based grader discovery from task eval/ directories.
+"""Grader loader: entrypoint-first with eval/grader.py as a deprecated fallback.
 
-Loads eval/grader.py from .coral/private/eval/, finds the Grader class
-(must be a TaskGrader subclass), and instantiates it with config args.
+Resolution order:
+
+1. ``config.grader.entrypoint`` → :class:`SubprocessGrader` running inside
+   ``.coral/private/grader_venv/`` (set up by ``coral.workspace.grader_env``).
+2. ``.coral/private/eval/grader.py`` exists → in-process load with a
+   ``DeprecationWarning`` pointing to the entrypoint migration.
+3. Otherwise → :class:`ValueError` with a migration hint.
+
+Legacy ``grader.type`` and ``grader.module`` fields have been removed; tasks
+that still set them get a clear error from :func:`coral.config._preprocess`.
 """
 
 from __future__ import annotations
 
-import importlib
 import importlib.util
 import logging
 import sys
+import warnings
 from pathlib import Path
 from typing import Any
 
 from coral.config import CoralConfig
+from coral.grader.subprocess_grader import SubprocessGrader
+from coral.workspace.grader_env import grader_python_path
 
 logger = logging.getLogger(__name__)
 
 
 def load_grader(config: CoralConfig, coral_dir: str | Path) -> Any:
-    """Load a grader from the task's eval/grader.py in .coral/private/eval/.
+    """Resolve the grader for a task.
 
-    Falls back to legacy builtin graders if config.grader.type is set.
+    Returns a grader implementing the GraderInterface protocol. Setting
+    ``private_dir`` on the returned object is part of this function's contract
+    so callers don't have to.
     """
     coral_dir = Path(coral_dir)
     private_dir = coral_dir / "private"
+
+    if config.grader.entrypoint:
+        worker_python = grader_python_path(coral_dir)
+        if not worker_python.exists():
+            raise RuntimeError(
+                f"Grader venv not initialized at {worker_python.parent}. "
+                f"Run `coral validate` or `coral start` first so that "
+                f"`coral.workspace.grader_env.setup_grader_env` can create it."
+            )
+        logger.info(
+            f"Loading grader entrypoint {config.grader.entrypoint!r} "
+            f"via worker {worker_python}"
+        )
+        return SubprocessGrader(
+            entrypoint=config.grader.entrypoint,
+            worker_python=worker_python,
+            config=config.grader,
+            private_dir=str(private_dir),
+        )
+
     grader_path = private_dir / "eval" / "grader.py"
+    if grader_path.exists():
+        warnings.warn(
+            "Loading grader from eval/grader.py is deprecated. Migrate to "
+            "grader.entrypoint = 'your_pkg.module:Grader' in task.yaml and "
+            "declare install steps under grader.setup. "
+            "See docs/guides/custom-grader.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return _load_eval_grader_py(grader_path, config, private_dir)
 
-    if not grader_path.exists():
-        # Fallback: load builtin grader by type name
-        return _load_legacy_grader(config, coral_dir)
+    raise ValueError(
+        "No grader configured. Set grader.entrypoint = "
+        "'your_pkg.module:Grader' in task.yaml (and grader.setup to install "
+        "the package), or create eval/grader.py (deprecated)."
+    )
 
-    # Import grader.py dynamically
+
+def _load_eval_grader_py(grader_path: Path, config: CoralConfig, private_dir: Path) -> Any:
+    """Legacy in-process load of eval/grader.py."""
     spec = importlib.util.spec_from_file_location("task_grader", str(grader_path))
     if spec is None or spec.loader is None:
         raise ImportError(f"Cannot load grader from {grader_path}")
@@ -40,7 +86,6 @@ def load_grader(config: CoralConfig, coral_dir: str | Path) -> Any:
     sys.modules["task_grader"] = module
     spec.loader.exec_module(module)
 
-    # Find the Grader class
     grader_cls = getattr(module, "Grader", None)
     if grader_cls is None:
         raise ImportError(
@@ -52,100 +97,9 @@ def load_grader(config: CoralConfig, coral_dir: str | Path) -> Any:
 
     if not issubclass(grader_cls, TaskGrader):
         raise TypeError(
-            f"Grader class must inherit from TaskGrader, "
-            f"got {grader_cls.__bases__}"
+            f"Grader class must inherit from TaskGrader, got {grader_cls.__bases__}"
         )
 
-    # Instantiate with grader config
     grader = grader_cls(config=config.grader)
     grader.private_dir = str(private_dir)
-
-    logger.info(f"Loaded grader from {grader_path}")
-    return grader
-
-
-def _load_legacy_grader(config: CoralConfig, coral_dir: Path | None = None) -> Any:
-    """Legacy grader loading by type name."""
-    private_dir = (coral_dir / "private") if coral_dir else None
-    grader_type = config.grader.type
-
-    if grader_type == "function":
-        module_path = config.grader.module
-        if not module_path:
-            raise ValueError("Function grader requires 'module' in grader config")
-        mod = importlib.import_module(module_path)
-        func = getattr(mod, config.grader.args.get("func_name", "grade"))
-        from coral.grader.builtin.function_grader import FunctionGrader
-        return FunctionGrader(name="eval", func=func)
-
-    elif grader_type in ("rubric_judge", "strict_rubric_judge", "scored_rubric_judge",
-                         "dynamic_rubric_judge", "race_rubric_judge", "agent_judge"):
-        return _load_rubric_grader(config, grader_type, private_dir)
-
-    elif grader_type and config.grader.module:
-        # Generic module-based loading
-        mod = importlib.import_module(config.grader.module)
-        cls = getattr(mod, config.grader.type)
-        return cls(**config.grader.args)
-
-    else:
-        raise ValueError(
-            f"No eval/grader.py found in .coral/private/eval/ and no valid "
-            f"legacy grader type specified (got type={config.grader.type!r}). "
-            f"Either create eval/grader.py in your task directory or set "
-            f"grader.type and grader.module in task.yaml."
-        )
-
-
-def _load_rubric_grader(config: CoralConfig, grader_type: str, private_dir: Path | None) -> Any:
-    """Load a rubric-based judge grader by type."""
-    from coral.config import GraderConfig, RubricItem
-
-    rubrics = config.task.rubrics if hasattr(config.task, "rubrics") and config.task.rubrics else []
-    if not rubrics:
-        rubrics_raw = config.grader.args.get("rubrics", [])
-        rubrics = [
-            RubricItem(name=r["name"], description=r["description"], weight=r.get("weight", 1.0))
-            for r in rubrics_raw
-        ]
-
-    grader_args = dict(config.grader.args)
-    grader_args.pop("rubrics", None)
-    grader_args.setdefault("task_description", config.task.description)
-    grader_args.setdefault("files", config.task.files)
-
-    grader_config = GraderConfig(
-        type=config.grader.type,
-        module=config.grader.module,
-        timeout=config.grader.timeout,
-        args=grader_args,
-        private=config.grader.private,
-        direction=config.grader.direction,
-    )
-
-    # Import the right grader class
-    grader_classes = {
-        "rubric_judge": ("coral.grader.builtin.rubric_judge_grader", "RubricJudgeGrader"),
-        "strict_rubric_judge": ("coral.grader.builtin.strict_rubric_judge_grader", "StrictRubricJudgeGrader"),
-        "scored_rubric_judge": ("coral.grader.builtin.scored_rubric_judge_grader", "ScoredRubricJudgeGrader"),
-        "dynamic_rubric_judge": ("coral.grader.builtin.dynamic_rubric_judge_grader", "DynamicRubricJudgeGrader"),
-        "race_rubric_judge": ("coral.grader.builtin.race_rubric_judge_grader", "RaceRubricJudgeGrader"),
-        "agent_judge": ("coral.grader.builtin.agent_judge_grader", "AgentJudgeGrader"),
-    }
-
-    module_path, class_name = grader_classes[grader_type]
-    mod = importlib.import_module(module_path)
-    cls = getattr(mod, class_name)
-
-    if grader_type == "agent_judge":
-        grader_args.setdefault("task_name", config.task.name)
-        grader_config = GraderConfig(
-            type=config.grader.type, module=config.grader.module,
-            timeout=config.grader.timeout, args=grader_args,
-            private=config.grader.private, direction=config.grader.direction,
-        )
-
-    grader = cls(config=grader_config, rubrics=rubrics)
-    if private_dir:
-        grader.private_dir = str(private_dir)
     return grader

@@ -145,11 +145,16 @@ def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: st
     shared_items = [
         "notes",
         "skills",
+        "agents",
         "attempts",
         "logs",
         "heartbeat",
         "rubrics",
         "guidance",
+        # Per-attempt eval artifacts (subprocess logs, terminal recordings,
+        # verifier output, etc.) that the grader writes via TaskGrader.eval_logs_dir.
+        # Lives outside the grader checkout so it survives daemon cleanup.
+        "eval_logs",
     ]
     for item in shared_items:
         src = coral_public / item
@@ -211,11 +216,14 @@ def setup_claude_settings(
     if not research:
         deny_rules.extend(["WebSearch", "WebFetch"])
 
+    permissions: dict = {
+        "defaultMode": "auto",
+        "allow": allow_rules,
+        "deny": deny_rules,
+    }
+
     settings: dict = {
-        "permissions": {
-            "allow": allow_rules,
-            "deny": deny_rules,
-        },
+        "permissions": permissions,
     }
 
     # Route agent traffic through gateway by overriding env in settings.
@@ -233,7 +241,7 @@ def setup_claude_settings(
         env["ANTHROPIC_CUSTOM_HEADERS"] = ""
         settings["env"] = env
 
-    settings_path = claude_dir / "settings.json"
+    settings_path = claude_dir / "settings.local.json"
     # Always overwrite — each agent needs its own copy
     settings_path.write_text(json.dumps(settings, indent=2) + "\n")
 
@@ -321,7 +329,7 @@ def setup_codex_settings(
 
     Sets the agent to full-auto mode (no approval prompts, workspace-write
     sandbox) and toggles web_search based on the *research* flag.  When a
-    gateway is configured, sets ``openai_base_url`` so the agent routes
+    gateway is configured, sets ``base_url`` so the agent routes
     traffic through the LiteLLM proxy.
     """
     codex_dir = worktree_path / ".codex"
@@ -341,7 +349,7 @@ def setup_codex_settings(
             'model_provider = "litellm"\n',
             '[model_providers.litellm]',
             'name = "LiteLLM Proxy"',
-            f'open_base_url = "{gateway_url}/v1"',
+            f'base_url = "{gateway_url}/v1"',
             'wire_api = "responses"',
             'env_key = "OPENAI_API_KEY"',
         ]

@@ -69,21 +69,17 @@ autoresearch/
 results/
 test_claude_code/
 
-# Dev artifacts
-scripts/
-
 # OpenCode local installation and generated files
 .opencode/
-coral/artifacts/openevolve/symbolic_regression/problems/
-coral/artifacts/openevolve/symbolic_regression/dataset/
-kernelbench_results*
-scripts/harbor_tasks/
-scripts/skillsbench/
 
 # Generated plots
 *.png
 !assets/*.png
 !blog/*.png
+
+# exceptions
+!coral/template/skills/*/scripts/
+
 results/examples/ADRS/eplb/eval/expert-load.json
 examples/ADRS/eplb/eval/expert-load.json
 
@@ -99,9 +95,3 @@ examples/frontier_cs_research/task_dynamic.yaml
 examples/apex-frontier
 examples/apex-prelim
 examples/deepresearch_bench
-
-# Experimental graders
-coral/grader/builtin/dynamic_rubric_judge_grader.py
-coral/grader/builtin/race_rubric_judge_grader.py
-coral/grader/builtin/rubric_judge_grader.py
-coral/grader/builtin/scored_rubric_judge_grader.py

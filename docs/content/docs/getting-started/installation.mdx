@@ -16,6 +16,10 @@ You'll also need at least one supported agent runtime:
 - **Codex** — OpenAI's coding agent
 - **OpenCode** — open-source alternative
 
+For Harbor-based benchmarks (SWE-bench, terminal-bench), you additionally need:
+- **Docker** — installed and running on the host
+- **Harbor CLI** — invoked via `uvx harbor` (no separate install needed if you have `uv`)
+
 ## Install from source
 
 ```bash
@@ -51,14 +55,31 @@ You should see something like `coral 0.2.0`.
 
 ## Optional dependencies
 
-Some grader types require additional packages:
+CORAL currently exposes two optional extras:
 
-| Feature | Install |
-|---------|---------|
-| SWE-bench grading | `uv sync --extra swebench` |
-| TerminalBench | `uv sync --extra terminalbench` |
-| Erdős problems | `uv sync --extra erdos` |
-| Web dashboard | `uv sync --extra ui` |
+| Extra  | Install                  | Purpose                              |
+|--------|--------------------------|--------------------------------------|
+| `dev`  | `uv sync --extra dev`    | Test and lint tools (pytest, ruff, mypy) |
+| `ui`   | `uv sync --extra ui`     | Web dashboard (Starlette + uvicorn)  |
+| `all`  | `uv sync --extra all`    | Everything above                     |
+
+## Benchmark evaluators
+
+Standardized coding benchmarks like **SWE-bench Verified** and **terminal-bench** are shipped as example tasks under `examples/`, not as Python extras. Their graders delegate evaluation to [Harbor](https://github.com/corca-ai/harbor), which runs each instance inside its own Docker container.
+
+Run them directly with `coral start` — no extra `uv sync` step is required:
+
+```bash
+# SWE-bench Verified (meta-solver optimization over 500 GitHub issues)
+coral start -c examples/swebench-verified/task.yaml
+
+# terminal-bench (meta-solver optimization over terminal/shell tasks)
+coral start -c examples/terminal-bench/task.yaml
+```
+
+Each task's seed includes a `solve.py` baseline (a Terminus2-based Harbor agent) and a grader that invokes `uvx harbor run -d <dataset>` with tiered evaluation (5 → 30 → all instances). See the [Benchmarks guide](/guides/benchmarks) for details.
+
+> **Docker-in-Docker is not supported.** Because Harbor spawns Docker containers, CORAL itself must run on the host machine (not inside a container) for these benchmarks. Other examples that don't use Harbor are unaffected.
 
 ## Next steps
 

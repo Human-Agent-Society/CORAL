@@ -1,6 +1,8 @@
 """CORAL - Orchestration system for autonomous coding agents."""
 
-__version__ = "0.2.0"
+from importlib.metadata import version
+
+__version__ = version("coral")
 
 from coral.types import Attempt, Score, ScoreBundle, Task
 from coral.config import CoralConfig

@@ -35,8 +35,10 @@ class TaskConfig:
 class GraderConfig:
     """Grader configuration."""
 
-    type: str = ""  # if empty, auto-discovers from eval/grader.py
-    module: str = ""  # Python module path for custom graders
+    entrypoint: str = ""  # "module.path:ClassName"; empty = auto-discover from eval/grader.py (deprecated)
+    setup: list[str] = field(
+        default_factory=list
+    )  # shell commands run in .coral/private/grader_venv/ before agents start
     timeout: int = 300  # eval timeout in seconds (0 = no limit)
     args: dict[str, Any] = field(default_factory=dict)
     private: list[str] = field(
@@ -70,7 +72,6 @@ class WarmStartConfig:
     """Warm-start configuration: optional research phase before the main coding loop."""
 
     enabled: bool = False
-    research_turns: int = 15  # max turns for the research phase
 
 
 @dataclass
@@ -90,6 +91,7 @@ class AgentConfig:
             HeartbeatActionConfig(name="reflect", every=1),
             HeartbeatActionConfig(name="consolidate", every=10, is_global=True),
             HeartbeatActionConfig(name="pivot", every=5, trigger="plateau"),
+            HeartbeatActionConfig(name="lint_wiki", every=10, is_global=True),
         ]
     )
     research: bool = True  # enable web search / literature review step in workflow
@@ -189,6 +191,17 @@ class CoralConfig:
 
 def _preprocess(data: dict[str, Any]) -> dict[str, Any]:
     """Transform legacy keys and normalize heartbeat config before OmegaConf merge."""
+    # Reject removed grader.type / grader.module fields with migration guidance.
+    grader_data = data.get("grader")
+    if isinstance(grader_data, dict):
+        legacy_grader_keys = [k for k in ("type", "module") if k in grader_data]
+        if legacy_grader_keys:
+            raise ValueError(
+                f"grader.{' / grader.'.join(legacy_grader_keys)} is removed. "
+                f"Use grader.entrypoint = 'your_pkg.module:Grader' (and grader.setup "
+                f"to install the package). See docs/guides/custom-grader."
+            )
+
     agents_data = data.get("agents", {})
     if not isinstance(agents_data, dict):
         return data

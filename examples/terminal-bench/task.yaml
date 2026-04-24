@@ -1,0 +1,79 @@
+# CORAL task: terminal-bench meta-solver optimization
+# Agents optimize solve.py to maximize the pass rate on terminal-bench tasks.
+# The grader runs `harbor run` directly to evaluate the solver.
+
+task:
+  name: "terminal-bench"
+  description: |
+    Optimize a solver agent (solve.py) that completes terminal/shell tasks.
+
+    Your solve.py implements a Harbor agent (SolverAgent class) that receives
+    a natural language instruction and executes commands in a Docker container
+    to complete the task. A verifier checks if the task was completed correctly.
+
+    The grader runs `uvx harbor run -d terminal-bench@2.0` with your solver as the
+    agent and returns the pass rate across all tasks.
+
+    Tiered evaluation — each `coral eval` runs ONE tier, chosen by your best
+    previous *raw* pass rate:
+      - Tier 1:  5 tasks  (weight 1×)   — raw pass ≥30% → promote
+      - Tier 2: 30 tasks  (weight 10×)  — raw pass ≥70% → promote
+      - Tier 3: all tasks (weight 100×)
+
+    The score recorded on the leaderboard is `tier_weight × pass_rate`, so:
+      - Max possible at Tier 1: 1.0  (1 × 100%)
+      - Max possible at Tier 2: 10.0 (10 × 100%)
+      - Max possible at Tier 3: 100.0 (100 × 100%)
+
+    This means any Tier 3 attempt with pass rate >0.10 outranks any Tier 2
+    attempt, and any Tier 2 attempt with pass rate >0.10 outranks any Tier 1
+    attempt — confidence dominates magnitude. Don't compare scores across
+    tiers as if they were the same metric. The raw pass rate is preserved
+    in attempt metadata (`raw_score`).
+
+    DO NOT TRY TO peek the test cases. You are not going to get any information from them.
+    Focus on the improving the general problem solving capability of the solver, making it more
+    robust and generalizable.
+
+  tips: |
+    - Start by understanding the baseline solve.py and Harbor agent architecture
+    - The agent interacts via tmux sessions in Docker containers
+    - Improve prompting, multi-turn reasoning, error recovery
+    - Common failures: wrong paths, missing packages, incorrect syntax
+    - Test locally: harbor run -d terminal-bench@2.0 --agent-import-path "solve:SolverAgent" -l 5
+    - Before fixing a method, the solver should search for parent/sibling class implementations of the same method to reuse established error-handling patterns (e.g. try/except vs narrow None check)
+    - The solver should verify semantic correctness of fixes, not just that errors/crashes disappear — a fix that silences an exception but produces wrong results will still fail verification
+    - Prefer robust, general fixes over minimal point fixes — a try/except catching multiple exception types beats an `if x is None` guard that misses other bad inputs
+    - After each eval, check the harbor logs path printed in the eval feedback (under your runtime's shared dir, e.g. `.claude/eval_logs/<commit_hash>/harbor_logs/`) for detailed agent trajectories, terminal recordings, and verifier output to understand why specific tasks failed
+
+grader:
+  entrypoint: "terminal_bench_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 7200
+  direction: maximize
+  args:
+    dataset: "terminal-bench@2.0"
+    n_concurrent: 4
+    tier1_size: 5
+    tier1_threshold: 0.3
+    tier2_size: 30
+    tier2_threshold: 0.7
+    agent_timeout_multiplier: 1.0
+    verifier_timeout_multiplier: 1.0
+
+agents:
+  count: 1
+  runtime: claude_code
+  model: claude-opus-4-6
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/terminal-bench/seed"
+  setup:
+    - "uv pip install anthropic"
+
+run:
+  verbose: false
+  ui: false
+  session: local

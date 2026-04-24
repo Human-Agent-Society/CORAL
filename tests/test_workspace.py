@@ -19,7 +19,7 @@ from coral.workspace import (
 def _make_config(repo_path: str, results_dir: str | None = None) -> CoralConfig:
     return CoralConfig(
         task=TaskConfig(name="Test Task", description="Test task"),
-        grader=GraderConfig(type="function"),
+        grader=GraderConfig(),
         agents=AgentConfig(count=2),
         workspace=WorkspaceConfig(
             results_dir=results_dir or os.path.join(repo_path, "results"),
