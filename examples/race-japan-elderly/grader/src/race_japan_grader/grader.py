@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 import time
 from pathlib import Path
 
@@ -99,8 +100,9 @@ class StrictRubricJudgeGrader(TaskGrader):
         codebase_link = workspace / "codebase"
         if codebase_link.is_symlink():
             codebase_link.unlink()
-        if not codebase_link.exists():
-            codebase_link.symlink_to(Path(self.codebase_path).resolve())
+        elif codebase_link.exists():
+            shutil.rmtree(codebase_link)
+        codebase_link.symlink_to(Path(self.codebase_path).resolve())
 
         task_description = self.config.args.get(
             "task_description", self._task_description_from_config
@@ -140,6 +142,11 @@ class StrictRubricJudgeGrader(TaskGrader):
             log_dir=log_dir,
             prompt=prompt,
             prompt_source="start",
+            # Add the worker's codebase to the session sandbox so the judge can
+            # read through the ./codebase/ symlink (which resolves outside the
+            # workspace). Without this, Claude Code's working-directory check
+            # blocks Read and Bash on the symlink target.
+            runtime_options={"add_dirs": [str(Path(self.codebase_path).resolve())]},
         )
 
         timeout = self.config.timeout or 600
@@ -369,17 +376,24 @@ Do not write any other file. Once `evaluation.json` is written, stop.
         settings_dir.mkdir(exist_ok=True)
         workspace_str = str(workspace.resolve())
         codebase_str = str(Path(self.codebase_path).resolve())
+        # Glob patterns (``/**``) are required — narrow exact-path rules like
+        # ``Write(.../evaluation.json)`` did not match in practice. ``Bash`` is
+        # allowed unrestricted so the judge can fall back to shell-based reads
+        # if the Read tool struggles with any path.
         settings = {
             "permissions": {
                 "allow": [
-                    f"Read({codebase_str}/**)",
+                    "Bash",
                     f"Read({workspace_str}/**)",
-                    f"Write({workspace_str}/evaluation.json)",
-                    f"Edit({workspace_str}/evaluation.json)",
+                    f"Read({codebase_str}/**)",
+                    f"Edit({workspace_str}/**)",
+                    f"Write({workspace_str}/**)",
                 ],
                 "deny": [
-                    f"Write({codebase_str}/**)",
+                    "Bash(git *)",
+                    "Bash(coral eval*)",
                     f"Edit({codebase_str}/**)",
+                    f"Write({codebase_str}/**)",
                 ],
             }
         }

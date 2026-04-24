@@ -156,6 +156,11 @@ class AgentJudgeGrader(TaskGrader):
             prompt=prompt,
             prompt_source=prompt_source,
             resume_session_id=resume_session_id,
+            # Add the worker's codebase to the session sandbox so the judge can
+            # read through the ./codebase/ symlink (which resolves outside the
+            # workspace). Without this, Claude Code's working-directory check
+            # blocks Read and Bash on the symlink target.
+            runtime_options={"add_dirs": [str(Path(self.codebase_path).resolve())]},
         )
 
         # 8. Wait for completion with timeout
