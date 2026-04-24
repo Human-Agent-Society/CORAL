@@ -245,6 +245,10 @@ class AgentJudgeGrader(TaskGrader):
 
         settings = {
             "permissions": {
+                # ``defaultMode: "auto"`` is required to actually apply the
+                # allow rules below — without it Claude Code falls back to
+                # prompting for approval on every tool call.
+                "defaultMode": "auto",
                 "allow": [
                     "Bash",
                     f"Read({workspace_str}/**)",

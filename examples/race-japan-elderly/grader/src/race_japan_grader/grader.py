@@ -379,9 +379,12 @@ Do not write any other file. Once `evaluation.json` is written, stop.
         # Glob patterns (``/**``) are required — narrow exact-path rules like
         # ``Write(.../evaluation.json)`` did not match in practice. ``Bash`` is
         # allowed unrestricted so the judge can fall back to shell-based reads
-        # if the Read tool struggles with any path.
+        # if the Read tool struggles with any path. ``defaultMode: "auto"`` is
+        # required to actually apply these allow rules — without it Claude Code
+        # falls back to prompting for approval on every tool call.
         settings = {
             "permissions": {
+                "defaultMode": "auto",
                 "allow": [
                     "Bash",
                     f"Read({workspace_str}/**)",
