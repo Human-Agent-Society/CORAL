@@ -20,8 +20,6 @@ grader:
   - uv pip install -e ./grader
   timeout: 600
   direction: maximize
-  private:
-  - eval/reference_article.md
   args:
     files:
     - report.md

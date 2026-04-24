@@ -36,9 +36,12 @@ an LLM judge. The final score is `target / (target + reference)`:
 
 ## Data Isolation
 
-The reference article is stored in `eval/reference_article.md` and copied to
-`.coral/private/` at runtime via `grader.private`. The agent **cannot access**
-the reference — only the grader process reads it from `.coral/private/`.
+The reference article ships inside the grader package at
+[`grader/src/race_japan_grader/references/reference_article.md`](grader/src/race_japan_grader/references/reference_article.md)
+— it's installed into the grader's isolated venv by `grader.setup` and loaded
+by the judge via `importlib`-style package-local resolution. The agent
+**cannot access** the reference: the grader venv is outside the agent
+worktree and the file is never copied into the agent's workspace.
 
 ## Grader
 
@@ -85,8 +88,10 @@ examples/race-japan-elderly/
 ├── grader/                             # race_japan_grader package
 │   ├── pyproject.toml
 │   └── src/race_japan_grader/
-├── eval/
-│   └── reference_article.md            # Reference article (hidden from agents)
+│       ├── grader.py
+│       └── references/
+│           └── reference_article.md    # Reference article (shipped in wheel,
+│                                       # loaded by judge; agent never sees it)
 └── repo/
     └── report.md                       # Placeholder — agent overwrites
 ```

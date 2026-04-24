@@ -282,16 +282,24 @@ class StrictRubricJudgeGrader(TaskGrader):
         return "\n\n".join(parts) if parts else "[No output files found]"
 
     def _read_reference_documents(self) -> str:
-        """Read reference/source documents for the judge to fact-check against."""
+        """Read reference/source documents for the judge to fact-check against.
+
+        Resolution order for each filename in ``reference_files``:
+        1. Bundled inside the grader package at
+           ``race_japan_grader/references/<filename>`` — the canonical home.
+        2. ``.coral/private/<filename>`` — legacy, for tasks that still
+           declared ``grader.private``.
+        """
         ref_files = self.config.args.get("reference_files", [])
         if not ref_files:
             return ""
 
+        package_refs = Path(__file__).parent / "references"
         parts = []
         for filename in ref_files:
-            filepath = Path(self.private_dir) / filename
+            filepath = package_refs / filename
             if not filepath.exists():
-                filepath = Path(self.codebase_path) / filename
+                filepath = Path(self.private_dir) / filename
             if filepath.exists():
                 content = filepath.read_text()
                 max_chars = 80_000
@@ -299,7 +307,7 @@ class StrictRubricJudgeGrader(TaskGrader):
                     content = content[:max_chars] + "\n\n[... TRUNCATED due to size ...]"
                 parts.append(f"### {filename}\n{content}")
             else:
-                logger.warning(f"Reference file not found: {filepath}")
+                logger.warning(f"Reference file not found: {filename}")
 
         return "\n\n".join(parts) if parts else ""
 
