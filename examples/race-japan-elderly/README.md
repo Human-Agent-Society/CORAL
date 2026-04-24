@@ -28,11 +28,10 @@ Unlike binary rubric evaluation, RACE scores the agent's output on a **continuou
 | Instruction Following | 0.22 | 5 criteria |
 | Readability | 0.15 | 8 criteria |
 
-The agent's report is scored **comparatively** against a reference article by
-an LLM judge. The final score is `target / (target + reference)`:
-- 0.5 = equal to reference
-- \>0.5 = outperforms reference
-- <0.5 = underperforms reference
+The agent's report is scored by a **Claude Code judge agent** that reads the
+worker's output, the reference article, and the 25-criterion rubric, then
+writes `evaluation.json` with per-criterion PASS/FAIL verdicts. Final score
+is the weighted pass rate across all criteria.
 
 ## Data Isolation
 

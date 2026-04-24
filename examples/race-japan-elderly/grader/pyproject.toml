@@ -5,8 +5,6 @@ description = "Strict APEX-style rubric judge for the Japan elderly market deep-
 requires-python = ">=3.11"
 dependencies = [
     "coral",
-    "anthropic>=0.34.0",
-    "openai>=1.40.0",
 ]
 
 [build-system]

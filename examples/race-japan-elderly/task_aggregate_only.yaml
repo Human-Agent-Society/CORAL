@@ -128,7 +128,9 @@ grader:
   args:
     files:
     - report.md
-    judge_model: claude-opus-4-6
+    runtime: claude_code
+    judge_model: opus
+    judge_max_turns: 30
     reference_files:
     - reference_article.md
     feedback_level: aggregate_only
