@@ -1,0 +1,38 @@
+task:
+  name: Frontier BU Revenue and Profit Forecast 2035 (Agent Judge)
+  description: |
+    Hi, can you calculate the estimated size of all Frontier's business units in 2035? You might need to conduct growth forecasting to assess the overall size of the markets they operate in by 2035. Let's assume the growth rate and market share will remain constant until 2035. Also, calculate the expected profit for each business unit.
+
+    Round all final answers to two decimal places. Where ranges are provided, use the mid-point of the provided values. Print out the answers in analysis.md.
+  tips: |
+    - Use the spreadsheet tools (MCP) to read .xlsx files — the Read tool cannot open binary .xlsx formats.
+    - Use the document tools (MCP) to read .docx files — the Read tool cannot open binary .docx formats.
+    - Use the PDF tools (MCP) to read PDF documents.
+    - Use the filesystem tools (MCP) to explore available files in the working directory.
+    - You are evaluated by an agent judge with PASS/FAIL criteria.
+    - The judge autonomously generates and evolves evaluation criteria.
+    - Check .claude/rubrics/current.md for the active rubric and version.
+
+grader:
+  entrypoint: "apex_judge.grader:Grader"
+  setup:
+    - "uv pip install -e ../apex-eggshell-skull/grader"
+  timeout: 600
+  direction: maximize
+  args:
+    files: ["analysis.md"]
+    model: opus
+    runtime: claude_code
+    judge_max_turns: 30
+    max_criteria: 15
+    min_criteria: 5
+    dynamic_rubric: true
+
+agents:
+  count: 1
+  runtime: claude_code
+  model: sonnet
+  timeout: 1800
+
+workspace:
+  repo_path: ./examples/apex-frontier-bu/repo

@@ -74,6 +74,13 @@ class ClaudeCodeRuntime:
             "--verbose",
         ]
 
+        # Extra paths added to the Claude Code session sandbox via --add-dir.
+        # Lets callers (e.g. judge graders) grant tool access to a sibling
+        # directory like the worker's codebase without copying its contents
+        # into the worktree.
+        for extra_dir in (runtime_options or {}).get("add_dirs") or []:
+            cmd.extend(["--add-dir", str(extra_dir)])
+
         if resume_session_id:
             cmd.extend(["--resume", resume_session_id])
 

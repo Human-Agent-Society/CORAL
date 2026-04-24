@@ -1,0 +1,155 @@
+---
+title: Rubric Judges
+description: Grade open-ended agent output with an LLM judge — static criteria or auto-evolving rubrics.
+---
+
+Most CORAL graders are programmatic: run the agent's code, compare against a ground truth, return a number. But many research tasks produce **open-ended artifacts** — reports, memos, designs — where there is no single correct answer. For those, CORAL ships two reusable **rubric-judge** grader packages that score by spawning a Claude Code judge agent against a weighted list of PASS/FAIL criteria.
+
+Both graders live inside `examples/`. You wire them into your own task by pointing `grader.entrypoint` at them in `task.yaml` and listing their install command under `grader.setup`. Nothing in the CORAL framework itself is judge-specific — the criteria, the judge prompt, and the scoring policy all live inside the grader package.
+
+## Which grader do I want?
+
+| Grader | Rubric | Source | Best for |
+|--------|--------|--------|----------|
+| [`race_japan_grader`](https://github.com/Human-Agent-Society/CORAL/tree/main/examples/race-japan-elderly/grader) | **Static** — criteria are fixed per task | `grader.args.rubrics` in `task.yaml` | Benchmarks where the evaluation protocol must be stable across runs and agents |
+| [`apex_judge`](https://github.com/Human-Agent-Society/CORAL/tree/main/examples/apex-eggshell-skull/grader) | **Dynamic** — judge auto-generates the rubric on first eval, evolves it on plateau | Agent's own reading of the task, plus optional seed hints | Exploratory tasks where you want the bar to rise as the agent improves |
+
+Both produce the same kind of output: a `ScoreBundle` with one `Score` per criterion (`1.0` = PASS, `0.0` = FAIL) and a weighted-pass-rate aggregate.
+
+## How the judge actually runs
+
+On each `coral eval`:
+
+1. The grader builds an isolated workspace under `.coral/private/<judge_name>/workspace/`.
+2. It writes a `CLAUDE.md` judge-instruction file containing the task description, the rubric, and (optionally) reference documents bundled with the grader.
+3. It symlinks the worker's codebase into `./codebase/` inside the workspace (read-only).
+4. It spawns `claude -p "You are the evaluator..." --model <...> --max-turns <...>` via the CORAL runtime registry, so the judge has file reads, bash, web search, and whatever other tools the Claude Code CLI exposes.
+5. It waits for the judge to write `evaluation.json` with per-criterion verdicts and rationales, then parses that into a `ScoreBundle`.
+
+The judge venv is created by `grader.setup` at `coral start` time and lives under `.coral/private/grader_venv/` — the agent worktrees cannot see it, so the judge's prompt, reference articles, and any hidden rubric entries never leak into agent context.
+
+## Static rubric: `race_japan_grader`
+
+Designed for the DeepResearch-Bench-style RACE task (see [examples/race-japan-elderly](https://github.com/Human-Agent-Society/CORAL/tree/main/examples/race-japan-elderly)). The rubric is exactly what you declare — the judge neither adds nor removes criteria.
+
+```yaml
+# examples/race-japan-elderly/task.yaml
+grader:
+  entrypoint: "race_japan_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 600
+  direction: maximize
+  args:
+    files: ["report.md"]
+    runtime: claude_code
+    judge_model: opus
+    judge_max_turns: 30
+    reference_files: ["reference_article.md"]
+    feedback_level: full
+    rubrics:
+      - name: "Detailed Elderly Population Projections (2020-2050)"
+        description: "Year-by-year or decade breakdowns by age cohort..."
+        weight: 1.0
+      - name: "Thoroughness of Consumption Category Analysis"
+        description: "Depth of coverage for clothing, food, housing, transportation..."
+        weight: 1.0
+      # ... as many criteria as your rubric needs
+```
+
+### Visible vs. hidden criteria
+
+Rubrics live under `grader.args.rubrics` — so by default the agent does **not** see them in its `CORAL.md`. If you want the agent to read the full rubric (the "rubric-guided" condition), bake it into `task.description`:
+
+```yaml
+task:
+  description: |
+    Produce a market size analysis report...
+
+    ## Evaluation Rubric
+
+    1. **Detailed Elderly Population Projections** — ...
+    2. **Thoroughness of Consumption Category Analysis** — ...
+    ...
+```
+
+The judge reads from `grader.args.rubrics`; the agent reads from `task.description`. Keeping the same list in both is your responsibility, but it gives you clean A/B conditions — see `task.yaml` (rubric-guided), `task_baseline.yaml` (hidden), and `task_aggregate_only.yaml` (hidden per-criterion feedback) in the race-japan-elderly example.
+
+### Reference articles
+
+The judge fact-checks the worker's claims against reference documents bundled inside the grader package at `grader/src/race_japan_grader/references/`. Listing a filename under `grader.args.reference_files` causes the judge to load it and inject it into its instructions. Because the file ships inside the grader wheel (not inside the task directory), it never appears in any agent worktree.
+
+### Feedback redaction
+
+`grader.args.feedback_level` controls what the worker sees after an eval:
+
+| Value | What the agent sees |
+|-------|---------------------|
+| `full` | Weighted score + per-criterion verdict + rationale for every criterion |
+| `aggregate_only` | Weighted score + `N/25 passed` only |
+| `score_only` | The aggregate score, nothing else |
+
+## Dynamic rubric: `apex_judge`
+
+Designed for the APEX-Agents legal / analyst benchmarks (see [examples/apex-eggshell-skull](https://github.com/Human-Agent-Society/CORAL/tree/main/examples/apex-eggshell-skull) and [examples/apex-frontier-bu](https://github.com/Human-Agent-Society/CORAL/tree/main/examples/apex-frontier-bu)). On the first eval the judge reads the agent's output and the source materials, then **generates its own initial rubric**. On subsequent evals it may **evolve** the rubric — adding harder criteria, dropping criteria that are consistently easy — when the worker's score plateaus or hits 100%.
+
+```yaml
+# examples/apex-eggshell-skull/task.yaml
+grader:
+  entrypoint: "apex_judge.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 600
+  direction: maximize
+  args:
+    files: ["memorandum.docx"]
+    model: opus
+    runtime: claude_code
+    judge_max_turns: 30
+    max_criteria: 15
+    min_criteria: 3
+    dynamic_rubric: true
+```
+
+### Rubric state on disk
+
+Evolved rubric versions are persisted under `.coral/private/rubrics/` as `v1.json`, `v2.json`, ... with a `current.json` pointer. A human-readable `current.md` is copied to `.coral/public/rubrics/current.md` so the agent can read it between evals — this is the file the auto-generated CORAL.md tips reference with "Check `.claude/rubrics/current.md` for the active rubric and version."
+
+### Persistent judge session
+
+The judge keeps a session ID between evaluations. On the first call it reads the source materials end-to-end; on subsequent calls it resumes the same Claude Code session with just the new worker output, which keeps per-eval cost down and preserves accumulated reasoning about the task.
+
+### Sharing one judge across tasks
+
+`apex_judge` is reused by three task configs in this repo. The non-owning tasks point at the shared grader directory via a relative `setup` command:
+
+```yaml
+# examples/apex-frontier-bu/task.yaml
+grader:
+  entrypoint: "apex_judge.grader:Grader"
+  setup:
+    - "uv pip install -e ../apex-eggshell-skull/grader"
+```
+
+You can do the same with your own judge — the grader venv is per-run, so two tasks can install the same source tree in editable mode without stepping on each other.
+
+## Writing your own rubric judge
+
+Both shipped judges inherit from `coral.grader.task_grader.TaskGrader` (see [Writing a Custom Grader](/guides/custom-grader) for the base interface). The rubric-judge pattern adds three pieces on top:
+
+1. **A local `RubricItem` dataclass** inside the grader package so the framework's `TaskConfig` schema stays unchanged. See `race_japan_grader/rubric_item.py` and `apex_judge/rubric_item.py` for the canonical 10-line implementation.
+2. **A `CLAUDE.md` builder** that assembles the task description, rubric (static or evolved), reference docs, and an output-format spec demanding a specific JSON schema. `race_japan_grader.grader._build_judge_instructions` is a short, readable example.
+3. **An `evaluation.json` parser** that maps judge verdicts back to `Score` objects by matching criterion names.
+
+Spawn the judge via `coral.agent.registry.get_runtime(...)`. That gives you the same runtime abstraction the worker agents use — including the log path, session-id extraction, and the permission-settings wiring for Claude Code.
+
+One subtlety: if you symlink the worker's codebase into the judge workspace (as both shipped judges do), Claude Code's working-directory sandbox will block reads on the symlink target. Pass the codebase path through `runtime_options={"add_dirs": [...]}` to `runtime.start(...)` so the judge can actually read the files behind `./codebase/`.
+
+## Validating and running
+
+```bash
+coral validate examples/race-japan-elderly
+coral start -c examples/race-japan-elderly/task.yaml
+```
+
+`coral validate` will install the grader package into a fresh venv and dry-run it. Actual judge spawning only happens on a real `coral eval`, since the judge is an LLM call that the validator cannot stub.

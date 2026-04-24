@@ -35,6 +35,7 @@
 
 ### 🔥 News!
 
+- **[2026-04-24]** 新增 **Rubric 评审 (Rubric Judges)** —— 两个开箱即用的 LLM 评审 grader 包，专为开放式任务（报告、备忘、法律分析等）设计：静态评审准则 (`race_japan_grader`) 与可自演进的动态准则 (`apex_judge`)，均由 Claude Code 作为评审代理执行。详见 [Rubric Judges 文档](docs/content/docs/guides/rubric-judge.mdx) 以及新增的 `examples/race-japan-elderly/`、`examples/apex-eggshell-skull/`、`examples/apex-frontier-bu/` 任务。
 - **[2026-03-18]** CORAL 正式发布！点击查看[Blog](https://human-agent-society.github.io/CORAL/)。
 
 ![Demo](assets/demo.gif)

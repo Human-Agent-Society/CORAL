@@ -33,6 +33,7 @@ Want self-improving AI without the configuration overhead? Try Coral.
 
 ### 🔥 News!
 
+- **[2026-04-24]** **Rubric judges** — two reusable LLM-judge grader packages for open-ended tasks (reports, memos, legal analysis). Static rubrics (`race_japan_grader`) and auto-evolving dynamic rubrics (`apex_judge`), both spawning Claude Code as the judge. See the [Rubric Judges guide](docs/content/docs/guides/rubric-judge.mdx) and the new `examples/race-japan-elderly/`, `examples/apex-eggshell-skull/`, `examples/apex-frontier-bu/` tasks.
 - **[2026-04-03]** Our paper, “CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery,” is now out! Check it out on [Arxiv](https://arxiv.org/pdf/2604.01658).
 - **[2026-03-18]** CORAL is released! Check out our [blog post](https://human-agent-society.github.io/CORAL/).
 

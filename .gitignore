@@ -63,7 +63,7 @@ Thumbs.db
 scripts/tmp_*/
 *.out
 
-# Project runs (ephemeral agent workspaces)
+# Project runs (ephemeral agent workspaces, logs, experiment outputs)
 erdos_project/
 autoresearch/
 results/
@@ -79,3 +79,19 @@ test_claude_code/
 
 # exceptions
 !coral/template/skills/*/scripts/
+
+results/examples/ADRS/eplb/eval/expert-load.json
+examples/ADRS/eplb/eval/expert-load.json
+
+# Example task data — repo/ dirs contain source data (APEX datasets, case
+# files, spreadsheets, etc.) that may be large or proprietary. Only task.yaml
+# and supporting config files should be committed.
+examples/*/repo/
+
+# Test experiments
+examples/auto-bo/
+examples/nvidia-analysis/
+examples/frontier_cs_research/task_dynamic.yaml
+examples/apex-frontier
+examples/apex-prelim
+examples/deepresearch_bench
