@@ -117,3 +117,34 @@ def test_plateau_default_evals_since_improvement():
 
     # Default evals_since_improvement=0, should never fire
     assert runner.check(local_eval_count=5, global_eval_count=5) == []
+
+
+# --- Built-in 'challenge' action registration ---
+
+def test_challenge_action_registered_as_global_plateau():
+    """The 'challenge' built-in must default to global scope + plateau trigger.
+
+    Drift audits are a population property: one challenger pass across the run
+    is enough. Per-agent every-tick would burn turns and miss the point.
+    """
+    from coral.hub.heartbeat import (
+        DEFAULT_GLOBAL,
+        DEFAULT_PROMPTS,
+        DEFAULT_TRIGGER,
+    )
+
+    assert "challenge" in DEFAULT_PROMPTS
+    assert DEFAULT_PROMPTS["challenge"], "challenge prompt should not be empty"
+    assert DEFAULT_GLOBAL["challenge"] is True
+    assert DEFAULT_TRIGGER["challenge"] == "plateau"
+
+
+def test_challenge_default_in_config():
+    """The default heartbeat list should include 'challenge' as plateau+global."""
+    from coral.config import CoralConfig
+
+    config = CoralConfig()
+    by_name = {h.name: h for h in config.agents.heartbeat}
+    assert "challenge" in by_name, "challenge should ship in default heartbeat list"
+    assert by_name["challenge"].is_global is True
+    assert by_name["challenge"].trigger == "plateau"
