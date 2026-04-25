@@ -1,0 +1,46 @@
+task:
+  name: "Frontier-CS: vdb_pareto (low_latency) (TTT)"
+  description: |
+    Solve the 'vdb_pareto (low_latency)' research problem from the Frontier-CS benchmark.
+
+    Read the full problem statement in `statement.md`.
+    Write your solution in `solution.py`.
+
+    Your score will be 0-100 based on solution quality.
+  tips: |
+    - Read statement.md carefully for the exact interface and scoring formula.
+    - Evaluation timeout: 3600s.
+    - Language: python.
+
+grader:
+  timeout: 3600
+  direction: maximize
+  args:
+    problem_name: vdb_pareto
+    variant_name: "low_latency"
+    language: python
+    needs_gpu: false
+
+agents:
+  count: 1
+  runtime: opencode
+  model: sglang/qwen3-4b
+  research: false
+  max_turns: 200
+  gateway:
+    enabled: true
+    config: "./seed/litellm_config.yaml"
+  heartbeat:
+    - name: reflect
+      every: 5
+    - name: diagnose
+      every: 5
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./ttt/examples/frontier_cs_tasks/vdb_pareto__low_latency/seed"
+
+run:
+  verbose: false
+  ui: false
+  session: local

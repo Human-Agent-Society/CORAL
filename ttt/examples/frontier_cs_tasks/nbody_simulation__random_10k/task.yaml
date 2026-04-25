@@ -1,0 +1,46 @@
+task:
+  name: "Frontier-CS: nbody_simulation (random_10k) (TTT)"
+  description: |
+    Solve the 'nbody_simulation (random_10k)' research problem from the Frontier-CS benchmark.
+
+    Read the full problem statement in `statement.md`.
+    Write your solution in `solution.py`.
+
+    Your score will be 0-100 based on solution quality.
+  tips: |
+    - Read statement.md carefully for the exact interface and scoring formula.
+    - Evaluation timeout: 600s.
+    - Language: cpp.
+
+grader:
+  timeout: 600
+  direction: maximize
+  args:
+    problem_name: nbody_simulation
+    variant_name: "random_10k"
+    language: cpp
+    needs_gpu: false
+
+agents:
+  count: 1
+  runtime: opencode
+  model: sglang/qwen3-4b
+  research: false
+  max_turns: 200
+  gateway:
+    enabled: true
+    config: "./seed/litellm_config.yaml"
+  heartbeat:
+    - name: reflect
+      every: 5
+    - name: diagnose
+      every: 5
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./ttt/examples/frontier_cs_tasks/nbody_simulation__random_10k/seed"
+
+run:
+  verbose: false
+  ui: false
+  session: local
