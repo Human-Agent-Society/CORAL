@@ -40,9 +40,15 @@ class Grader(TaskGrader):
             return self.score(0.0, feedback=f"{sol_file} is empty.")
 
         # Use frontier_cs evaluator
+        import os
+
         from frontier_cs import SingleEvaluator
 
-        evaluator = SingleEvaluator(backend="docker", register_cleanup=False)
+        # base_dir points to the cloned Frontier-CS repo containing research/problems/
+        base_dir = os.environ.get("FRONTIER_CS_BASE_DIR", os.path.expanduser("~/Frontier-CS"))
+        base_dir_path = Path(base_dir) if base_dir else None
+
+        evaluator = SingleEvaluator(backend="docker", base_dir=base_dir_path, register_cleanup=False)
         result = evaluator.evaluate("research", problem_id=problem_id, code=code)
 
         if not result.success:
