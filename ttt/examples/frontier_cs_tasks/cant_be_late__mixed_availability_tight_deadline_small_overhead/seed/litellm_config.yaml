@@ -1,0 +1,22 @@
+model_list:
+  - model_name: "qwen3-4b"
+    litellm_params:
+      model: "hosted_vllm/qwen3-4b"
+      api_base: "http://127.0.0.1:30000/v1"
+      api_key: "EMPTY"
+      drop_params: true
+      max_tokens: 4096
+  - model_name: "qwen3-30b-a3b"
+    litellm_params:
+      model: "hosted_vllm/qwen3-30b-a3b"
+      api_base: "http://127.0.0.1:30000/v1"
+      api_key: "EMPTY"
+      drop_params: true
+      max_tokens: 4096
+
+litellm_settings:
+  drop_params: true
+  modify_params: true
+
+general_settings:
+  forward_client_headers_to_llm_api: true

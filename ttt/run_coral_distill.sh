@@ -204,18 +204,22 @@ else
 fi
 
 # --- SFT loss (replaces GRPO) ---
-# Use KL loss to prevent drift from the reference model.
-# No policy gradient, no clipping, no advantage estimation.
+# Optionally use KL loss to prevent drift from the reference model.
+# Disabled by default because the entropy computation OOMs on small GPU setups.
 SFT_ARGS=(
    --advantage-estimator grpo
    --disable-rewards-normalization
-   --use-kl-loss
-   --kl-loss-coef "${KL_LOSS_COEF:-0.01}"
-   --kl-loss-type low_var_kl
    --entropy-coef 0.00
    --eps-clip 1000.0
    --eps-clip-high 1000.0
 )
+if [ "${USE_KL_LOSS:-0}" = "1" ]; then
+   SFT_ARGS+=(
+      --use-kl-loss
+      --kl-loss-coef "${KL_LOSS_COEF:-0.01}"
+      --kl-loss-type low_var_kl
+   )
+fi
 # NOTE: eps-clip is set very high (1000) to effectively disable clipping.
 # With SFT data (all rewards positive, loss_mask=1 for good trajectories),
 # the loss reduces to standard cross-entropy + KL regularization.

@@ -44,6 +44,9 @@ ttt = [
     "fastapi>=0.115.0",
     "uvicorn>=0.30.0",
 ]
+frontier-cs = [
+    "frontier-cs @ git+https://github.com/FrontierCS/Frontier-CS.git",
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",

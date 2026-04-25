@@ -91,7 +91,9 @@ This incentivizes changes that improve eval scores relative to the previous comm
 ttt/
   coral_api_server.py   FastAPI proxy: SGLang forwarding, logprob extraction, sample creation
   coral_rollout.py      SLIME rollout function: agent lifecycle, eval monitoring, reward assignment
-  run_coral_rl.sh       Training launcher: Ray, SLIME train_async.py, model/GPU config
+  coral_distill.py      Self-distillation rollout: SFT on improving trajectories
+  run_coral_rl.sh       RL training launcher: Ray, SLIME train_async.py, model/GPU config
+  run_coral_distill.sh  Distillation training launcher: SFT variant of RL training
   run_coral_rl_docker.sh  Docker wrapper for run_coral_rl.sh
   docker/
     Dockerfile          Builds on SLIME base image, adds CORAL + opencode
@@ -99,6 +101,8 @@ ttt/
   slime/                SLIME framework (vendored, see acknowledgments)
   examples/
     circle_packing/     Example task: pack 26 circles into a unit square
+    eplb/               Expert Parallelism Load Balancer (MoE optimization)
+    frontier_cs/        Frontier-CS Research: cant_be_late scheduling (requires frontier-cs package)
   README.md             This file
 ```
 

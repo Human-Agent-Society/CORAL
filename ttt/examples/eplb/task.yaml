@@ -1,0 +1,66 @@
+task:
+  name: "Expert Parallelism Load Balancer (EPLB) TTT"
+  description: |
+    You are an expert programmer specializing in optimization algorithms. Your task is
+    to improve the Mixture-of-Expert models Expert Parallelism Load Balancer (MoE EPLB)
+    expert rearrangement algorithm.
+
+    This algorithm will take the load metrics recorded by the vLLM server, and rearrange
+    the experts to balance the load. It can make replicas of some experts to achieve
+    better load balancing.
+
+    Your goal will be two-fold:
+      1. Improve the algorithm to achieve better load balancing; while
+      2. Improve the algorithm to be more efficient, i.e. reduce the execution time
+         of the algorithm itself, since perfect load balancing is NP-hard.
+
+    The current algorithm is implemented in the `rebalance_experts` function:
+
+        def rebalance_experts(
+            weight: torch.Tensor,   # [num_moe_layers, num_logical_experts] load stats
+            num_replicas: int,      # total physical experts (must be multiple of num_gpus)
+            num_groups: int,        # number of expert groups
+            num_nodes: int,         # number of server nodes
+            num_gpus: int,          # number of GPUs (multiple of num_nodes)
+        ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+            # Returns: (physical_to_logical_map, logical_to_physical_map, expert_count)
+
+    The score is: 0.5 * balancedness_score_expert + 0.5 * speed_score
+    where speed_score = 0.002 / avg_inference_time (higher is better).
+  tips: |
+    - Eval timeout is 360s. If your solution takes longer, it scores as a timeout.
+    - The evaluator checks: load balancedness across experts and GPUs, plus algorithm speed.
+    - torch is always available.
+    - Focus on both algorithmic quality AND implementation efficiency.
+    - The current algorithm uses hierarchical packing. Consider: ILP relaxations,
+      greedy heuristics, GPU-accelerated sorting, vectorized operations.
+
+grader:
+  timeout: 360
+  direction: maximize
+  args:
+    program_file: "initial_program.py"
+
+agents:
+  count: 1
+  runtime: opencode
+  model: sglang/qwen3-4b
+  research: false
+  max_turns: 200
+  gateway:
+    enabled: true
+    config: "./seed/litellm_config.yaml"
+  heartbeat:
+    - name: reflect
+      every: 5
+    - name: diagnose
+      every: 5
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./ttt/examples/eplb/seed"
+
+run:
+  verbose: false
+  ui: false
+  session: local
