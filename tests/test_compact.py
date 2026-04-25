@@ -7,8 +7,6 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from coral.agent.builtin.claude_code import ClaudeCodeRuntime
 from coral.agent.builtin.codex import CodexRuntime
 from coral.agent.builtin.kiro import KiroRuntime
@@ -133,19 +131,6 @@ def test_compact_helper_is_noop_for_non_claude_runtime(tmp_path: Path) -> None:
     manager._compact_session_for("agent-1", tmp_path, "sid-xyz")
 
 
-def test_run_config_default_compact_timeout() -> None:
-    cfg = CoralConfig()
-    assert cfg.run.compact_timeout == pytest.approx(300.0)
-
-
-def test_run_config_compact_timeout_override() -> None:
-    cfg = CoralConfig.from_dict({
-        "task": {"name": "t", "description": "d"},
-        "run": {"compact_timeout": 60},
-    })
-    assert cfg.run.compact_timeout == pytest.approx(60.0)
-
-
 def test_resume_all_calls_compact_when_enabled(tmp_path: Path) -> None:
     """When resume_all is called with compact=True, the runtime is asked to
     compact each session before _setup_and_start_agent runs."""
@@ -202,7 +187,6 @@ def test_resume_all_calls_compact_when_enabled(tmp_path: Path) -> None:
     assert kwargs["session_id"] == "sid-xyz"
     assert kwargs["worktree_path"] == agents_dir / "agent-1"
     assert kwargs["model"] == "opus"
-    assert kwargs["timeout"] == pytest.approx(300.0)
 
 
 def test_resume_all_skips_compact_when_disabled(tmp_path: Path) -> None:

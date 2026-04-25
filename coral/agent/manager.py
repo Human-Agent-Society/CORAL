@@ -592,7 +592,6 @@ class AgentManager:
         gateway_url = self._gateway.url if self._gateway else None
         gateway_api_key = self._gateway_keys.get(agent_id)
         log_dir = self.paths.coral_dir / "public" / "logs"
-        timeout = float(self.config.run.compact_timeout)
         if self.verbose:
             print(f"[coral] Compacting context for {agent_id} (session {session_id[:12]}...)")
         try:
@@ -601,7 +600,6 @@ class AgentManager:
                 worktree_path=worktree_path,
                 model=self.config.agents.model,
                 log_dir=log_dir,
-                timeout=timeout,
                 gateway_url=gateway_url,
                 gateway_api_key=gateway_api_key,
             )

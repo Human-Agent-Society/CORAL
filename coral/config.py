@@ -122,7 +122,6 @@ class RunConfig:
     ui: bool = False
     session: str = "tmux"  # "local", "tmux", or "docker"
     docker_image: str = ""  # empty = auto-build from project Dockerfile
-    compact_timeout: float = 300.0  # seconds to wait for runtime /compact on resume
 
 
 @dataclass
