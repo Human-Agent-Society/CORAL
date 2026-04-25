@@ -121,11 +121,13 @@ def test_plateau_default_evals_since_improvement():
 
 # --- Built-in 'challenge' action registration ---
 
-def test_challenge_action_registered_as_global_plateau():
-    """The 'challenge' built-in must default to global scope + plateau trigger.
+def test_challenge_action_registered_as_global_interval():
+    """The 'challenge' built-in must default to global scope + interval trigger.
 
     Drift audits are a population property: one challenger pass across the run
-    is enough. Per-agent every-tick would burn turns and miss the point.
+    is enough. Interval (not plateau) so the audit fires on a regular cadence
+    regardless of whether scores are improving — drift can happen on a healthy
+    trajectory, and an audit that only fires on plateau audits too late.
     """
     from coral.hub.heartbeat import (
         DEFAULT_GLOBAL,
@@ -136,15 +138,15 @@ def test_challenge_action_registered_as_global_plateau():
     assert "challenge" in DEFAULT_PROMPTS
     assert DEFAULT_PROMPTS["challenge"], "challenge prompt should not be empty"
     assert DEFAULT_GLOBAL["challenge"] is True
-    assert DEFAULT_TRIGGER["challenge"] == "plateau"
+    assert DEFAULT_TRIGGER["challenge"] == "interval"
 
 
 def test_challenge_default_in_config():
-    """The default heartbeat list should include 'challenge' as plateau+global."""
+    """The default heartbeat list should include 'challenge' as interval+global."""
     from coral.config import CoralConfig
 
     config = CoralConfig()
     by_name = {h.name: h for h in config.agents.heartbeat}
     assert "challenge" in by_name, "challenge should ship in default heartbeat list"
     assert by_name["challenge"].is_global is True
-    assert by_name["challenge"].trigger == "plateau"
+    assert by_name["challenge"].trigger == "interval"

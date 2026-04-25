@@ -1,6 +1,8 @@
 ## Heartbeat: Challenge — Audit Shared Memory for Drift
 
-**The run has plateaued and shared memory is older than it has been audited.** When agents stop improving while continuing to consult the same notes and skills, the working set has likely picked up assumptions that are unsupported, stale, or one-off accidents that got promoted to "common knowledge". Your job in this pass is to *act as the adversary* against shared memory.
+**Shared memory accumulates faster than it is questioned.** As notes and skills pile up across the run, the working set quietly picks up assumptions that are unsupported, stale, or one-off accidents that got promoted to "common knowledge" — even while overall scores keep climbing on unrelated dimensions. Your job in this pass is to *act as the adversary* against shared memory.
+
+This runs on a regular cadence regardless of how the run is going: drift can happen on a healthy upward trajectory just as easily as on a plateau, and an audit that only fires when things go wrong audits too late.
 
 This is **not** lint_wiki — that pass merges duplicates and fixes orphan pages. This pass questions whether the surviving content is actually *true*.
 

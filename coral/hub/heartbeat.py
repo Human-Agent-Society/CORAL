@@ -54,7 +54,7 @@ DEFAULT_TRIGGER: dict[str, str] = {
     "consolidate": "interval",
     "pivot": "plateau",
     "lint_wiki": "interval",
-    "challenge": "plateau",
+    "challenge": "interval",
 }
 
 # Protected actions: reflect is always local, consolidate is always global
