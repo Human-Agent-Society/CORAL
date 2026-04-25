@@ -29,6 +29,87 @@ class ClaudeCodeRuntime:
     def extract_session_id(self, log_path: Path) -> str | None:
         return _extract_session_id(log_path)
 
+    def compact_session(
+        self,
+        session_id: str,
+        worktree_path: Path,
+        model: str = "opus",
+        log_dir: Path | None = None,
+        timeout: float = 300.0,
+        gateway_url: str | None = None,
+        gateway_api_key: str | None = None,
+    ) -> bool:
+        """Run `/compact` against an existing Claude Code session.
+
+        Spawns a one-shot `claude -p --resume <session_id> "/compact"` and
+        waits for it to finish so the compacted transcript is on disk before
+        the agent resumes. Returns True on success, False on failure or
+        timeout.
+        """
+        agent_id_file = worktree_path / ".coral_agent_id"
+        agent_id = agent_id_file.read_text().strip() if agent_id_file.exists() else "unknown"
+
+        if log_dir is None:
+            log_dir = worktree_path / ".claude" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        log_path = log_dir / f"{agent_id}.compact.{session_id[:8]}.log"
+
+        cmd = [
+            "claude",
+            "-p", "/compact",
+            "--model", model,
+            "--resume", session_id,
+            "--output-format", "stream-json",
+            "--verbose",
+        ]
+
+        logger.info(f"Compacting session {session_id} for agent {agent_id}")
+        logger.info(f"Command: {' '.join(cmd)}")
+
+        agent_env = _clean_env()
+        worktree_venv = str(worktree_path / ".venv")
+        agent_env["UV_PROJECT_ENVIRONMENT"] = worktree_venv
+        agent_env["VIRTUAL_ENV"] = worktree_venv
+        venv_bin = str(worktree_path / ".venv" / "bin")
+        agent_env["PATH"] = venv_bin + ":" + agent_env.get("PATH", "")
+
+        if gateway_url:
+            agent_env["ANTHROPIC_BASE_URL"] = gateway_url
+        if gateway_api_key:
+            agent_env["ANTHROPIC_API_KEY"] = gateway_api_key
+
+        try:
+            with open(log_path, "w", buffering=1) as log_file:
+                result = subprocess.run(
+                    cmd,
+                    cwd=str(worktree_path),
+                    stdout=log_file,
+                    stderr=subprocess.STDOUT,
+                    env=agent_env,
+                    timeout=timeout,
+                    check=False,
+                )
+        except subprocess.TimeoutExpired:
+            logger.warning(
+                f"Compaction for {agent_id} (session {session_id}) timed out "
+                f"after {timeout}s; resuming with un-compacted context"
+            )
+            return False
+        except FileNotFoundError as e:
+            logger.warning(f"Compaction for {agent_id} failed: {e}")
+            return False
+
+        if result.returncode != 0:
+            logger.warning(
+                f"Compaction for {agent_id} exited rc={result.returncode}; "
+                f"see {log_path} for details"
+            )
+            return False
+
+        logger.info(f"Compacted session {session_id} for agent {agent_id}")
+        return True
+
     def start(
         self,
         worktree_path: Path,

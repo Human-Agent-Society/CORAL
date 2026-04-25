@@ -304,6 +304,9 @@ def _resume_in_tmux(args: argparse.Namespace, config: CoralConfig, coral_dir: Pa
     instruction = getattr(args, "instruction", None)
     if instruction:
         cmd.extend(["--instruction", instruction])
+    # Forward --compact flag
+    if getattr(args, "compact", False):
+        cmd.append("--compact")
     # Forward user overrides, then force local (inner process is already in tmux)
     cmd.extend(getattr(args, "overrides", []))
     cmd.append("run.session=local")
@@ -479,6 +482,8 @@ def _resume_in_docker(args: argparse.Namespace, config: CoralConfig, coral_dir: 
     instruction = getattr(args, "instruction", None)
     if instruction:
         docker_cmd.extend(["--instruction", instruction])
+    if getattr(args, "compact", False):
+        docker_cmd.append("--compact")
     docker_cmd.extend(getattr(args, "overrides", []))
 
     _run_docker_container(docker_cmd, container_name)
@@ -587,8 +592,9 @@ def cmd_resume(args: argparse.Namespace) -> None:
         print(f"[coral] Model:   {config.agents.model}")
 
     instruction = getattr(args, "instruction", None)
+    compact = bool(getattr(args, "compact", False))
     manager = AgentManager(config, verbose=verbose)
-    handles = manager.resume_all(paths, instruction=instruction)
+    handles = manager.resume_all(paths, instruction=instruction, compact=compact)
 
     print(f"Resumed {len(handles)} agent(s):")
     for h in handles:

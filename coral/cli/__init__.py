@@ -184,7 +184,12 @@ Run 'coral <command> --help' for details on any command."""
         "resume",
         help="Resume a previous run",
         description="Resume agents from a previous run, restoring their sessions.",
-        epilog="Examples:\n  coral resume\n  coral resume --task my-task agents.model=opus",
+        epilog=(
+            "Examples:\n"
+            "  coral resume\n"
+            "  coral resume --task my-task agents.model=opus\n"
+            "  coral resume --compact            Compact each agent's session before resuming"
+        ),
         formatter_class=_CommandHelpFormatter,
     )
     _add_run_args(p_resume)
@@ -194,6 +199,15 @@ Run 'coral <command> --help' for details on any command."""
         type=str,
         default=None,
         help="Additional instruction to inject into agents at resume time",
+    )
+    p_resume.add_argument(
+        "--compact",
+        action="store_true",
+        default=False,
+        help=(
+            "Run the runtime's /compact equivalent on each saved session "
+            "before resuming. Reduces context size; failures are non-fatal."
+        ),
     )
     p_resume.add_argument(
         "overrides",
