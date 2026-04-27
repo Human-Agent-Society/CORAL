@@ -258,8 +258,6 @@ def _start_in_docker(args: argparse.Namespace, config: CoralConfig) -> None:
         "start", "--config", f"/task/{config_path.name}",
         "workspace.run_dir=/app/run", "workspace.repo_path=/repo", "run.session=local",
     ])
-    if getattr(args, "compact", False):
-        docker_cmd.append("--compact")
     docker_cmd.extend(getattr(args, "overrides", []))
 
     _run_docker_container(docker_cmd, container_name)
