@@ -168,11 +168,22 @@ Run 'coral <command> --help' for details on any command."""
             "Examples:\n"
             "  coral start -c task.yaml\n"
             "  coral start -c task.yaml agents.count=4 agents.model=opus\n"
+            "  coral start -c task.yaml --compact   Compact each agent's session before every resume\n"
             "  coral start -c task.yaml run.verbose=true run.ui=true run.session=local"
         ),
         formatter_class=_CommandHelpFormatter,
     )
     p_start.add_argument("--config", "-c", required=True, help="Path to task config YAML")
+    p_start.add_argument(
+        "--compact",
+        action="store_true",
+        default=False,
+        help=(
+            "Auto-compact each agent's session before every resume — both the "
+            "post-eval restart cycle and the user-initiated coral resume. "
+            "Claude Code only; failures are non-fatal."
+        ),
+    )
     p_start.add_argument(
         "overrides",
         nargs="*",
@@ -188,7 +199,7 @@ Run 'coral <command> --help' for details on any command."""
             "Examples:\n"
             "  coral resume\n"
             "  coral resume --task my-task agents.model=opus\n"
-            "  coral resume --compact            Compact each agent's session before resuming"
+            "  coral resume --compact            Auto-compact each agent's session before every resume"
         ),
         formatter_class=_CommandHelpFormatter,
     )
@@ -205,8 +216,9 @@ Run 'coral <command> --help' for details on any command."""
         action="store_true",
         default=False,
         help=(
-            "Run the runtime's /compact equivalent on each saved session "
-            "before resuming. Reduces context size; failures are non-fatal."
+            "Auto-compact each agent's session before every resume — both the "
+            "user-initiated coral resume and every internal interrupt-and-resume "
+            "after each eval. Claude Code only; failures are non-fatal."
         ),
     )
     p_resume.add_argument(

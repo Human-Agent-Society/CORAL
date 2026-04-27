@@ -131,65 +131,12 @@ def test_compact_helper_is_noop_for_non_claude_runtime(tmp_path: Path) -> None:
     manager._compact_session_for("agent-1", tmp_path, "sid-xyz")
 
 
-def test_resume_all_calls_compact_when_enabled(tmp_path: Path) -> None:
-    """When resume_all is called with compact=True, the runtime is asked to
-    compact each session before _setup_and_start_agent runs."""
-    from coral.agent.manager import AgentManager
-    from coral.workspace import ProjectPaths
+def _make_manager_with_paths(tmp_path: Path, *, auto_compact: bool):
+    """Helper: build a real AgentManager with a fake ProjectPaths.
 
-    # Build a minimal fake ProjectPaths
-    coral_dir = tmp_path / ".coral"
-    (coral_dir / "public").mkdir(parents=True)
-    (coral_dir / "private").mkdir(parents=True)
-    (coral_dir / "private" / "sessions").mkdir()
-    agents_dir = tmp_path / "agents"
-    (agents_dir / "agent-1").mkdir(parents=True)
-    (agents_dir / "agent-1" / ".coral_agent_id").write_text("agent-1")
-    repo_dir = tmp_path / "repo"
-    repo_dir.mkdir()
-    run_dir = tmp_path / "run"
-    run_dir.mkdir()
-
-    paths = ProjectPaths(
-        results_dir=tmp_path / "results",
-        task_dir=tmp_path,
-        run_dir=run_dir,
-        coral_dir=coral_dir,
-        agents_dir=agents_dir,
-        repo_dir=repo_dir,
-    )
-
-    # Pre-seed sessions.json so resume_all picks up a session for agent-1
-    (coral_dir / "public" / "sessions.json").write_text('{"agent-1": "sid-xyz"}')
-
-    cfg = CoralConfig.from_dict({
-        "task": {"name": "t", "description": "d"},
-        "agents": {"count": 1, "model": "opus", "runtime": "claude-code"},
-    })
-    manager = AgentManager(cfg, verbose=False)
-
-    # Stub out heavy operations so we can focus on the compact path.
-    manager._start_gateway_if_enabled = MagicMock()  # type: ignore[method-assign]
-    manager._start_grader_daemon = MagicMock()  # type: ignore[method-assign]
-    manager._kill_old_agent_processes = MagicMock()  # type: ignore[method-assign]
-    manager._setup_and_start_agent = MagicMock(  # type: ignore[method-assign]
-        return_value=MagicMock(agent_id="agent-1", session_id="sid-xyz")
-    )
-    manager._write_pid_file = MagicMock()  # type: ignore[method-assign]
-
-    # Force session validation to accept our fake session
-    with patch("coral.agent.manager._validate_sessions", return_value={"agent-1": "sid-xyz"}), \
-         patch.object(manager.runtime, "compact_session", return_value=True) as compact:
-        manager.resume_all(paths, compact=True)
-
-    compact.assert_called_once()
-    kwargs = compact.call_args.kwargs
-    assert kwargs["session_id"] == "sid-xyz"
-    assert kwargs["worktree_path"] == agents_dir / "agent-1"
-    assert kwargs["model"] == "opus"
-
-
-def test_resume_all_skips_compact_when_disabled(tmp_path: Path) -> None:
+    Stubs out heavy lifecycle hooks so we can drive the compact code paths
+    in isolation.
+    """
     from coral.agent.manager import AgentManager
     from coral.workspace import ProjectPaths
 
@@ -218,7 +165,7 @@ def test_resume_all_skips_compact_when_disabled(tmp_path: Path) -> None:
         "task": {"name": "t", "description": "d"},
         "agents": {"count": 1, "model": "opus", "runtime": "claude-code"},
     })
-    manager = AgentManager(cfg, verbose=False)
+    manager = AgentManager(cfg, verbose=False, auto_compact=auto_compact)
     manager._start_gateway_if_enabled = MagicMock()  # type: ignore[method-assign]
     manager._start_grader_daemon = MagicMock()  # type: ignore[method-assign]
     manager._kill_old_agent_processes = MagicMock()  # type: ignore[method-assign]
@@ -226,12 +173,141 @@ def test_resume_all_skips_compact_when_disabled(tmp_path: Path) -> None:
         return_value=MagicMock(agent_id="agent-1", session_id="sid-xyz")
     )
     manager._write_pid_file = MagicMock()  # type: ignore[method-assign]
+    return manager, paths
 
-    with patch("coral.agent.manager._validate_sessions", return_value={"agent-1": "sid-xyz"}), \
-         patch.object(manager.runtime, "compact_session", return_value=True) as compact:
-        manager.resume_all(paths)  # compact defaults to False
 
-    compact.assert_not_called()
+def test_resume_all_passes_session_through_to_setup(tmp_path: Path) -> None:
+    """resume_all delegates to _setup_and_start_agent (where compaction now
+    happens, gated on the auto_compact flag)."""
+    manager, paths = _make_manager_with_paths(tmp_path, auto_compact=True)
+    with patch("coral.agent.manager._validate_sessions", return_value={"agent-1": "sid-xyz"}):
+        manager.resume_all(paths)
+    manager._setup_and_start_agent.assert_called_once()
+    kwargs = manager._setup_and_start_agent.call_args.kwargs
+    assert kwargs["resume_session_id"] == "sid-xyz"
+
+
+def test_setup_and_start_agent_compacts_when_auto_compact(tmp_path: Path) -> None:
+    """With auto_compact=True, every resume call (including post-eval restart)
+    should run compact_session before runtime.start."""
+    from coral.agent.manager import AgentManager
+
+    cfg = CoralConfig.from_dict({
+        "task": {"name": "t", "description": "d"},
+        "agents": {"count": 1, "model": "opus", "runtime": "claude-code"},
+    })
+    manager = AgentManager(cfg, verbose=False, auto_compact=True)
+
+    # _setup_and_start_agent needs paths set
+    from coral.workspace import ProjectPaths
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public" / "logs").mkdir(parents=True)
+    paths = ProjectPaths(
+        results_dir=tmp_path / "results",
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=tmp_path / "agents",
+        repo_dir=tmp_path / "repo",
+    )
+    manager.paths = paths
+
+    with patch.object(manager, "_compact_session_for") as compact_for, \
+         patch("coral.agent.manager.create_agent_worktree", return_value=tmp_path / "wt"), \
+         patch("coral.agent.manager.setup_gitignore"), \
+         patch("coral.agent.manager.setup_worktree_env"), \
+         patch("coral.agent.manager.write_coral_dir"), \
+         patch("coral.agent.manager.setup_shared_state"), \
+         patch("coral.agent.manager.setup_claude_settings"), \
+         patch("coral.agent.manager.read_agent_heartbeat", return_value={"actions": []}), \
+         patch("coral.agent.manager.write_agent_id"), \
+         patch("coral.agent.manager.generate_coral_md", return_value="# fake"), \
+         patch.object(manager.runtime, "start", return_value=MagicMock()):
+        # Make sure the worktree path the patched create_agent_worktree returns exists
+        (tmp_path / "wt").mkdir(exist_ok=True)
+        manager._setup_and_start_agent("agent-1", resume_session_id="sid-xyz")
+
+    compact_for.assert_called_once_with("agent-1", tmp_path / "wt", "sid-xyz")
+
+
+def test_setup_and_start_agent_skips_compact_on_fresh_start(tmp_path: Path) -> None:
+    """No resume_session_id → no compaction even if auto_compact is True."""
+    from coral.agent.manager import AgentManager
+    from coral.workspace import ProjectPaths
+
+    cfg = CoralConfig.from_dict({
+        "task": {"name": "t", "description": "d"},
+        "agents": {"count": 1, "model": "opus", "runtime": "claude-code"},
+    })
+    manager = AgentManager(cfg, verbose=False, auto_compact=True)
+
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public" / "logs").mkdir(parents=True)
+    paths = ProjectPaths(
+        results_dir=tmp_path / "results",
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=tmp_path / "agents",
+        repo_dir=tmp_path / "repo",
+    )
+    manager.paths = paths
+
+    with patch.object(manager, "_compact_session_for") as compact_for, \
+         patch("coral.agent.manager.create_agent_worktree", return_value=tmp_path / "wt"), \
+         patch("coral.agent.manager.setup_gitignore"), \
+         patch("coral.agent.manager.setup_worktree_env"), \
+         patch("coral.agent.manager.write_coral_dir"), \
+         patch("coral.agent.manager.setup_shared_state"), \
+         patch("coral.agent.manager.setup_claude_settings"), \
+         patch("coral.agent.manager.read_agent_heartbeat", return_value={"actions": []}), \
+         patch("coral.agent.manager.write_agent_id"), \
+         patch("coral.agent.manager.generate_coral_md", return_value="# fake"), \
+         patch.object(manager.runtime, "start", return_value=MagicMock()):
+        (tmp_path / "wt").mkdir(exist_ok=True)
+        manager._setup_and_start_agent("agent-1", resume_session_id=None)
+
+    compact_for.assert_not_called()
+
+
+def test_setup_and_start_agent_skips_compact_when_flag_off(tmp_path: Path) -> None:
+    """auto_compact=False → never compact, even on resume."""
+    from coral.agent.manager import AgentManager
+    from coral.workspace import ProjectPaths
+
+    cfg = CoralConfig.from_dict({
+        "task": {"name": "t", "description": "d"},
+        "agents": {"count": 1, "model": "opus", "runtime": "claude-code"},
+    })
+    manager = AgentManager(cfg, verbose=False, auto_compact=False)
+
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public" / "logs").mkdir(parents=True)
+    paths = ProjectPaths(
+        results_dir=tmp_path / "results",
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=tmp_path / "agents",
+        repo_dir=tmp_path / "repo",
+    )
+    manager.paths = paths
+
+    with patch.object(manager, "_compact_session_for") as compact_for, \
+         patch("coral.agent.manager.create_agent_worktree", return_value=tmp_path / "wt"), \
+         patch("coral.agent.manager.setup_gitignore"), \
+         patch("coral.agent.manager.setup_worktree_env"), \
+         patch("coral.agent.manager.write_coral_dir"), \
+         patch("coral.agent.manager.setup_shared_state"), \
+         patch("coral.agent.manager.setup_claude_settings"), \
+         patch("coral.agent.manager.read_agent_heartbeat", return_value={"actions": []}), \
+         patch("coral.agent.manager.write_agent_id"), \
+         patch("coral.agent.manager.generate_coral_md", return_value="# fake"), \
+         patch.object(manager.runtime, "start", return_value=MagicMock()):
+        (tmp_path / "wt").mkdir(exist_ok=True)
+        manager._setup_and_start_agent("agent-1", resume_session_id="sid-xyz")
+
+    compact_for.assert_not_called()
 
 
 def test_cli_resume_parses_compact_flag() -> None:

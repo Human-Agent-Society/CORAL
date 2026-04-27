@@ -68,6 +68,8 @@ def _build_coral_command(args: argparse.Namespace) -> list[str]:
     """Reconstruct the coral start command with run.session=local added."""
     cmd = [_resolved_python(), "-m", "coral.cli", "start"]
     cmd.extend(["--config", str(Path(args.config).resolve())])
+    if getattr(args, "compact", False):
+        cmd.append("--compact")
     # Forward user overrides, then force local (inner process is already in tmux)
     cmd.extend(getattr(args, "overrides", []))
     cmd.append("run.session=local")
@@ -258,6 +260,8 @@ def _start_in_docker(args: argparse.Namespace, config: CoralConfig) -> None:
         "start", "--config", f"/task/{config_path.name}",
         "workspace.run_dir=/app/run", "workspace.repo_path=/repo", "run.session=local",
     ])
+    if getattr(args, "compact", False):
+        docker_cmd.append("--compact")
     docker_cmd.extend(getattr(args, "overrides", []))
 
     _run_docker_container(docker_cmd, container_name)
@@ -400,7 +404,11 @@ def cmd_start(args: argparse.Namespace) -> None:
             print("[coral] Warm-start: enabled")
         print()
 
-    manager = AgentManager(config, verbose=verbose, config_dir=config_path.parent)
+    auto_compact = bool(getattr(args, "compact", False))
+    manager = AgentManager(
+        config, verbose=verbose, config_dir=config_path.parent,
+        auto_compact=auto_compact,
+    )
     handles = manager.start_all()
 
     print(f"Started {len(handles)} agent(s):")
@@ -592,9 +600,9 @@ def cmd_resume(args: argparse.Namespace) -> None:
         print(f"[coral] Model:   {config.agents.model}")
 
     instruction = getattr(args, "instruction", None)
-    compact = bool(getattr(args, "compact", False))
-    manager = AgentManager(config, verbose=verbose)
-    handles = manager.resume_all(paths, instruction=instruction, compact=compact)
+    auto_compact = bool(getattr(args, "compact", False))
+    manager = AgentManager(config, verbose=verbose, auto_compact=auto_compact)
+    handles = manager.resume_all(paths, instruction=instruction)
 
     print(f"Resumed {len(handles)} agent(s):")
     for h in handles:

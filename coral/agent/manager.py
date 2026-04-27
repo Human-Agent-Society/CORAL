@@ -50,13 +50,20 @@ logger = logging.getLogger(__name__)
 class AgentManager:
     """Manage the lifecycle of multiple CORAL agents."""
 
-    def __init__(self, config: CoralConfig, verbose: bool = False, config_dir: Path | None = None) -> None:
+    def __init__(
+        self, config: CoralConfig, verbose: bool = False,
+        config_dir: Path | None = None, auto_compact: bool = False,
+    ) -> None:
         self.config = config
         self.config_dir = config_dir
         self.runtime: AgentRuntime = get_runtime(config.agents.runtime)
         self.handles: list[AgentHandle] = []
         self.paths: ProjectPaths | None = None
         self.verbose = verbose
+        # When True, compact each agent's session right before every resume —
+        # both the user-initiated `coral resume` and every internal interrupt-
+        # and-resume cycle (i.e. after each eval).
+        self._auto_compact = auto_compact
         self._running = False
         self._stop_event = threading.Event()
         self._stopping = False
@@ -368,6 +375,11 @@ class AgentManager:
         )
         (worktree_path / instruction_file).write_text(coral_md)
 
+        # Auto-compact: every resume (post-eval restart, dead-agent restart,
+        # user-initiated coral resume) trims context before relaunching.
+        if resume_session_id and self._auto_compact:
+            self._compact_session_for(agent_id, worktree_path, resume_session_id)
+
         # Start agent
         handle = self.runtime.start(
             worktree_path=worktree_path,
@@ -441,13 +453,12 @@ class AgentManager:
         self,
         paths: ProjectPaths,
         instruction: str | None = None,
-        compact: bool = False,
     ) -> list[AgentHandle]:
         """Resume agents into an existing run's worktrees.
 
-        If compact is True, run the runtime's `/compact` equivalent on each
-        agent's saved session before starting it. Compaction failures are
-        non-fatal: the agent resumes with un-compacted context.
+        If the manager was constructed with auto_compact=True, every resume
+        (here and in the per-eval interrupt-and-resume cycle) runs the
+        runtime's /compact first. Compaction failures are non-fatal.
         """
         self._start_time = datetime.now(UTC)
         self.paths = paths
@@ -511,8 +522,6 @@ class AgentManager:
             if session_id:
                 logger.info(f"Resuming {agent_id} with session {session_id}")
                 prompt = instruction if instruction else None  # None → runtime default
-                if compact:
-                    self._compact_session_for(agent_id, agent_dir, session_id)
             else:
                 logger.info(f"Starting {agent_id} fresh (no session to resume)")
                 prompt = fresh_start_prompt
