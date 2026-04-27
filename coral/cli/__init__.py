@@ -168,22 +168,11 @@ Run 'coral <command> --help' for details on any command."""
             "Examples:\n"
             "  coral start -c task.yaml\n"
             "  coral start -c task.yaml agents.count=4 agents.model=opus\n"
-            "  coral start -c task.yaml --compact   Compact each agent's session before every resume\n"
             "  coral start -c task.yaml run.verbose=true run.ui=true run.session=local"
         ),
         formatter_class=_CommandHelpFormatter,
     )
     p_start.add_argument("--config", "-c", required=True, help="Path to task config YAML")
-    p_start.add_argument(
-        "--compact",
-        action="store_true",
-        default=False,
-        help=(
-            "Auto-compact each agent's session before every resume — both the "
-            "post-eval restart cycle and the user-initiated coral resume. "
-            "Claude Code only; failures are non-fatal."
-        ),
-    )
     p_start.add_argument(
         "overrides",
         nargs="*",
@@ -195,12 +184,7 @@ Run 'coral <command> --help' for details on any command."""
         "resume",
         help="Resume a previous run",
         description="Resume agents from a previous run, restoring their sessions.",
-        epilog=(
-            "Examples:\n"
-            "  coral resume\n"
-            "  coral resume --task my-task agents.model=opus\n"
-            "  coral resume --compact            Auto-compact each agent's session before every resume"
-        ),
+        epilog="Examples:\n  coral resume\n  coral resume --task my-task agents.model=opus",
         formatter_class=_CommandHelpFormatter,
     )
     _add_run_args(p_resume)
@@ -210,16 +194,6 @@ Run 'coral <command> --help' for details on any command."""
         type=str,
         default=None,
         help="Additional instruction to inject into agents at resume time",
-    )
-    p_resume.add_argument(
-        "--compact",
-        action="store_true",
-        default=False,
-        help=(
-            "Auto-compact each agent's session before every resume — both the "
-            "user-initiated coral resume and every internal interrupt-and-resume "
-            "after each eval. Claude Code only; failures are non-fatal."
-        ),
     )
     p_resume.add_argument(
         "overrides",

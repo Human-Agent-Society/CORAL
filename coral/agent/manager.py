@@ -52,7 +52,7 @@ class AgentManager:
 
     def __init__(
         self, config: CoralConfig, verbose: bool = False,
-        config_dir: Path | None = None, auto_compact: bool = False,
+        config_dir: Path | None = None,
     ) -> None:
         self.config = config
         self.config_dir = config_dir
@@ -60,10 +60,6 @@ class AgentManager:
         self.handles: list[AgentHandle] = []
         self.paths: ProjectPaths | None = None
         self.verbose = verbose
-        # When True, compact each agent's session right before every resume —
-        # both the user-initiated `coral resume` and every internal interrupt-
-        # and-resume cycle (i.e. after each eval).
-        self._auto_compact = auto_compact
         self._running = False
         self._stop_event = threading.Event()
         self._stopping = False
@@ -375,9 +371,11 @@ class AgentManager:
         )
         (worktree_path / instruction_file).write_text(coral_md)
 
-        # Auto-compact: every resume (post-eval restart, dead-agent restart,
-        # user-initiated coral resume) trims context before relaunching.
-        if resume_session_id and self._auto_compact:
+        # Compact context before every resume — post-eval restart, dead-agent
+        # restart, and user-initiated coral resume all flow through here. The
+        # call is a no-op for runtimes that don't expose compact_session
+        # (Codex/OpenCode/Kiro), so this stays cheap on those.
+        if resume_session_id:
             self._compact_session_for(agent_id, worktree_path, resume_session_id)
 
         # Start agent
@@ -456,9 +454,10 @@ class AgentManager:
     ) -> list[AgentHandle]:
         """Resume agents into an existing run's worktrees.
 
-        If the manager was constructed with auto_compact=True, every resume
-        (here and in the per-eval interrupt-and-resume cycle) runs the
-        runtime's /compact first. Compaction failures are non-fatal.
+        Every resume — here and in the per-eval interrupt-and-resume cycle —
+        runs the runtime's /compact first via `_setup_and_start_agent`.
+        Compaction failures are non-fatal and skipped on runtimes without
+        a compact_session method.
         """
         self._start_time = datetime.now(UTC)
         self.paths = paths
