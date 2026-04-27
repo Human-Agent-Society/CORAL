@@ -372,6 +372,13 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
 
     Each worktree gets its own isolated ``.venv`` via UV_PROJECT_ENVIRONMENT
     to prevent concurrent agents from corrupting a shared venv.
+
+    Idempotent: if the worktree's ``.venv`` is already populated (the python
+    binary exists), skip both the setup commands and the coral reinstall.
+    Deps don't change mid-run, so re-running ``uv sync`` on every
+    interrupt-and-resume cycle is wasted work — and visibly so once
+    compaction adds another wait on top. To force a re-sync, delete the
+    ``.venv`` directory before resuming.
     """
     if not setup_commands:
         return
@@ -379,6 +386,14 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
     # Force uv to create/use a venv inside this worktree, even if
     # pyproject.toml is resolved from a parent directory.
     worktree_venv = worktree_path / ".venv"
+    venv_python = worktree_venv / "bin" / "python"
+    if venv_python.exists():
+        logger.debug(
+            f"Worktree venv already populated at {worktree_venv}, "
+            f"skipping setup commands"
+        )
+        return
+
     env_override = {"UV_PROJECT_ENVIRONMENT": str(worktree_venv)}
     run_setup_commands(setup_commands, worktree_path, extra_env=env_override)
 
