@@ -805,7 +805,14 @@ class AgentManager:
         signal.signal(signal.SIGTERM, _signal_handler)
         signal.signal(signal.SIGINT, _signal_handler)
 
-        seen_attempts = self._get_seen_attempts()
+        # Only mark already-scored attempts as "seen" at startup. Pending
+        # attempts left over from a previous manager (still in the grader
+        # queue or mid-grade when we came up) need to flow through the
+        # normal new-attempts path so heartbeat fires for them when they
+        # transition to scored. Without this, anything pending at the
+        # moment of a `coral resume` would silently bypass the per-eval
+        # interrupt-and-resume cycle for the rest of the run.
+        seen_attempts = self._filter_scored(self._get_seen_attempts())
 
         logger.info(f"Monitoring {len(self.handles)} agent(s) (check every {check_interval}s)...")
 
