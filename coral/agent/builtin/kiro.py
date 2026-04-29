@@ -29,6 +29,22 @@ class KiroRuntime:
     def extract_session_id(self, log_path: Path) -> str | None:
         return None  # Kiro doesn't expose session IDs in the same way
 
+    def classify_exit(
+        self,
+        log_path: Path,
+        exit_code: int | None,
+        uptime_seconds: float | None,
+        min_clean_runtime_seconds: int = 60,
+    ) -> str:
+        """Classify a Kiro subprocess exit using the uptime fallback.
+
+        Kiro emits plain text without a stable terminal marker, so we treat
+        an `exit_code==0` as clean only when the agent ran for at least
+        `min_clean_runtime_seconds`; shorter exits count as crashes.
+        """
+        from coral.agent.exit_classifier import classify_by_uptime
+        return classify_by_uptime(exit_code, uptime_seconds, min_clean_runtime_seconds)
+
     def start(
         self,
         worktree_path: Path,

@@ -58,6 +58,22 @@ class OpenCodeRuntime:
     def extract_session_id(self, log_path: Path) -> str | None:
         return _extract_opencode_session_id(log_path)
 
+    def classify_exit(
+        self,
+        log_path: Path,
+        exit_code: int | None,
+        uptime_seconds: float | None,
+        min_clean_runtime_seconds: int = 60,
+    ) -> str:
+        """Classify an OpenCode subprocess exit using the uptime fallback.
+
+        OpenCode's log format does not yet include a stable terminal marker,
+        so we use the conservative uptime heuristic: `exit_code==0` is clean
+        only when the agent ran for at least `min_clean_runtime_seconds`.
+        """
+        from coral.agent.exit_classifier import classify_by_uptime
+        return classify_by_uptime(exit_code, uptime_seconds, min_clean_runtime_seconds)
+
     def start(
         self,
         worktree_path: Path,

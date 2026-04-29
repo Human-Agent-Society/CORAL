@@ -10,13 +10,21 @@ import os
 import signal
 import threading
 import time
+from collections import deque
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from coral.agent.exit_classifier import classify_by_uptime
 from coral.agent.heartbeat import HeartbeatRunner
 from coral.agent.registry import get_runtime
 from coral.agent.runtime import AgentHandle, AgentRuntime
+from coral.agent.state import (
+    AgentRuntimeState,
+    AgentStateDocument,
+    RestartEvent,
+    write_agent_state,
+)
 from coral.agent.warmstart import WarmStartRunner
 from coral.config import CoralConfig
 from coral.hub.heartbeat import (
@@ -68,6 +76,18 @@ class AgentManager:
         self._agent_eval_counts: dict[str, int] = {}
         self._agent_best_scores: dict[str, float] = {}
         self._agent_evals_since_improvement: dict[str, int] = {}
+        # Reliability state. `_started_at` records when each agent's current
+        # subprocess began running (epoch seconds), used as the uptime input
+        # for the runtime exit classifier. `_crash_history` is the sliding
+        # window of non-clean exits the circuit breaker counts. `_paused_until`
+        # is the wall-clock deadline at which a paused agent is allowed to
+        # restart again. `_pause_count` and `_last_fault_at` are persisted
+        # metadata on `agent_state.json` for `coral status`.
+        self._started_at: dict[str, float] = {}
+        self._crash_history: dict[str, deque[RestartEvent]] = {}
+        self._paused_until: dict[str, float] = {}
+        self._pause_count: dict[str, int] = {}
+        self._last_fault_at: dict[str, str] = {}
         self._gateway: Any | None = None
         self._gateway_keys: dict[str, str] = {}  # agent_id -> proxy key
         self._grader_proc: multiprocessing.Process | None = None
@@ -388,6 +408,8 @@ class AgentManager:
             gateway_url=gateway_url,
             gateway_api_key=gateway_api_key,
         )
+        # Record fresh process start time for the exit-classifier uptime check.
+        self._started_at[agent_id] = time.time()
         return handle
 
     def _restart_agent(
@@ -646,24 +668,51 @@ class AgentManager:
                 scored.add(fname)
         return scored
 
-    def _read_latest_attempt(self, new_files: set[str]) -> dict[str, Any] | None:
-        """Read the most recent attempt from a set of new attempt filenames."""
+    def _read_latest_attempt(
+        self, new_files: set[str], agent_id: str | None = None
+    ) -> dict[str, Any] | None:
+        """Read the most recent attempt from a set of new attempt filenames.
+
+        When `agent_id` is provided, only attempts owned by that agent are
+        considered. This prevents cross-agent score leakage when building a
+        resume prompt for a dying agent in multi-agent runs.
+        """
         assert self.paths is not None
         attempts_dir = self.paths.coral_dir / "public" / "attempts"
-        newest = None
+        newest_path: Path | None = None
+        newest_data: dict[str, Any] | None = None
         newest_mtime = 0.0
         for fname in new_files:
             path = attempts_dir / fname
-            if path.exists():
-                mtime = path.stat().st_mtime
-                if mtime > newest_mtime:
-                    newest_mtime = mtime
-                    newest = path
-        if newest:
+            if not path.exists():
+                continue
+            mtime = path.stat().st_mtime
+            if mtime <= newest_mtime:
+                continue
+            if agent_id is not None:
+                # When filtering, we have to read each candidate to inspect
+                # its agent_id field; cache the parse so we do not re-read.
+                try:
+                    data = json.loads(path.read_text())
+                except (json.JSONDecodeError, OSError) as e:
+                    logger.warning(f"Failed to read attempt {path}: {e}")
+                    continue
+                if data.get("agent_id") != agent_id:
+                    continue
+                newest_mtime = mtime
+                newest_path = path
+                newest_data = data
+            else:
+                newest_mtime = mtime
+                newest_path = path
+                newest_data = None  # parse lazily below
+        if newest_data is not None:
+            return newest_data
+        if newest_path is not None:
             try:
-                return json.loads(newest.read_text())
+                return json.loads(newest_path.read_text())
             except (json.JSONDecodeError, OSError) as e:
-                logger.warning(f"Failed to read attempt {newest}: {e}")
+                logger.warning(f"Failed to read attempt {newest_path}: {e}")
         return None
 
     def _get_eval_count(self) -> int:
@@ -705,6 +754,163 @@ class AgentManager:
                 trigger=trigger,
             ))
         return HeartbeatRunner(heartbeat_actions)
+
+    def _is_paused(self, agent_id: str) -> bool:
+        """Return True if the agent is currently in PAUSED state.
+
+        A pause is lifted automatically when its deadline passes; the next
+        observed exit will resume normal restart behavior.
+        """
+        until = self._paused_until.get(agent_id)
+        if until is None:
+            return False
+        if time.time() >= until:
+            self._paused_until.pop(agent_id, None)
+            self._persist_agent_state()
+            logger.info(f"Agent {agent_id} pause expired; eligible for restart")
+            return False
+        return True
+
+    def _classify_agent_exit(
+        self, agent_id: str, log_path: Path, exit_code: int | None
+    ) -> str:
+        """Dispatch to the runtime's classifier with the manager's uptime view."""
+        started = self._started_at.get(agent_id)
+        uptime = time.time() - started if started is not None else None
+        min_clean = self.config.agents.min_clean_runtime_seconds
+        runtime = self.runtime
+        if hasattr(runtime, "classify_exit"):
+            try:
+                return runtime.classify_exit(
+                    log_path, exit_code, uptime,
+                    min_clean_runtime_seconds=min_clean,
+                )
+            except Exception as e:
+                logger.warning(
+                    f"runtime.classify_exit raised for {agent_id}: {e}; "
+                    f"falling back to uptime heuristic"
+                )
+        return classify_by_uptime(exit_code, uptime, min_clean)
+
+    def _record_crash(
+        self,
+        agent_id: str,
+        exit_code: int | None,
+        log_path: Path,
+        classification: str,
+    ) -> None:
+        """Append a non-clean exit event and prune entries outside the window."""
+        history = self._crash_history.setdefault(agent_id, deque(maxlen=64))
+        history.append(
+            RestartEvent(
+                timestamp=time.time(),
+                exit_code=exit_code,
+                log_path=str(log_path),
+                classification=classification,
+            )
+        )
+        window = self.config.agents.restart_burst_window
+        if window > 0:
+            cutoff = time.time() - window
+            while history and history[0].timestamp < cutoff:
+                history.popleft()
+
+    def _should_pause_for_burst(self, agent_id: str) -> bool:
+        """Return True iff the recent crash count meets the configured threshold."""
+        threshold = self.config.agents.restart_burst_threshold
+        if threshold <= 0:
+            return False  # 0 disables the breaker entirely
+        history = self._crash_history.get(agent_id)
+        if not history:
+            return False
+        return len(history) >= threshold
+
+    def _enter_paused(self, agent_id: str, log_path: Path) -> None:
+        """Transition the agent into PAUSED, dump fault evidence, persist state."""
+        pause_seconds = self.config.agents.restart_pause_seconds
+        self._paused_until[agent_id] = time.time() + pause_seconds
+        self._pause_count[agent_id] = self._pause_count.get(agent_id, 0) + 1
+        fault_at = self._dump_fault_log(agent_id, log_path)
+        if fault_at:
+            self._last_fault_at[agent_id] = fault_at
+        self._persist_agent_state()
+        burst_count = len(self._crash_history.get(agent_id, []))
+        logger.warning(
+            f"Agent {agent_id} entered PAUSED for {pause_seconds}s after "
+            f"{burst_count} crashes within {self.config.agents.restart_burst_window}s. "
+            f"Fault dump under public/diagnostics/{agent_id}/fault.log"
+        )
+        if self.verbose:
+            print(
+                f"[coral] {agent_id} PAUSED ({pause_seconds}s) — "
+                f"see public/diagnostics/{agent_id}/fault.log"
+            )
+
+    def _dump_fault_log(self, agent_id: str, log_path: Path) -> str | None:
+        """Write a fault dump under public/diagnostics/<agent_id>/fault.log.
+
+        The file is overwritten on each pause cycle so stale data does not
+        linger. Returns the ISO-8601 timestamp of the dump on success, or
+        None if the dump could not be written.
+        """
+        assert self.paths is not None
+        diag_dir = self.paths.coral_dir / "public" / "diagnostics" / agent_id
+        try:
+            diag_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            logger.error(f"Failed to create diagnostics dir for {agent_id}: {e}")
+            return None
+        fault_path = diag_dir / "fault.log"
+        now_iso = datetime.now(UTC).isoformat()
+        history = list(self._crash_history.get(agent_id, []))
+        try:
+            with open(fault_path, "w", encoding="utf-8") as f:
+                f.write(f"# Fault dump for {agent_id}\n")
+                f.write(f"# Written: {now_iso}\n")
+                f.write(f"# Pause cycle #{self._pause_count.get(agent_id, 0)}\n")
+                f.write(f"# Burst window: {self.config.agents.restart_burst_window}s\n")
+                f.write(f"# Burst threshold: {self.config.agents.restart_burst_threshold}\n")
+                f.write("# Recent crash events (oldest first):\n")
+                for ev in history:
+                    ev_iso = datetime.fromtimestamp(ev.timestamp, UTC).isoformat()
+                    f.write(
+                        f"#   {ev_iso} exit_code={ev.exit_code} "
+                        f"classification={ev.classification} log={ev.log_path}\n"
+                    )
+                f.write("#\n")
+                f.write(f"# --- Last 200 lines of {log_path} ---\n")
+                try:
+                    tail: deque[str] = deque(maxlen=200)
+                    with open(log_path, encoding="utf-8", errors="replace") as src:
+                        for line in src:
+                            tail.append(line)
+                    f.writelines(tail)
+                except OSError as e:
+                    f.write(f"# (could not read agent log: {e})\n")
+            return now_iso
+        except OSError as e:
+            logger.error(f"Failed to write fault dump for {agent_id}: {e}")
+            return None
+
+    def _persist_agent_state(self) -> None:
+        """Persist current paused/active state to public/agent_state.json."""
+        if self.paths is None:
+            return
+        document = AgentStateDocument()
+        for handle in self.handles:
+            agent_id = handle.agent_id
+            until = self._paused_until.get(agent_id)
+            state = "paused" if until is not None else "active"
+            document.agents[agent_id] = AgentRuntimeState(
+                state=state,
+                paused_until=until,
+                pause_count=self._pause_count.get(agent_id, 0),
+                last_fault_at=self._last_fault_at.get(agent_id),
+            )
+        try:
+            write_agent_state(self.paths.coral_dir, document)
+        except OSError as e:
+            logger.error(f"Failed to persist agent_state.json: {e}")
 
     def _build_score_prompt(self, attempt: dict[str, Any], eval_count: int) -> str:
         """Build a resume prompt with just the eval results (no reflection)."""
@@ -875,23 +1081,47 @@ class AgentManager:
             # Check for dead agents (max-turns exit, crash, etc.)
             for i, handle in enumerate(self.handles):
                 if not handle.alive and self._running:
-                    exit_code = handle.process.returncode if handle.process else None
-                    count = self._restart_counts.get(handle.agent_id, 0) + 1
+                    agent_id = handle.agent_id
 
-                    # Build resume prompt from latest attempt if available
+                    # Honor an active PAUSED window: skip the restart entirely
+                    # until the cooldown deadline passes.
+                    if self._is_paused(agent_id):
+                        continue
+
+                    exit_code = handle.process.returncode if handle.process else None
+                    log_path = handle.log_path
+
+                    # Classify the exit. Only non-clean exits feed the breaker;
+                    # clean `max_turns`-style completions never trip it.
+                    classification = self._classify_agent_exit(agent_id, log_path, exit_code)
+                    if classification != "clean":
+                        self._record_crash(agent_id, exit_code, log_path, classification)
+                        if self._should_pause_for_burst(agent_id):
+                            self._enter_paused(agent_id, log_path)
+                            self._write_agent_pids()
+                            continue
+
+                    count = self._restart_counts.get(agent_id, 0) + 1
+
+                    # Build resume prompt from this agent's own latest attempt
+                    # so multi-agent runs do not feed cross-agent feedback.
                     eval_count = self._get_eval_count()
-                    latest = self._read_latest_attempt(current_attempts)
+                    latest = self._read_latest_attempt(current_attempts, agent_id=agent_id)
                     if latest:
                         prompt = self._build_score_prompt(latest, eval_count)
                     else:
                         prompt = None
 
                     logger.warning(
-                        f"Agent {handle.agent_id} exited (code: {exit_code}), "
+                        f"Agent {agent_id} exited "
+                        f"(code: {exit_code}, classification: {classification}), "
                         f"restart #{count}"
                     )
                     if self.verbose:
-                        print(f"[coral] {handle.agent_id} exited (code: {exit_code}), resuming...")
+                        print(
+                            f"[coral] {agent_id} exited "
+                            f"(code: {exit_code}, {classification}), resuming..."
+                        )
                     self.handles[i] = self._restart_agent(i, prompt=prompt)
                     self._write_agent_pids()
 

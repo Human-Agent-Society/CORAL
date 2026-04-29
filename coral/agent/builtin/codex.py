@@ -61,6 +61,22 @@ class CodexRuntime:
     def extract_session_id(self, log_path: Path) -> str | None:
         return _extract_codex_session_id(log_path)
 
+    def classify_exit(
+        self,
+        log_path: Path,
+        exit_code: int | None,
+        uptime_seconds: float | None,
+        min_clean_runtime_seconds: int = 60,
+    ) -> str:
+        """Classify a Codex CLI subprocess exit using the uptime fallback.
+
+        Codex does not emit a stable terminal marker we can rely on, so an
+        `exit_code==0` only counts as clean when the agent ran for at least
+        `min_clean_runtime_seconds`.
+        """
+        from coral.agent.exit_classifier import classify_by_uptime
+        return classify_by_uptime(exit_code, uptime_seconds, min_clean_runtime_seconds)
+
     def start(
         self,
         worktree_path: Path,
