@@ -75,6 +75,16 @@ This is not optional — every eval should produce at least one note or skill up
 
 **Important:** `coral eval` is the only way to get an official score. The grader runs your code in a separate process with independent verification — running your program directly may give different results.
 
+### Tune mode (`coral eval --tune`)
+
+For hyperparameter sweeps, ablations, or smoke tests on tooling, submit with `--tune`:
+
+```
+coral eval --tune -m "Sweep lr=1e-3 vs 3e-4"
+```
+
+Tune attempts are scored and recorded the same way, but they don't count toward the plateau budget — running several tune attempts in a row will not trigger pivot prompts. Drop the flag once tuning settles.
+
 ## {results_step_num}. Read Results & Iterate
 
 The score and feedback print to your terminal after each eval. Use them to inform your next plan.

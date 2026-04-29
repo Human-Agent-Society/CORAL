@@ -33,7 +33,13 @@ from coral.hub.attempts import (
     read_attempts,
     write_attempt,
 )
-from coral.types import Attempt, Task
+from coral.types import (
+    BUDGET_CLASS_INFRA,
+    BUDGET_CLASS_REAL,
+    Attempt,
+    Task,
+    get_budget_class,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -258,6 +264,10 @@ def _grade_one(
     status = "crashed"
     feedback = ""
     metadata: dict = {}
+    # Pending attempts may carry a tune marker from `coral eval --tune`.
+    # Real submissions default to "real"; grader infra failures override to "infra" below.
+    pending_class = get_budget_class(attempt.metadata)
+    budget_class = pending_class if pending_class != BUDGET_CLASS_REAL else BUDGET_CLASS_REAL
 
     try:
         _add_isolated_worktree(repo_dir, attempt.commit_hash, checkout_path)
@@ -271,16 +281,26 @@ def _grade_one(
             status = _compute_status(
                 score, attempt.agent_id, attempt.commit_hash, coral_dir, minimize,
             )
+            # Score==None still means the grader ran but produced no number; that's
+            # an agent-side fail (status="crashed" via _compute_status), not infra.
         finally:
             _remove_worktree(repo_dir, checkout_path)
     except TimeoutError:
         logger.error("Grader timed out on %s after %ss", attempt.commit_hash[:12], timeout)
         status = "timeout"
         feedback = f"Eval timed out after {timeout}s."
+        budget_class = BUDGET_CLASS_INFRA
     except Exception as e:
         logger.exception("Grader crashed on %s", attempt.commit_hash[:12])
         status = "crashed"
         feedback = str(e)
+        budget_class = BUDGET_CLASS_INFRA
+
+    # Carry forward any pending metadata (e.g. tune marker) we didn't overwrite,
+    # then stamp the final budget class.
+    for k, v in (attempt.metadata or {}).items():
+        metadata.setdefault(k, v)
+    metadata["budget_class"] = budget_class
 
     finalized = Attempt(
         commit_hash=attempt.commit_hash,

@@ -44,6 +44,7 @@ from coral.hub.heartbeat import (
     write_global_heartbeat,
 )
 from coral.template.coral_md import generate_coral_md
+from coral.types import BUDGET_CLASS_REAL, get_budget_class
 from coral.workspace import (
     ProjectPaths,
     create_agent_worktree,
@@ -98,6 +99,11 @@ class AgentManager:
         self._pause_count: dict[str, int] = {}
         self._last_fault_at: dict[str, str] = {}
         self._pending_restart_after_pause: set[str] = set()
+        # Per-agent attempt counts split by budget class (issue #73). "real"
+        # attempts drive plateau / heartbeat triggers; "infra" (grader
+        # timeout/crash) and "tune" (--tune submissions) are recorded for
+        # visibility but do not advance the budget counter.
+        self._agent_class_counts: dict[str, dict[str, int]] = {}
         self._gateway: Any | None = None
         self._gateway_keys: dict[str, str] = {}  # agent_id -> proxy key
         self._grader_proc: multiprocessing.Process | None = None
@@ -631,6 +637,7 @@ class AgentManager:
         """Get status of all agents."""
         statuses = []
         for handle in self.handles:
+            class_counts = dict(self._agent_class_counts.get(handle.agent_id, {}))
             statuses.append({
                 "agent_id": handle.agent_id,
                 "alive": handle.alive,
@@ -639,6 +646,7 @@ class AgentManager:
                 "log": str(handle.log_path),
                 "session_id": handle.session_id,
                 "restarts": self._restart_counts.get(handle.agent_id, 0),
+                "attempts_by_class": class_counts,
             })
         return statuses
 
@@ -1076,28 +1084,43 @@ class AgentManager:
                     agent_eval_count = self._agent_eval_counts[committing_agent_id]
                     global_eval_count = self._get_eval_count()
 
-                    # Track plateau state (evals since personal-best improvement)
+                    # Track per-class counts (issue #73): real / infra / tune.
+                    # Reads from attempt metadata; absent → "real" (back-compat).
+                    budget_class = get_budget_class(attempt_data.get("metadata"))
+                    class_counts = self._agent_class_counts.setdefault(
+                        committing_agent_id, {}
+                    )
+                    class_counts[budget_class] = class_counts.get(budget_class, 0) + 1
+
+                    # Track plateau state (evals since personal-best improvement).
+                    # Only "real" attempts drive plateau pressure. Tune-mode
+                    # attempts and grader infra failures (timeout/crashed) record
+                    # but don't advance evals_since_improvement, so they don't
+                    # spuriously trigger pivot heartbeat actions.
                     score = attempt_data.get("score")
                     minimize = self.config.grader.direction == "minimize"
-                    if score is not None:
-                        prev_best = self._agent_best_scores.get(committing_agent_id)
-                        improved = (
-                            prev_best is None
-                            or (minimize and score < prev_best)
-                            or (not minimize and score > prev_best)
-                        )
-                        if improved:
-                            self._agent_best_scores[committing_agent_id] = score
-                            self._agent_evals_since_improvement[committing_agent_id] = 0
+                    if budget_class == BUDGET_CLASS_REAL:
+                        if score is not None:
+                            prev_best = self._agent_best_scores.get(committing_agent_id)
+                            improved = (
+                                prev_best is None
+                                or (minimize and score < prev_best)
+                                or (not minimize and score > prev_best)
+                            )
+                            if improved:
+                                self._agent_best_scores[committing_agent_id] = score
+                                self._agent_evals_since_improvement[committing_agent_id] = 0
+                            else:
+                                self._agent_evals_since_improvement[committing_agent_id] = (
+                                    self._agent_evals_since_improvement.get(committing_agent_id, 0) + 1
+                                )
                         else:
+                            # Score=None on a "real" attempt = the agent's own code
+                            # broke the grader (e.g. import error). Counts as
+                            # non-improving.
                             self._agent_evals_since_improvement[committing_agent_id] = (
                                 self._agent_evals_since_improvement.get(committing_agent_id, 0) + 1
                             )
-                    else:
-                        # Failed/crashed eval counts as non-improving
-                        self._agent_evals_since_improvement[committing_agent_id] = (
-                            self._agent_evals_since_improvement.get(committing_agent_id, 0) + 1
-                        )
 
                     evals_since_improvement = self._agent_evals_since_improvement.get(
                         committing_agent_id, 0
@@ -1135,6 +1158,11 @@ class AgentManager:
                         f"Commit: {commit}",
                         f"What you did: {title}",
                     ]
+                    if budget_class != BUDGET_CLASS_REAL:
+                        header_lines.append(
+                            f"Budget: {budget_class} "
+                            "(this attempt does not count toward your plateau budget)"
+                        )
                     if feedback:
                         header_lines.append(f"Feedback: {feedback}")
                     header_lines.append("")

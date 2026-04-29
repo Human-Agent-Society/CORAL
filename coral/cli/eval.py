@@ -21,6 +21,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
     agent_id = args.agent or read_agent_id()
     wait = getattr(args, "wait", True)
     timeout = getattr(args, "timeout", None)
+    tune = getattr(args, "tune", False)
 
     try:
         attempt = submit_eval(
@@ -29,6 +30,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
             workdir=args.workdir or ".",
             wait=wait,
             poll_timeout=timeout,
+            tune=tune,
         )
     except RuntimeError as e:
         print(f"Error: {e}", file=sys.stderr)
@@ -136,7 +138,11 @@ def _print_attempt_result(attempt, header: str) -> None:
     print(f"\n{'=' * 50}")
     print(f"{header}{count_str}: {score_str}")
     print(f"Commit:  {attempt.commit_hash[:12]}")
-    print(f"Status:  {attempt.status}")
+    status_line = attempt.status
+    budget_class = attempt.budget_class
+    if budget_class != "real":
+        status_line = f"{status_line}  (budget: {budget_class})"
+    print(f"Status:  {status_line}")
     if attempt.feedback:
         print(f"Feedback: {attempt.feedback}")
     if attempt.status == "pending":

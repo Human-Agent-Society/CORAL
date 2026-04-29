@@ -145,6 +145,22 @@ def get_recent(coral_dir: str | Path, n: int = 10) -> list[Attempt]:
     return attempts[:n]
 
 
+def per_agent_class_counts(coral_dir: str | Path) -> dict[str, dict[str, int]]:
+    """Tally finalized attempts per agent, split by budget_class.
+
+    Returns ``{agent_id: {"real": n, "infra": n, "tune": n}}``. Pending
+    attempts (not yet graded) are skipped; they don't have a final
+    classification. Used by `coral status` to surface per-agent stall rate.
+    """
+    counts: dict[str, dict[str, int]] = {}
+    for a in read_attempts(coral_dir):
+        if a.status == "pending":
+            continue
+        bucket = counts.setdefault(a.agent_id, {})
+        bucket[a.budget_class] = bucket.get(a.budget_class, 0) + 1
+    return counts
+
+
 def search_attempts(coral_dir: str | Path, query: str) -> list[Attempt]:
     """Full-text search over attempt titles, feedback, and status."""
     query_lower = query.lower()

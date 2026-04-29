@@ -79,6 +79,21 @@ This is not optional — every eval should produce at least one note or skill up
 
 **Important:** `coral eval` is the only way to get an official score. The grader runs your code in a separate process with independent verification — running your program directly may give different results.
 
+### Tune mode (`coral eval --tune`)
+
+When you're sweeping hyperparameters or shaking out config — work that's necessary but not really a "real attempt" — submit with `--tune`:
+
+```
+coral eval --tune -m "Sweep lr=1e-3 vs 3e-4"
+```
+
+Tune attempts are scored and recorded the same way, but they don't count toward the plateau / heartbeat budget — i.e. running 10 tune attempts in a row will not trigger pivot prompts the way 10 "real" non-improving attempts would. Use it for:
+- Hyperparameter sweeps and ablations
+- Smoke-tests on a smaller eval slice before a real submission
+- Wiring up a new tool or harness change you want to verify scores correctly
+
+Once tuning settles, drop the flag and submit the final config as a normal eval.
+
 ## 4. Read Results & Iterate
 
 The score and feedback print to your terminal after each eval.

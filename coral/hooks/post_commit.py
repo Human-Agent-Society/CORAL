@@ -22,7 +22,7 @@ from coral.hub.attempts import (
     write_attempt,
 )
 from coral.hub.checkpoint import checkpoint
-from coral.types import Attempt
+from coral.types import BUDGET_CLASS_TUNE, Attempt
 
 # Legacy alias — external tests/hooks may still import the underscore-prefixed
 # name. Prefer `coral.hub.attempts.increment_eval_count` directly.
@@ -117,6 +117,7 @@ def submit_eval(
     workdir: str = ".",
     wait: bool = True,
     poll_timeout: float | None = None,
+    tune: bool = False,
 ) -> Attempt:
     """Stage changes, commit with message, write a pending attempt record.
 
@@ -125,6 +126,11 @@ def submit_eval(
     returns the final Attempt. If False, returns immediately with a pending
     Attempt — the caller (or a future `coral wait` invocation) is responsible
     for observing the final result.
+
+    If ``tune`` is True, the attempt is marked as a tune-mode submission
+    (``budget_class="tune"`` on its metadata). The grader still runs and the
+    score is recorded, but the manager will not count it toward the agent's
+    plateau / heartbeat budget — see issue #73.
 
     This is the core of `coral eval -m "description"` on the agent side.
     The grader itself runs asynchronously in `coral.grader.daemon`.
@@ -160,6 +166,9 @@ def submit_eval(
 
     # Write pending record. The grader daemon will observe this and fill in
     # score/status/feedback asynchronously.
+    metadata: dict = {}
+    if tune:
+        metadata["budget_class"] = BUDGET_CLASS_TUNE
     attempt = Attempt(
         commit_hash=commit_hash,
         agent_id=agent_id,
@@ -171,6 +180,7 @@ def submit_eval(
         feedback="",
         shared_state_hash=shared_state_hash,
         parent_shared_state_hash=parent_shared_state_hash,
+        metadata=metadata,
     )
     write_attempt(str(coral_dir), attempt)
 

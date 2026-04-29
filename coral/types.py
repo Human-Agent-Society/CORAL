@@ -137,6 +137,29 @@ class ScoreBundle:
         )
 
 
+# Budget classification for an attempt. Stored on `Attempt.metadata["budget_class"]`.
+#
+# - "real":  a genuine optimization attempt — counts toward plateau / heartbeat triggers.
+# - "infra": grader timeout / crash — infrastructure failure, not a real fail.
+# - "tune":  agent-submitted in tune mode — config/hyperparam exploration.
+#
+# Attempts without this metadata key are treated as "real" (backward compat).
+BUDGET_CLASS_REAL = "real"
+BUDGET_CLASS_INFRA = "infra"
+BUDGET_CLASS_TUNE = "tune"
+_VALID_BUDGET_CLASSES = (BUDGET_CLASS_REAL, BUDGET_CLASS_INFRA, BUDGET_CLASS_TUNE)
+
+
+def get_budget_class(metadata: dict[str, Any] | None) -> str:
+    """Read the budget class from attempt metadata, defaulting to 'real'."""
+    if not metadata:
+        return BUDGET_CLASS_REAL
+    cls = metadata.get("budget_class")
+    if cls in _VALID_BUDGET_CLASSES:
+        return cls
+    return BUDGET_CLASS_REAL
+
+
 @dataclass
 class Attempt:
     """Record of a single optimization attempt by an agent."""
@@ -152,6 +175,11 @@ class Attempt:
     shared_state_hash: str | None = None
     parent_shared_state_hash: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def budget_class(self) -> str:
+        """Budget classification: 'real', 'infra', or 'tune'. Defaults to 'real'."""
+        return get_budget_class(self.metadata)
 
     def to_dict(self) -> dict[str, Any]:
         d = {

@@ -8,6 +8,7 @@ from coral.hub.attempts import (
     get_agent_attempts,
     get_leaderboard,
     get_recent,
+    per_agent_class_counts,
     read_attempts,
     search_attempts,
     write_attempt,
@@ -78,6 +79,44 @@ def test_format_leaderboard():
     md = format_leaderboard(attempts)
     assert "Rank" in md
     assert "0.9000" in md
+
+
+def test_per_agent_class_counts_splits_by_budget_class():
+    """Budget class counts are tallied per agent (issue #73)."""
+    with tempfile.TemporaryDirectory() as d:
+        # agent-1: 2 real, 1 infra, 1 tune
+        a = _make_attempt("aaa", agent="agent-1")
+        b = _make_attempt("bbb", agent="agent-1")
+        c = _make_attempt("ccc", agent="agent-1")
+        c.metadata["budget_class"] = "infra"
+        c.status = "timeout"
+        d_att = _make_attempt("ddd", agent="agent-1")
+        d_att.metadata["budget_class"] = "tune"
+
+        # agent-2: 1 real
+        e = _make_attempt("eee", agent="agent-2")
+
+        for att in (a, b, c, d_att, e):
+            write_attempt(d, att)
+
+        counts = per_agent_class_counts(d)
+        assert counts["agent-1"] == {"real": 2, "infra": 1, "tune": 1}
+        assert counts["agent-2"] == {"real": 1}
+
+
+def test_per_agent_class_counts_skips_pending():
+    """Pending attempts have no final classification — exclude from tallies."""
+    with tempfile.TemporaryDirectory() as d:
+        scored = _make_attempt("aaa", agent="agent-1")
+        pending = _make_attempt("bbb", agent="agent-1")
+        pending.status = "pending"
+        pending.score = None
+
+        write_attempt(d, scored)
+        write_attempt(d, pending)
+
+        counts = per_agent_class_counts(d)
+        assert counts["agent-1"] == {"real": 1}
 
 
 def test_notes():

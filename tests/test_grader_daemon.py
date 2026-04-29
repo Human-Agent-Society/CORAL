@@ -281,6 +281,137 @@ def test_grader_sees_committed_code_not_working_tree():
 
 
 # --------------------------------------------------------------------------- #
+# Budget class accounting (issue #73)                                         #
+# --------------------------------------------------------------------------- #
+
+def test_submit_eval_tune_flag_marks_pending():
+    """`submit_eval(tune=True)` writes budget_class=tune onto the pending record."""
+    with tempfile.TemporaryDirectory() as d:
+        repo = _init_repo_and_coral(Path(d))
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "main.py").write_text("print('v2')\n")
+            pending = submit_eval(
+                message="sweep lr",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
+                tune=True,
+            )
+            assert pending.metadata.get("budget_class") == "tune"
+            assert pending.budget_class == "tune"
+        finally:
+            sys.path.pop(0)
+
+
+def test_grader_preserves_tune_class_through_finalization():
+    """Successfully-graded tune attempt keeps budget_class=tune (not overwritten to 'real')."""
+    with tempfile.TemporaryDirectory() as d:
+        repo = _init_repo_and_coral(Path(d), score=0.42)
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "main.py").write_text("print('v2')\n")
+            pending = submit_eval(
+                message="sweep", agent_id="agent-1",
+                workdir=str(repo), wait=False, tune=True,
+            )
+            process_pending_once(repo / ".coral")
+            final = read_attempt(repo / ".coral", pending.commit_hash)
+            assert final is not None
+            assert final.score == 0.42
+            assert final.status == "improved"
+            assert final.budget_class == "tune", (
+                f"Expected budget_class=tune to flow through, got "
+                f"{final.metadata.get('budget_class')!r}"
+            )
+        finally:
+            sys.path.pop(0)
+
+
+def test_grader_marks_real_class_on_normal_success():
+    """Default eval (no --tune) ends up classified as 'real' after grading."""
+    with tempfile.TemporaryDirectory() as d:
+        repo = _init_repo_and_coral(Path(d), score=0.5)
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "main.py").write_text("print('v2')\n")
+            pending = submit_eval(
+                message="real attempt", agent_id="agent-1",
+                workdir=str(repo), wait=False,
+            )
+            process_pending_once(repo / ".coral")
+            final = read_attempt(repo / ".coral", pending.commit_hash)
+            assert final is not None
+            assert final.budget_class == "real"
+        finally:
+            sys.path.pop(0)
+
+
+def test_grader_marks_infra_on_exception():
+    """A grader that raises is classified as 'infra' (not a real fail)."""
+    with tempfile.TemporaryDirectory() as d:
+        repo = _init_repo_and_coral(Path(d))
+        # Overwrite the grader to raise.
+        (repo / ".coral" / "private" / "eval" / "grader.py").write_text(
+            "from coral.grader.task_grader import TaskGrader\n"
+            "class Grader(TaskGrader):\n"
+            "    def evaluate(self):\n"
+            "        raise RuntimeError('grader infra failure')\n"
+        )
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "main.py").write_text("print('v2')\n")
+            pending = submit_eval(
+                message="x", agent_id="agent-1",
+                workdir=str(repo), wait=False,
+            )
+            process_pending_once(repo / ".coral")
+            final = read_attempt(repo / ".coral", pending.commit_hash)
+            assert final is not None
+            assert final.status == "crashed"
+            assert final.budget_class == "infra", (
+                "Grader exceptions should be classified as infra failures, "
+                "not real attempts."
+            )
+        finally:
+            sys.path.pop(0)
+
+
+def test_grader_marks_infra_on_timeout():
+    """A grader that exceeds its timeout is classified as 'infra'."""
+    with tempfile.TemporaryDirectory() as d:
+        repo = _init_repo_and_coral(Path(d))
+        # Tighten the timeout so the test runs quickly.
+        config_path = repo / ".coral" / "config.yaml"
+        config = yaml.safe_load(config_path.read_text())
+        config["grader"]["timeout"] = 2
+        config_path.write_text(yaml.dump(config))
+        # Overwrite grader to sleep past the timeout.
+        (repo / ".coral" / "private" / "eval" / "grader.py").write_text(
+            "import time\n"
+            "from coral.grader.task_grader import TaskGrader\n"
+            "class Grader(TaskGrader):\n"
+            "    def evaluate(self):\n"
+            "        time.sleep(30)\n"
+            "        return 0.5\n"
+        )
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "main.py").write_text("print('v2')\n")
+            pending = submit_eval(
+                message="hang", agent_id="agent-1",
+                workdir=str(repo), wait=False,
+            )
+            process_pending_once(repo / ".coral")
+            final = read_attempt(repo / ".coral", pending.commit_hash)
+            assert final is not None
+            assert final.status == "timeout"
+            assert final.budget_class == "infra"
+        finally:
+            sys.path.pop(0)
+
+
+# --------------------------------------------------------------------------- #
 # run_daemon subprocess — submit from main process, daemon in child           #
 # --------------------------------------------------------------------------- #
 

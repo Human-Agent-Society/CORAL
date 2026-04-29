@@ -709,6 +709,7 @@ def cmd_status(args: argparse.Namespace) -> None:
         format_leaderboard,
         format_status_summary,
         get_leaderboard,
+        per_agent_class_counts,
     )
 
     task = getattr(args, "task", None)
@@ -768,6 +769,7 @@ def cmd_status(args: argparse.Namespace) -> None:
             # Missing or corrupt agent_state.json falls back to log inference.
             agent_state_doc = read_agent_state(coral_dir)
             agent_states = agent_state_doc.agents
+            class_counts = per_agent_class_counts(coral_dir)
 
             print(f"\nAgents: {len(agent_logs)}")
             for agent_name, logs in sorted(agent_logs.items()):
@@ -801,6 +803,18 @@ def cmd_status(args: argparse.Namespace) -> None:
                     f"latest log: {log_size:,} bytes  |  "
                     f"last activity: {mtime.strftime('%H:%M:%S')}{extras_str}"
                 )
+                buckets = class_counts.get(agent_name, {})
+                if buckets:
+                    real = buckets.get("real", 0)
+                    infra = buckets.get("infra", 0)
+                    tune = buckets.get("tune", 0)
+                    total = real + infra + tune
+                    if total:
+                        rate_str = f"{infra}/{total} ({100 * infra / total:.0f}%)"
+                        print(
+                            f"    attempts: real={real}  infra={infra}  tune={tune}  "
+                            f"|  stall rate: {rate_str}"
+                        )
 
     direction = read_direction(coral_dir)
     print()

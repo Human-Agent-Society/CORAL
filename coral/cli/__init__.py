@@ -347,7 +347,8 @@ Run 'coral <command> --help' for details on any command."""
             'Examples:\n'
             '  coral eval -m "Optimized inner loop"\n'
             '  coral eval -m "Try variant A" --no-wait\n'
-            '  coral eval -m "Heavy benchmark" --timeout 1800'
+            '  coral eval -m "Heavy benchmark" --timeout 1800\n'
+            '  coral eval --tune -m "Sweep lr=1e-3 vs 3e-4"'
         ),
         formatter_class=_CommandHelpFormatter,
     )
@@ -367,6 +368,17 @@ Run 'coral <command> --help' for details on any command."""
         type=float,
         default=None,
         help="Seconds to wait for grader (default: derived from grader.timeout).",
+    )
+    p_eval.add_argument(
+        "--tune",
+        action="store_true",
+        default=False,
+        help=(
+            "Submit as a tune-mode attempt: scored and recorded normally, but "
+            "excluded from the agent's plateau / heartbeat budget. Use for "
+            "hyperparameter sweeps and config exploration that shouldn't "
+            "trigger pivot prompts."
+        ),
     )
 
     p_wait = sub.add_parser(

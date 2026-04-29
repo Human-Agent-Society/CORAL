@@ -1,6 +1,15 @@
 """Tests for core types."""
 
-from coral.types import Attempt, Score, ScoreBundle, Task
+from coral.types import (
+    BUDGET_CLASS_INFRA,
+    BUDGET_CLASS_REAL,
+    BUDGET_CLASS_TUNE,
+    Attempt,
+    Score,
+    ScoreBundle,
+    Task,
+    get_budget_class,
+)
 
 
 def test_task_roundtrip():
@@ -86,3 +95,60 @@ def test_attempt_from_dict_without_shared_state_hash():
     attempt = Attempt.from_dict(data)
     assert attempt.shared_state_hash is None
     assert attempt.parent_shared_state_hash is None
+
+
+# --------------------------------------------------------------------------- #
+# Budget class (issue #73)                                                    #
+# --------------------------------------------------------------------------- #
+
+def test_get_budget_class_default_real():
+    """Empty / missing metadata defaults to 'real' for backward compat."""
+    assert get_budget_class(None) == BUDGET_CLASS_REAL
+    assert get_budget_class({}) == BUDGET_CLASS_REAL
+    assert get_budget_class({"other_key": "x"}) == BUDGET_CLASS_REAL
+
+
+def test_get_budget_class_recognizes_known_values():
+    assert get_budget_class({"budget_class": "real"}) == BUDGET_CLASS_REAL
+    assert get_budget_class({"budget_class": "infra"}) == BUDGET_CLASS_INFRA
+    assert get_budget_class({"budget_class": "tune"}) == BUDGET_CLASS_TUNE
+
+
+def test_get_budget_class_rejects_unknown():
+    """Unknown values fall back to 'real' rather than corrupting accounting."""
+    assert get_budget_class({"budget_class": "garbage"}) == BUDGET_CLASS_REAL
+
+
+def test_attempt_budget_class_property():
+    """Attempt.budget_class reads from metadata with default 'real'."""
+    a = Attempt(
+        commit_hash="abc",
+        agent_id="a-1",
+        title="t",
+        score=0.5,
+        status="improved",
+        parent_hash=None,
+        timestamp="2026-03-11T10:00:00Z",
+    )
+    assert a.budget_class == BUDGET_CLASS_REAL
+
+    a.metadata["budget_class"] = "tune"
+    assert a.budget_class == BUDGET_CLASS_TUNE
+
+    a.metadata["budget_class"] = "infra"
+    assert a.budget_class == BUDGET_CLASS_INFRA
+
+
+def test_attempt_legacy_json_loads_as_real():
+    """Pre-issue-73 JSON without budget_class metadata reads as 'real'."""
+    data = {
+        "commit_hash": "abc",
+        "agent_id": "a-1",
+        "title": "old",
+        "score": 0.5,
+        "status": "improved",
+        "parent_hash": None,
+        "timestamp": "2026-03-11T10:00:00Z",
+    }
+    a = Attempt.from_dict(data)
+    assert a.budget_class == BUDGET_CLASS_REAL
