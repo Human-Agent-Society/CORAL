@@ -100,8 +100,11 @@ class AgentConfig:
 
     # Reliability: grader-queue exemption for stall detection.
     # Skip stall checks for an agent whose latest attempt is pending grading,
-    # but only if the grader heartbeat is fresh and the pending attempt is not stale.
-    grader_heartbeat_max_age: int = 30  # seconds; older heartbeats do not grant exemption
+    # but only if the grader process is alive and the pending attempt is not
+    # stale. `grader_heartbeat_max_age` is retained for forward compatibility
+    # but no longer consulted — the manager checks the live multiprocessing
+    # process instead, which is correct during long-running grades.
+    grader_heartbeat_max_age: int = 30  # deprecated; live process check is used instead
     grader_pending_max_age: int = 1800  # seconds; older pending attempts no longer exempt
 
     # Reliability: minimum runtime in seconds before an exit_code==0 is considered "clean"

@@ -935,21 +935,26 @@ class AgentManager:
             logger.error(f"Failed to write fault dump for {agent_id}: {e}")
             return None
 
-    def _grader_heartbeat_age(self) -> float | None:
-        """Return age in seconds of the grader daemon heartbeat, or None.
+    def _grader_alive(self) -> bool:
+        """Return True iff the grader daemon multiprocessing.Process is alive.
 
-        The daemon writes `<coral_dir>/public/grader_daemon_heartbeat` on
-        startup and on each idle tick. A missing or unreadable file means we
-        cannot certify grader liveness and must fall back to non-exempt
-        stall checks.
+        We use the live process handle the manager already owns
+        (`self._grader_proc`) rather than the on-disk
+        `<coral_dir>/public/grader_daemon_heartbeat` file. The heartbeat file
+        is only refreshed in the daemon's idle path and around each grade
+        attempt; during a long-running grade subprocess the file's mtime can
+        drift past any reasonable freshness threshold. The live process check
+        is both stricter (catches a daemon that died mid-grade) and looser
+        on the only axis that matters (does not falsely report dead during a
+        healthy long grade).
         """
-        if self.paths is None:
-            return None
-        hb_path = self.paths.coral_dir / "public" / "grader_daemon_heartbeat"
+        proc = self._grader_proc
+        if proc is None:
+            return False
         try:
-            return time.time() - hb_path.stat().st_mtime
-        except OSError:
-            return None
+            return bool(proc.is_alive())
+        except Exception:
+            return False
 
     def _attempt_age_seconds(self, timestamp_iso: str) -> float | None:
         """Return age in seconds of an attempt's ISO timestamp, or None on parse failure."""
@@ -1227,11 +1232,7 @@ class AgentManager:
                 # or stat the heartbeat file repeatedly.
                 from coral.hub.attempts import agent_in_grader_queue, read_attempts
                 attempts_cache = read_attempts(self.paths.coral_dir)
-                grader_heartbeat_age = self._grader_heartbeat_age()
-                grader_fresh = (
-                    grader_heartbeat_age is not None
-                    and grader_heartbeat_age <= self.config.agents.grader_heartbeat_max_age
-                )
+                grader_alive = self._grader_alive()
 
                 for i, handle in enumerate(self.handles):
                     if handle.alive and self._running:
@@ -1245,9 +1246,10 @@ class AgentManager:
                         # Grader-queue exemption: an agent that just submitted
                         # an attempt is silent because the grader is working,
                         # not because it deadlocked. Skip the stall check
-                        # only when the grader heartbeat is fresh and the
-                        # pending attempt has not aged past the cap.
-                        if grader_fresh:
+                        # only when the grader process is alive AND the
+                        # pending attempt has not aged past the cap (so a
+                        # forgotten pending file cannot mask a true hang).
+                        if grader_alive:
                             pending = agent_in_grader_queue(
                                 self.paths.coral_dir, handle.agent_id, attempts_cache
                             )
@@ -1261,8 +1263,7 @@ class AgentManager:
                                         f"Agent {handle.agent_id} silent for "
                                         f"{int(age)}s but pending attempt "
                                         f"{pending.commit_hash[:12]} is in grader queue "
-                                        f"({int(pending_age)}s old, heartbeat "
-                                        f"{int(grader_heartbeat_age)}s ago); "
+                                        f"({int(pending_age)}s old); "
                                         f"stall check exempt"
                                     )
                                     continue

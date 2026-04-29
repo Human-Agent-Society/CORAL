@@ -114,19 +114,28 @@ def get_agent_attempts(coral_dir: str | Path, agent_id: str) -> list[Attempt]:
 def agent_in_grader_queue(
     coral_dir: str | Path, agent_id: str, attempts: list[Attempt] | None = None
 ) -> Attempt | None:
-    """Return the agent's pending attempt if one is in the grader queue, else None.
+    """Return the agent's newest pending attempt if any is in the grader queue.
 
     A pending attempt is one with `status == "pending"` and `score is None` —
-    matching the daemon's own `_find_pending` filter. Callers (e.g. the manager
-    monitor loop) should pass a pre-fetched `attempts` list once per tick to
-    avoid rescanning the JSON directory for every agent.
+    matching the daemon's own `_find_pending` filter. When multiple pending
+    attempts exist for the same agent (e.g. the agent crashed and resubmitted
+    while a prior attempt was still queued), the newest by ISO timestamp is
+    returned so the stall-watchdog exemption uses the most relevant evidence.
+    Callers (e.g. the manager monitor loop) should pass a pre-fetched
+    `attempts` list once per tick to avoid rescanning the JSON directory for
+    every agent.
     """
     if attempts is None:
         attempts = read_attempts(coral_dir)
-    for a in attempts:
-        if a.agent_id == agent_id and a.status == "pending" and a.score is None:
-            return a
-    return None
+    candidates = [
+        a
+        for a in attempts
+        if a.agent_id == agent_id and a.status == "pending" and a.score is None
+    ]
+    if not candidates:
+        return None
+    candidates.sort(key=lambda a: a.timestamp, reverse=True)
+    return candidates[0]
 
 
 def get_recent(coral_dir: str | Path, n: int = 10) -> list[Attempt]:

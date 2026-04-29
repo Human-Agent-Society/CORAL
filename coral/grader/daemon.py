@@ -377,6 +377,14 @@ def run_daemon(coral_dir: str | Path, stop_event: Any = None) -> None:
         for attempt in pending:
             if _should_stop():
                 break
+            # Refresh the heartbeat before each attempt so external readers
+            # of `grader_daemon_heartbeat` (separate from the manager's
+            # stall-watchdog exemption, which uses live `_grader_proc.is_alive()`
+            # checks) still see a fresh timestamp during long grades.
+            try:
+                heartbeat_file.write_text(datetime.now(UTC).isoformat())
+            except OSError:
+                pass
             try:
                 _grade_one(attempt, config_path, coral_dir, config)
             except Exception:
