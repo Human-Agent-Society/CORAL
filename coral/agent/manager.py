@@ -374,8 +374,9 @@ class AgentManager:
         # Compact context before every resume — post-eval restart, dead-agent
         # restart, and user-initiated coral resume all flow through here. The
         # call is a no-op for runtimes that don't expose compact_session
-        # (Codex/OpenCode/Kiro), so this stays cheap on those.
-        if resume_session_id:
+        # (Codex/OpenCode/Kiro), so this stays cheap on those. Set
+        # CORAL_NO_COMPACT=1 to disable (used for A/B comparisons).
+        if resume_session_id and os.environ.get("CORAL_NO_COMPACT") != "1":
             self._compact_session_for(agent_id, worktree_path, resume_session_id)
 
         # Start agent
