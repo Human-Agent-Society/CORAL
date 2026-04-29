@@ -376,8 +376,7 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
     Idempotent: if the worktree's ``.venv`` is already populated (the python
     binary exists), skip both the setup commands and the coral reinstall.
     Deps don't change mid-run, so re-running ``uv sync`` on every
-    interrupt-and-resume cycle is wasted work — and visibly so once
-    compaction adds another wait on top. To force a re-sync, delete the
+    interrupt-and-resume cycle is wasted work. To force a re-sync, delete the
     ``.venv`` directory before resuming.
     """
     if not setup_commands:

@@ -371,14 +371,6 @@ class AgentManager:
         )
         (worktree_path / instruction_file).write_text(coral_md)
 
-        # Compact context before every resume — post-eval restart, dead-agent
-        # restart, and user-initiated coral resume all flow through here. The
-        # call is a no-op for runtimes that don't expose compact_session
-        # (Codex/OpenCode/Kiro), so this stays cheap on those. Set
-        # CORAL_NO_COMPACT=1 to disable (used for A/B comparisons).
-        if resume_session_id and os.environ.get("CORAL_NO_COMPACT") != "1":
-            self._compact_session_for(agent_id, worktree_path, resume_session_id)
-
         # Start agent
         handle = self.runtime.start(
             worktree_path=worktree_path,
@@ -453,13 +445,7 @@ class AgentManager:
         paths: ProjectPaths,
         instruction: str | None = None,
     ) -> list[AgentHandle]:
-        """Resume agents into an existing run's worktrees.
-
-        Every resume — here and in the per-eval interrupt-and-resume cycle —
-        runs the runtime's /compact first via `_setup_and_start_agent`.
-        Compaction failures are non-fatal and skipped on runtimes without
-        a compact_session method.
-        """
+        """Resume agents into an existing run's worktrees."""
         self._start_time = datetime.now(UTC)
         self.paths = paths
 
@@ -578,45 +564,6 @@ class AgentManager:
         if logs:
             return self.runtime.extract_session_id(logs[-1])
         return None
-
-    def _compact_session_for(
-        self, agent_id: str, worktree_path: Path, session_id: str,
-    ) -> None:
-        """Compact a session via the runtime, before resuming the agent.
-
-        Only Claude Code exposes a CLI-level /compact today, so we gate on
-        the runtime having a compact_session method. Failures are logged and
-        swallowed: the agent will resume with un-compacted context rather
-        than crash the whole run.
-        """
-        assert self.paths is not None
-        compact = getattr(self.runtime, "compact_session", None)
-        if compact is None:
-            logger.info(
-                f"Runtime {type(self.runtime).__name__} does not support "
-                f"compaction; resuming {agent_id} as-is"
-            )
-            return
-
-        gateway_url = self._gateway.url if self._gateway else None
-        gateway_api_key = self._gateway_keys.get(agent_id)
-        log_dir = self.paths.coral_dir / "public" / "logs"
-        if self.verbose:
-            print(f"[coral] Compacting context for {agent_id} (session {session_id[:12]}...)")
-        try:
-            ok = compact(
-                session_id=session_id,
-                worktree_path=worktree_path,
-                model=self.config.agents.model,
-                log_dir=log_dir,
-                gateway_url=gateway_url,
-                gateway_api_key=gateway_api_key,
-            )
-        except Exception as e:
-            logger.warning(f"Compaction for {agent_id} raised {type(e).__name__}: {e}")
-            ok = False
-        if not ok and self.verbose:
-            print(f"[coral] Compaction skipped/failed for {agent_id}; resuming as-is")
 
     def stop_all(self) -> None:
         """Gracefully stop all agents.
