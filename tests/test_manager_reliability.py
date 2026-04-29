@@ -334,6 +334,33 @@ def test_agent_in_grader_queue_uses_cached_attempts(tmp_path: Path) -> None:
     assert found is not None
 
 
+def test_agent_in_grader_queue_returns_newest_when_multiple_pending() -> None:
+    """When an agent has multiple pending attempts (e.g. crash-resubmit), the
+    newest by ISO timestamp must win so the stall-watchdog exemption uses
+    the most relevant evidence."""
+    older = Attempt(
+        commit_hash="0" * 40 + "a",
+        agent_id="agent-1",
+        title="older pending",
+        score=None,
+        status="pending",
+        parent_hash=None,
+        timestamp="2026-04-29T00:00:00+00:00",
+    )
+    newer = Attempt(
+        commit_hash="0" * 40 + "b",
+        agent_id="agent-1",
+        title="newer pending",
+        score=None,
+        status="pending",
+        parent_hash=None,
+        timestamp="2026-04-29T01:00:00+00:00",
+    )
+    found = agent_in_grader_queue(Path("/tmp/unused"), "agent-1", attempts=[older, newer])
+    assert found is not None
+    assert found.title == "newer pending"
+
+
 # ---------------------------------------------------------------------------
 # Per-agent latest-attempt filter
 # ---------------------------------------------------------------------------
