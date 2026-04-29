@@ -92,6 +92,8 @@ Tune attempts are scored and recorded the same way, but they don't count toward 
 - Smoke-tests on a smaller eval slice before a real submission
 - Wiring up a new tool or harness change you want to verify scores correctly
 
+The flag is also visible to the grader (as `self.tune` on `TaskGrader`), so a task author can route tune-mode evals to a cheaper local target — smaller eval slice, dev split, smoke harness — without you having to do anything different on the agent side. Whether the grader actually does that is task-specific.
+
 Once tuning settles, drop the flag and submit the final config as a normal eval.
 
 ## 4. Read Results & Iterate

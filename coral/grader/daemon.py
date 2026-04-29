@@ -35,7 +35,6 @@ from coral.hub.attempts import (
 )
 from coral.types import (
     BUDGET_CLASS_INFRA,
-    BUDGET_CLASS_REAL,
     Attempt,
     Task,
     get_budget_class,
@@ -249,11 +248,25 @@ def _grade_one(
     config: CoralConfig,
 ) -> Attempt:
     """Grade a single pending attempt and return the finalized Attempt record."""
+    # Pending attempts may carry a tune marker from `coral eval --tune`.
+    # Real submissions default to "real"; grader infra failures override to "infra" below.
+    pending_class = get_budget_class(attempt.metadata)
+    budget_class = pending_class
+    # Surface the tune flag (and a few other useful per-attempt fields) to
+    # the user's grader via Task.metadata. TaskGrader exposes `self.tune`
+    # and `self.budget_class` to read these. Both the in-process TaskGrader
+    # path and the SubprocessGrader path serialize Task.metadata, so this
+    # works for either grader runtime.
     task = Task(
         id=config.task.name,
         name=config.task.name,
         description=config.task.description,
-        metadata={},
+        metadata={
+            "tune": pending_class == "tune",
+            "budget_class": pending_class,
+            "agent_id": attempt.agent_id,
+            "commit_hash": attempt.commit_hash,
+        },
     )
     timeout = config.grader.timeout
     minimize = config.grader.direction == "minimize"
@@ -264,10 +277,6 @@ def _grade_one(
     status = "crashed"
     feedback = ""
     metadata: dict = {}
-    # Pending attempts may carry a tune marker from `coral eval --tune`.
-    # Real submissions default to "real"; grader infra failures override to "infra" below.
-    pending_class = get_budget_class(attempt.metadata)
-    budget_class = pending_class if pending_class != BUDGET_CLASS_REAL else BUDGET_CLASS_REAL
 
     try:
         _add_isolated_worktree(repo_dir, attempt.commit_hash, checkout_path)

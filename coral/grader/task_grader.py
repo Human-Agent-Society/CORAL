@@ -28,15 +28,18 @@ class TaskGrader(ABC):
     """Base class for task graders.
 
     Subclasses implement evaluate() and return a float or ScoreBundle.
-    The framework sets codebase_path, private_dir, config, and args before calling.
+    The framework sets codebase_path, private_dir, config, args, and tasks
+    before calling.
     """
 
     codebase_path: str
     private_dir: str
     config: GraderConfig
+    tasks: list[Task]
 
     def __init__(self, config: GraderConfig) -> None:
         self.config = config
+        self.tasks = []
 
     @property
     def args(self) -> dict[str, Any]:
@@ -47,6 +50,34 @@ class TaskGrader(ABC):
     def timeout(self) -> int | None:
         """Eval timeout in seconds, from grader config. None means no limit."""
         return self.config.timeout or None
+
+    @property
+    def tune(self) -> bool:
+        """True if this attempt was submitted with `coral eval --tune`.
+
+        Use this to switch your grader to a cheaper local target — a smaller
+        eval slice, dev split, or smoke harness — when the agent is sweeping
+        hyperparameters or shaking out config rather than making a real
+        submission. The agent will not be charged against its plateau /
+        heartbeat budget for tune-mode attempts (see issue #73).
+
+        False for the standard ``coral eval`` path.
+        """
+        if not self.tasks:
+            return False
+        return bool(self.tasks[0].metadata.get("tune", False))
+
+    @property
+    def budget_class(self) -> str:
+        """The pending attempt's budget class: "real" or "tune".
+
+        Note: "infra" is assigned by the daemon *after* grading (when the
+        grader times out or raises), so this property only ever returns
+        "real" or "tune".
+        """
+        if not self.tasks:
+            return "real"
+        return str(self.tasks[0].metadata.get("budget_class", "real"))
 
     @property
     def eval_logs_dir(self) -> Path:
@@ -234,6 +265,7 @@ class TaskGrader(ABC):
         Enforces self.timeout around the entire evaluate() call.
         """
         self.codebase_path = codebase_path
+        self.tasks = tasks
 
         loop = asyncio.get_running_loop()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:

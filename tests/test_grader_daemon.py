@@ -328,6 +328,47 @@ def test_grader_preserves_tune_class_through_finalization():
             sys.path.pop(0)
 
 
+def test_grader_sees_tune_flag_via_self_tune():
+    """`coral eval --tune` exposes self.tune=True to the user's grader."""
+    with tempfile.TemporaryDirectory() as d:
+        repo = _init_repo_and_coral(Path(d))
+        # Grader returns 1.0 in tune mode, 0.0 otherwise — the score
+        # is how we observe what self.tune saw.
+        (repo / ".coral" / "private" / "eval" / "grader.py").write_text(
+            "from coral.grader.task_grader import TaskGrader\n"
+            "class Grader(TaskGrader):\n"
+            "    def evaluate(self):\n"
+            "        return 1.0 if self.tune else 0.0\n"
+        )
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "main.py").write_text("print('v2')\n")
+            tune_pending = submit_eval(
+                message="tune sweep", agent_id="agent-1",
+                workdir=str(repo), wait=False, tune=True,
+            )
+            process_pending_once(repo / ".coral")
+            tune_final = read_attempt(repo / ".coral", tune_pending.commit_hash)
+            assert tune_final is not None
+            assert tune_final.score == 1.0, (
+                "Grader should have seen self.tune=True (got score=0.0, "
+                "meaning self.tune was False)."
+            )
+
+            # And a non-tune submission must NOT see self.tune=True.
+            (repo / "main.py").write_text("print('v3')\n")
+            real_pending = submit_eval(
+                message="real attempt", agent_id="agent-1",
+                workdir=str(repo), wait=False,
+            )
+            process_pending_once(repo / ".coral")
+            real_final = read_attempt(repo / ".coral", real_pending.commit_hash)
+            assert real_final is not None
+            assert real_final.score == 0.0
+        finally:
+            sys.path.pop(0)
+
+
 def test_grader_marks_real_class_on_normal_success():
     """Default eval (no --tune) ends up classified as 'real' after grading."""
     with tempfile.TemporaryDirectory() as d:
