@@ -95,6 +95,16 @@ class KiroRuntime:
 
         log_file = open(log_path, "w", buffering=1)
 
+        # Per-agent stderr capture under public/diagnostics/<agent_id>/agent.err.
+        from coral.agent.process import open_agent_stderr_for_log_dir
+        err_path: Path | None = None
+        err_file: Any = None
+        stderr_target: Any = subprocess.STDOUT
+        opened = open_agent_stderr_for_log_dir(log_dir, agent_id)
+        if opened is not None:
+            err_path, err_file = opened
+            stderr_target = err_file
+
         write_coral_log_entry(
             log_file,
             prompt=prompt,
@@ -109,7 +119,7 @@ class KiroRuntime:
                 cmd,
                 cwd=str(worktree_path),
                 stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
+                stderr=stderr_target,
                 start_new_session=True,
                 env=agent_env,
             )
@@ -138,7 +148,7 @@ class KiroRuntime:
                 cmd,
                 cwd=str(worktree_path),
                 stdout=log_file,
-                stderr=subprocess.STDOUT,
+                stderr=stderr_target,
                 start_new_session=True,
                 env=agent_env,
             )
@@ -152,4 +162,6 @@ class KiroRuntime:
             worktree_path=worktree_path,
             log_path=log_path,
             _log_file=log_file_ref,
+            err_file=err_file,
+            err_path=err_path,
         )

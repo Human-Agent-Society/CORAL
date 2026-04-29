@@ -137,6 +137,18 @@ class ClaudeCodeRuntime:
 
         log_file = open(log_path, "w", buffering=1)  # line-buffered
 
+        # Open per-agent stderr capture under public/diagnostics/<agent_id>/agent.err
+        # so stderr does not pollute the stream-json log. Falls back to STDOUT
+        # merge for non-managed contexts (tests, direct API users).
+        from coral.agent.process import open_agent_stderr_for_log_dir
+        err_path: Path | None = None
+        err_file: Any = None
+        stderr_target: Any = subprocess.STDOUT
+        opened = open_agent_stderr_for_log_dir(log_dir, agent_id)
+        if opened is not None:
+            err_path, err_file = opened
+            stderr_target = err_file
+
         # Write CORAL prompt entry so the initial instruction is captured in the log
         write_coral_log_entry(
             log_file,
@@ -149,12 +161,14 @@ class ClaudeCodeRuntime:
         )
 
         if verbose:
-            # Tee: write to both terminal and log file
+            # Tee: write to both terminal and log file. Stderr goes to its
+            # own file (when available); operators viewing crashes in real
+            # time can `tail -F` agent.err per the v1 release notes.
             process = subprocess.Popen(
                 cmd,
                 cwd=str(worktree_path),
                 stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
+                stderr=stderr_target,
                 start_new_session=True,  # own process group for clean SIGINT
                 env=agent_env,
             )
@@ -191,7 +205,7 @@ class ClaudeCodeRuntime:
                 cmd,
                 cwd=str(worktree_path),
                 stdout=log_file,
-                stderr=subprocess.STDOUT,
+                stderr=stderr_target,
                 start_new_session=True,  # own process group for clean SIGINT
                 env=agent_env,
             )
@@ -206,4 +220,6 @@ class ClaudeCodeRuntime:
             log_path=log_path,
             session_id=resume_session_id,
             _log_file=log_file_ref,
+            err_file=err_file,
+            err_path=err_path,
         )

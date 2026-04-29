@@ -7,6 +7,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -762,23 +763,43 @@ def cmd_status(args: argparse.Namespace) -> None:
                 agent_name = parts[0] if len(parts) == 2 else lf.stem
                 agent_logs.setdefault(agent_name, []).append(lf)
 
+            # Best-effort read of the manager-persisted reliability state.
+            # Missing or corrupt agent_state.json falls back to log inference.
+            from coral.agent.state import read_agent_state
+            agent_state_doc = read_agent_state(coral_dir)
+            agent_states = agent_state_doc.agents
+
             print(f"\nAgents: {len(agent_logs)}")
             for agent_name, logs in sorted(agent_logs.items()):
                 latest_log = max(logs, key=lambda p: p.stat().st_mtime)
                 log_size = latest_log.stat().st_size
                 mtime = datetime.fromtimestamp(latest_log.stat().st_mtime)
                 age = datetime.now() - mtime
-                if age.total_seconds() < 30 and manager_alive:
+
+                runtime_state = agent_states.get(agent_name)
+                paused_until = runtime_state.paused_until if runtime_state else None
+                if paused_until is not None and paused_until > time.time() and manager_alive:
+                    cooldown = int(paused_until - time.time())
+                    status_str = f"PAUSED ({cooldown}s cooldown remaining)"
+                elif age.total_seconds() < 30 and manager_alive:
                     status_str = "ACTIVE"
                 elif manager_alive:
                     status_str = f"idle ({int(age.total_seconds())}s since last output)"
                 else:
                     status_str = "stopped"
+
+                extras = []
+                if runtime_state and runtime_state.pause_count > 0:
+                    extras.append(f"pauses: {runtime_state.pause_count}")
+                if runtime_state and runtime_state.last_fault_at:
+                    extras.append(f"last fault: {runtime_state.last_fault_at}")
+                extras_str = "  |  " + "  |  ".join(extras) if extras else ""
+
                 print(
                     f"  {agent_name}: {status_str}  |  "
                     f"sessions: {len(logs)}  |  "
                     f"latest log: {log_size:,} bytes  |  "
-                    f"last activity: {mtime.strftime('%H:%M:%S')}"
+                    f"last activity: {mtime.strftime('%H:%M:%S')}{extras_str}"
                 )
 
     direction = read_direction(coral_dir)

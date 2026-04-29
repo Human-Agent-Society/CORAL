@@ -914,6 +914,22 @@ class AgentManager:
                     f.writelines(tail)
                 except OSError as e:
                     f.write(f"# (could not read agent log: {e})\n")
+                # Append the per-agent stderr tail when available — typically
+                # this is where startup-time crash messages land for runtimes
+                # that emit nothing useful to the stream-json log.
+                err_path = (
+                    self.paths.coral_dir / "public" / "diagnostics" / agent_id / "agent.err"
+                )
+                if err_path.exists():
+                    f.write(f"#\n# --- Last 100 lines of {err_path} ---\n")
+                    try:
+                        err_tail: deque[str] = deque(maxlen=100)
+                        with open(err_path, encoding="utf-8", errors="replace") as src:
+                            for line in src:
+                                err_tail.append(line)
+                        f.writelines(err_tail)
+                    except OSError as e:
+                        f.write(f"# (could not read stderr capture: {e})\n")
             return now_iso
         except OSError as e:
             logger.error(f"Failed to write fault dump for {agent_id}: {e}")
