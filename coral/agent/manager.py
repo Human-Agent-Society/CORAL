@@ -15,7 +15,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from coral.agent.exit_classifier import classify_by_uptime
+from coral.agent.exit_classifier import (
+    classify_by_uptime,
+)
+from coral.agent.exit_classifier import (
+    claude_code_log_has_session_error as _log_has_session_error,
+)
 from coral.agent.heartbeat import HeartbeatRunner
 from coral.agent.registry import get_runtime
 from coral.agent.runtime import AgentHandle, AgentRuntime
@@ -27,6 +32,7 @@ from coral.agent.state import (
 )
 from coral.agent.warmstart import WarmStartRunner
 from coral.config import CoralConfig
+from coral.hub.attempts import agent_in_grader_queue, read_attempts
 from coral.hub.heartbeat import (
     DEFAULT_PROMPTS,
     DEFAULT_TRIGGER,
@@ -1222,15 +1228,11 @@ class AgentManager:
                     self._write_agent_pids()
 
             # Check for stalled agents (alive but no output for > timeout).
-            # `effective_stall_timeout` honors the new `stall_timeout` field
-            # when set and falls back to the legacy `timeout` for backward
-            # compatibility; either being 0 disables the watchdog entirely.
-            stall_threshold = self.config.agents.effective_stall_timeout()
+            # `agents.timeout == 0` disables the watchdog entirely.
+            stall_threshold = self.config.agents.timeout
             if stall_threshold > 0:
-                # Cache pending attempts and the grader heartbeat once per tick
-                # so per-agent exemption checks do not rescan the attempts dir
-                # or stat the heartbeat file repeatedly.
-                from coral.hub.attempts import agent_in_grader_queue, read_attempts
+                # Cache pending attempts and the grader liveness once per tick
+                # so per-agent exemption checks do not rescan the attempts dir.
                 attempts_cache = read_attempts(self.paths.coral_dir)
                 grader_alive = self._grader_alive()
 
@@ -1438,16 +1440,3 @@ def _validate_sessions(
                 f"(different machine?), will start fresh"
             )
     return validated
-
-
-def _log_has_session_error(log_path: Path) -> bool:
-    """Check if a log file indicates a session-not-found error.
-
-    This happens when resuming on a different machine where the Claude Code
-    session doesn't exist.
-    """
-    try:
-        content = log_path.read_text()
-        return "No conversation found" in content
-    except (OSError, UnicodeDecodeError):
-        return False

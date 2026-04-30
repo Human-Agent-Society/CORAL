@@ -149,18 +149,12 @@ def test_agent_config_defaults_pass_validation() -> None:
     assert cfg.restart_burst_threshold == 3
     assert cfg.restart_burst_window == 30
     assert cfg.restart_pause_seconds == 300
-    assert cfg.stall_timeout == 1200
     assert cfg.min_clean_runtime_seconds == 60
 
 
 def test_agent_config_rejects_negative_threshold() -> None:
     with pytest.raises(ValueError, match="restart_burst_threshold"):
         AgentConfig(restart_burst_threshold=-1)
-
-
-def test_agent_config_rejects_negative_stall_timeout() -> None:
-    with pytest.raises(ValueError, match="stall_timeout"):
-        AgentConfig(stall_timeout=-5)
 
 
 def test_agent_config_rejects_pause_shorter_than_window() -> None:
@@ -181,21 +175,6 @@ def test_agent_config_zero_threshold_is_allowed_disabled() -> None:
 def test_agent_config_zero_window_or_pause_is_allowed_disabled() -> None:
     AgentConfig(restart_burst_window=0)
     AgentConfig(restart_pause_seconds=0)
-
-
-def test_agent_config_effective_stall_timeout_prefers_new_field() -> None:
-    cfg = AgentConfig(timeout=3600, stall_timeout=900)
-    assert cfg.effective_stall_timeout() == 900
-
-
-def test_agent_config_effective_stall_timeout_falls_back_to_legacy() -> None:
-    cfg = AgentConfig(timeout=3600, stall_timeout=0)
-    assert cfg.effective_stall_timeout() == 3600
-
-
-def test_agent_config_effective_stall_timeout_zero_disables() -> None:
-    cfg = AgentConfig(timeout=0, stall_timeout=0)
-    assert cfg.effective_stall_timeout() == 0
 
 
 # ---------------------------------------------------------------------------

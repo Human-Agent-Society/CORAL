@@ -73,7 +73,11 @@ class AgentConfig:
     warmstart: WarmStartConfig = field(default_factory=WarmStartConfig)
     runtime_options: dict[str, Any] = field(default_factory=dict)
     max_turns: int = 200
-    timeout: int = 3600
+    # Stall watchdog: restart an agent that produces no output for this many
+    # seconds. 0 disables the watchdog. Default 1200s (20 min) catches deadlocks
+    # faster than the prior 3600s while still being well above legitimate quiet
+    # periods (long tool calls, grader queue waits — the latter is exempted).
+    timeout: int = 1200
     heartbeat: list[HeartbeatActionConfig] = field(
         default_factory=lambda: [
             HeartbeatActionConfig(name="reflect", every=1),
@@ -93,18 +97,9 @@ class AgentConfig:
     restart_burst_window: int = 30  # seconds; sliding window for crash counting
     restart_pause_seconds: int = 300  # how long the paused state holds before restart attempts resume
 
-    # Reliability: stall watchdog.
-    # When set (>0), takes precedence over the legacy `timeout` field for output-stall detection.
-    # 0 disables stall detection (matching today's `timeout=0` semantics).
-    stall_timeout: int = 1200
-
     # Reliability: grader-queue exemption for stall detection.
     # Skip stall checks for an agent whose latest attempt is pending grading,
-    # but only if the grader process is alive and the pending attempt is not
-    # stale. `grader_heartbeat_max_age` is retained for forward compatibility
-    # but no longer consulted — the manager checks the live multiprocessing
-    # process instead, which is correct during long-running grades.
-    grader_heartbeat_max_age: int = 30  # deprecated; live process check is used instead
+    # but only if the grader process is alive and the pending attempt is not stale.
     grader_pending_max_age: int = 1800  # seconds; older pending attempts no longer exempt
 
     # Reliability: minimum runtime in seconds before an exit_code==0 is considered "clean"
@@ -118,8 +113,6 @@ class AgentConfig:
             "restart_burst_threshold",
             "restart_burst_window",
             "restart_pause_seconds",
-            "stall_timeout",
-            "grader_heartbeat_max_age",
             "grader_pending_max_age",
             "min_clean_runtime_seconds",
         ):
@@ -139,14 +132,6 @@ class AgentConfig:
                 "agents.restart_pause_seconds must be >= agents.restart_burst_window "
                 f"(got pause={self.restart_pause_seconds}, window={self.restart_burst_window})"
             )
-
-    def effective_stall_timeout(self) -> int:
-        """Return the stall timeout actually applied by the manager.
-
-        Prefers the newer `stall_timeout` field; falls back to the legacy `timeout`
-        when `stall_timeout` is unset (0). 0 disables stall detection.
-        """
-        return self.stall_timeout if self.stall_timeout > 0 else self.timeout
 
     def heartbeat_interval(self, name: str) -> int:
         """Get the interval for a heartbeat action by name."""

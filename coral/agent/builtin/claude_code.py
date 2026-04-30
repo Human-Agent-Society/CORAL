@@ -9,6 +9,11 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from coral.agent.exit_classifier import (
+    claude_code_has_result,
+    claude_code_log_has_session_error,
+)
+from coral.agent.process import open_agent_stderr_for_log_dir
 from coral.agent.runtime import AgentHandle, _extract_session_id, write_coral_log_entry
 from coral.workspace.repo import _clean_env
 
@@ -48,14 +53,9 @@ class ClaudeCodeRuntime:
             "session_error" when the log shows a missing-session error.
             "no_result" otherwise (the burst counter consumes this).
         """
-        from coral.agent.exit_classifier import claude_code_has_result
-
-        # Avoid circular import: _log_has_session_error lives in manager.py.
-        from coral.agent.manager import _log_has_session_error
-
         if exit_code == 0 and claude_code_has_result(log_path):
             return "clean"
-        if _log_has_session_error(log_path):
+        if claude_code_log_has_session_error(log_path):
             return "session_error"
         return "no_result"
 
@@ -140,7 +140,6 @@ class ClaudeCodeRuntime:
         # Open per-agent stderr capture under public/diagnostics/<agent_id>/agent.err
         # so stderr does not pollute the stream-json log. Falls back to STDOUT
         # merge for non-managed contexts (tests, direct API users).
-        from coral.agent.process import open_agent_stderr_for_log_dir
         err_path: Path | None = None
         err_file: Any = None
         stderr_target: Any = subprocess.STDOUT

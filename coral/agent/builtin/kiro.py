@@ -9,6 +9,8 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from coral.agent.exit_classifier import classify_by_uptime
+from coral.agent.process import open_agent_stderr_for_log_dir
 from coral.agent.runtime import AgentHandle, write_coral_log_entry
 from coral.workspace.repo import _clean_env
 
@@ -42,7 +44,6 @@ class KiroRuntime:
         an `exit_code==0` as clean only when the agent ran for at least
         `min_clean_runtime_seconds`; shorter exits count as crashes.
         """
-        from coral.agent.exit_classifier import classify_by_uptime
         return classify_by_uptime(exit_code, uptime_seconds, min_clean_runtime_seconds)
 
     def start(
@@ -96,7 +97,6 @@ class KiroRuntime:
         log_file = open(log_path, "w", buffering=1)
 
         # Per-agent stderr capture under public/diagnostics/<agent_id>/agent.err.
-        from coral.agent.process import open_agent_stderr_for_log_dir
         err_path: Path | None = None
         err_file: Any = None
         stderr_target: Any = subprocess.STDOUT

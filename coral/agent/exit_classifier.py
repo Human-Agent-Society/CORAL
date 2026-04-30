@@ -60,3 +60,17 @@ def claude_code_has_result(log_path: Path) -> bool:
     except OSError:
         return False
     return False
+
+
+def claude_code_log_has_session_error(log_path: Path) -> bool:
+    """Return True iff the log indicates a Claude Code session-not-found error.
+
+    This happens when resuming on a different machine where the Claude Code
+    session does not exist locally. Lives next to `claude_code_has_result` so
+    the runtime classifier does not have to reach back into `manager.py`.
+    """
+    try:
+        content = log_path.read_text()
+        return "No conversation found" in content
+    except (OSError, UnicodeDecodeError):
+        return False

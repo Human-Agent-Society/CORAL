@@ -11,6 +11,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from coral.agent.state import read_agent_state
 from coral.cli._helpers import (
     docker_cmd,
     find_coral_dir,
@@ -765,7 +766,6 @@ def cmd_status(args: argparse.Namespace) -> None:
 
             # Best-effort read of the manager-persisted reliability state.
             # Missing or corrupt agent_state.json falls back to log inference.
-            from coral.agent.state import read_agent_state
             agent_state_doc = read_agent_state(coral_dir)
             agent_states = agent_state_doc.agents
 
