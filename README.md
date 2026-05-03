@@ -363,7 +363,7 @@ agents:
   model: auto              # or any model id supported by your Cursor plan
 ```
 
-CORAL spawns each agent as `cursor-agent --print --output-format stream-json --force --workspace <wt> [--model] [--mode] [--resume] <prompt>`. The `--force` flag is always passed (cursor-agent requires it for write tools in `--print` mode), and instructions are read from `AGENTS.md` at the worktree root.
+CORAL spawns each agent as `cursor-agent --print --output-format stream-json --force --workspace <wt> [--model] [--mode] [--resume] <prompt>`. The `--force` flag is always passed (cursor-agent requires it for write tools in `--print` mode). The full task brief is written to `AGENTS.md` at the worktree root, and CORAL also drops a `.cursor/rules/coral.mdc` always-apply rule with short guardrails (use `coral eval`, don't touch `.coral/private/`, share via `.cursor/notes/` and `.cursor/skills/`) so they survive context pressure.
 
 Optional `runtime_options`:
 

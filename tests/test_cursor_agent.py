@@ -13,6 +13,7 @@ from coral.agent.builtin.cursor_agent import (
     _extract_cursor_session_id,
 )
 from coral.agent.registry import default_model_for_runtime, get_runtime
+from coral.workspace.worktree import setup_cursor_settings
 
 # ---------------------------------------------------------------------------
 # Registry wiring
@@ -268,3 +269,90 @@ def test_start_ignores_unknown_runtime_options(
     assert "--bogus_flag" not in cmd
     assert "--bogus-flag" not in cmd
     assert any("bogus_flag" in r.message for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# setup_cursor_settings — `.cursor/rules/coral.mdc` always-apply guardrails
+# ---------------------------------------------------------------------------
+
+
+def test_setup_cursor_settings_writes_alwaysapply_rule(tmp_path: Path) -> None:
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "private").mkdir(parents=True)
+
+    setup_cursor_settings(wt, coral_dir=coral_dir, research=True)
+
+    rule = wt / ".cursor" / "rules" / "coral.mdc"
+    assert rule.exists()
+    text = rule.read_text()
+
+    # Frontmatter must mark the rule alwaysApply so it survives context pressure
+    assert text.startswith("---\n")
+    assert "alwaysApply: true" in text.split("---\n", 2)[1]
+
+    # Body must reference coral eval, AGENTS.md pointer, and private-dir guard
+    assert "coral eval" in text
+    assert "AGENTS.md" in text
+    assert str((coral_dir / "private").resolve()) in text
+
+
+def test_setup_cursor_settings_omits_research_line_when_disabled(tmp_path: Path) -> None:
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "private").mkdir(parents=True)
+
+    setup_cursor_settings(wt, coral_dir=coral_dir, research=False)
+
+    text = (wt / ".cursor" / "rules" / "coral.mdc").read_text()
+    assert "Web search and web fetch are disabled" in text
+
+
+def test_setup_cursor_settings_includes_research_only_when_disabled(tmp_path: Path) -> None:
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "private").mkdir(parents=True)
+
+    setup_cursor_settings(wt, coral_dir=coral_dir, research=True)
+    text = (wt / ".cursor" / "rules" / "coral.mdc").read_text()
+    assert "Web search and web fetch are disabled" not in text
+
+
+def test_setup_cursor_settings_overwrites_existing_rule(tmp_path: Path) -> None:
+    wt = tmp_path / "wt"
+    rules_dir = wt / ".cursor" / "rules"
+    rules_dir.mkdir(parents=True)
+    (rules_dir / "coral.mdc").write_text("stale content from a previous run\n")
+
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "private").mkdir(parents=True)
+
+    setup_cursor_settings(wt, coral_dir=coral_dir, research=True)
+
+    text = (rules_dir / "coral.mdc").read_text()
+    assert "stale content" not in text
+    assert "alwaysApply: true" in text
+
+
+def test_setup_cursor_settings_accepts_gateway_kwargs(tmp_path: Path) -> None:
+    """Cursor doesn't route through the gateway, but the kwargs must be accepted."""
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "private").mkdir(parents=True)
+
+    setup_cursor_settings(
+        wt,
+        coral_dir=coral_dir,
+        research=True,
+        gateway_url="http://localhost:4000",
+        gateway_api_key="sk-test",
+    )
+
+    text = (wt / ".cursor" / "rules" / "coral.mdc").read_text()
+    # Gateway args are intentionally ignored — must not leak into the rule
+    assert "localhost:4000" not in text
+    assert "sk-test" not in text

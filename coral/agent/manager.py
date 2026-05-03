@@ -50,6 +50,7 @@ from coral.workspace import (
     create_project,
     setup_claude_settings,
     setup_codex_settings,
+    setup_cursor_settings,
     setup_gitignore,
     setup_opencode_settings,
     setup_shared_state,
@@ -377,6 +378,13 @@ class AgentManager:
             )
         elif shared_dir_name == ".codex":
             setup_codex_settings(
+                worktree_path, coral_dir=self.paths.coral_dir,
+                research=self.config.agents.research,
+                gateway_url=gateway_url,
+                gateway_api_key=gateway_api_key,
+            )
+        elif shared_dir_name == ".cursor":
+            setup_cursor_settings(
                 worktree_path, coral_dir=self.paths.coral_dir,
                 research=self.config.agents.research,
                 gateway_url=gateway_url,
