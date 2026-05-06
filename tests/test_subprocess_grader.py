@@ -40,6 +40,73 @@ def _grade(grader: SubprocessGrader, codebase_path: str, tasks: list[Task] | Non
     return asyncio.run(grader.grade(codebase_path, tasks or []))
 
 
+def test_subprocess_grader_describe_tune_default(pythonpath_with: Path) -> None:
+    """Worker dispatches mode=describe_tune and returns the grader's default text."""
+    _write_fixture_grader(
+        pythonpath_with,
+        """
+        from coral.grader import TaskGrader
+
+        class Grader(TaskGrader):
+            def evaluate(self) -> float:
+                return 0.0
+        """,
+    )
+
+    grader = SubprocessGrader(
+        entrypoint="fixture_grader:Grader",
+        worker_python=Path(sys.executable),
+        config=GraderConfig(),
+        private_dir=str(pythonpath_with / "private"),
+    )
+
+    description = grader.describe_tune()
+    assert "does not differentiate" in description
+    assert "budget classification" in description
+
+
+def test_subprocess_grader_describe_tune_override(pythonpath_with: Path) -> None:
+    """A grader override is round-tripped intact through the worker."""
+    _write_fixture_grader(
+        pythonpath_with,
+        """
+        from coral.grader import TaskGrader
+
+        class Grader(TaskGrader):
+            def evaluate(self) -> float:
+                return 0.0
+            def describe_tune(self) -> str:
+                return "scored on a 10% subset; ~30s vs ~5m for a real eval"
+        """,
+    )
+
+    grader = SubprocessGrader(
+        entrypoint="fixture_grader:Grader",
+        worker_python=Path(sys.executable),
+        config=GraderConfig(),
+        private_dir=str(pythonpath_with / "private"),
+    )
+
+    description = grader.describe_tune()
+    assert description.startswith("scored on a 10% subset")
+
+
+def test_subprocess_grader_describe_tune_falls_back_on_bad_worker(tmp_path: Path) -> None:
+    """A nonexistent worker python must not block startup — return the default."""
+    grader = SubprocessGrader(
+        entrypoint="anything:Anything",
+        worker_python=tmp_path / "does-not-exist",
+        config=GraderConfig(),
+        private_dir=str(tmp_path / "private"),
+    )
+
+    description = grader.describe_tune()
+    # Falls back to the same default the template uses.
+    from coral.template.coral_md import default_tune_description
+
+    assert description == default_tune_description()
+
+
 def test_subprocess_grader_returns_score(pythonpath_with: Path) -> None:
     _write_fixture_grader(
         pythonpath_with,

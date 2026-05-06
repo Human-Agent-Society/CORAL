@@ -43,6 +43,7 @@ from coral.hub.heartbeat import (
     write_agent_heartbeat,
     write_global_heartbeat,
 )
+from coral.template.coral_md import default_tune_description as _default_tune_description
 from coral.template.coral_md import generate_coral_md
 from coral.types import BUDGET_CLASS_REAL, get_budget_class
 from coral.workspace import (
@@ -108,6 +109,10 @@ class AgentManager:
         self._gateway_keys: dict[str, str] = {}  # agent_id -> proxy key
         self._grader_proc: multiprocessing.Process | None = None
         self._grader_stop_event: Any | None = None  # multiprocessing.Event
+        # Cache of the grader's `describe_tune()` output, resolved once at
+        # start_all time and templated into every agent's CORAL.md so the
+        # agent knows what `--tune` actually does on this task.
+        self._tune_description: str | None = None
 
     def start_all(self) -> list[AgentHandle]:
         """Create workspace structure and spawn all agents."""
@@ -126,6 +131,11 @@ class AgentManager:
         #     the daemon picks them up, grades inside an isolated worktree,
         #     and writes the score back. Must be running before agents start.
         self._start_grader_daemon()
+
+        # 1d. Resolve the grader's tune-mode contract. Cached for templating
+        #     into every agent's CORAL.md so the agent knows whether `--tune`
+        #     just toggles budget classification or also uses a cheaper eval.
+        self._tune_description = self._resolve_tune_description()
 
         # 2. Seed global heartbeat config if not already present
         if not read_global_heartbeat(self.paths.coral_dir):
@@ -164,6 +174,34 @@ class AgentManager:
         atexit.register(self._atexit_cleanup)
 
         return handles
+
+    def _resolve_tune_description(self) -> str:
+        """Ask the grader once for its tune-mode contract; default on failure.
+
+        Templated into every agent's CORAL.md so the agent knows whether
+        `--tune` actually changes the eval (cheaper subset, smoke harness,
+        etc.) or just classifies the attempt against the budget.
+        Failures here must never block run startup — the daemon will
+        independently report a real grader-load problem if there is one.
+        """
+        assert self.paths is not None
+        try:
+            from coral.grader.loader import load_grader
+
+            grader = load_grader(self.config, coral_dir=self.paths.coral_dir)
+            describe = getattr(grader, "describe_tune", None)
+            if not callable(describe):
+                return _default_tune_description()
+            description = describe()
+            if isinstance(description, str) and description.strip():
+                return description
+            return _default_tune_description()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                f"Could not resolve grader.describe_tune() at startup: {exc}; "
+                "falling back to the default tune description in CORAL.md"
+            )
+            return _default_tune_description()
 
     def _start_grader_daemon(self) -> None:
         """Spawn the grader daemon subprocess. Idempotent.
@@ -404,6 +442,7 @@ class AgentManager:
             self.config, agent_id,
             single_agent=single_agent,
             shared_dir=shared_dir_name,
+            tune_description=self._tune_description or _default_tune_description(),
         )
         (worktree_path / instruction_file).write_text(coral_md)
 

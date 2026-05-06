@@ -10,11 +10,28 @@ _TEMPLATE_PATH = Path(__file__).parent / "coral.md.template"
 _SINGLE_TEMPLATE_PATH = Path(__file__).parent / "coral_single.md.template"
 
 
+def default_tune_description() -> str:
+    """Fallback used when the grader did not override `describe_tune()`.
+
+    Mirrors `coral.grader.task_grader.TaskGrader.describe_tune`. Kept here
+    too so CORAL.md generation has no hard dependency on grader internals
+    when the grader is unreachable (worker crash at startup, legacy paths).
+    """
+    return (
+        "This grader does not differentiate tune mode from a real "
+        "submission: scoring runs the full evaluation either way and "
+        "returns the same score it would return without `--tune`. "
+        "The flag's only effect is budget classification — tune "
+        "attempts do not count against the plateau / heartbeat budget."
+    )
+
+
 def generate_coral_md(
     config: CoralConfig,
     agent_id: str,
     single_agent: bool = False,
     shared_dir: str = ".claude",
+    tune_description: str | None = None,
 ) -> str:
     """Produce the CORAL.md file that agents read at startup.
 
@@ -83,6 +100,11 @@ def generate_coral_md(
         research_back_reference = ""
         repeat_research_hint = "research new techniques, "
 
+    if tune_description and tune_description.strip():
+        resolved_tune_description = tune_description.strip()
+    else:
+        resolved_tune_description = default_tune_description()
+
     return template.format(
         task_name=config.task.name,
         task_description=config.task.description,
@@ -99,6 +121,7 @@ def generate_coral_md(
         knowledge_step_num=step_offset + 4,
         research_back_reference=research_back_reference,
         repeat_research_hint=repeat_research_hint,
+        tune_description=resolved_tune_description,
     )
 
 

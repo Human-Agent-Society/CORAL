@@ -79,6 +79,29 @@ class TaskGrader(ABC):
             return "real"
         return str(self.tasks[0].metadata.get("budget_class", "real"))
 
+    def describe_tune(self) -> str:
+        """Per-task contract for what `coral eval --tune` does on this grader.
+
+        Override this to tell the agent what is actually different about a
+        tune-mode evaluation on your task — e.g. "scored on a 10% subset of
+        the validation set; runs in ~30s instead of ~5m; the tune score is
+        an unbiased but noisier estimate of the real score." The string is
+        rendered into the agent's CORAL.md so it shows up alongside the
+        `--tune` documentation. Plain prose; markdown is allowed.
+
+        The default below is correct for graders that have not bothered to
+        differentiate tune from real: tune is a pure budget-classification
+        flag and the score returned is identical. If your grader does
+        nothing special for tune mode, leave the default — it is honest.
+        """
+        return (
+            "This grader does not differentiate tune mode from a real "
+            "submission: scoring runs the full evaluation either way and "
+            "returns the same score it would return without `--tune`. "
+            "The flag's only effect is budget classification — tune "
+            "attempts do not count against the plateau / heartbeat budget."
+        )
+
     @property
     def eval_logs_dir(self) -> Path:
         """Per-attempt directory for eval artifacts that should outlive the grader.

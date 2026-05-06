@@ -49,6 +49,7 @@ def _resolve_entrypoint(spec):
 
 def _main():
     payload = json.loads(sys.stdin.read())
+    mode = payload.get("mode", "grade")
 
     cls = _resolve_entrypoint(payload["entrypoint"])
 
@@ -65,6 +66,12 @@ def _main():
     config = GraderConfig(**payload["config"])
     grader = cls(config=config)
     grader.private_dir = payload["private_dir"]
+
+    if mode == "describe_tune":
+        # Read-only metadata fetch: no codebase, no tasks. Used at run setup
+        # to template the grader's tune contract into CORAL.md.
+        sys.stdout.write(json.dumps({"description": str(grader.describe_tune())}))
+        return
 
     tasks = [Task.from_dict(t) for t in payload["tasks"]]
     bundle = asyncio.run(grader.grade(payload["codebase_path"], tasks))
@@ -145,6 +152,55 @@ class SubprocessGrader:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._run_worker, payload)
 
+    def describe_tune(self) -> str:
+        """Fetch the grader's tune-mode description by spawning the worker once.
+
+        Used at run setup to template the per-task tune contract into CORAL.md.
+        Falls back to the TaskGrader default if the worker errors out — a
+        broken describe call must never block the run from starting.
+        """
+        payload = {
+            "mode": "describe_tune",
+            "entrypoint": self.entrypoint,
+            "config": _grader_config_to_dict(self.config),
+            "private_dir": self.private_dir,
+        }
+        try:
+            result = subprocess.run(
+                [str(self.worker_python), "-c", _WORKER_SCRIPT],
+                input=json.dumps(payload),
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            logger.warning(f"describe_tune worker failed: {exc}; using default")
+            return _default_tune_description()
+
+        if result.returncode != 0:
+            logger.warning(
+                f"describe_tune worker exited {result.returncode}: "
+                f"{result.stderr.strip()[-500:]}; using default"
+            )
+            return _default_tune_description()
+
+        try:
+            response = _parse_worker_response(result.stdout)
+        except RuntimeError as exc:
+            logger.warning(f"describe_tune worker bad response: {exc}; using default")
+            return _default_tune_description()
+
+        if "error" in response:
+            logger.warning(
+                f"describe_tune raised in worker: {response['error']}; using default"
+            )
+            return _default_tune_description()
+
+        description = response.get("description")
+        if not isinstance(description, str) or not description.strip():
+            return _default_tune_description()
+        return description
+
     def _run_worker(self, payload: dict[str, Any]) -> ScoreBundle:
         try:
             result = subprocess.run(
@@ -185,3 +241,10 @@ class SubprocessGrader:
             )
 
         return ScoreBundle.from_dict(response["bundle"])
+
+
+def _default_tune_description() -> str:
+    """Fallback when the worker can't be reached for `describe_tune`."""
+    from coral.template.coral_md import default_tune_description
+
+    return default_tune_description()

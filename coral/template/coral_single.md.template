@@ -77,13 +77,17 @@ This is not optional — every eval should produce at least one note or skill up
 
 ### Tune mode (`coral eval --tune`)
 
-For hyperparameter sweeps, ablations, or smoke tests on tooling, submit with `--tune`:
-
 ```
 coral eval --tune -m "Sweep lr=1e-3 vs 3e-4"
 ```
 
-Tune attempts are scored and recorded the same way, but they don't count toward the plateau budget — running several tune attempts in a row will not trigger pivot prompts. Drop the flag once tuning settles.
+**What this grader does in tune mode:** {tune_description}
+
+**Use `--tune` for:** hyperparameter sweeps, ablations, and smoke tests after a tooling change — work where most variants will be thrown away.
+
+**Do NOT use `--tune` for:** your final/best answer (must be a normal `coral eval` to count on the leaderboard), or to dodge plateau pivot prompts when you're actually stuck (pivots exist for a reason). If this grader uses a cheaper target in tune mode, tune scores may not be directly comparable to real ones — check the description above.
+
+Tune attempts are still scored, recorded, and visible in `coral log` — they just don't drive plateau triggers. Drop the flag once tuning settles.
 
 ## {results_step_num}. Read Results & Iterate
 
