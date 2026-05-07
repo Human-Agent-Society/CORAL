@@ -21,7 +21,7 @@
 </div>
 
 <p align="center">
-<a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#using-opencode">OpenCode</a> · <a href="#using-the-gateway-for-custom-models">Gateway</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
+<a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#using-opencode">OpenCode</a> · <a href="#using-cursor-agent">Cursor</a> · <a href="#using-kiro">Kiro</a> · <a href="#using-the-gateway-for-custom-models">Gateway</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
 </p>
 
 
@@ -56,6 +56,8 @@ Coral works with any coding agent that can run as a subprocess and interact via 
 |-------|-------------|
 | [**Claude Code**](https://github.com/anthropics/claude-code) | Anthropic's agentic coding tool — the default and most tested runtime |
 | [**Codex**](https://github.com/openai/codex) | OpenAI's open-source coding agent |
+| [**Cursor Agent**](https://cursor.com/docs/cli/overview) | Cursor's headless `cursor-agent` CLI |
+| [**Kiro**](https://kiro.dev) | Kiro's `kiro-cli` agent (AWS-hosted) |
 | [**OpenCode**](https://github.com/opencode-ai/opencode) | Open-source terminal-based AI coding agent |
 
 > [!TIP]
@@ -71,7 +73,7 @@ Set the agent in your task config (refer to <a href="#3-configure-the-task">Conf
 
 ```yaml
 agents:
-  runtime: claude_code   # or "codex" or "opencode"
+  runtime: claude_code   # or "codex", "cursor", "kiro", "opencode"
   count: 3  # how many agents you want to spawn. Beware of your budget :)
   model: opus   # name of the model you wish to use
 ```
@@ -111,7 +113,7 @@ Each agent runs in its own git worktree branch. Shared state (attempts, notes, s
 
 | Concept | Description |
 |---------|-------------|
-| **Agents as optimizers** | Claude Code / Codex / OpenCode subprocesses, each in its own git worktree |
+| **Agents as optimizers** | Claude Code / Codex / Cursor Agent / Kiro / OpenCode subprocesses, each in its own git worktree |
 | **Shared state** | `.coral/` directory with attempts, notes, and skills — symlinked into every worktree |
 | **Eval loop** | Agents call `uv run coral eval -m "..."` to stage, commit, and grade in one shot |
 | **CLI orchestration** | 17+ commands: `start`, `stop`, `status`, `eval`, `log`, `ui`, and more |
@@ -205,7 +207,7 @@ grader:
 
 agents:
   count: 1
-  runtime: claude_code  # or opencode, codex
+  runtime: claude_code  # or codex, cursor, kiro, opencode
   model: claude-sonnet-4-6
   max_turns: 200  # before the agent reboots. dont worry Coral keeps running until you stop
 
@@ -266,7 +268,7 @@ coral/
 ├── config.py            # YAML-based CoralConfig
 ├── agent/
 │   ├── manager.py       # Multi-agent lifecycle
-│   └── runtime.py       # Claude Code / Codex / OpenCode subprocess
+│   └── runtime.py       # Claude Code / Codex / Cursor Agent / Kiro / OpenCode subprocess
 ├── workspace/
 │   └── setup.py         # Worktree creation, hooks, symlinks
 ├── grader/
@@ -344,6 +346,52 @@ agents:
   model: claude/claude-opus-4-6  # must match a model defined in opencode.json
 ```
 
+### Using Cursor Agent
+
+To use [Cursor Agent](https://cursor.com/docs/cli/overview), install the headless CLI and authenticate once:
+
+```bash
+curl -fsSL https://cursor.com/install | bash
+cursor-agent login
+```
+
+Then point your task at it:
+
+```yaml
+agents:
+  runtime: cursor          # alias for cursor_agent; "cursor-agent" also works
+  model: auto              # or any model id supported by your Cursor plan
+```
+
+CORAL spawns each agent as `cursor-agent --print --output-format stream-json --force --workspace <wt> [--model] [--mode] [--resume] <prompt>`. The `--force` flag is always passed (cursor-agent requires it for write tools in `--print` mode). The full task brief is written to `AGENTS.md` at the worktree root, and CORAL also drops a `.cursor/rules/coral.mdc` always-apply rule with short guardrails (use `coral eval`, don't touch `.coral/private/`, share via `.cursor/notes/` and `.cursor/skills/`) so they survive context pressure.
+
+Optional `runtime_options`:
+
+```yaml
+agents:
+  runtime: cursor
+  runtime_options:
+    command: /usr/local/bin/cursor-agent  # override binary path
+    mode: plan                            # --mode plan|ask
+    stream_partial_output: true           # --stream-partial-output
+```
+
+> **Note:** Cursor Agent uses its own auth and does **not** route through the LiteLLM gateway. Login state lives in your Cursor account, not in CORAL config.
+
+### Using Kiro
+
+To use [Kiro](https://kiro.dev), install `kiro-cli` and authenticate via Kiro's setup. Then:
+
+```yaml
+agents:
+  runtime: kiro
+  model: auto              # or any Kiro-supported model
+```
+
+CORAL spawns each agent as `kiro-cli chat <prompt> --no-interactive -a` (the `-a` flag trusts all tools). Instructions are read from `KIRO.md` at the worktree root. Kiro does not currently expose a session id we can resume from, so restarted agents start fresh — they still see all prior attempts and notes via the shared `.kiro/` directory.
+
+Like Cursor, Kiro uses its own auth and does not route through the LiteLLM gateway.
+
 ### Using the Gateway for Custom Models
 
 CORAL includes a built-in **LiteLLM gateway** that acts as a proxy between agents and model providers. This is useful when you want to:
@@ -375,7 +423,7 @@ Each entry in `model_list` defines a model the gateway will serve. The `model_na
 
 ```yaml
 agents:
-  runtime: opencode           # or claude_code, codex
+  runtime: opencode           # or claude_code, codex (cursor and kiro use their own auth, not the gateway)
   model: claude/claude-opus-4-6
   gateway:
     enabled: true

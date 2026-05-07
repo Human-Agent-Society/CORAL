@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from coral.agent.builtin.claude_code import ClaudeCodeRuntime
 from coral.agent.builtin.codex import CodexRuntime
+from coral.agent.builtin.cursor_agent import CursorAgentRuntime
 from coral.agent.builtin.kiro import KiroRuntime
 from coral.agent.builtin.opencode import OpenCodeRuntime
 from coral.agent.runtime import AgentRuntime
@@ -11,6 +12,7 @@ from coral.agent.runtime import AgentRuntime
 _RUNTIMES: dict[str, type] = {
     "claude_code": ClaudeCodeRuntime,
     "codex": CodexRuntime,
+    "cursor_agent": CursorAgentRuntime,
     "kiro": KiroRuntime,
     "opencode": OpenCodeRuntime,
 }
@@ -23,12 +25,15 @@ _ALIASES: dict[str, str] = {
     "openai-codex": "codex",
     "open-code": "opencode",
     "kiro-cli": "kiro",
+    "cursor": "cursor_agent",
+    "cursor-agent": "cursor_agent",
 }
 
 # Default models per runtime (used when user doesn't specify --model)
 _DEFAULT_MODELS: dict[str, str] = {
     "claude_code": "sonnet",
     "codex": "gpt-5.4",
+    "cursor_agent": "auto",
     "kiro": "auto",
     "opencode": "openai/gpt-5",
 }

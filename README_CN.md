@@ -27,7 +27,7 @@
 <a href="#安装">安装</a> · <a href="#支持的-agent">支持的 Agent</a> · <a href="#使用">使用</a> · <a href="#工作原理">工作原理</a> · <a href="#快速上手">快速上手</a> · <a href="#cli-命令">CLI 命令</a> · <a href="#示例">示例</a> · <a href="#许可证">许可证</a>
 </p>
 
-**CORAL** 是一套用于构建**自主 AI Agent 组织**的基础设施，Agent 们持续运行实验、共享知识、不断进化出更优方案。只需提供代码库和评分脚本，Coral 即可完成剩余工作：隔离工作空间、安全评估、持久化共享知识，以及多 Agent 协作驱动持续进化。原生集成 Claude Code、OpenCode、Codex 等主流编程 Agent。
+**CORAL** 是一套用于构建**自主 AI Agent 组织**的基础设施，Agent 们持续运行实验、共享知识、不断进化出更优方案。只需提供代码库和评分脚本，Coral 即可完成剩余工作：隔离工作空间、安全评估、持久化共享知识，以及多 Agent 协作驱动持续进化。原生集成 Claude Code、Codex、Cursor Agent、Kiro、OpenCode 等主流编程 Agent。
 
 想要自我进化的 AI，又不想折腾配置？试试 Coral。
 
@@ -57,6 +57,8 @@ CORAL 支持任何可以作为子进程运行并通过终端交互的编程 Agen
 |-------|------|
 | [**Claude Code**](https://github.com/anthropics/claude-code) | Anthropic 的 Agentic 编程工具——默认且测试最充分的运行时 |
 | [**Codex**](https://github.com/openai/codex) | OpenAI 的开源编程 Agent |
+| [**Cursor Agent**](https://cursor.com/docs/cli/overview) | Cursor 的无头 `cursor-agent` CLI |
+| [**Kiro**](https://kiro.dev) | Kiro 的 `kiro-cli` Agent（AWS 托管） |
 | [**OpenCode**](https://github.com/opencode-ai/opencode) | 开源终端 AI 编程 Agent |
 
 > [!TIP]
@@ -72,7 +74,7 @@ CORAL 支持任何可以作为子进程运行并通过终端交互的编程 Agen
 
 ```yaml
 agents:
-  runtime: claude_code   # 或 "codex" 或 "opencode"
+  runtime: claude_code   # 或 "codex"、"cursor"、"kiro"、"opencode"
   count: 3
   model: opus  
 
@@ -192,7 +194,7 @@ grader:
 
 agents:
   count: 1
-  runtime: claude_code  # 或 opencode、codex
+  runtime: claude_code  # 或 codex、cursor、kiro、opencode
   model: claude-sonnet-4-6
   max_turns: 200  # Agent 重启前的最大轮数，别担心 Coral 会一直运行直到你停止
 
@@ -246,7 +248,7 @@ coral/
 ├── config.py            # YAML 配置加载
 ├── agent/
 │   ├── manager.py       # 多 Agent 生命周期
-│   └── runtime.py       # Claude Code / Codex / OpenCode 子进程
+│   └── runtime.py       # Claude Code / Codex / Cursor Agent / Kiro / OpenCode 子进程
 ├── workspace/
 │   └── setup.py         # Worktree 创建、hook、软链
 ├── grader/

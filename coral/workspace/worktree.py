@@ -10,8 +10,8 @@ import subprocess
 from pathlib import Path
 
 from coral.workspace.repo import (
-    run_setup_commands,
     _clean_env,
+    run_setup_commands,
 )
 
 logger = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ def create_agent_worktree(repo_path: Path, agent_id: str, agents_dir: Path) -> P
 def setup_gitignore(worktree_path: Path) -> None:
     """Write .gitignore to exclude CORAL-managed files from git."""
     gitignore_path = worktree_path / ".gitignore"
-    entries = {".coral_agent_id", ".coral_dir", "CLAUDE.md", "AGENTS.md", ".claude/", ".codex/", ".opencode/", ".venv/"}
+    entries = {".coral_agent_id", ".coral_dir", "CLAUDE.md", "AGENTS.md", ".claude/", ".codex/", ".cursor/", ".opencode/", ".venv/"}
 
     # Preserve existing entries
     existing = set()
@@ -359,6 +359,59 @@ def setup_codex_settings(
 
     settings_path = codex_dir / "config.toml"
     settings_path.write_text(config_toml)
+
+
+def setup_cursor_settings(
+    worktree_path: Path,
+    coral_dir: Path,
+    *,
+    research: bool = True,
+    # Cursor Agent uses its own auth (`cursor-agent login`) and does not
+    # honour the OpenAI/Anthropic base-url env vars LiteLLM relies on.
+    # The kwargs are accepted so the manager dispatch can stay uniform.
+    gateway_url: str | None = None,  # noqa: ARG001
+    gateway_api_key: str | None = None,  # noqa: ARG001
+) -> None:
+    """Write `.cursor/rules/coral.mdc` with always-apply CORAL guardrails.
+
+    Cursor Agent reads `.cursor/rules/*.mdc` files via its native rules
+    system in addition to AGENTS.md. The full task brief lives in AGENTS.md;
+    this file holds short, high-priority constraints that should survive
+    context pressure (eval workflow, private-dir guard, sharing channels).
+
+    Permission bypass is handled at the CLI via `--force`, not in a settings
+    file — so unlike claude/opencode/codex there is no permissions block.
+    """
+    rules_dir = worktree_path / ".cursor" / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+
+    private_dir = str(coral_dir.resolve() / "private")
+
+    body_lines = [
+        "Always:",
+        "",
+        '- Use `coral eval -m "<short description>"` to stage, commit, and grade your work — never bare `git commit`.',
+        "- Read the full task brief in `AGENTS.md` at the workspace root.",
+        f"- Do not read or modify anything under `{private_dir}/` (grader internals, answer keys).",
+        "- Share findings through `.cursor/notes/` and reusable tools through `.cursor/skills/` so other agents benefit.",
+    ]
+    if not research:
+        body_lines.append("- Web search and web fetch are disabled for this run.")
+
+    rules_md = (
+        "---\n"
+        "description: CORAL agent guardrails\n"
+        "globs:\n"
+        "alwaysApply: true\n"
+        "---\n"
+        "\n"
+        "# CORAL Agent Guardrails\n"
+        "\n"
+        + "\n".join(body_lines)
+        + "\n"
+    )
+
+    (rules_dir / "coral.mdc").write_text(rules_md)
 
 
 def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
