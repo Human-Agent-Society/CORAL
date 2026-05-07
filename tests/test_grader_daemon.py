@@ -202,6 +202,15 @@ def test_process_pending_multiple_in_submission_order():
     """Pending attempts are graded in submission (timestamp) order."""
     with tempfile.TemporaryDirectory() as d:
         repo = _init_repo_and_coral(Path(d))
+        # This test exercises consumer-side ordering, so disable the
+        # producer-side per-agent pending cap (default 1) to allow stacking.
+        cfg_path = repo / ".coral" / "config.yaml"
+        with open(cfg_path) as f:
+            cfg = yaml.safe_load(f)
+        cfg["grader"]["max_pending_per_agent"] = 0
+        with open(cfg_path, "w") as f:
+            yaml.dump(cfg, f)
+
         sys.path.insert(0, str(repo))
         try:
             (repo / "main.py").write_text("print('a')\n")

@@ -184,6 +184,144 @@ def test_submit_eval_tracks_eval_count():
             sys.path.pop(0)
 
 
+def _set_grader_config(repo: Path, **fields) -> None:
+    """Rewrite .coral/config.yaml's grader section with the given overrides."""
+    cfg_path = repo / ".coral" / "config.yaml"
+    with open(cfg_path) as f:
+        cfg = yaml.safe_load(f)
+    cfg.setdefault("grader", {}).update(fields)
+    with open(cfg_path, "w") as f:
+        yaml.dump(cfg, f)
+
+
+def _head_hash(repo: Path) -> str:
+    return subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+
+def test_submit_eval_rejects_when_agent_at_pending_limit():
+    """Default cap is 1: a second submit while the first is pending must raise
+    and must not create a new commit."""
+    import sys
+
+    with tempfile.TemporaryDirectory() as d:
+        repo = _setup_repo_with_config(Path(d))
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "hello.py").write_text("print('v1')\n")
+            first = submit_eval(
+                message="v1", agent_id="agent-test", workdir=str(repo), wait=False,
+            )
+            assert first.status == "pending"
+            head_after_first = _head_hash(repo)
+
+            # Second submit while first is still pending — must reject.
+            (repo / "hello.py").write_text("print('v2')\n")
+            with pytest.raises(RuntimeError, match=r"pending attempt"):
+                submit_eval(
+                    message="v2", agent_id="agent-test", workdir=str(repo), wait=False,
+                )
+
+            # No orphan commit was created by the rejected submit.
+            assert _head_hash(repo) == head_after_first
+        finally:
+            sys.path.pop(0)
+
+
+def test_submit_eval_allows_after_drain():
+    """After the daemon grades the pending attempt, a new submit succeeds."""
+    import sys
+
+    with tempfile.TemporaryDirectory() as d:
+        repo = _setup_repo_with_config(Path(d))
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "hello.py").write_text("print('v1')\n")
+            _submit_and_grade("v1", "agent-test", str(repo))
+
+            (repo / "hello.py").write_text("print('v2')\n")
+            second = submit_eval(
+                message="v2", agent_id="agent-test", workdir=str(repo), wait=False,
+            )
+            assert second.status == "pending"
+        finally:
+            sys.path.pop(0)
+
+
+def test_submit_eval_respects_higher_limit():
+    """grader.max_pending_per_agent: 3 lets three pending stack, rejects the fourth."""
+    import sys
+
+    with tempfile.TemporaryDirectory() as d:
+        repo = _setup_repo_with_config(Path(d))
+        _set_grader_config(repo, max_pending_per_agent=3)
+
+        sys.path.insert(0, str(repo))
+        try:
+            for i in range(3):
+                (repo / "hello.py").write_text(f"print('v{i}')\n")
+                submit_eval(
+                    message=f"v{i}", agent_id="agent-test",
+                    workdir=str(repo), wait=False,
+                )
+
+            (repo / "hello.py").write_text("print('overflow')\n")
+            with pytest.raises(RuntimeError, match=r"pending attempt"):
+                submit_eval(
+                    message="overflow", agent_id="agent-test",
+                    workdir=str(repo), wait=False,
+                )
+        finally:
+            sys.path.pop(0)
+
+
+def test_submit_eval_unlimited_when_zero():
+    """grader.max_pending_per_agent: 0 disables the cap entirely."""
+    import sys
+
+    with tempfile.TemporaryDirectory() as d:
+        repo = _setup_repo_with_config(Path(d))
+        _set_grader_config(repo, max_pending_per_agent=0)
+
+        sys.path.insert(0, str(repo))
+        try:
+            for i in range(5):
+                (repo / "hello.py").write_text(f"print('v{i}')\n")
+                submit_eval(
+                    message=f"v{i}", agent_id="agent-test",
+                    workdir=str(repo), wait=False,
+                )
+            # All five sit in the queue as pending; nothing was rejected.
+            attempts_dir = repo / ".coral" / "public" / "attempts"
+            assert len(list(attempts_dir.glob("*.json"))) == 5
+        finally:
+            sys.path.pop(0)
+
+
+def test_submit_eval_per_agent_isolation():
+    """A pending submission from agent-A must not block agent-B from submitting."""
+    import sys
+
+    with tempfile.TemporaryDirectory() as d:
+        repo = _setup_repo_with_config(Path(d))
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "hello.py").write_text("print('a')\n")
+            submit_eval(message="a", agent_id="agent-A", workdir=str(repo), wait=False)
+
+            # agent-A is at its limit, but agent-B has no pending attempts.
+            (repo / "hello.py").write_text("print('b')\n")
+            second = submit_eval(
+                message="b", agent_id="agent-B", workdir=str(repo), wait=False,
+            )
+            assert second.status == "pending"
+            assert second.agent_id == "agent-B"
+        finally:
+            sys.path.pop(0)
+
+
 def test_submit_eval_sets_shared_state_hash():
     """submit_eval should checkpoint shared state and store hash in the attempt.
 

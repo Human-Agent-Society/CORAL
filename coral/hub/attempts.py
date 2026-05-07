@@ -138,6 +138,24 @@ def agent_in_grader_queue(
     return candidates[0]
 
 
+def count_agent_pending(
+    coral_dir: str | Path, agent_id: str, attempts: list[Attempt] | None = None
+) -> int:
+    """Return the number of pending attempts owned by `agent_id`.
+
+    Uses the same filter as `agent_in_grader_queue` (status=="pending" and
+    score is None). Pass a pre-fetched `attempts` list to avoid a duplicate
+    directory scan when the caller already has one.
+    """
+    if attempts is None:
+        attempts = read_attempts(coral_dir)
+    return sum(
+        1
+        for a in attempts
+        if a.agent_id == agent_id and a.status == "pending" and a.score is None
+    )
+
+
 def get_recent(coral_dir: str | Path, n: int = 10) -> list[Attempt]:
     """Get N most recent attempts (by timestamp)."""
     attempts = read_attempts(coral_dir)

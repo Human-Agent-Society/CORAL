@@ -16,6 +16,8 @@ from pathlib import Path
 
 from coral.config import CoralConfig
 from coral.hub.attempts import (
+    agent_in_grader_queue,
+    count_agent_pending,
     increment_eval_count,
     read_attempt,
     read_eval_count,
@@ -154,6 +156,26 @@ def submit_eval(
     if not config_path.exists():
         raise FileNotFoundError(f"No config.yaml found at {config_path}")
     config = CoralConfig.from_yaml(config_path)
+
+    # Producer-side queue cap: refuse to commit when this agent already has
+    # `max_pending_per_agent` ungraded submissions in flight. The grader is
+    # serial; without this cap, a slow grader plus a fast agent piles up
+    # arbitrarily many pending JSONs (issue #80). 0 = unlimited (legacy).
+    pending_limit = config.grader.max_pending_per_agent
+    if pending_limit > 0:
+        pending_count = count_agent_pending(coral_dir, agent_id)
+        if pending_count >= pending_limit:
+            oldest = agent_in_grader_queue(coral_dir, agent_id)
+            wait_hint = (
+                f"Run `coral wait {oldest.commit_hash[:12]}` to block on it "
+                f"before submitting again."
+                if oldest is not None
+                else "Wait for the prior eval to finish before submitting again."
+            )
+            raise RuntimeError(
+                f"You already have {pending_count} pending attempt(s) "
+                f"(limit: {pending_limit}). {wait_hint}"
+            )
 
     # Git add + commit
     commit_hash = _git_add_and_commit(message, str(workdir_path))
