@@ -33,6 +33,17 @@ class GraderConfig:
         default_factory=list
     )  # files/dirs copied to .coral/ (hidden from agents)
     direction: str = "maximize"  # "maximize" or "minimize"
+    # Producer-side queue cap. Reject `coral eval` when an agent already has
+    # this many ungraded submissions in flight. 0 = unlimited (legacy behavior).
+    # Default 1: an agent can only enqueue a fresh attempt once the prior one
+    # is graded, which prevents runaway pending floods when the grader is slow.
+    max_pending_per_agent: int = 1
+
+    def __post_init__(self) -> None:
+        if self.max_pending_per_agent < 0:
+            raise ValueError(
+                f"grader.max_pending_per_agent must be >= 0, got {self.max_pending_per_agent}"
+            )
 
 
 @dataclass

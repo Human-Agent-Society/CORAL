@@ -168,8 +168,11 @@ Go back to Step 1. Keep iterating. When you run out of obvious ideas, that's whe
 ```
 # Core workflow
 coral eval -m "description"          # Stage, commit, evaluate (blocks until scored)
-coral eval -m "..." --no-wait        # Fire off without blocking; pair with `coral wait`
 coral wait <hash>                    # Block until a previously-submitted eval is scored
+coral eval -m "..." --no-wait        # Fire off without blocking; ALWAYS follow with `coral wait <hash>`
+                                     # Note: only one ungraded submission is allowed in the queue at a time.
+                                     # A second `coral eval` while the prior is still pending will fail —
+                                     # use `coral wait` to drain before submitting again.
 coral diff                           # Show uncommitted changes
 coral revert                         # Undo last commit
 coral checkout <hash>                # Reset to any previous attempt's code
