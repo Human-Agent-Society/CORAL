@@ -6,8 +6,11 @@ inside an isolated `git worktree add --detach <commit>` checkout, so agent
 commits during grading do not perturb the codebase the grader sees.
 
 Design invariants:
-- Each pending attempt is processed serially (most graders are not concurrency-safe:
-  Docker port conflicts, GPU contention, shared scratch dirs, etc.).
+- Pending attempts are dispatched through a thread pool of size
+  `grader.parallel.max_workers` (default 1 = serial). Bumping the value is
+  just configuration; safety is the operator's call — most graders are NOT
+  concurrency-safe (Docker port conflicts, GPU contention, shared scratch
+  dirs, etc.).
 - Writes are atomic via hub.attempts.write_attempt (tmp + rename).
 - Daemon is idempotent: re-seeing an already-scored attempt is a no-op.
 """
@@ -19,8 +22,11 @@ import logging
 import multiprocessing
 import shutil
 import subprocess
+import threading
 import time
 import traceback
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -38,6 +44,11 @@ from coral.types import Attempt, Task
 logger = logging.getLogger(__name__)
 
 _POLL_INTERVAL_SEC = 0.5
+
+# Guards `increment_eval_count` (read-modify-write on .coral/public/eval_count).
+# The daemon is the sole writer; this lock is only needed because pending
+# attempts can be drained in parallel by multiple worker threads.
+_eval_count_lock = threading.Lock()
 
 
 # --------------------------------------------------------------------------- #
@@ -297,7 +308,8 @@ def _grade_one(
         metadata=metadata,
     )
     write_attempt(str(coral_dir), finalized)
-    count = increment_eval_count(coral_dir)
+    with _eval_count_lock:
+        count = increment_eval_count(coral_dir)
     logger.info(
         "Graded #%d %s -> score=%s status=%s",
         count, attempt.commit_hash[:12],
@@ -319,6 +331,100 @@ def _find_pending(coral_dir: Path) -> list[Attempt]:
     return pending
 
 
+def _safe_grade_one(
+    attempt: Attempt,
+    config_path: Path,
+    coral_dir: Path,
+    config: CoralConfig,
+) -> Attempt | None:
+    """Grade an attempt, swallowing truly unexpected errors as `crashed`.
+
+    Per-attempt failures (timeout, grader exception) are already turned into
+    `crashed`/`timeout` Attempts inside `_grade_one`. This wrapper is the last
+    line of defense so a thread in the pool can't take the daemon down.
+    Returns the finalized Attempt, or None if even the crash-record write
+    failed.
+    """
+    try:
+        return _grade_one(attempt, config_path, coral_dir, config)
+    except Exception:
+        logger.exception(
+            "Unhandled error grading %s; marking crashed", attempt.commit_hash[:12]
+        )
+        try:
+            crashed = Attempt(
+                commit_hash=attempt.commit_hash,
+                agent_id=attempt.agent_id,
+                title=attempt.title,
+                score=None,
+                status="crashed",
+                parent_hash=attempt.parent_hash,
+                timestamp=attempt.timestamp,
+                feedback="Grader daemon hit an unexpected error; see logs.",
+                shared_state_hash=attempt.shared_state_hash,
+                parent_shared_state_hash=attempt.parent_shared_state_hash,
+            )
+            write_attempt(str(coral_dir), crashed)
+            with _eval_count_lock:
+                increment_eval_count(coral_dir)
+            return crashed
+        except Exception:
+            logger.exception("Failed to record crash for %s", attempt.commit_hash[:12])
+            return None
+
+
+def _drain_pending(
+    pending: list[Attempt],
+    config_path: Path,
+    coral_dir: Path,
+    config: CoralConfig,
+    *,
+    max_workers: int,
+    heartbeat_file: Path | None = None,
+    should_stop: Callable[[], bool] = lambda: False,
+) -> list[Attempt]:
+    """Grade `pending` attempts via a worker pool of size `max_workers`.
+
+    `max_workers=1` is serial — same behavior as the pre-pool daemon. Larger
+    values let the daemon overlap grades when the operator has set
+    `grader.parallel.max_workers` higher (only safe for concurrency-safe
+    graders).
+
+    Stop semantics: when `should_stop()` becomes true, queued (not-yet-running)
+    futures are cancelled. Already-running grades finish — same as the old
+    serial loop, where a stop signal mid-attempt waited for that attempt.
+    """
+    finalized: list[Attempt] = []
+    if not pending:
+        return finalized
+
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {
+            pool.submit(_safe_grade_one, attempt, config_path, coral_dir, config): attempt
+            for attempt in pending
+        }
+        try:
+            for fut in as_completed(futures):
+                if heartbeat_file is not None:
+                    try:
+                        heartbeat_file.write_text(datetime.now(UTC).isoformat())
+                    except OSError:
+                        pass
+                result = fut.result()
+                if result is not None:
+                    finalized.append(result)
+                if should_stop():
+                    for queued in futures:
+                        queued.cancel()
+                    break
+        finally:
+            # ThreadPoolExecutor.__exit__ waits for in-flight grades (their
+            # subprocesses already own the work and will return on their own
+            # timeout). We don't kill mid-grade workers from a stop signal.
+            pass
+    return finalized
+
+
 def process_pending_once(coral_dir: str | Path) -> list[Attempt]:
     """Drain all currently-pending attempts synchronously and return finalized records.
 
@@ -328,10 +434,13 @@ def process_pending_once(coral_dir: str | Path) -> list[Attempt]:
     coral_dir = Path(coral_dir).resolve()
     config_path = coral_dir / "config.yaml"
     config = CoralConfig.from_yaml(config_path)
-    finalized = []
-    for attempt in _find_pending(coral_dir):
-        finalized.append(_grade_one(attempt, config_path, coral_dir, config))
-    return finalized
+    return _drain_pending(
+        _find_pending(coral_dir),
+        config_path,
+        coral_dir,
+        config,
+        max_workers=config.grader.parallel.max_workers,
+    )
 
 
 def run_daemon(coral_dir: str | Path, stop_event: Any = None) -> None:
@@ -349,8 +458,12 @@ def run_daemon(coral_dir: str | Path, stop_event: Any = None) -> None:
         raise FileNotFoundError(f"No config.yaml at {config_path}")
 
     config = CoralConfig.from_yaml(config_path)
+    max_workers = config.grader.parallel.max_workers
 
-    logger.info("Grader daemon started (coral_dir=%s)", coral_dir)
+    logger.info(
+        "Grader daemon started (coral_dir=%s, max_workers=%d)",
+        coral_dir, max_workers,
+    )
     started_at = datetime.now(UTC).isoformat()
     heartbeat_file = coral_dir / "public" / "grader_daemon_heartbeat"
     heartbeat_file.write_text(started_at)
@@ -374,43 +487,14 @@ def run_daemon(coral_dir: str | Path, stop_event: Any = None) -> None:
             time.sleep(_POLL_INTERVAL_SEC)
             continue
 
-        for attempt in pending:
-            if _should_stop():
-                break
-            # Refresh the heartbeat before each attempt so external readers
-            # of `grader_daemon_heartbeat` (separate from the manager's
-            # stall-watchdog exemption, which uses live `_grader_proc.is_alive()`
-            # checks) still see a fresh timestamp during long grades.
-            try:
-                heartbeat_file.write_text(datetime.now(UTC).isoformat())
-            except OSError:
-                pass
-            try:
-                _grade_one(attempt, config_path, coral_dir, config)
-            except Exception:
-                # Catch-all: never let a bad grade kill the daemon. The per-attempt
-                # handler already finalized the record as "crashed" on any known
-                # failure mode; this only fires for truly unexpected errors.
-                logger.exception(
-                    "Unhandled error grading %s; marking crashed",
-                    attempt.commit_hash[:12],
-                )
-                try:
-                    crashed = Attempt(
-                        commit_hash=attempt.commit_hash,
-                        agent_id=attempt.agent_id,
-                        title=attempt.title,
-                        score=None,
-                        status="crashed",
-                        parent_hash=attempt.parent_hash,
-                        timestamp=attempt.timestamp,
-                        feedback="Grader daemon hit an unexpected error; see logs.",
-                        shared_state_hash=attempt.shared_state_hash,
-                        parent_shared_state_hash=attempt.parent_shared_state_hash,
-                    )
-                    write_attempt(str(coral_dir), crashed)
-                    increment_eval_count(coral_dir)
-                except Exception:
-                    logger.exception("Failed to record crash for %s", attempt.commit_hash[:12])
+        _drain_pending(
+            pending,
+            config_path,
+            coral_dir,
+            config,
+            max_workers=max_workers,
+            heartbeat_file=heartbeat_file,
+            should_stop=_should_stop,
+        )
 
     logger.info("Grader daemon stopped")
