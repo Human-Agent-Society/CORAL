@@ -5,16 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from coral.config import CoralConfig
-
-# Re-exported for callers that previously imported from this module.
-# The canonical definition lives next to the contract it defaults — see
-# `coral.grader.task_grader.default_tune_description`.
-from coral.grader.task_grader import default_tune_description
+from coral.grader.task_grader import DEFAULT_TUNE_DESCRIPTION
 
 _TEMPLATE_PATH = Path(__file__).parent / "coral.md.template"
 _SINGLE_TEMPLATE_PATH = Path(__file__).parent / "coral_single.md.template"
-
-__all__ = ["default_tune_description", "generate_coral_md"]
 
 
 def generate_coral_md(
@@ -91,10 +85,11 @@ def generate_coral_md(
         research_back_reference = ""
         repeat_research_hint = "research new techniques, "
 
-    if tune_description and tune_description.strip():
-        resolved_tune_description = tune_description.strip()
-    else:
-        resolved_tune_description = default_tune_description()
+    resolved_tune_description = (
+        tune_description.strip()
+        if tune_description and tune_description.strip()
+        else DEFAULT_TUNE_DESCRIPTION
+    )
 
     return template.format(
         task_name=config.task.name,

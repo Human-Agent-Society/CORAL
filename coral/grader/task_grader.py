@@ -25,10 +25,9 @@ from typing import Any
 from coral.config import GraderConfig
 from coral.types import Score, ScoreBundle, Task
 
-# Default text returned by `TaskGrader.describe_tune()` when a grader has not
-# overridden it. Lives at module scope (not duplicated in coral.template.coral_md
-# or in the SubprocessGrader fallback) so the grader contract has a single
-# source of truth — change the string here, every consumer reads the new value.
+# Single source of truth for the default tune-mode description. Used by
+# `TaskGrader.describe_tune()`, by CORAL.md generation, and by the
+# SubprocessGrader fallback path when the worker can't be reached.
 DEFAULT_TUNE_DESCRIPTION = (
     "This grader does not differentiate tune mode from a real "
     "submission: scoring runs the full evaluation either way and "
@@ -36,17 +35,6 @@ DEFAULT_TUNE_DESCRIPTION = (
     "The flag's only effect is budget classification — tune "
     "attempts do not count against the plateau / heartbeat budget."
 )
-
-
-def default_tune_description() -> str:
-    """Return the canonical default tune-mode description.
-
-    Used by CORAL.md generation and by the SubprocessGrader fallback path
-    when the grader's own `describe_tune()` cannot be reached. Wraps the
-    `DEFAULT_TUNE_DESCRIPTION` constant so callers don't need to import it
-    directly — call this and the string lives in exactly one place.
-    """
-    return DEFAULT_TUNE_DESCRIPTION
 
 
 class TaskGrader(ABC):
@@ -104,19 +92,12 @@ class TaskGrader(ABC):
         return self.budget_class == "tune"
 
     def describe_tune(self) -> str:
-        """Per-task contract for what `coral eval --tune` does on this grader.
+        """Override to describe what `--tune` actually does on this grader.
 
-        Override this to tell the agent what is actually different about a
-        tune-mode evaluation on your task — e.g. "scored on a 10% subset of
-        the validation set; runs in ~30s instead of ~5m; the tune score is
-        an unbiased but noisier estimate of the real score." The string is
-        rendered into the agent's CORAL.md so it shows up alongside the
-        `--tune` documentation. Plain prose; markdown is allowed.
-
-        The default is correct for graders that have not bothered to
-        differentiate tune from real: tune is a pure budget-classification
-        flag and the score returned is identical. If your grader does
-        nothing special for tune mode, leave the default — it is honest.
+        Returned text is rendered into the agent's CORAL.md alongside the
+        `--tune` documentation, so the agent knows whether tune mode uses
+        a cheaper target (subset, dev split, smoke harness) or is identical
+        to a real eval. The default is honest about doing nothing special.
         """
         return DEFAULT_TUNE_DESCRIPTION
 

@@ -17,6 +17,7 @@ import pytest
 
 from coral.config import GraderConfig
 from coral.grader.subprocess_grader import SubprocessGrader
+from coral.grader.task_grader import DEFAULT_TUNE_DESCRIPTION
 from coral.types import Task
 
 
@@ -100,11 +101,7 @@ def test_subprocess_grader_describe_tune_falls_back_on_bad_worker(tmp_path: Path
         private_dir=str(tmp_path / "private"),
     )
 
-    description = grader.describe_tune()
-    # Falls back to the same default the template uses.
-    from coral.template.coral_md import default_tune_description
-
-    assert description == default_tune_description()
+    assert grader.describe_tune() == DEFAULT_TUNE_DESCRIPTION
 
 
 def test_subprocess_grader_returns_score(pythonpath_with: Path) -> None:

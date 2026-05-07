@@ -33,7 +33,7 @@ from coral.agent.state import (
 from coral.agent.warmstart import WarmStartRunner
 from coral.config import CoralConfig
 from coral.grader.loader import load_grader
-from coral.grader.task_grader import default_tune_description
+from coral.grader.task_grader import DEFAULT_TUNE_DESCRIPTION
 from coral.hub.attempts import agent_in_grader_queue, read_attempts
 from coral.hub.heartbeat import (
     DEFAULT_PROMPTS,
@@ -182,28 +182,19 @@ class AgentManager:
     def _resolve_tune_description(self) -> str:
         """Ask the grader once for its tune-mode contract; default on failure.
 
-        Templated into every agent's CORAL.md so the agent knows whether
-        `--tune` actually changes the eval (cheaper subset, smoke harness,
-        etc.) or just classifies the attempt against the budget.
-        Failures here must never block run startup — the daemon will
-        independently report a real grader-load problem if there is one.
+        Templated into every agent's CORAL.md. Failures must never block
+        startup — the daemon independently reports real grader-load issues.
         """
         assert self.paths is not None
         try:
             grader = load_grader(self.config, coral_dir=self.paths.coral_dir)
-            describe = getattr(grader, "describe_tune", None)
-            if not callable(describe):
-                return default_tune_description()
-            description = describe()
+            description = grader.describe_tune()
             if isinstance(description, str) and description.strip():
                 return description
-            return default_tune_description()
+            raise RuntimeError("describe_tune returned empty")
         except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                f"Could not resolve grader.describe_tune() at startup: {exc}; "
-                "falling back to the default tune description in CORAL.md"
-            )
-            return default_tune_description()
+            logger.warning(f"Could not resolve grader.describe_tune() ({exc}); using default")
+            return DEFAULT_TUNE_DESCRIPTION
 
     def _start_grader_daemon(self) -> None:
         """Spawn the grader daemon subprocess. Idempotent.
@@ -464,7 +455,7 @@ class AgentManager:
             agent_id,
             single_agent=single_agent,
             shared_dir=shared_dir_name,
-            tune_description=self._tune_description or default_tune_description(),
+            tune_description=self._tune_description or DEFAULT_TUNE_DESCRIPTION,
         )
         (worktree_path / instruction_file).write_text(coral_md)
 

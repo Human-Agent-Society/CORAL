@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from coral.config import GraderConfig
-from coral.grader.task_grader import default_tune_description
+from coral.grader.task_grader import DEFAULT_TUNE_DESCRIPTION
 from coral.types import Score, ScoreBundle, Task
 
 logger = logging.getLogger(__name__)
@@ -175,11 +175,10 @@ class SubprocessGrader:
         return await loop.run_in_executor(None, self._run_worker, payload)
 
     def describe_tune(self) -> str:
-        """Fetch the grader's tune-mode description by spawning the metadata worker.
+        """Fetch the grader's tune-mode description via a one-shot worker.
 
-        Used at run setup to template the per-task tune contract into CORAL.md.
         Falls back to the TaskGrader default on any failure — a broken
-        describe call must never block the run from starting.
+        describe call must never block run startup.
         """
         payload = {
             "entrypoint": self.entrypoint,
@@ -193,32 +192,18 @@ class SubprocessGrader:
                 capture_output=True,
                 text=True,
                 timeout=30,
+                check=True,
             )
-        except (subprocess.TimeoutExpired, OSError) as exc:
-            logger.warning(f"describe_tune worker failed: {exc}; using default")
-            return default_tune_description()
-
-        if result.returncode != 0:
-            logger.warning(
-                f"describe_tune worker exited {result.returncode}: "
-                f"{result.stderr.strip()[-500:]}; using default"
-            )
-            return default_tune_description()
-
-        try:
             response = _parse_worker_response(result.stdout)
-        except RuntimeError as exc:
-            logger.warning(f"describe_tune worker bad response: {exc}; using default")
-            return default_tune_description()
-
-        if "error" in response:
-            logger.warning(f"describe_tune raised in worker: {response['error']}; using default")
-            return default_tune_description()
-
-        description = response.get("description")
-        if not isinstance(description, str) or not description.strip():
-            return default_tune_description()
-        return description
+            if "error" in response:
+                raise RuntimeError(response["error"])
+            description = response.get("description")
+            if not isinstance(description, str) or not description.strip():
+                raise RuntimeError("worker returned empty description")
+            return description
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"describe_tune worker failed ({exc}); using default")
+            return DEFAULT_TUNE_DESCRIPTION
 
     def _run_worker(self, payload: dict[str, Any]) -> ScoreBundle:
         try:

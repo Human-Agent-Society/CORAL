@@ -1,7 +1,8 @@
 """Tests for CORAL.md template generation."""
 
 from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig
-from coral.template.coral_md import default_tune_description, generate_coral_md
+from coral.grader.task_grader import DEFAULT_TUNE_DESCRIPTION
+from coral.template.coral_md import generate_coral_md
 
 
 def test_generate_coral_md_has_required_sections():
@@ -111,7 +112,7 @@ def test_generate_coral_md_default_tune_description_used():
         grader=GraderConfig(),
     )
     md = generate_coral_md(config, "agent-1")
-    default = default_tune_description()
+    default = DEFAULT_TUNE_DESCRIPTION
     assert default in md
     assert "What this grader does in tune mode" in md
 
@@ -129,7 +130,7 @@ def test_generate_coral_md_custom_tune_description_used():
     md = generate_coral_md(config, "agent-1", tune_description=custom)
     assert custom in md
     # Default must NOT appear when a custom description is supplied.
-    assert default_tune_description() not in md
+    assert DEFAULT_TUNE_DESCRIPTION not in md
 
 
 def test_generate_coral_md_tune_guardrails_present():
@@ -156,7 +157,7 @@ def test_generate_coral_md_blank_tune_description_falls_back():
         grader=GraderConfig(),
     )
     md = generate_coral_md(config, "agent-1", tune_description="   ")
-    assert default_tune_description() in md
+    assert DEFAULT_TUNE_DESCRIPTION in md
 
 
 def test_generate_coral_md_score_direction_from_config():

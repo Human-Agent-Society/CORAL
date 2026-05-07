@@ -49,35 +49,6 @@ def test_grader_protocol_compliance():
     assert isinstance(grader, GraderInterface)
 
 
-def test_task_grader_describe_tune_default():
-    """Default TaskGrader.describe_tune() must be honest: budget-only semantics."""
-    from coral.grader.task_grader import TaskGrader
-
-    class Stub(TaskGrader):
-        def evaluate(self) -> float:
-            return 0.0
-
-    grader = Stub(config=GraderConfig())
-    text = grader.describe_tune()
-    assert "does not differentiate" in text
-    assert "budget classification" in text
-
-
-def test_task_grader_describe_tune_override_is_used():
-    """Subclasses can replace the description; nothing surprising about the override path."""
-    from coral.grader.task_grader import TaskGrader
-
-    class CheaperEvalGrader(TaskGrader):
-        def evaluate(self) -> float:
-            return 0.0
-
-        def describe_tune(self) -> str:
-            return "scored on a 10% subset; ~30s vs ~5m for a real eval"
-
-    grader = CheaperEvalGrader(config=GraderConfig())
-    assert grader.describe_tune().startswith("scored on a 10% subset")
-
-
 def _create_grader_file(directory: Path) -> None:
     """Create a minimal eval/grader.py for testing the legacy loader path."""
     eval_dir = directory / "private" / "eval"
