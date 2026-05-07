@@ -34,7 +34,7 @@ from coral.hub.attempts import (
     write_attempt,
 )
 from coral.types import (
-    BUDGET_CLASS_INFRA,
+    BUDGET_CLASS_GRADER_ERROR,
     Attempt,
     Task,
     get_budget_class,
@@ -248,21 +248,22 @@ def _grade_one(
     config: CoralConfig,
 ) -> Attempt:
     """Grade a single pending attempt and return the finalized Attempt record."""
-    # Pending attempts may carry a tune marker from `coral eval --tune`.
-    # Real submissions default to "real"; grader infra failures override to "infra" below.
+    # Pending attempts may carry a tune marker from `coral eval --tune`,
+    # encoded as `metadata["budget_class"] = "tune"`. Real submissions default
+    # to "real"; grader-side failures override to "grader_error" below.
     pending_class = get_budget_class(attempt.metadata)
     budget_class = pending_class
-    # Surface the tune flag (and a few other useful per-attempt fields) to
+    # Surface the budget class (and a few other useful per-attempt fields) to
     # the user's grader via Task.metadata. TaskGrader exposes `self.tune`
-    # and `self.budget_class` to read these. Both the in-process TaskGrader
-    # path and the SubprocessGrader path serialize Task.metadata, so this
-    # works for either grader runtime.
+    # and `self.budget_class` to read these — both derive from this single
+    # canonical field. Both the in-process TaskGrader path and the
+    # SubprocessGrader path serialize Task.metadata, so this works for
+    # either grader runtime.
     task = Task(
         id=config.task.name,
         name=config.task.name,
         description=config.task.description,
         metadata={
-            "tune": pending_class == "tune",
             "budget_class": pending_class,
             "agent_id": attempt.agent_id,
             "commit_hash": attempt.commit_hash,
@@ -298,12 +299,12 @@ def _grade_one(
         logger.error("Grader timed out on %s after %ss", attempt.commit_hash[:12], timeout)
         status = "timeout"
         feedback = f"Eval timed out after {timeout}s."
-        budget_class = BUDGET_CLASS_INFRA
+        budget_class = BUDGET_CLASS_GRADER_ERROR
     except Exception as e:
         logger.exception("Grader crashed on %s", attempt.commit_hash[:12])
         status = "crashed"
         feedback = str(e)
-        budget_class = BUDGET_CLASS_INFRA
+        budget_class = BUDGET_CLASS_GRADER_ERROR
 
     # Carry forward any pending metadata (e.g. tune marker) we didn't overwrite,
     # then stamp the final budget class.

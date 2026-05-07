@@ -1,7 +1,7 @@
 """Tests for core types."""
 
 from coral.types import (
-    BUDGET_CLASS_INFRA,
+    BUDGET_CLASS_GRADER_ERROR,
     BUDGET_CLASS_REAL,
     BUDGET_CLASS_TUNE,
     Attempt,
@@ -110,7 +110,7 @@ def test_get_budget_class_default_real():
 
 def test_get_budget_class_recognizes_known_values():
     assert get_budget_class({"budget_class": "real"}) == BUDGET_CLASS_REAL
-    assert get_budget_class({"budget_class": "infra"}) == BUDGET_CLASS_INFRA
+    assert get_budget_class({"budget_class": "grader_error"}) == BUDGET_CLASS_GRADER_ERROR
     assert get_budget_class({"budget_class": "tune"}) == BUDGET_CLASS_TUNE
 
 
@@ -135,8 +135,8 @@ def test_attempt_budget_class_property():
     a.metadata["budget_class"] = "tune"
     assert a.budget_class == BUDGET_CLASS_TUNE
 
-    a.metadata["budget_class"] = "infra"
-    assert a.budget_class == BUDGET_CLASS_INFRA
+    a.metadata["budget_class"] = "grader_error"
+    assert a.budget_class == BUDGET_CLASS_GRADER_ERROR
 
 
 def test_attempt_legacy_json_loads_as_real():

@@ -84,11 +84,11 @@ def test_format_leaderboard():
 def test_per_agent_class_counts_splits_by_budget_class():
     """Budget class counts are tallied per agent (issue #73)."""
     with tempfile.TemporaryDirectory() as d:
-        # agent-1: 2 real, 1 infra, 1 tune
+        # agent-1: 2 real, 1 grader_error, 1 tune
         a = _make_attempt("aaa", agent="agent-1")
         b = _make_attempt("bbb", agent="agent-1")
         c = _make_attempt("ccc", agent="agent-1")
-        c.metadata["budget_class"] = "infra"
+        c.metadata["budget_class"] = "grader_error"
         c.status = "timeout"
         d_att = _make_attempt("ddd", agent="agent-1")
         d_att.metadata["budget_class"] = "tune"
@@ -100,7 +100,7 @@ def test_per_agent_class_counts_splits_by_budget_class():
             write_attempt(d, att)
 
         counts = per_agent_class_counts(d)
-        assert counts["agent-1"] == {"real": 2, "infra": 1, "tune": 1}
+        assert counts["agent-1"] == {"real": 2, "grader_error": 1, "tune": 1}
         assert counts["agent-2"] == {"real": 1}
 
 

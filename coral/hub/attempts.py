@@ -148,9 +148,9 @@ def get_recent(coral_dir: str | Path, n: int = 10) -> list[Attempt]:
 def per_agent_class_counts(coral_dir: str | Path) -> dict[str, dict[str, int]]:
     """Tally finalized attempts per agent, split by budget_class.
 
-    Returns ``{agent_id: {"real": n, "infra": n, "tune": n}}``. Pending
-    attempts (not yet graded) are skipped; they don't have a final
-    classification. Used by `coral status` to surface per-agent stall rate.
+    Returns ``{agent_id: {"real": n, "grader_error": n, "tune": n}}``.
+    Pending attempts (not yet graded) are skipped; they don't have a final
+    classification. Used by `coral status` to surface per-agent grader-error rate.
     """
     counts: dict[str, dict[str, int]] = {}
     for a in read_attempts(coral_dir):

@@ -52,32 +52,31 @@ class TaskGrader(ABC):
         return self.config.timeout or None
 
     @property
+    def budget_class(self) -> str:
+        """The pending attempt's budget class: "real" or "tune".
+
+        Note: "grader_error" is assigned by the daemon *after* grading (when
+        the grader times out or raises), so this property only ever returns
+        "real" or "tune" from inside the grader.
+        """
+        if not self.tasks:
+            return "real"
+        return str(self.tasks[0].metadata.get("budget_class", "real"))
+
+    @property
     def tune(self) -> bool:
         """True if this attempt was submitted with `coral eval --tune`.
 
-        Use this to switch your grader to a cheaper local target — a smaller
-        eval slice, dev split, or smoke harness — when the agent is sweeping
+        Convenience derived from ``self.budget_class == "tune"``. Use this to
+        switch your grader to a cheaper local target — a smaller eval slice,
+        dev split, or smoke harness — when the agent is sweeping
         hyperparameters or shaking out config rather than making a real
         submission. The agent will not be charged against its plateau /
         heartbeat budget for tune-mode attempts (see issue #73).
 
         False for the standard ``coral eval`` path.
         """
-        if not self.tasks:
-            return False
-        return bool(self.tasks[0].metadata.get("tune", False))
-
-    @property
-    def budget_class(self) -> str:
-        """The pending attempt's budget class: "real" or "tune".
-
-        Note: "infra" is assigned by the daemon *after* grading (when the
-        grader times out or raises), so this property only ever returns
-        "real" or "tune".
-        """
-        if not self.tasks:
-            return "real"
-        return str(self.tasks[0].metadata.get("budget_class", "real"))
+        return self.budget_class == "tune"
 
     def describe_tune(self) -> str:
         """Per-task contract for what `coral eval --tune` does on this grader.

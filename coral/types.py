@@ -139,15 +139,16 @@ class ScoreBundle:
 
 # Budget classification for an attempt. Stored on `Attempt.metadata["budget_class"]`.
 #
-# - "real":  a genuine optimization attempt — counts toward plateau / heartbeat triggers.
-# - "infra": grader timeout / crash — infrastructure failure, not a real fail.
-# - "tune":  agent-submitted in tune mode — config/hyperparam exploration.
+# - "real":         a genuine optimization attempt — counts toward plateau / heartbeat triggers.
+# - "grader_error": grader timeout or grader-side exception — the eval machinery itself broke,
+#                   not a real fail of the agent's code.
+# - "tune":         agent-submitted in tune mode — config/hyperparam exploration.
 #
 # Attempts without this metadata key are treated as "real" (backward compat).
 BUDGET_CLASS_REAL = "real"
-BUDGET_CLASS_INFRA = "infra"
+BUDGET_CLASS_GRADER_ERROR = "grader_error"
 BUDGET_CLASS_TUNE = "tune"
-_VALID_BUDGET_CLASSES = (BUDGET_CLASS_REAL, BUDGET_CLASS_INFRA, BUDGET_CLASS_TUNE)
+_VALID_BUDGET_CLASSES = (BUDGET_CLASS_REAL, BUDGET_CLASS_GRADER_ERROR, BUDGET_CLASS_TUNE)
 
 
 def get_budget_class(metadata: dict[str, Any] | None) -> str:
@@ -178,7 +179,7 @@ class Attempt:
 
     @property
     def budget_class(self) -> str:
-        """Budget classification: 'real', 'infra', or 'tune'. Defaults to 'real'."""
+        """Budget classification: 'real', 'grader_error', or 'tune'. Defaults to 'real'."""
         return get_budget_class(self.metadata)
 
     def to_dict(self) -> dict[str, Any]:

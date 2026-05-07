@@ -102,7 +102,7 @@ class AgentManager:
         self._last_fault_at: dict[str, str] = {}
         self._pending_restart_after_pause: set[str] = set()
         # Per-agent attempt counts split by budget class (issue #73). "real"
-        # attempts drive plateau / heartbeat triggers; "infra" (grader
+        # attempts drive plateau / heartbeat triggers; "grader_error" (grader
         # timeout/crash) and "tune" (--tune submissions) are recorded for
         # visibility but do not advance the budget counter.
         self._agent_class_counts: dict[str, dict[str, int]] = {}

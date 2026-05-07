@@ -388,8 +388,8 @@ def test_grader_marks_real_class_on_normal_success():
             sys.path.pop(0)
 
 
-def test_grader_marks_infra_on_exception():
-    """A grader that raises is classified as 'infra' (not a real fail)."""
+def test_grader_marks_grader_error_on_exception():
+    """A grader that raises is classified as 'grader_error' (not a real fail)."""
     with tempfile.TemporaryDirectory() as d:
         repo = _init_repo_and_coral(Path(d))
         # Overwrite the grader to raise.
@@ -397,7 +397,7 @@ def test_grader_marks_infra_on_exception():
             "from coral.grader.task_grader import TaskGrader\n"
             "class Grader(TaskGrader):\n"
             "    def evaluate(self):\n"
-            "        raise RuntimeError('grader infra failure')\n"
+            "        raise RuntimeError('grader-side failure')\n"
         )
         sys.path.insert(0, str(repo))
         try:
@@ -410,16 +410,16 @@ def test_grader_marks_infra_on_exception():
             final = read_attempt(repo / ".coral", pending.commit_hash)
             assert final is not None
             assert final.status == "crashed"
-            assert final.budget_class == "infra", (
-                "Grader exceptions should be classified as infra failures, "
+            assert final.budget_class == "grader_error", (
+                "Grader exceptions should be classified as grader_error, "
                 "not real attempts."
             )
         finally:
             sys.path.pop(0)
 
 
-def test_grader_marks_infra_on_timeout():
-    """A grader that exceeds its timeout is classified as 'infra'."""
+def test_grader_marks_grader_error_on_timeout():
+    """A grader that exceeds its timeout is classified as 'grader_error'."""
     with tempfile.TemporaryDirectory() as d:
         repo = _init_repo_and_coral(Path(d))
         # Tighten the timeout so the test runs quickly.
@@ -447,7 +447,7 @@ def test_grader_marks_infra_on_timeout():
             final = read_attempt(repo / ".coral", pending.commit_hash)
             assert final is not None
             assert final.status == "timeout"
-            assert final.budget_class == "infra"
+            assert final.budget_class == "grader_error"
         finally:
             sys.path.pop(0)
 

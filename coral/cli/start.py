@@ -806,14 +806,18 @@ def cmd_status(args: argparse.Namespace) -> None:
                 buckets = class_counts.get(agent_name, {})
                 if buckets:
                     real = buckets.get("real", 0)
-                    infra = buckets.get("infra", 0)
+                    grader_error = buckets.get("grader_error", 0)
                     tune = buckets.get("tune", 0)
-                    total = real + infra + tune
+                    total = real + grader_error + tune
                     if total:
-                        rate_str = f"{infra}/{total} ({100 * infra / total:.0f}%)"
+                        rate_str = (
+                            f"{grader_error}/{total} "
+                            f"({100 * grader_error / total:.0f}%)"
+                        )
                         print(
-                            f"    attempts: real={real}  infra={infra}  tune={tune}  "
-                            f"|  stall rate: {rate_str}"
+                            f"    attempts: real={real}  "
+                            f"grader_error={grader_error}  tune={tune}  "
+                            f"|  grader-error rate: {rate_str}"
                         )
 
     direction = read_direction(coral_dir)
