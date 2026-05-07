@@ -38,33 +38,22 @@ class Task:
 
 @dataclass
 class Score:
-    """Single evaluation score."""
+    """Single evaluation score.
 
-    value: float | str | bool | None
+    `value` is a number (or None when the grader couldn't produce a result —
+    e.g. a timeout). Pass/fail and verdict-style outputs must be converted to
+    a float by the grader before constructing the Score; the framework does
+    not infer a number from a string label, since the mapping it would have
+    to use ("PASS"? "CORRECT"? "1"?) is task-specific.
+    """
+
+    value: float | int | None
     name: str
     explanation: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_float(self) -> float | None:
-        if self.value is None:
-            return None
-        if isinstance(self.value, bool):
-            return 1.0 if self.value else 0.0
-        elif isinstance(self.value, int | float):
-            return float(self.value)
-        elif isinstance(self.value, str):
-            mapping = {
-                "CORRECT": 1.0,
-                "C": 1.0,
-                "INCORRECT": 0.0,
-                "I": 0.0,
-                "PARTIAL": 0.5,
-                "P": 0.5,
-                "NOANSWER": 0.0,
-                "N": 0.0,
-            }
-            return mapping.get(self.value.upper(), 0.0)
-        return 0.0
+        return None if self.value is None else float(self.value)
 
     def to_dict(self) -> dict[str, Any]:
         return {
