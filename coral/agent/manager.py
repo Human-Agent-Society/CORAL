@@ -32,6 +32,8 @@ from coral.agent.state import (
 )
 from coral.agent.warmstart import WarmStartRunner
 from coral.config import CoralConfig
+from coral.grader.loader import load_grader
+from coral.grader.task_grader import default_tune_description
 from coral.hub.attempts import agent_in_grader_queue, read_attempts
 from coral.hub.heartbeat import (
     DEFAULT_PROMPTS,
@@ -43,7 +45,6 @@ from coral.hub.heartbeat import (
     write_agent_heartbeat,
     write_global_heartbeat,
 )
-from coral.template.coral_md import default_tune_description as _default_tune_description
 from coral.template.coral_md import generate_coral_md
 from coral.types import BUDGET_CLASS_REAL, get_budget_class
 from coral.workspace import (
@@ -189,22 +190,20 @@ class AgentManager:
         """
         assert self.paths is not None
         try:
-            from coral.grader.loader import load_grader
-
             grader = load_grader(self.config, coral_dir=self.paths.coral_dir)
             describe = getattr(grader, "describe_tune", None)
             if not callable(describe):
-                return _default_tune_description()
+                return default_tune_description()
             description = describe()
             if isinstance(description, str) and description.strip():
                 return description
-            return _default_tune_description()
+            return default_tune_description()
         except Exception as exc:  # noqa: BLE001
             logger.warning(
                 f"Could not resolve grader.describe_tune() at startup: {exc}; "
                 "falling back to the default tune description in CORAL.md"
             )
-            return _default_tune_description()
+            return default_tune_description()
 
     def _start_grader_daemon(self) -> None:
         """Spawn the grader daemon subprocess. Idempotent.
@@ -465,7 +464,7 @@ class AgentManager:
             agent_id,
             single_agent=single_agent,
             shared_dir=shared_dir_name,
-            tune_description=self._tune_description or _default_tune_description(),
+            tune_description=self._tune_description or default_tune_description(),
         )
         (worktree_path / instruction_file).write_text(coral_md)
 
@@ -1427,7 +1426,6 @@ class AgentManager:
         agent_pids_file = self.paths.coral_dir / "public" / "agent.pids"
         if not agent_pids_file.exists():
             return
-        import time
 
         pids = []
         for line in agent_pids_file.read_text().strip().splitlines():

@@ -6,24 +6,15 @@ from pathlib import Path
 
 from coral.config import CoralConfig
 
+# Re-exported for callers that previously imported from this module.
+# The canonical definition lives next to the contract it defaults — see
+# `coral.grader.task_grader.default_tune_description`.
+from coral.grader.task_grader import default_tune_description
+
 _TEMPLATE_PATH = Path(__file__).parent / "coral.md.template"
 _SINGLE_TEMPLATE_PATH = Path(__file__).parent / "coral_single.md.template"
 
-
-def default_tune_description() -> str:
-    """Fallback used when the grader did not override `describe_tune()`.
-
-    Mirrors `coral.grader.task_grader.TaskGrader.describe_tune`. Kept here
-    too so CORAL.md generation has no hard dependency on grader internals
-    when the grader is unreachable (worker crash at startup, legacy paths).
-    """
-    return (
-        "This grader does not differentiate tune mode from a real "
-        "submission: scoring runs the full evaluation either way and "
-        "returns the same score it would return without `--tune`. "
-        "The flag's only effect is budget classification — tune "
-        "attempts do not count against the plateau / heartbeat budget."
-    )
+__all__ = ["default_tune_description", "generate_coral_md"]
 
 
 def generate_coral_md(

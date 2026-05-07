@@ -15,13 +15,38 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import json
+import shutil
 import subprocess
+import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
 from coral.config import GraderConfig
 from coral.types import Score, ScoreBundle, Task
+
+# Default text returned by `TaskGrader.describe_tune()` when a grader has not
+# overridden it. Lives at module scope (not duplicated in coral.template.coral_md
+# or in the SubprocessGrader fallback) so the grader contract has a single
+# source of truth — change the string here, every consumer reads the new value.
+DEFAULT_TUNE_DESCRIPTION = (
+    "This grader does not differentiate tune mode from a real "
+    "submission: scoring runs the full evaluation either way and "
+    "returns the same score it would return without `--tune`. "
+    "The flag's only effect is budget classification — tune "
+    "attempts do not count against the plateau / heartbeat budget."
+)
+
+
+def default_tune_description() -> str:
+    """Return the canonical default tune-mode description.
+
+    Used by CORAL.md generation and by the SubprocessGrader fallback path
+    when the grader's own `describe_tune()` cannot be reached. Wraps the
+    `DEFAULT_TUNE_DESCRIPTION` constant so callers don't need to import it
+    directly — call this and the string lives in exactly one place.
+    """
+    return DEFAULT_TUNE_DESCRIPTION
 
 
 class TaskGrader(ABC):
@@ -88,18 +113,12 @@ class TaskGrader(ABC):
         rendered into the agent's CORAL.md so it shows up alongside the
         `--tune` documentation. Plain prose; markdown is allowed.
 
-        The default below is correct for graders that have not bothered to
+        The default is correct for graders that have not bothered to
         differentiate tune from real: tune is a pure budget-classification
         flag and the score returned is identical. If your grader does
         nothing special for tune mode, leave the default — it is honest.
         """
-        return (
-            "This grader does not differentiate tune mode from a real "
-            "submission: scoring runs the full evaluation either way and "
-            "returns the same score it would return without `--tune`. "
-            "The flag's only effect is budget classification — tune "
-            "attempts do not count against the plateau / heartbeat budget."
-        )
+        return DEFAULT_TUNE_DESCRIPTION
 
     @property
     def eval_logs_dir(self) -> Path:
@@ -152,9 +171,6 @@ class TaskGrader(ABC):
         that task-specific dependencies (numpy, scipy, …) are available.
         Falls back to the current interpreter otherwise.
         """
-        import shutil
-        import sys
-
         if (Path(self.codebase_path) / "pyproject.toml").exists() and shutil.which("uv"):
             return ["uv", "run", "--project", self.codebase_path, "python"]
         return [sys.executable]

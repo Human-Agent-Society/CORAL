@@ -20,7 +20,8 @@ from pathlib import Path
 from typing import Any
 
 from coral.config import GraderConfig
-from coral.types import ScoreBundle, Task
+from coral.grader.task_grader import default_tune_description
+from coral.types import Score, ScoreBundle, Task
 
 logger = logging.getLogger(__name__)
 
@@ -195,28 +196,28 @@ class SubprocessGrader:
             )
         except (subprocess.TimeoutExpired, OSError) as exc:
             logger.warning(f"describe_tune worker failed: {exc}; using default")
-            return _default_tune_description()
+            return default_tune_description()
 
         if result.returncode != 0:
             logger.warning(
                 f"describe_tune worker exited {result.returncode}: "
                 f"{result.stderr.strip()[-500:]}; using default"
             )
-            return _default_tune_description()
+            return default_tune_description()
 
         try:
             response = _parse_worker_response(result.stdout)
         except RuntimeError as exc:
             logger.warning(f"describe_tune worker bad response: {exc}; using default")
-            return _default_tune_description()
+            return default_tune_description()
 
         if "error" in response:
             logger.warning(f"describe_tune raised in worker: {response['error']}; using default")
-            return _default_tune_description()
+            return default_tune_description()
 
         description = response.get("description")
         if not isinstance(description, str) or not description.strip():
-            return _default_tune_description()
+            return default_tune_description()
         return description
 
     def _run_worker(self, payload: dict[str, Any]) -> ScoreBundle:
@@ -229,8 +230,6 @@ class SubprocessGrader:
                 timeout=self.timeout,
             )
         except subprocess.TimeoutExpired:
-            from coral.types import Score
-
             timeout = self.timeout
             return ScoreBundle(
                 scores={
@@ -259,10 +258,3 @@ class SubprocessGrader:
             )
 
         return ScoreBundle.from_dict(response["bundle"])
-
-
-def _default_tune_description() -> str:
-    """Fallback when the worker can't be reached for `describe_tune`."""
-    from coral.template.coral_md import default_tune_description
-
-    return default_tune_description()
