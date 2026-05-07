@@ -34,6 +34,7 @@ pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
 
+
 def _init_repo_and_coral(base_dir: Path, score: float = 0.5) -> Path:
     """Create a git repo with .coral/ wired up to a minimal eval/grader.py."""
     repo = base_dir / "repo"
@@ -41,24 +42,26 @@ def _init_repo_and_coral(base_dir: Path, score: float = 0.5) -> Path:
     subprocess.run(["git", "init", str(repo)], capture_output=True, check=True)
     subprocess.run(
         ["git", "-C", str(repo), "config", "user.email", "test@test.com"],
-        capture_output=True, check=True,
+        capture_output=True,
+        check=True,
     )
     subprocess.run(
         ["git", "-C", str(repo), "config", "user.name", "Test"],
-        capture_output=True, check=True,
+        capture_output=True,
+        check=True,
     )
 
     (repo / "main.py").write_text("print('hello')\n")
-    (repo / ".gitignore").write_text(
-        ".coral/\n.coral_dir\n.claude/\n.coral_agent_id\nCLAUDE.md\n"
-    )
+    (repo / ".gitignore").write_text(".coral/\n.coral_dir\n.claude/\n.coral_agent_id\nCLAUDE.md\n")
     subprocess.run(
         ["git", "-C", str(repo), "add", "main.py", ".gitignore"],
-        capture_output=True, check=True,
+        capture_output=True,
+        check=True,
     )
     subprocess.run(
         ["git", "-C", str(repo), "commit", "-m", "Initial"],
-        capture_output=True, check=True,
+        capture_output=True,
+        check=True,
     )
 
     coral_dir = repo / ".coral"
@@ -94,6 +97,7 @@ def _init_repo_and_coral(base_dir: Path, score: float = 0.5) -> Path:
 # _repo_dir — handles both production and test layouts                        #
 # --------------------------------------------------------------------------- #
 
+
 def test_repo_dir_detects_test_layout():
     """When .coral/ lives inside the repo, daemon falls back to coral_dir.parent."""
     with tempfile.TemporaryDirectory() as d:
@@ -122,6 +126,7 @@ def test_repo_dir_prefers_run_dir_repo():
 # process_pending_once — drains the queue without spawning a daemon           #
 # --------------------------------------------------------------------------- #
 
+
 def test_process_pending_once_grades_pending():
     """A submitted pending attempt gets scored after one drain."""
     with tempfile.TemporaryDirectory() as d:
@@ -130,7 +135,10 @@ def test_process_pending_once_grades_pending():
         try:
             (repo / "main.py").write_text("print('v2')\n")
             pending = submit_eval(
-                message="Change", agent_id="agent-1", workdir=str(repo), wait=False,
+                message="Change",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
             )
             assert pending.status == "pending"
 
@@ -171,8 +179,10 @@ def test_process_pending_once_preserves_submission_fields():
         try:
             (repo / "main.py").write_text("print('v2')\n")
             pending = submit_eval(
-                message="Preserve me", agent_id="agent-1",
-                workdir=str(repo), wait=False,
+                message="Preserve me",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
             )
             original_ts = pending.timestamp
             process_pending_once(repo / ".coral")
@@ -195,11 +205,9 @@ def test_process_pending_multiple_in_submission_order():
         sys.path.insert(0, str(repo))
         try:
             (repo / "main.py").write_text("print('a')\n")
-            a = submit_eval(message="a", agent_id="agent-1",
-                            workdir=str(repo), wait=False)
+            a = submit_eval(message="a", agent_id="agent-1", workdir=str(repo), wait=False)
             (repo / "main.py").write_text("print('b')\n")
-            b = submit_eval(message="b", agent_id="agent-1",
-                            workdir=str(repo), wait=False)
+            b = submit_eval(message="b", agent_id="agent-1", workdir=str(repo), wait=False)
 
             finalized = process_pending_once(repo / ".coral")
             assert [f.commit_hash for f in finalized] == [a.commit_hash, b.commit_hash]
@@ -210,6 +218,7 @@ def test_process_pending_multiple_in_submission_order():
 # --------------------------------------------------------------------------- #
 # Atomic write — writer and concurrent reader never collide                   #
 # --------------------------------------------------------------------------- #
+
 
 def test_write_attempt_is_atomic():
     """Rapid writes interleaved with reads never yield a partial JSON.
@@ -246,6 +255,7 @@ def test_write_attempt_is_atomic():
 # Isolated worktree — grader doesn't see agent's post-submit edits            #
 # --------------------------------------------------------------------------- #
 
+
 def test_grader_sees_committed_code_not_working_tree():
     """If the agent mutates files after submit, grader must grade the commit snapshot."""
     with tempfile.TemporaryDirectory() as d:
@@ -263,8 +273,10 @@ def test_grader_sees_committed_code_not_working_tree():
         try:
             (repo / "main.py").write_text("# COMMITTED\nprint('x')\n")
             pending = submit_eval(
-                message="stable snapshot", agent_id="agent-1",
-                workdir=str(repo), wait=False,
+                message="stable snapshot",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
             )
             # Agent now mutates the working tree post-submission — should NOT affect grading.
             (repo / "main.py").write_text("# POST-SUBMIT\nprint('y')\n")
@@ -283,6 +295,7 @@ def test_grader_sees_committed_code_not_working_tree():
 # --------------------------------------------------------------------------- #
 # Budget class accounting (issue #73)                                         #
 # --------------------------------------------------------------------------- #
+
 
 def test_submit_eval_tune_flag_marks_pending():
     """`submit_eval(tune=True)` writes budget_class=tune onto the pending record."""
@@ -312,8 +325,11 @@ def test_grader_preserves_tune_class_through_finalization():
         try:
             (repo / "main.py").write_text("print('v2')\n")
             pending = submit_eval(
-                message="sweep", agent_id="agent-1",
-                workdir=str(repo), wait=False, tune=True,
+                message="sweep",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
+                tune=True,
             )
             process_pending_once(repo / ".coral")
             final = read_attempt(repo / ".coral", pending.commit_hash)
@@ -344,8 +360,11 @@ def test_grader_sees_tune_flag_via_self_tune():
         try:
             (repo / "main.py").write_text("print('v2')\n")
             tune_pending = submit_eval(
-                message="tune sweep", agent_id="agent-1",
-                workdir=str(repo), wait=False, tune=True,
+                message="tune sweep",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
+                tune=True,
             )
             process_pending_once(repo / ".coral")
             tune_final = read_attempt(repo / ".coral", tune_pending.commit_hash)
@@ -358,8 +377,10 @@ def test_grader_sees_tune_flag_via_self_tune():
             # And a non-tune submission must NOT see self.tune=True.
             (repo / "main.py").write_text("print('v3')\n")
             real_pending = submit_eval(
-                message="real attempt", agent_id="agent-1",
-                workdir=str(repo), wait=False,
+                message="real attempt",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
             )
             process_pending_once(repo / ".coral")
             real_final = read_attempt(repo / ".coral", real_pending.commit_hash)
@@ -377,8 +398,10 @@ def test_grader_marks_real_class_on_normal_success():
         try:
             (repo / "main.py").write_text("print('v2')\n")
             pending = submit_eval(
-                message="real attempt", agent_id="agent-1",
-                workdir=str(repo), wait=False,
+                message="real attempt",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
             )
             process_pending_once(repo / ".coral")
             final = read_attempt(repo / ".coral", pending.commit_hash)
@@ -403,16 +426,17 @@ def test_grader_marks_grader_error_on_exception():
         try:
             (repo / "main.py").write_text("print('v2')\n")
             pending = submit_eval(
-                message="x", agent_id="agent-1",
-                workdir=str(repo), wait=False,
+                message="x",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
             )
             process_pending_once(repo / ".coral")
             final = read_attempt(repo / ".coral", pending.commit_hash)
             assert final is not None
             assert final.status == "crashed"
             assert final.budget_class == "grader_error", (
-                "Grader exceptions should be classified as grader_error, "
-                "not real attempts."
+                "Grader exceptions should be classified as grader_error, not real attempts."
             )
         finally:
             sys.path.pop(0)
@@ -440,8 +464,10 @@ def test_grader_marks_grader_error_on_timeout():
         try:
             (repo / "main.py").write_text("print('v2')\n")
             pending = submit_eval(
-                message="hang", agent_id="agent-1",
-                workdir=str(repo), wait=False,
+                message="hang",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
             )
             process_pending_once(repo / ".coral")
             final = read_attempt(repo / ".coral", pending.commit_hash)
@@ -456,6 +482,7 @@ def test_grader_marks_grader_error_on_timeout():
 # run_daemon subprocess — submit from main process, daemon in child           #
 # --------------------------------------------------------------------------- #
 
+
 def test_run_daemon_subprocess_grades_pending():
     """End-to-end: spawn the daemon in a subprocess and verify it picks up pending."""
     with tempfile.TemporaryDirectory() as d:
@@ -467,19 +494,20 @@ def test_run_daemon_subprocess_grades_pending():
         import os
 
         sys.path.insert(0, str(repo))
-        os.environ["PYTHONPATH"] = (
-            str(repo) + os.pathsep + os.environ.get("PYTHONPATH", "")
-        )
+        os.environ["PYTHONPATH"] = str(repo) + os.pathsep + os.environ.get("PYTHONPATH", "")
         try:
             (repo / "main.py").write_text("print('real daemon')\n")
             pending = submit_eval(
-                message="daemon run", agent_id="agent-1",
-                workdir=str(repo), wait=False,
+                message="daemon run",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
             )
 
             stop_event = multiprocessing.Event()
             proc = multiprocessing.Process(
-                target=run_daemon, args=(str(repo / ".coral"), stop_event),
+                target=run_daemon,
+                args=(str(repo / ".coral"), stop_event),
             )
             proc.start()
             try:

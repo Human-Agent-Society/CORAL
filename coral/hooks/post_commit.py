@@ -39,7 +39,9 @@ def _git_add_and_commit(message: str, workdir: str) -> str:
     # Stage all changes
     result = subprocess.run(
         ["git", "add", "-A"],
-        capture_output=True, text=True, cwd=workdir,
+        capture_output=True,
+        text=True,
+        cwd=workdir,
     )
     if result.returncode != 0:
         raise RuntimeError(f"git add failed: {result.stderr}")
@@ -47,7 +49,8 @@ def _git_add_and_commit(message: str, workdir: str) -> str:
     # Check if there's anything to commit
     status = subprocess.run(
         ["git", "diff", "--cached", "--quiet"],
-        capture_output=True, cwd=workdir,
+        capture_output=True,
+        cwd=workdir,
     )
     if status.returncode == 0:
         raise RuntimeError("Nothing to commit — no changes detected.")
@@ -55,7 +58,9 @@ def _git_add_and_commit(message: str, workdir: str) -> str:
     # Commit
     result = subprocess.run(
         ["git", "commit", "-m", message],
-        capture_output=True, text=True, cwd=workdir,
+        capture_output=True,
+        text=True,
+        cwd=workdir,
     )
     if result.returncode != 0:
         raise RuntimeError(f"git commit failed: {result.stderr}")
@@ -63,7 +68,9 @@ def _git_add_and_commit(message: str, workdir: str) -> str:
     # Get the commit hash
     result = subprocess.run(
         ["git", "rev-parse", "HEAD"],
-        capture_output=True, text=True, cwd=workdir,
+        capture_output=True,
+        text=True,
+        cwd=workdir,
     )
     return result.stdout.strip()
 
@@ -72,7 +79,9 @@ def _get_parent_hash(commit_hash: str, cwd: str) -> str | None:
     """Get the parent commit hash."""
     result = subprocess.run(
         ["git", "log", "--format=%P", "-n", "1", commit_hash],
-        capture_output=True, text=True, cwd=cwd,
+        capture_output=True,
+        text=True,
+        cwd=cwd,
     )
     if result.returncode == 0 and result.stdout.strip():
         return result.stdout.strip().split()[0]

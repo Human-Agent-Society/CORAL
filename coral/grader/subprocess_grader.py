@@ -77,7 +77,9 @@ except Exception as exc:  # noqa: BLE001
 # Worker that grades an attempt: needs codebase_path + tasks, returns a
 # ScoreBundle. This is the long-running path — its timeout is the grader's
 # configured timeout, possibly minutes.
-_GRADE_WORKER_SCRIPT = _WORKER_PROLOGUE + r"""
+_GRADE_WORKER_SCRIPT = (
+    _WORKER_PROLOGUE
+    + r"""
 
 def _main():
     from coral.types import Task
@@ -86,19 +88,25 @@ def _main():
     tasks = [Task.from_dict(t) for t in payload["tasks"]]
     bundle = asyncio.run(grader.grade(payload["codebase_path"], tasks))
     sys.stdout.write(json.dumps({"bundle": bundle.to_dict()}))
-""" + _WORKER_EPILOGUE
+"""
+    + _WORKER_EPILOGUE
+)
 
 # Worker that fetches static metadata about the grader: no codebase, no
 # tasks, hard 30s timeout in the parent. Currently only used for
 # `describe_tune()`; if we add more read-only RPCs we can either reuse this
 # script with an extra payload field or grow another sibling.
-_DESCRIBE_TUNE_WORKER_SCRIPT = _WORKER_PROLOGUE + r"""
+_DESCRIBE_TUNE_WORKER_SCRIPT = (
+    _WORKER_PROLOGUE
+    + r"""
 
 def _main():
     payload = json.loads(sys.stdin.read())
     grader = _instantiate(payload)
     sys.stdout.write(json.dumps({"description": str(grader.describe_tune())}))
-""" + _WORKER_EPILOGUE
+"""
+    + _WORKER_EPILOGUE
+)
 
 
 def _grader_config_to_dict(config: GraderConfig) -> dict[str, Any]:
@@ -203,9 +211,7 @@ class SubprocessGrader:
             return _default_tune_description()
 
         if "error" in response:
-            logger.warning(
-                f"describe_tune raised in worker: {response['error']}; using default"
-            )
+            logger.warning(f"describe_tune raised in worker: {response['error']}; using default")
             return _default_tune_description()
 
         description = response.get("description")

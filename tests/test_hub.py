@@ -7,18 +7,19 @@ from coral.hub.attempts import (
     format_leaderboard,
     get_agent_attempts,
     get_leaderboard,
-    get_recent,
     per_agent_class_counts,
     read_attempts,
     search_attempts,
     write_attempt,
 )
-from coral.hub.notes import list_notes, read_note, search_notes, get_recent_notes, format_notes_list
-from coral.hub.skills import list_skills, read_skill, get_skill_tree
+from coral.hub.notes import format_notes_list, get_recent_notes, list_notes, read_note, search_notes
+from coral.hub.skills import get_skill_tree, list_skills, read_skill
 from coral.types import Attempt
 
 
-def _make_attempt(commit: str, agent: str = "agent-1", score: float = 0.5, title: str = "test") -> Attempt:
+def _make_attempt(
+    commit: str, agent: str = "agent-1", score: float = 0.5, title: str = "test"
+) -> Attempt:
     return Attempt(
         commit_hash=commit,
         agent_id=agent,

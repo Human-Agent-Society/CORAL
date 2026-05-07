@@ -67,7 +67,7 @@ def generate_coral_md(
             "objective function, identify constraints and evaluation criteria.\n"
             "- **Survey the literature** — use web search to find state-of-the-art approaches, "
             "academic papers, benchmark comparisons, and existing implementations. "
-            "Search broadly first (`\"[problem] state of the art\"`), then drill into "
+            'Search broadly first (`"[problem] state of the art"`), then drill into '
             "specific techniques.\n"
             "- **Review domain knowledge** — if the task involves specialized domains "
             "(biology, chemistry, physics, math), research the underlying science. "

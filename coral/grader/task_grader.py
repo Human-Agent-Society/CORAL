@@ -117,11 +117,7 @@ class TaskGrader(ABC):
         Symlinked into each agent worktree at `<worktree>/.claude/eval_logs/`
         by setup_shared_state.
         """
-        d = (
-            Path(self.private_dir).parent
-            / "public" / "eval_logs"
-            / Path(self.codebase_path).name
-        )
+        d = Path(self.private_dir).parent / "public" / "eval_logs" / Path(self.codebase_path).name
         d.mkdir(parents=True, exist_ok=True)
         return d
 
@@ -213,9 +209,7 @@ class TaskGrader(ABC):
         stdout = result.stdout.strip()
         if not stdout:
             stderr_tail = result.stderr.strip()[-1000:]
-            raise RuntimeError(
-                f"Script produced no output on stdout.\nstderr: {stderr_tail}"
-            )
+            raise RuntimeError(f"Script produced no output on stdout.\nstderr: {stderr_tail}")
         # Try full stdout first
         try:
             return json.loads(stdout)
@@ -247,7 +241,10 @@ class TaskGrader(ABC):
         return Path(self.private_dir) / "eval" / relative_path
 
     def score(
-        self, value: float | None, explanation: str = "", feedback: str | None = None,
+        self,
+        value: float | None,
+        explanation: str = "",
+        feedback: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> ScoreBundle:
         """Return a single-score bundle."""
@@ -258,7 +255,10 @@ class TaskGrader(ABC):
         return self.bundle(None, explanation, feedback=feedback)
 
     def bundle(
-        self, value: float | None, explanation: str = "", feedback: str | None = None,
+        self,
+        value: float | None,
+        explanation: str = "",
+        feedback: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> ScoreBundle:
         """Create a ScoreBundle from a score value and explanation."""
@@ -296,7 +296,7 @@ class TaskGrader(ABC):
                     loop.run_in_executor(pool, self.evaluate),
                     timeout=self.timeout,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 return self.fail(f"Evaluation timed out after {self.timeout}s")
 
         if isinstance(result, ScoreBundle):

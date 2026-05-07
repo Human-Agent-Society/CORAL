@@ -54,10 +54,14 @@ class Score:
             return float(self.value)
         elif isinstance(self.value, str):
             mapping = {
-                "CORRECT": 1.0, "C": 1.0,
-                "INCORRECT": 0.0, "I": 0.0,
-                "PARTIAL": 0.5, "P": 0.5,
-                "NOANSWER": 0.0, "N": 0.0,
+                "CORRECT": 1.0,
+                "C": 1.0,
+                "INCORRECT": 0.0,
+                "I": 0.0,
+                "PARTIAL": 0.5,
+                "P": 0.5,
+                "NOANSWER": 0.0,
+                "N": 0.0,
             }
             return mapping.get(self.value.upper(), 0.0)
         return 0.0

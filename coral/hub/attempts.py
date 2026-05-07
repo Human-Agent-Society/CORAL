@@ -97,7 +97,9 @@ def read_attempts(coral_dir: str | Path) -> list[Attempt]:
     return attempts
 
 
-def get_leaderboard(coral_dir: str | Path, top_n: int = 20, direction: str = "maximize") -> list[Attempt]:
+def get_leaderboard(
+    coral_dir: str | Path, top_n: int = 20, direction: str = "maximize"
+) -> list[Attempt]:
     """Get top N attempts sorted by score. Direction controls sort order."""
     attempts = read_attempts(coral_dir)
     scored = [a for a in attempts if a.score is not None]
@@ -128,9 +130,7 @@ def agent_in_grader_queue(
     if attempts is None:
         attempts = read_attempts(coral_dir)
     candidates = [
-        a
-        for a in attempts
-        if a.agent_id == agent_id and a.status == "pending" and a.score is None
+        a for a in attempts if a.agent_id == agent_id and a.status == "pending" and a.score is None
     ]
     if not candidates:
         return None
@@ -233,14 +233,14 @@ def format_status_summary(coral_dir: str | Path, direction: str = "maximize") ->
             f"Best:  {best.score:.10f}  ({best.title[:50]})  @ {_format_time(best.timestamp)}"
         )
     if worst and best and worst.commit_hash != best.commit_hash:
-        lines.append(
-            f"Worst: {worst.score:.10f}  ({worst.title[:50]})"
-        )
+        lines.append(f"Worst: {worst.score:.10f}  ({worst.title[:50]})")
 
     if scored:
         first_time = min(a.timestamp for a in attempts)
         last_time = max(a.timestamp for a in attempts)
-        lines.append(f"First attempt: {_format_time(first_time)}  |  Latest: {_format_time(last_time)}")
+        lines.append(
+            f"First attempt: {_format_time(first_time)}  |  Latest: {_format_time(last_time)}"
+        )
 
     # Per-agent breakdown
     lines.append("")

@@ -49,6 +49,7 @@ _POLL_INTERVAL_SEC = 0.5
 # Subprocess wrapper around the grader (keeps hard-kill semantics on timeout) #
 # --------------------------------------------------------------------------- #
 
+
 def _grader_worker(
     config_path: str,
     coral_dir: str,
@@ -129,6 +130,7 @@ def _run_grader_with_timeout(
 # Isolated worktree management                                                #
 # --------------------------------------------------------------------------- #
 
+
 def _grader_checkouts_dir(coral_dir: Path) -> Path:
     d = coral_dir / "private" / "grader_checkouts"
     d.mkdir(parents=True, exist_ok=True)
@@ -146,8 +148,7 @@ def _repo_dir(coral_dir: Path) -> Path:
     if _is_git_repo(coral_dir.parent):
         return coral_dir.parent
     raise RuntimeError(
-        f"Cannot locate source repo from {coral_dir} "
-        f"(tried {candidate} and {coral_dir.parent})"
+        f"Cannot locate source repo from {coral_dir} (tried {candidate} and {coral_dir.parent})"
     )
 
 
@@ -166,7 +167,9 @@ def _add_isolated_worktree(repo_dir: Path, commit_hash: str, dest: Path) -> None
 
     result = subprocess.run(
         ["git", "worktree", "add", "--detach", str(dest), commit_hash],
-        capture_output=True, text=True, cwd=str(repo_dir),
+        capture_output=True,
+        text=True,
+        cwd=str(repo_dir),
     )
     if result.returncode != 0:
         raise RuntimeError(
@@ -179,12 +182,16 @@ def _remove_worktree(repo_dir: Path, dest: Path) -> None:
     # git worktree remove is the preferred path; fall back to rmtree + prune.
     result = subprocess.run(
         ["git", "worktree", "remove", "--force", str(dest)],
-        capture_output=True, text=True, cwd=str(repo_dir),
+        capture_output=True,
+        text=True,
+        cwd=str(repo_dir),
     )
     if result.returncode != 0:
         logger.warning(
             "git worktree remove %s failed (rc=%d): %s — falling back to rmtree",
-            dest, result.returncode, result.stderr.strip(),
+            dest,
+            result.returncode,
+            result.stderr.strip(),
         )
         try:
             if dest.exists():
@@ -193,13 +200,16 @@ def _remove_worktree(repo_dir: Path, dest: Path) -> None:
             logger.warning("rmtree %s failed: %s", dest, e)
         subprocess.run(
             ["git", "worktree", "prune"],
-            capture_output=True, text=True, cwd=str(repo_dir),
+            capture_output=True,
+            text=True,
+            cwd=str(repo_dir),
         )
 
 
 # --------------------------------------------------------------------------- #
 # Per-attempt grading                                                         #
 # --------------------------------------------------------------------------- #
+
 
 def _compute_status(
     score: float | None,
@@ -214,8 +224,7 @@ def _compute_status(
 
     prev_attempts = get_agent_attempts(str(coral_dir), agent_id)
     prev_scores = [
-        a.score for a in prev_attempts
-        if a.score is not None and a.commit_hash != commit_hash
+        a.score for a in prev_attempts if a.score is not None and a.commit_hash != commit_hash
     ]
     if not prev_scores:
         return "improved"
@@ -283,13 +292,21 @@ def _grade_one(
         _add_isolated_worktree(repo_dir, attempt.commit_hash, checkout_path)
         try:
             bundle = _run_grader_with_timeout(
-                str(config_path), str(coral_dir), str(checkout_path), [task], timeout,
+                str(config_path),
+                str(coral_dir),
+                str(checkout_path),
+                [task],
+                timeout,
             )
             score = bundle.aggregated
             feedback = _build_feedback(bundle)
             metadata = dict(getattr(bundle, "metadata", None) or {})
             status = _compute_status(
-                score, attempt.agent_id, attempt.commit_hash, coral_dir, minimize,
+                score,
+                attempt.agent_id,
+                attempt.commit_hash,
+                coral_dir,
+                minimize,
             )
             # Score==None still means the grader ran but produced no number; that's
             # an agent-side fail (status="crashed" via _compute_status), not infra.
@@ -330,7 +347,8 @@ def _grade_one(
     count = increment_eval_count(coral_dir)
     logger.info(
         "Graded #%d %s -> score=%s status=%s",
-        count, attempt.commit_hash[:12],
+        count,
+        attempt.commit_hash[:12],
         f"{score:.6f}" if score is not None else "None",
         status,
     )
@@ -340,6 +358,7 @@ def _grade_one(
 # --------------------------------------------------------------------------- #
 # Main loop                                                                   #
 # --------------------------------------------------------------------------- #
+
 
 def _find_pending(coral_dir: Path) -> list[Attempt]:
     """Return pending attempts in submission order (oldest first)."""

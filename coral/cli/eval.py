@@ -67,7 +67,8 @@ def cmd_wait(args: argparse.Namespace) -> None:
     if coral_dir is None:
         try:
             coral_dir = find_coral_dir(
-                getattr(args, "task", None), getattr(args, "run", None),
+                getattr(args, "task", None),
+                getattr(args, "run", None),
             )
         except Exception as e:
             print(f"Error: Could not locate .coral directory: {e}", file=sys.stderr)
@@ -128,9 +129,7 @@ def cmd_wait(args: argparse.Namespace) -> None:
 
 def _print_attempt_result(attempt, header: str) -> None:
     """Shared formatter for `coral eval` and `coral wait` output."""
-    score_str = (
-        f"{attempt.score:.10f}" if attempt.score is not None else "FAILED"
-    )
+    score_str = f"{attempt.score:.10f}" if attempt.score is not None else "FAILED"
     if attempt.status == "pending":
         score_str = "PENDING"
     eval_count = getattr(attempt, "_eval_count", None)
