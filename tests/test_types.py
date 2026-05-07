@@ -21,12 +21,6 @@ def test_task_roundtrip():
     assert restored.metadata == {"key": "val"}
 
 
-def test_score_to_float():
-    assert Score(value=0.75, name="s").to_float() == 0.75
-    assert Score(value=1, name="s").to_float() == 1.0
-    assert Score(value=None, name="s").to_float() is None
-
-
 def test_score_bundle_aggregation():
     bundle = ScoreBundle(
         scores={

@@ -7,8 +7,8 @@ import inspect
 from collections.abc import Callable
 from typing import Any
 
-from coral.types import Score, ScoreBundle, Task
 from coral.grader.base import BaseGrader
+from coral.types import Score, ScoreBundle, Task
 
 GraderFunc = Callable[[str, list[Task]], Score | float | bool]
 AsyncGraderFunc = Callable[[str, list[Task]], Any]
@@ -48,7 +48,8 @@ class FunctionGrader(BaseGrader):
             result = await loop.run_in_executor(None, self.func, codebase_path, tasks)
 
         score = self._normalize_result(result)
-        return self._make_bundle(score, aggregated=score.to_float())
+        aggregated = None if score.value is None else float(score.value)
+        return self._make_bundle(score, aggregated=aggregated)
 
     def _normalize_result(self, result: Score | float | int | bool) -> Score:
         if isinstance(result, Score):
@@ -82,6 +83,7 @@ class FunctionGrader(BaseGrader):
                 is_public=is_public,
                 **kwargs,
             )
+
         return decorator
 
 

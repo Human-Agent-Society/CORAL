@@ -52,9 +52,6 @@ class Score:
     explanation: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_float(self) -> float | None:
-        return None if self.value is None else float(self.value)
-
     def to_dict(self) -> dict[str, Any]:
         return {
             "value": self.value,
@@ -88,22 +85,20 @@ class ScoreBundle:
 
     def get_score_value(self, name: str, default: float = 0.0) -> float:
         score = self.scores.get(name)
-        if score is None:
+        if score is None or score.value is None:
             return default
-        return score.to_float()
+        return float(score.value)
 
     def compute_aggregated(self, weights: dict[str, float] | None = None) -> float:
         weights = weights or {}
         total = 0.0
         weight_sum = 0.0
         for name, score in self.scores.items():
-            try:
-                value = score.to_float()
-                weight = weights.get(name, 1.0)
-                total += value * weight
-                weight_sum += weight
-            except (ValueError, TypeError):
+            if score.value is None:
                 continue
+            weight = weights.get(name, 1.0)
+            total += float(score.value) * weight
+            weight_sum += weight
         return total / weight_sum if weight_sum > 0 else 0.0
 
     def to_dict(self) -> dict[str, Any]:
