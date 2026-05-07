@@ -241,6 +241,11 @@ Run 'coral <command> --help' for details on any command."""
     p_log.add_argument("--recent", action="store_true", help="Sort by time instead of score")
     p_log.add_argument("--agent", help="Filter by agent ID")
     p_log.add_argument("--search", help="Full-text search")
+    p_log.add_argument(
+        "--all",
+        action="store_true",
+        help="Include tune-mode and grader-error attempts (hidden by default)",
+    )
     _add_run_args(p_log)
     # Hidden alias: attempts -> log
     p_attempts_alias = sub.add_parser("attempts", help=argparse.SUPPRESS)

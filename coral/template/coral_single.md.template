@@ -87,7 +87,7 @@ coral eval --tune -m "Sweep lr=1e-3 vs 3e-4"
 
 **Do NOT use `--tune` for:** your final/best answer (must be a normal `coral eval` to count on the leaderboard), or to dodge plateau pivot prompts when you're actually stuck (pivots exist for a reason). If this grader uses a cheaper target in tune mode, tune scores may not be directly comparable to real ones — check the description above.
 
-Tune attempts are still scored, recorded, and visible in `coral log` — they just don't drive plateau triggers. Drop the flag once tuning settles.
+Tune attempts are scored and recorded normally, but **hidden from `coral log` by default** — pass `coral log --all` to see them. They don't drive plateau triggers either. Drop the flag once tuning settles.
 
 ## {results_step_num}. Read Results & Iterate
 
@@ -194,11 +194,12 @@ coral revert                         # Undo last commit
 coral checkout <hash>                # Reset to any previous attempt's code
 
 # Attempts
-coral log                            # Leaderboard (top 20)
+coral log                            # Leaderboard (top 20, real attempts only)
 coral log -n 5                       # Top 5
 coral log --recent                   # Sort by time
 coral log --agent {agent_id}         # Your history
 coral log --search "query"           # Search all attempts
+coral log --all                      # Include tune + grader_error attempts
 coral show <hash>                    # Details + file summary for one attempt
 coral show <hash> --diff             # Details + full code diff
 

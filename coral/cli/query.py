@@ -21,6 +21,7 @@ def cmd_log(args: argparse.Namespace) -> None:
       coral log --recent            Sort by time instead of score
       coral log --agent agent-1     Filter by agent
       coral log --search "kernel"   Full-text search
+      coral log --all               Include tune + grader_error attempts
     """
     from coral.hub.attempts import (
         format_leaderboard,
@@ -29,34 +30,51 @@ def cmd_log(args: argparse.Namespace) -> None:
         get_recent,
         search_attempts,
     )
+    from coral.types import Attempt
 
     coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
     direction = read_direction(coral_dir)
     count = getattr(args, "count", None) or 20
+    show_all = getattr(args, "all", False)
+    # Over-fetch when filtering, so the trimmed result still has up to `count`
+    # rows even when many recent / top attempts happen to be tune or error.
+    raw_n = count if show_all else max(count * 4, 40)
+
+    def filter_real(attempts: list[Attempt]) -> list[Attempt]:
+        # Default: hide tune-mode probes (exploratory, not "real" results)
+        # and grader_error attempts (infrastructure noise, not the agent's
+        # work). `coral log --all` opts back in to the full timeline; the
+        # underlying hub functions still return everything for daemon /
+        # web-API callers that need it.
+        if show_all:
+            return attempts
+        return [a for a in attempts if a.budget_class not in ("tune", "grader_error")]
 
     if args.search:
-        attempts = search_attempts(str(coral_dir), args.search)
+        attempts = filter_real(search_attempts(str(coral_dir), args.search))[:count]
         if attempts:
             print(f"Search results for '{args.search}':")
             print(format_leaderboard(attempts))
         else:
             print(f"No attempts matching '{args.search}'.")
     elif args.agent:
-        attempts = get_agent_attempts(str(coral_dir), args.agent)
+        attempts = filter_real(get_agent_attempts(str(coral_dir), args.agent))[:count]
         if attempts:
             print(f"Attempts by {args.agent}:")
             print(format_leaderboard(attempts))
         else:
             print(f"No attempts by {args.agent}.")
     elif args.recent:
-        attempts = get_recent(str(coral_dir), n=count)
+        attempts = filter_real(get_recent(str(coral_dir), n=raw_n))[:count]
         if attempts:
             print(f"Recent {len(attempts)} attempt(s):")
             print(format_leaderboard(attempts))
         else:
             print("No attempts yet.")
     else:
-        attempts = get_leaderboard(str(coral_dir), top_n=count, direction=direction)
+        attempts = filter_real(get_leaderboard(str(coral_dir), top_n=raw_n, direction=direction))[
+            :count
+        ]
         if attempts:
             print(f"Leaderboard (top {len(attempts)}):")
             print(format_leaderboard(attempts))
@@ -339,9 +357,7 @@ def _collect_runs(results_dir: Path) -> list[dict]:
                     except (json.JSONDecodeError, OSError):
                         attempt_count += 1
 
-            is_latest = latest_resolved is not None and (
-                latest_resolved == run_dir.resolve()
-            )
+            is_latest = latest_resolved is not None and (latest_resolved == run_dir.resolve())
 
             runs.append(
                 {
