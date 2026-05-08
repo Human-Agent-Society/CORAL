@@ -20,6 +20,21 @@ class TaskConfig:
 
 
 @dataclass
+class ParallelGraderConfig:
+    """Parallel evaluation in the grader daemon.
+
+    The daemon always routes pending attempts through a worker pool of this
+    size. ``max_workers=1`` (the default) is serial — same behavior as before
+    the pool existed. Set higher only when the grader is concurrency-safe
+    (pure Python, sandboxed swebench runs, etc.); the daemon does not enforce
+    safety, so a misconfigured value with a non-safe grader is the user's
+    responsibility.
+    """
+
+    max_workers: int = 1
+
+
+@dataclass
 class GraderConfig:
     """Grader configuration."""
 
@@ -38,11 +53,22 @@ class GraderConfig:
     # Default 1: an agent can only enqueue a fresh attempt once the prior one
     # is graded, which prevents runaway pending floods when the grader is slow.
     max_pending_per_agent: int = 1
+    parallel: ParallelGraderConfig = field(default_factory=ParallelGraderConfig)
 
     def __post_init__(self) -> None:
         if self.max_pending_per_agent < 0:
             raise ValueError(
                 f"grader.max_pending_per_agent must be >= 0, got {self.max_pending_per_agent}"
+            )
+        # SubprocessGrader serializes GraderConfig via dataclasses.asdict and
+        # rebuilds with `GraderConfig(**payload)`, which leaves `parallel` as a
+        # plain dict. Coerce here so validation and downstream attribute access
+        # work for both real callers and the worker reconstruction path.
+        if isinstance(self.parallel, dict):
+            self.parallel = ParallelGraderConfig(**self.parallel)
+        if self.parallel.max_workers < 1:
+            raise ValueError(
+                f"grader.parallel.max_workers must be >= 1, got {self.parallel.max_workers}"
             )
 
 
