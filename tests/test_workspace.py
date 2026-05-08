@@ -3,6 +3,7 @@
 import os
 import subprocess
 import tempfile
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ import pytest
 from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig, WorkspaceConfig
 from coral.workspace import (
     create_project,
+    setup_codex_settings,
     setup_gitignore,
     setup_worktree_env,
     write_agent_id,
@@ -129,6 +131,31 @@ def test_setup_gitignore_idempotent():
         assert content.count(".claude/") == 1
 
 
+@pytest.mark.parametrize(
+    ("research", "expected"),
+    [
+        (True, "live"),
+        (False, "disabled"),
+    ],
+)
+def test_setup_codex_settings_writes_top_level_web_search(
+    research: bool, expected: str,
+):
+    """Codex expects web_search as a top-level mode, not under [tools]."""
+    with tempfile.TemporaryDirectory() as d:
+        worktree = Path(d) / "worktree"
+        coral_dir = Path(d) / ".coral"
+        worktree.mkdir()
+        coral_dir.mkdir()
+
+        setup_codex_settings(worktree, coral_dir, research=research)
+
+        config_toml = (worktree / ".codex" / "config.toml").read_text()
+        config = tomllib.loads(config_toml)
+        assert config["web_search"] == expected
+        assert "tools" not in config
+
+
 def test_create_project_runs_setup_commands():
     """Setup commands execute in the worktree directory."""
     with tempfile.TemporaryDirectory() as d:
@@ -200,5 +227,4 @@ def test_setup_worktree_env_runs_when_venv_missing():
         setup_worktree_env(worktree, [f"touch {marker}"])
 
         assert marker.exists(), "Setup should have run on first launch"
-
 
