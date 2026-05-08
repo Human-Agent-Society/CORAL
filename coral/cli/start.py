@@ -113,6 +113,7 @@ def _start_in_tmux(args: argparse.Namespace, config: CoralConfig) -> None:
 _RUNTIME_DOCKER_DIR: dict[str, str] = {
     "claude_code": "claude",
     "codex": "codex",
+    "cursor_agent": "cursor",
     "opencode": "opencode",
 }
 
@@ -197,6 +198,13 @@ def _build_docker_cmd(
         opencode_config = Path.home() / ".opencode"
         if opencode_config.is_dir():
             cmd.extend(["-v", f"{opencode_config}:/opencode-config:ro"])
+    elif docker_dir == "cursor":
+        cursor_home = host_run_dir / ".cursor_home"
+        cursor_home.mkdir(exist_ok=True)
+        cmd.extend(["-v", f"{cursor_home}:/root/.cursor:rw"])
+        cursor_config = Path.home() / ".cursor"
+        if cursor_config.is_dir():
+            cmd.extend(["-v", f"{cursor_config}:/cursor-config:ro"])
 
     # Pass through API key env vars
     for key, val in os.environ.items():
