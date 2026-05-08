@@ -338,6 +338,7 @@ def setup_codex_settings(
         'approval_policy = "never"',
         'sandbox_mode = "danger-full-access"',
         'personality = "pragmatic"',
+        f'web_search = "{web_search}"',
     ]
 
     if gateway_url:
@@ -349,11 +350,6 @@ def setup_codex_settings(
             'wire_api = "responses"',
             'env_key = "OPENAI_API_KEY"',
         ]
-
-    lines += [
-        '\n[tools]',
-        f'web_search = "{web_search}"',
-    ]
 
     config_toml = "\n".join(lines) + "\n"
 
@@ -469,4 +465,3 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
                 logger.warning(
                     f"Failed to install coral in worktree: {result.stderr.strip()}"
                 )
-
