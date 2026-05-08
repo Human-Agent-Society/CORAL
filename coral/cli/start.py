@@ -11,6 +11,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from coral.agent.registry import canonical_runtime_name
 from coral.agent.state import read_agent_state
 from coral.cli._helpers import (
     docker_cmd,
@@ -121,7 +122,7 @@ def _ensure_docker_image(config: CoralConfig) -> str:
     if config.run.docker_image:
         return config.run.docker_image
 
-    runtime = config.agents.runtime
+    runtime = canonical_runtime_name(config.agents.runtime)
     docker_dir = _RUNTIME_DOCKER_DIR.get(runtime)
     if docker_dir is None:
         print(
@@ -170,7 +171,7 @@ def _build_docker_cmd(
     ]
 
     # Mount runtime-specific credentials
-    runtime = config.agents.runtime
+    runtime = canonical_runtime_name(config.agents.runtime)
     docker_dir = _RUNTIME_DOCKER_DIR.get(runtime, "claude")
 
     if docker_dir == "claude":

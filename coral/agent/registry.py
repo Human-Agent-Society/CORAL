@@ -39,12 +39,21 @@ _DEFAULT_MODELS: dict[str, str] = {
 }
 
 
+def canonical_runtime_name(name: str) -> str:
+    """Resolve a runtime alias to its canonical name.
+
+    Returns the input unchanged if it isn't a known alias — callers that
+    need to validate registration should still go through `get_runtime`.
+    """
+    return _ALIASES.get(name, name)
+
+
 def get_runtime(name: str) -> AgentRuntime:
     """Get a runtime instance by name.
 
     Supports canonical names (claude_code, codex, opencode) and aliases.
     """
-    canonical = _ALIASES.get(name, name)
+    canonical = canonical_runtime_name(name)
     cls = _RUNTIMES.get(canonical)
     if cls is None:
         available = sorted(set(list(_RUNTIMES.keys()) + list(_ALIASES.keys())))
@@ -56,7 +65,7 @@ def get_runtime(name: str) -> AgentRuntime:
 
 def default_model_for_runtime(name: str) -> str | None:
     """Return the default model for a runtime, or None if unknown."""
-    canonical = _ALIASES.get(name, name)
+    canonical = canonical_runtime_name(name)
     return _DEFAULT_MODELS.get(canonical)
 
 
