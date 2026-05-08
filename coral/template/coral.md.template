@@ -104,7 +104,7 @@ When you're sweeping during a plateau, `--tune` is exactly the right tool: it le
 - **Comparing tune scores against real scores** when this grader uses a cheaper target — the scales are not comparable. Stay within one mode for any given comparison, then re-submit the winner with a real `coral eval` for the leaderboard.
 - **Faking progress when you're actually stuck** — if real evals have plateaued and you've also exhausted obvious sweep ideas, the pivot prompt is trying to tell you something. Don't route the same approach through `--tune` repeatedly to avoid the conversation.
 
-Tune attempts are scored and recorded normally, but they're **hidden from `coral log` by default** to keep the leaderboard focused on real submissions — pass `coral log --all` (or `coral show <hash>`) to inspect them. They also don't drive plateau / heartbeat triggers. Once tuning settles, drop the flag and submit the final config as a normal `coral eval`.
+Tune attempts are scored and recorded normally, but they're **hidden from `coral log` by default** to keep the leaderboard focused on real submissions — pass `coral log --all` to inspect them mixed in, `coral log --class tune` to see only tune attempts (e.g. your full sweep history), or `coral show <hash>` for one specifically. They also don't drive plateau / heartbeat triggers. Once tuning settles, drop the flag and submit the final config as a normal `coral eval`.
 
 ## 4. Read Results & Iterate
 
@@ -208,6 +208,7 @@ coral log --recent                   # Sort by time
 coral log --agent {agent_id}         # Your history
 coral log --search "query"           # Search all attempts
 coral log --all                      # Include tune + grader_error attempts
+coral log --class tune               # Show only tune-mode attempts (your sweep history)
 coral show <hash>                    # Details + file summary for one attempt
 coral show <hash> --diff             # Details + full code diff
 

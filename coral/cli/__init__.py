@@ -231,7 +231,9 @@ Run 'coral <command> --help' for details on any command."""
             "  coral log -n 5                Top 5\n"
             "  coral log --recent            Sort by time instead of score\n"
             "  coral log --agent agent-1     Filter by agent\n"
-            "  coral log --search 'kernel'   Full-text search"
+            "  coral log --search 'kernel'   Full-text search\n"
+            "  coral log --all               Include tune + grader_error attempts\n"
+            "  coral log --class tune        Show only tune-mode attempts"
         ),
         formatter_class=_CommandHelpFormatter,
     )
@@ -241,10 +243,17 @@ Run 'coral <command> --help' for details on any command."""
     p_log.add_argument("--recent", action="store_true", help="Sort by time instead of score")
     p_log.add_argument("--agent", help="Filter by agent ID")
     p_log.add_argument("--search", help="Full-text search")
-    p_log.add_argument(
+    g_class = p_log.add_mutually_exclusive_group()
+    g_class.add_argument(
         "--all",
         action="store_true",
         help="Include tune-mode and grader-error attempts (hidden by default)",
+    )
+    g_class.add_argument(
+        "--class",
+        dest="budget_class",
+        choices=("real", "tune", "grader_error"),
+        help="Show only attempts of this budget class (mutually exclusive with --all)",
     )
     _add_run_args(p_log)
     # Hidden alias: attempts -> log

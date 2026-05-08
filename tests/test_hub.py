@@ -82,6 +82,27 @@ def test_format_leaderboard():
     assert "0.9000" in md
 
 
+def test_format_leaderboard_shows_class_column():
+    """The Class column distinguishes real / tune / error attempts at a glance."""
+    real = _make_attempt("aaa", score=0.9, title="real-row")
+    tune = _make_attempt("bbb", score=0.5, title="tune-row")
+    tune.metadata["budget_class"] = "tune"
+    err = _make_attempt("ccc", score=0.3, title="error-row")
+    err.metadata["budget_class"] = "grader_error"
+
+    md = format_leaderboard([real, tune, err])
+    assert "Class" in md
+    # Per-row class labels appear in the table body.
+    real_line = next(line for line in md.splitlines() if "real-row" in line)
+    tune_line = next(line for line in md.splitlines() if "tune-row" in line)
+    err_line = next(line for line in md.splitlines() if "error-row" in line)
+    assert " real " in real_line
+    assert " tune " in tune_line
+    # grader_error is rendered as compact "error" to keep the column narrow.
+    assert " error " in err_line
+    assert "grader_error" not in err_line
+
+
 def test_per_agent_class_counts_splits_by_budget_class():
     """Budget class counts are tallied per agent (issue #73)."""
     with tempfile.TemporaryDirectory() as d:

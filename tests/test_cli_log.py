@@ -47,6 +47,7 @@ def _run_cmd_log(capsys: pytest.CaptureFixture, **flags) -> str:
         agent=None,
         search=None,
         all=False,
+        budget_class=None,
         task=None,
         run=None,
     )
@@ -100,3 +101,36 @@ def test_log_agent_filter_applies(coral_dir_with_mixed_attempts, capsys):
     assert "tune-A" not in out
     out_all = _run_cmd_log(capsys, agent="agent-1", all=True)
     assert "tune-A" in out_all
+
+
+def test_log_class_tune_shows_only_tune(coral_dir_with_mixed_attempts, capsys):
+    """`coral log --class tune` returns only tune-mode attempts."""
+    out = _run_cmd_log(capsys, budget_class="tune")
+    assert "tune-A" in out
+    assert "real-A" not in out
+    assert "real-B" not in out
+    assert "error-A" not in out
+
+
+def test_log_class_grader_error_shows_only_errors(coral_dir_with_mixed_attempts, capsys):
+    """`coral log --class grader_error` returns only grader_error attempts."""
+    out = _run_cmd_log(capsys, budget_class="grader_error")
+    assert "error-A" in out
+    assert "real-A" not in out
+    assert "tune-A" not in out
+
+
+def test_log_class_real_shows_only_real(coral_dir_with_mixed_attempts, capsys):
+    """`coral log --class real` is equivalent to the default filter."""
+    out = _run_cmd_log(capsys, budget_class="real")
+    assert "real-A" in out
+    assert "real-B" in out
+    assert "tune-A" not in out
+    assert "error-A" not in out
+
+
+def test_log_class_composes_with_agent_filter(coral_dir_with_mixed_attempts, capsys):
+    """`coral log --class tune --agent agent-1` narrows to that intersection."""
+    out = _run_cmd_log(capsys, budget_class="tune", agent="agent-1")
+    assert "tune-A" in out
+    assert "real-A" not in out

@@ -22,6 +22,7 @@ def cmd_log(args: argparse.Namespace) -> None:
       coral log --agent agent-1     Filter by agent
       coral log --search "kernel"   Full-text search
       coral log --all               Include tune + grader_error attempts
+      coral log --class tune        Show only tune-mode attempts
     """
     from coral.hub.attempts import (
         format_leaderboard,
@@ -36,40 +37,43 @@ def cmd_log(args: argparse.Namespace) -> None:
     direction = read_direction(coral_dir)
     count = getattr(args, "count", None) or 20
     show_all = getattr(args, "all", False)
+    only_class = getattr(args, "budget_class", None)
     # Over-fetch when filtering, so the trimmed result still has up to `count`
     # rows even when many recent / top attempts happen to be tune or error.
-    raw_n = count if show_all else max(count * 4, 40)
+    raw_n = count if (show_all or only_class) else max(count * 4, 40)
 
-    def filter_real(attempts):
+    def filter_attempts(attempts):
+        if only_class:
+            return [a for a in attempts if a.budget_class == only_class]
         if show_all:
             return attempts
         return [a for a in attempts if a.budget_class == BUDGET_CLASS_REAL]
 
     if args.search:
-        attempts = filter_real(search_attempts(str(coral_dir), args.search))[:count]
+        attempts = filter_attempts(search_attempts(str(coral_dir), args.search))[:count]
         if attempts:
             print(f"Search results for '{args.search}':")
             print(format_leaderboard(attempts))
         else:
             print(f"No attempts matching '{args.search}'.")
     elif args.agent:
-        attempts = filter_real(get_agent_attempts(str(coral_dir), args.agent))[:count]
+        attempts = filter_attempts(get_agent_attempts(str(coral_dir), args.agent))[:count]
         if attempts:
             print(f"Attempts by {args.agent}:")
             print(format_leaderboard(attempts))
         else:
             print(f"No attempts by {args.agent}.")
     elif args.recent:
-        attempts = filter_real(get_recent(str(coral_dir), n=raw_n))[:count]
+        attempts = filter_attempts(get_recent(str(coral_dir), n=raw_n))[:count]
         if attempts:
             print(f"Recent {len(attempts)} attempt(s):")
             print(format_leaderboard(attempts))
         else:
             print("No attempts yet.")
     else:
-        attempts = filter_real(get_leaderboard(str(coral_dir), top_n=raw_n, direction=direction))[
-            :count
-        ]
+        attempts = filter_attempts(
+            get_leaderboard(str(coral_dir), top_n=raw_n, direction=direction)
+        )[:count]
         if attempts:
             print(f"Leaderboard (top {len(attempts)}):")
             print(format_leaderboard(attempts))
@@ -106,6 +110,9 @@ def cmd_show(args: argparse.Namespace) -> None:
     print(f"Title:   {data['title']}")
     print(f"Score:   {data.get('score', '—')}")
     print(f"Status:  {data['status']}")
+    from coral.types import get_budget_class
+
+    print(f"Budget:  {get_budget_class(data.get('metadata'))}")
     print(f"Time:    {data['timestamp']}")
     if data.get("parent_hash"):
         print(f"Parent:  {data['parent_hash']}")

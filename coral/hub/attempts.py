@@ -205,16 +205,18 @@ def format_leaderboard(attempts: list[Attempt]) -> str:
         return "No attempts yet."
 
     lines = [
-        "| Rank | Score            | Agent   | Title                                    | Time        | Commit   |",
-        "|------|------------------|---------|------------------------------------------|-------------|----------|",
+        "| Rank | Score            | Agent   | Class  | Title                                    | Time        | Commit   |",
+        "|------|------------------|---------|--------|------------------------------------------|-------------|----------|",
     ]
     for i, a in enumerate(attempts, 1):
         score_str = f"{a.score:.10f}" if a.score is not None else "—"
         commit_short = a.commit_hash[:8]
         title = a.title[:40].ljust(40) if a.title else "—".ljust(40)
         time_str = _format_time(a.timestamp)
+        # Display "error" instead of full "grader_error" to keep the column narrow.
+        class_str = "error" if a.budget_class == "grader_error" else a.budget_class
         lines.append(
-            f"| {i:<4} | {score_str:>16} | {a.agent_id:<7} | {title} | {time_str:<11} | {commit_short} |"
+            f"| {i:<4} | {score_str:>16} | {a.agent_id:<7} | {class_str:<6} | {title} | {time_str:<11} | {commit_short} |"
         )
 
     return "\n".join(lines)

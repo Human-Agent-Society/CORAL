@@ -89,7 +89,7 @@ Tune mode is the cheap-and-fast variant of `coral eval`. **On graders that imple
 
 **Do NOT use `--tune` for:** your final/best answer (must be a normal `coral eval` to count on the leaderboard); comparing tune scores against real ones if this grader uses a cheaper target (scales differ — stay within one mode per comparison); faking progress when you're genuinely out of ideas (if real evals have plateaued and you've exhausted obvious sweep ideas, the pivot prompt is trying to tell you something — don't route the same approach through `--tune` repeatedly to avoid the conversation).
 
-Tune attempts are scored and recorded normally, but **hidden from `coral log` by default** — pass `coral log --all` to see them. They don't drive plateau triggers either. Drop the flag once tuning settles.
+Tune attempts are scored and recorded normally, but **hidden from `coral log` by default** — pass `coral log --all` to see them mixed in, or `coral log --class tune` to see only your sweep history. They don't drive plateau triggers either. Drop the flag once tuning settles.
 
 ## {results_step_num}. Read Results & Iterate
 
@@ -202,6 +202,7 @@ coral log --recent                   # Sort by time
 coral log --agent {agent_id}         # Your history
 coral log --search "query"           # Search all attempts
 coral log --all                      # Include tune + grader_error attempts
+coral log --class tune               # Show only tune-mode attempts (your sweep history)
 coral show <hash>                    # Details + file summary for one attempt
 coral show <hash> --diff             # Details + full code diff
 
