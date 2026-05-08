@@ -95,6 +95,8 @@ The first time you submit with `--tune` on this task, the result feedback starts
 - **Smoke-tests after a tooling/harness change**, just to confirm the pipeline still scores end-to-end.
 - **Pre-flight checks** before a real submission — does the build still produce a valid output?
 
+**Rule of thumb: if you'd be surprised this change improves the score, run `--tune` first.** Real evals are for committing, tune evals are for finding out. If your last few real attempts haven't improved the score, you're in "finding out" territory — switch to `--tune` for the next variant rather than burning more real attempts on uncertain hypotheses.
+
 When you're sweeping during a plateau, `--tune` is exactly the right tool: it lets you explore more configs without each one ticking the plateau counter (which exists to push you off a stuck approach, not to punish exploration).
 
 **Do NOT use `--tune` for:**

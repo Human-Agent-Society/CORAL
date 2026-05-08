@@ -85,6 +85,8 @@ Tune mode is the cheap-and-fast variant of `coral eval`. **On graders that imple
 
 **Use `--tune` for:** hyperparameter / config sweeps, ablations, smoke-tests after a tooling change, pre-flight checks before a real submission. When you're sweeping during a plateau, `--tune` is exactly the right tool — it lets you explore more configs without each one ticking the plateau counter.
 
+**Rule of thumb: if you'd be surprised this change improves the score, run `--tune` first.** Real evals are for committing, tune evals are for finding out. If your last few real attempts haven't improved, you're in "finding out" territory — switch to `--tune` for the next variant rather than burning more real attempts on uncertain hypotheses.
+
 **Do NOT use `--tune` for:** your final/best answer (must be a normal `coral eval` to count on the leaderboard); comparing tune scores against real ones if this grader uses a cheaper target (scales differ — stay within one mode per comparison); faking progress when you're genuinely out of ideas (if real evals have plateaued and you've exhausted obvious sweep ideas, the pivot prompt is trying to tell you something — don't route the same approach through `--tune` repeatedly to avoid the conversation).
 
 Tune attempts are scored and recorded normally, but **hidden from `coral log` by default** — pass `coral log --all` to see them. They don't drive plateau triggers either. Drop the flag once tuning settles.
