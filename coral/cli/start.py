@@ -729,6 +729,7 @@ def cmd_status(args: argparse.Namespace) -> None:
         get_leaderboard,
         per_agent_class_counts,
     )
+    from coral.types import BUDGET_CLASS_GRADER_ERROR, BUDGET_CLASS_REAL, BUDGET_CLASS_TUNE
 
     task = getattr(args, "task", None)
     run = getattr(args, "run", None)
@@ -823,9 +824,9 @@ def cmd_status(args: argparse.Namespace) -> None:
                 )
                 buckets = class_counts.get(agent_name, {})
                 if buckets:
-                    real = buckets.get("real", 0)
-                    grader_error = buckets.get("grader_error", 0)
-                    tune = buckets.get("tune", 0)
+                    real = buckets.get(BUDGET_CLASS_REAL, 0)
+                    grader_error = buckets.get(BUDGET_CLASS_GRADER_ERROR, 0)
+                    tune = buckets.get(BUDGET_CLASS_TUNE, 0)
                     total = real + grader_error + tune
                     if total:
                         rate_str = f"{grader_error}/{total} ({100 * grader_error / total:.0f}%)"

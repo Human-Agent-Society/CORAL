@@ -137,9 +137,11 @@ def _print_attempt_result(attempt, header: str) -> None:
     print(f"\n{'=' * 50}")
     print(f"{header}{count_str}: {score_str}")
     print(f"Commit:  {attempt.commit_hash[:12]}")
+    from coral.types import BUDGET_CLASS_REAL
+
     status_line = attempt.status
     budget_class = attempt.budget_class
-    if budget_class != "real":
+    if budget_class != BUDGET_CLASS_REAL:
         status_line = f"{status_line}  (budget: {budget_class})"
     print(f"Status:  {status_line}")
     if attempt.feedback:

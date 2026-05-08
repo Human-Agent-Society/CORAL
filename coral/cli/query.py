@@ -30,7 +30,7 @@ def cmd_log(args: argparse.Namespace) -> None:
         get_recent,
         search_attempts,
     )
-    from coral.types import Attempt
+    from coral.types import BUDGET_CLASS_REAL
 
     coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
     direction = read_direction(coral_dir)
@@ -40,15 +40,10 @@ def cmd_log(args: argparse.Namespace) -> None:
     # rows even when many recent / top attempts happen to be tune or error.
     raw_n = count if show_all else max(count * 4, 40)
 
-    def filter_real(attempts: list[Attempt]) -> list[Attempt]:
-        # Default: hide tune-mode probes (exploratory, not "real" results)
-        # and grader_error attempts (infrastructure noise, not the agent's
-        # work). `coral log --all` opts back in to the full timeline; the
-        # underlying hub functions still return everything for daemon /
-        # web-API callers that need it.
+    def filter_real(attempts):
         if show_all:
             return attempts
-        return [a for a in attempts if a.budget_class not in ("tune", "grader_error")]
+        return [a for a in attempts if a.budget_class == BUDGET_CLASS_REAL]
 
     if args.search:
         attempts = filter_real(search_attempts(str(coral_dir), args.search))[:count]

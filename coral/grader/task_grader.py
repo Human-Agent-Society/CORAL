@@ -23,11 +23,8 @@ from pathlib import Path
 from typing import Any
 
 from coral.config import GraderConfig
-from coral.types import Score, ScoreBundle, Task
+from coral.types import BUDGET_CLASS_TUNE, Score, ScoreBundle, Task, get_budget_class
 
-# Default text returned by `TaskGrader.describe_tune()`. Surfaced to the
-# agent only on tune-mode submissions, prepended to the eval feedback by
-# `grade()`.
 DEFAULT_TUNE_DESCRIPTION = (
     "This grader does not differentiate tune mode from a real "
     "submission: scoring runs the full evaluation either way and "
@@ -66,39 +63,30 @@ class TaskGrader(ABC):
 
     @property
     def budget_class(self) -> str:
-        """The pending attempt's budget class: "real" or "tune".
+        """The pending attempt's budget class.
 
-        Note: "grader_error" is assigned by the daemon *after* grading (when
-        the grader times out or raises), so this property only ever returns
-        "real" or "tune" from inside the grader.
+        Only "real" or "tune" from inside the grader — "grader_error" is
+        stamped by the daemon *after* grading (timeout / exception).
         """
-        if not self.tasks:
-            return "real"
-        return str(self.tasks[0].metadata.get("budget_class", "real"))
+        return get_budget_class(self.tasks[0].metadata if self.tasks else None)
 
     @property
     def tune(self) -> bool:
         """True if this attempt was submitted with `coral eval --tune`.
 
-        Convenience derived from ``self.budget_class == "tune"``. Use this to
-        switch your grader to a cheaper local target — a smaller eval slice,
-        dev split, or smoke harness — when the agent is sweeping
-        hyperparameters or shaking out config rather than making a real
-        submission. The agent will not be charged against its plateau /
-        heartbeat budget for tune-mode attempts (see issue #73).
-
-        False for the standard ``coral eval`` path.
+        Use this to switch your grader to a cheaper local target — a smaller
+        eval slice, dev split, or smoke harness — when the agent is sweeping
+        hyperparameters rather than making a real submission. Tune-mode
+        attempts don't count against the plateau / heartbeat budget.
         """
-        return self.budget_class == "tune"
+        return self.budget_class == BUDGET_CLASS_TUNE
 
     def describe_tune(self) -> str:
-        """Override to describe what `--tune` actually does on this grader.
+        """Override to describe what `--tune` does on this grader.
 
-        Surfaced to the agent only on tune-mode submissions: `grade()`
-        prepends the returned text to the eval feedback when ``self.tune``
-        is true. Use it to tell the agent whether tune mode uses a cheaper
-        target (subset, dev split, smoke harness) or is identical to a real
-        eval. The default is honest about doing nothing special.
+        Prepended to the eval feedback whenever ``self.tune`` is true, so
+        the agent learns whether tune mode uses a cheaper target or is
+        identical to a real eval.
         """
         return DEFAULT_TUNE_DESCRIPTION
 

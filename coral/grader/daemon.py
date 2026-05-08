@@ -257,23 +257,17 @@ def _grade_one(
     config: CoralConfig,
 ) -> Attempt:
     """Grade a single pending attempt and return the finalized Attempt record."""
-    # Pending attempts may carry a tune marker from `coral eval --tune`,
-    # encoded as `metadata["budget_class"] = "tune"`. Real submissions default
-    # to "real"; grader-side failures override to "grader_error" below.
-    pending_class = get_budget_class(attempt.metadata)
-    budget_class = pending_class
-    # Surface the budget class (and a few other useful per-attempt fields) to
-    # the user's grader via Task.metadata. TaskGrader exposes `self.tune`
-    # and `self.budget_class` to read these — both derive from this single
-    # canonical field. Both the in-process TaskGrader path and the
-    # SubprocessGrader path serialize Task.metadata, so this works for
-    # either grader runtime.
+    # Task.metadata is the canonical channel for surfacing per-attempt context
+    # to the user's grader (read via TaskGrader.tune / .budget_class). Both
+    # the in-process and SubprocessGrader paths serialize it, so this works
+    # for either runtime. Final budget_class may flip to "grader_error" below.
+    budget_class = get_budget_class(attempt.metadata)
     task = Task(
         id=config.task.name,
         name=config.task.name,
         description=config.task.description,
         metadata={
-            "budget_class": pending_class,
+            "budget_class": budget_class,
             "agent_id": attempt.agent_id,
             "commit_hash": attempt.commit_hash,
         },
@@ -308,8 +302,6 @@ def _grade_one(
                 coral_dir,
                 minimize,
             )
-            # Score==None still means the grader ran but produced no number; that's
-            # an agent-side fail (status="crashed" via _compute_status), not infra.
         finally:
             _remove_worktree(repo_dir, checkout_path)
     except TimeoutError:
@@ -323,8 +315,8 @@ def _grade_one(
         feedback = str(e)
         budget_class = BUDGET_CLASS_GRADER_ERROR
 
-    # Carry forward any pending metadata (e.g. tune marker) we didn't overwrite,
-    # then stamp the final budget class.
+    # Carry forward any pending metadata the grader bundle didn't overwrite,
+    # then stamp the final budget_class (always wins over any pending value).
     for k, v in (attempt.metadata or {}).items():
         metadata.setdefault(k, v)
     metadata["budget_class"] = budget_class
