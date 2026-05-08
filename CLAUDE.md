@@ -189,6 +189,6 @@ Project-local skills live under `.claude/skills/`. Claude Code loads them on dem
 
 | Skill | Use when |
 |---|---|
-| [coral-dev](.claude/skills/coral-dev/SKILL.md) | Editing code under `coral/` — reproduce loops, where-to-look pointers, run inspection, lint/test |
-| [coral-new-example](.claude/skills/coral-new-example/SKILL.md) | Creating a new `examples/<task>/` — seed + task.yaml + grader package, validation loop, common pitfalls |
-| [coral-author](.claude/skills/coral-author/SKILL.md) | Extending CORAL itself — new runtime, CLI command, bundled skill, hook, or config field |
+| [coral-debug](.claude/skills/coral-debug/SKILL.md) | Editing existing code under `coral/` or chasing a bug — reproduce loops, where-to-look pointers, run inspection, lint/test |
+| [coral-new-task](.claude/skills/coral-new-task/SKILL.md) | Adding a new `examples/<task>/` — seed + task.yaml + grader package, validation loop, common pitfalls |
+| [coral-extend](.claude/skills/coral-extend/SKILL.md) | Extending the framework itself — new runtime, CLI command, bundled skill, hook, or config field |

@@ -1,13 +1,13 @@
 ---
-name: coral-dev
-description: Developer workflows for working ON the CORAL project itself — reproduce loops for changes to graders, the CLI, hooks, the grader daemon, or the agent manager; where to look when something breaks; how to inspect a live run's `.coral/public/` state; the canonical test/lint commands. Use when editing code under `coral/` or debugging CORAL itself, NOT when authoring a task or running agents on a task.
+name: coral-debug
+description: Verify and debug changes to CORAL itself — smallest reproduce loop per area (grader / daemon / CLI / hooks / manager / workspace / hub / template / config / web), where to look when something breaks (hung graders, agent restart loops, stalled agents, missing heartbeat actions, corrupted shared state, broken worktree symlinks, grader import errors, wrong-task resume), how to inspect a live or finished run under `.coral/public/`, and the canonical lint/test commands. Use when editing code under `coral/` or chasing a CORAL bug, NOT when adding a new task or extending the framework.
 ---
 
-# CORAL developer workflows
+# CORAL debug & change-verification workflows
 
 This skill is for people (and Claude Code) hacking on the CORAL package itself, not for users authoring a task. For authoring guides see the siblings:
-- `coral-new-example` — creating a new `examples/<task>/` (seed + task.yaml + grader)
-- `coral-author` — extending CORAL itself (new runtime, new CLI command, new bundled skill, ...)
+- `coral-new-task` — creating a new `examples/<task>/` (seed + task.yaml + grader)
+- `coral-extend` — extending CORAL itself (new runtime, new CLI command, new bundled skill, ...)
 
 ## Reproduce loops
 

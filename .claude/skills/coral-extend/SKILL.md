@@ -1,15 +1,15 @@
 ---
-name: coral-author
-description: Authoring guides for adding new pieces to the CORAL package — a new agent runtime under `coral/agent/builtin/`, a new CLI command in `coral/cli/`, a new bundled skill or subagent template under `coral/template/`, a new hook, or a new field in `coral/config.py`. For task-side authoring (writing a TaskGrader for a specific task, building a new `examples/<task>/` directory) see the `coral-new-example` skill instead.
+name: coral-extend
+description: Add a new component to the CORAL framework itself — a new agent runtime under `coral/agent/builtin/` (claude_code/codex/cursor_agent style), a new CLI command in `coral/cli/`, a new bundled skill or subagent template under `coral/template/skills/` or `coral/template/agents/`, a new hook in `coral/hooks/`, a new field in `coral/config.py`, or a framework-level extension to the grader stack under `coral/grader/`. NOT for writing a per-task grader or adding an example task — use `coral-new-task` for that. NOT for debugging existing code — use `coral-debug`.
 ---
 
-# Authoring guides for CORAL internals
+# Extending the CORAL framework
 
-For day-to-day reproduce/debug loops see the sibling `coral-dev` skill. For creating a new `examples/<task>/` (seed + task.yaml + grader package) see `coral-new-example`. This skill covers *adding new pieces to the CORAL package itself*.
+For day-to-day debug / reproduce loops see the sibling `coral-debug` skill. For creating a new `examples/<task>/` (seed + task.yaml + grader package) see `coral-new-task`. This skill covers *adding new components to the CORAL package itself*.
 
 ## Extending the grader infrastructure
 
-If you're writing a grader for a specific task, use `coral-new-example`. This section is only for changes to the grader **framework** under `coral/grader/`:
+If you're writing a grader for a specific task, use `coral-new-task`. This section is only for changes to the grader **framework** under `coral/grader/`:
 
 - New helpers on `TaskGrader` (`coral/grader/task_grader.py`) — make sure they're useful to multiple existing example graders before adding.
 - New `GraderInterface` implementations (`coral/grader/protocol.py` / `base.py`) — the bar is high; the existing protocol covers everything we currently need.

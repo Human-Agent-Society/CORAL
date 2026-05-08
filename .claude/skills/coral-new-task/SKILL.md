@@ -1,9 +1,9 @@
 ---
-name: coral-new-example
-description: End-to-end recipe for creating a new task in `examples/` — the three pieces that have to line up (`task.yaml`, `seed/`, and `grader/` or legacy `eval/grader.py`), what to put in each, the `TaskGrader` API, the validation loop, and the common mistakes (repo_path pointing at the wrong dir, score direction backwards, private-vs-public confusion, missing `run()` signature). Use whenever the user wants to add a new task, port an existing benchmark into CORAL, or migrate an old `eval/grader.py` example to the packaged form.
+name: coral-new-task
+description: End-to-end recipe for adding a new task under `examples/` — the three pieces that have to line up (`task.yaml`, `seed/`, and `grader/` or legacy `eval/grader.py`), what to put in each, the `TaskGrader` API surface, the `coral validate` → smoke-test loop, and the common mistakes (repo_path pointing at the wrong dir, score direction backwards, hidden answer keys leaking into seed/, grader writing to codebase_path which the daemon force-removes, private-vs-public confusion, missing `run()` signature). Use whenever the user wants to add a new CORAL task, port an existing benchmark into CORAL, or migrate an old `eval/grader.py` example to the packaged grader form.
 ---
 
-# Creating a new CORAL example
+# Creating a new CORAL task
 
 A CORAL task is **three things** that must line up:
 
