@@ -5,7 +5,9 @@ description: Developer workflows for working ON the CORAL project itself — rep
 
 # CORAL developer workflows
 
-This skill is for people (and Claude Code) hacking on the CORAL package itself, not for users authoring a task. For authoring guides (new grader / runtime / CLI command / bundled skill), see the sibling `coral-author` skill.
+This skill is for people (and Claude Code) hacking on the CORAL package itself, not for users authoring a task. For authoring guides see the siblings:
+- `coral-new-example` — creating a new `examples/<task>/` (seed + task.yaml + grader)
+- `coral-author` — extending CORAL itself (new runtime, new CLI command, new bundled skill, ...)
 
 ## Reproduce loops
 

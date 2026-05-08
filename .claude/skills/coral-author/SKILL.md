@@ -1,56 +1,20 @@
 ---
 name: coral-author
-description: Authoring guides for adding new pieces to the CORAL package — a new TaskGrader subclass or builtin grader, a new agent runtime under `coral/agent/builtin/`, a new CLI command in `coral/cli/`, a new bundled skill or subagent template under `coral/template/`, or a new hook. Use when adding to CORAL itself, NOT when authoring a user-facing task or running agents.
+description: Authoring guides for adding new pieces to the CORAL package — a new agent runtime under `coral/agent/builtin/`, a new CLI command in `coral/cli/`, a new bundled skill or subagent template under `coral/template/`, a new hook, or a new field in `coral/config.py`. For task-side authoring (writing a TaskGrader for a specific task, building a new `examples/<task>/` directory) see the `coral-new-example` skill instead.
 ---
 
 # Authoring guides for CORAL internals
 
-For day-to-day reproduce/debug loops see the sibling `coral-dev` skill. This one covers *adding new pieces* to the CORAL package.
+For day-to-day reproduce/debug loops see the sibling `coral-dev` skill. For creating a new `examples/<task>/` (seed + task.yaml + grader package) see `coral-new-example`. This skill covers *adding new pieces to the CORAL package itself*.
 
-## A new task grader (the common case)
+## Extending the grader infrastructure
 
-Two paths. Pick by where the grader will live.
+If you're writing a grader for a specific task, use `coral-new-example`. This section is only for changes to the grader **framework** under `coral/grader/`:
 
-### Path A — packaged grader (recommended)
-
-Use this when the grader has its own dependencies, lives outside the task dir, or you want it imported by `module.path:ClassName`.
-
-1. Subclass `TaskGrader`:
-   ```python
-   # my_pkg/grader.py
-   from coral.grader import TaskGrader
-
-   class Grader(TaskGrader):
-       def evaluate(self) -> float:
-           # self.codebase_path  — agent's commit checked out detached
-           # self.private_dir    — .coral/private/
-           # self.args           — dict from task.yaml grader.args
-           # return a float, or use self.score(value, explanation) /
-           # self.fail(reason) for richer ScoreBundle output
-           return 0.0
-   ```
-2. Wire it in `task.yaml`:
-   ```yaml
-   grader:
-     entrypoint: "my_pkg.grader:Grader"
-     setup: ["uv pip install -e ./grader"]   # runs once in .coral/private/grader_venv/
-     timeout: 600
-     direction: maximize
-     args: { program_file: "initial_program.py" }
-     parallel: { max_workers: 1 }            # bump only when grader is concurrency-safe
-     max_pending_per_agent: 1
-   ```
-3. Validate: `uv run coral validate my-task`. The validator dry-runs the grader against `seed/` in a tempdir.
-
-The daemon resolves the entrypoint via `coral/grader/loader.py` and runs each eval in a `SubprocessGrader` worker inside the venv, so import errors surface as a failed Attempt with `feedback` instead of crashing the daemon.
-
-### Path B — legacy `eval/grader.py`
-
-Still supported (emits `DeprecationWarning`). Drop a `Grader` class into `<task>/eval/grader.py` and leave `grader.entrypoint` empty. Runs in-process — fine for trivial graders, but no venv isolation.
-
-### Built-in graders
-
-`coral/grader/builtin/function_grader.py` wraps any `(codebase_path, tasks) -> Score | float | bool` callable. It is no longer wired through `task.yaml`; if you need it, ship a thin `TaskGrader` subclass that delegates to your function.
+- New helpers on `TaskGrader` (`coral/grader/task_grader.py`) — make sure they're useful to multiple existing example graders before adding.
+- New `GraderInterface` implementations (`coral/grader/protocol.py` / `base.py`) — the bar is high; the existing protocol covers everything we currently need.
+- Daemon-side changes (`coral/grader/daemon.py`) — concurrency, queue caps, worktree isolation, retry policy. Cover with `tests/test_grader_daemon.py`.
+- Built-in graders under `coral/grader/builtin/` — `function_grader.py` is the only one today; not wired through `task.yaml`. New built-ins should justify why a `TaskGrader` subclass per task isn't enough.
 
 ## A new agent runtime
 

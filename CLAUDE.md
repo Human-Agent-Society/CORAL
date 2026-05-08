@@ -185,4 +185,10 @@ uv run ruff format .
 
 ## Developer Workflows
 
-There's a project-local skill at `.claude/skills/coral-dev/SKILL.md` covering the common reproduce/debug/test loops (validating a grader, testing a CLI change, watching the daemon, etc.) and a companion `coral-author/SKILL.md` for authoring new graders, runtimes, hooks, and bundled skills. Claude Code surfaces them on demand — describe the task and the matching skill loads automatically.
+Project-local skills live under `.claude/skills/`. Claude Code loads them on demand by description match — describe the task and the matching skill triggers automatically.
+
+| Skill | Use when |
+|---|---|
+| [coral-dev](.claude/skills/coral-dev/SKILL.md) | Editing code under `coral/` — reproduce loops, where-to-look pointers, run inspection, lint/test |
+| [coral-new-example](.claude/skills/coral-new-example/SKILL.md) | Creating a new `examples/<task>/` — seed + task.yaml + grader package, validation loop, common pitfalls |
+| [coral-author](.claude/skills/coral-author/SKILL.md) | Extending CORAL itself — new runtime, CLI command, bundled skill, hook, or config field |
