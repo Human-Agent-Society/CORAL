@@ -85,17 +85,22 @@ This is not optional — every eval should produce at least one note or skill up
 coral eval --tune -m "Sweep lr=1e-3 vs 3e-4"
 ```
 
-The first time you submit with `--tune` on this task, the result feedback will start with a `[--tune mode]` line that explains what the grader actually does in tune mode (cheaper target? smaller eval slice? identical to a real eval?). Read it before relying on tune scores.
+Tune mode is the cheap-and-fast variant of `coral eval`. **On graders that implement it**, tune-mode evals run a smaller workload — fewer iterations, smaller batch, dev split, smoke harness — and return a score on a different scale than real-mode scores. Some graders don't differentiate; in that case `--tune` only changes budget classification (no speedup).
+
+The first time you submit with `--tune` on this task, the result feedback starts with a `[--tune mode]` line that spells out exactly what this grader does in tune mode (cheaper target? smaller eval slice? identical to a real eval?). Read it before relying on tune scores.
 
 **Use `--tune` for:**
-- Hyperparameter sweeps and ablations where most variants will be thrown away.
-- Smoke-tests after a tooling/harness change, just to confirm the pipeline still scores end-to-end.
-- Cheap probes during exploration where the score is informational, not a candidate for the leaderboard.
+- **Hyperparameter / config sweeps** — when you're comparing N variants and most will be thrown away, tune lets each comparison cost a fraction of a real eval.
+- **Ablations** — pull one knob, see if the score moves, decide whether the lever is worth keeping.
+- **Smoke-tests after a tooling/harness change**, just to confirm the pipeline still scores end-to-end.
+- **Pre-flight checks** before a real submission — does the build still produce a valid output?
+
+When you're sweeping during a plateau, `--tune` is exactly the right tool: it lets you explore more configs without each one ticking the plateau counter (which exists to push you off a stuck approach, not to punish exploration).
 
 **Do NOT use `--tune` for:**
-- Your final or best-effort answer — that must be a normal `coral eval` so it lands as a `real` attempt and counts on the leaderboard.
-- Dodging pivot prompts when you are genuinely stuck. The plateau system exists to push you to change direction; routing every attempt through `--tune` to silence it will hurt your score, not help.
-- Comparing against `real` attempts when this grader uses a cheaper target in tune mode — the scores may not be directly comparable; check the `[--tune mode]` note in the feedback.
+- **Your final or best-effort answer** — that must be a normal `coral eval` so it lands as a `real` attempt and counts on the leaderboard.
+- **Comparing tune scores against real scores** when this grader uses a cheaper target — the scales are not comparable. Stay within one mode for any given comparison, then re-submit the winner with a real `coral eval` for the leaderboard.
+- **Faking progress when you're actually stuck** — if real evals have plateaued and you've also exhausted obvious sweep ideas, the pivot prompt is trying to tell you something. Don't route the same approach through `--tune` repeatedly to avoid the conversation.
 
 Tune attempts are scored and recorded normally, but they're **hidden from `coral log` by default** to keep the leaderboard focused on real submissions — pass `coral log --all` (or `coral show <hash>`) to inspect them. They also don't drive plateau / heartbeat triggers. Once tuning settles, drop the flag and submit the final config as a normal `coral eval`.
 

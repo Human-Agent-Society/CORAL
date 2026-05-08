@@ -15,9 +15,17 @@ import textwrap
 from coral.grader import TaskGrader
 from coral.types import ScoreBundle
 
-# Performance thresholds
+# Performance thresholds (real-mode dimensions: forest_height=10, rounds=16, batch_size=256)
 BASELINE_CYCLES = 147_734
 BEST_KNOWN_CYCLES = 1_363
+
+# Real-mode workload: matches the original submission_tests.py methodology.
+REAL_PARAMS = {"forest_height": 10, "rounds": 16, "batch_size": 256, "iterations": 8}
+
+# Tune-mode workload: smaller batch + fewer rounds + fewer iterations.
+# ~16x less per-iter work (4x rounds × 4x batch) and 4x fewer iters → roughly an
+# order of magnitude faster. Cycle counts are NOT comparable to real-mode scores.
+TUNE_PARAMS = {"forest_height": 10, "rounds": 4, "batch_size": 64, "iterations": 2}
 
 
 class Grader(TaskGrader):
@@ -25,7 +33,28 @@ class Grader(TaskGrader):
 
     Score is the raw cycle count (lower is better, direction: minimize).
     Failures return null score.
+
+    In tune mode (``coral eval --tune``) the grader runs the kernel against a
+    smaller workload — fewer rounds, smaller batch, fewer correctness iterations
+    — to give faster feedback during config sweeps. Tune-mode cycle counts are
+    on a different scale than real-mode counts; see ``describe_tune()``.
     """
+
+    def describe_tune(self) -> str:
+        real = REAL_PARAMS
+        tune = TUNE_PARAMS
+        return (
+            f"Tune mode runs {tune['iterations']} correctness iterations "
+            f"(vs {real['iterations']} in real mode) at "
+            f"rounds={tune['rounds']}, batch_size={tune['batch_size']} "
+            f"(vs rounds={real['rounds']}, batch_size={real['batch_size']}). "
+            "Roughly an order of magnitude faster — useful for sweeping cost "
+            "configs, scheduler seeds, ablations, or smoke-testing a new "
+            "build_kernel variant. Cycle counts are NOT comparable to real-mode "
+            "scores (the workload is smaller), so use tune to compare configs "
+            "against each other, then re-submit the winner with a normal "
+            "`coral eval` for the leaderboard score."
+        )
 
     def evaluate(self) -> ScoreBundle:
         program_file = self.args.get("program_file", "kernel_builder.py")
@@ -35,9 +64,16 @@ class Grader(TaskGrader):
             return self.fail(f"Program file not found: {program_file}")
 
         timeout = self.timeout
+        params = TUNE_PARAMS if self.tune else REAL_PARAMS
 
         try:
-            result = _run_evaluation(program_path, self.read_eval_path("frozen_problem.py"), timeout, self.get_python_command())
+            result = _run_evaluation(
+                program_path,
+                self.read_eval_path("frozen_problem.py"),
+                timeout,
+                self.get_python_command(),
+                params,
+            )
         except TimeoutError:
             return self.fail(f"Evaluation timed out after {timeout}s")
         except Exception as e:
@@ -53,29 +89,45 @@ class Grader(TaskGrader):
         if not is_correct:
             return self.fail(f"Kernel produces incorrect output: {error_msg}")
 
-        speedup = BASELINE_CYCLES / cycles if cycles > 0 else 0
-
-        explanation = (
-            f"Cycles: {cycles:,} | "
-            f"Speedup: {speedup:.2f}x | "
-            f"Baseline: {BASELINE_CYCLES:,} | "
-            f"Best known: {BEST_KNOWN_CYCLES:,}"
-        )
-        if cycles <= BEST_KNOWN_CYCLES:
-            explanation += " | NEW RECORD!"
+        if self.tune:
+            explanation = (
+                f"Cycles: {cycles:,} (tune workload: "
+                f"rounds={params['rounds']}, batch_size={params['batch_size']}) | "
+                "NOT comparable to real-mode scores"
+            )
+        else:
+            speedup = BASELINE_CYCLES / cycles if cycles > 0 else 0
+            explanation = (
+                f"Cycles: {cycles:,} | "
+                f"Speedup: {speedup:.2f}x | "
+                f"Baseline: {BASELINE_CYCLES:,} | "
+                f"Best known: {BEST_KNOWN_CYCLES:,}"
+            )
+            if cycles <= BEST_KNOWN_CYCLES:
+                explanation += " | NEW RECORD!"
 
         return self.score(float(cycles), explanation)
 
 
-def _run_evaluation(program_path: str, utils_path: str, timeout: int, python_cmd: list[str]) -> dict:
+def _run_evaluation(
+    program_path: str,
+    utils_path: str,
+    timeout: int,
+    python_cmd: list[str],
+    params: dict,
+) -> dict:
     """Run the kernel in a subprocess with the frozen simulator.
 
     Matches the original submission_tests.py methodology:
     - Uses frozen_problem simulator directly
-    - Runs 8 correctness checks with random trees
+    - Runs N correctness checks with random trees
     - Reports cycle count from a single run (deterministic for given instruction sequence)
     - No fixed random seed (kernel builder should be internally deterministic)
     """
+    forest_height = params["forest_height"]
+    rounds = params["rounds"]
+    batch_size = params["batch_size"]
+    iterations = params["iterations"]
     script = textwrap.dedent(f"""\
         import json, sys, os
 
@@ -117,9 +169,8 @@ def _run_evaluation(program_path: str, utils_path: str, timeout: int, python_cmd
                 return machine.cycle, False, "Incorrect output values"
             return machine.cycle, True, ""
 
-        # Run 8 correctness checks (matching submission_tests.py)
-        for i in range(8):
-            cycles, is_correct, error_msg = do_kernel_test(10, 16, 256)
+        for i in range({iterations}):
+            cycles, is_correct, error_msg = do_kernel_test({forest_height}, {rounds}, {batch_size})
             if not is_correct:
                 print(json.dumps({{
                     "cycles": cycles,

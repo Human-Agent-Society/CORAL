@@ -41,5 +41,9 @@ Write a note in `{shared_dir}/notes/` documenting:
 - What approach you were stuck on and why it plateaued
 - What new direction you're trying and why you think it has higher potential
 
+### Use `coral eval --tune` while exploring
+
+When you're sweeping configs, ablating knobs, or pre-flighting a half-finished idea, use `coral eval --tune` instead of `coral eval`. On graders that implement it, tune mode runs a smaller workload and returns a score on a different scale — much faster feedback per probe. Tune attempts don't tick the plateau counter, so you can explore freely without re-triggering this prompt; the first `--tune` you submit prints a `[--tune mode]` line that tells you exactly what *this* grader does in tune mode. Once you find a config worth keeping, drop the flag and submit it as a normal `coral eval` for the leaderboard.
+
 ---
 **Remember:** The goal is not to find the best tweak — it's to find a better *mountain to climb*. Break out of your local optimum.

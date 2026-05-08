@@ -81,11 +81,11 @@ This is not optional — every eval should produce at least one note or skill up
 coral eval --tune -m "Sweep lr=1e-3 vs 3e-4"
 ```
 
-The first time you submit with `--tune` on this task, the result feedback will start with a `[--tune mode]` line that explains what the grader actually does in tune mode (cheaper target? identical to a real eval?). Read it before relying on tune scores.
+Tune mode is the cheap-and-fast variant of `coral eval`. **On graders that implement it**, tune-mode evals run a smaller workload (fewer iterations, smaller batch, dev split, smoke harness) and return a score on a different scale than real-mode scores. Some graders don't differentiate; in that case `--tune` only changes budget classification (no speedup). The first `--tune` you submit prints a `[--tune mode]` line explaining what *this* grader does — read it before relying on tune scores.
 
-**Use `--tune` for:** hyperparameter sweeps, ablations, and smoke tests after a tooling change — work where most variants will be thrown away.
+**Use `--tune` for:** hyperparameter / config sweeps, ablations, smoke-tests after a tooling change, pre-flight checks before a real submission. When you're sweeping during a plateau, `--tune` is exactly the right tool — it lets you explore more configs without each one ticking the plateau counter.
 
-**Do NOT use `--tune` for:** your final/best answer (must be a normal `coral eval` to count on the leaderboard), or to dodge plateau pivot prompts when you're actually stuck (pivots exist for a reason). If this grader uses a cheaper target in tune mode, tune scores may not be directly comparable to real ones — check the `[--tune mode]` note in the feedback.
+**Do NOT use `--tune` for:** your final/best answer (must be a normal `coral eval` to count on the leaderboard); comparing tune scores against real ones if this grader uses a cheaper target (scales differ — stay within one mode per comparison); faking progress when you're genuinely out of ideas (if real evals have plateaued and you've exhausted obvious sweep ideas, the pivot prompt is trying to tell you something — don't route the same approach through `--tune` repeatedly to avoid the conversation).
 
 Tune attempts are scored and recorded normally, but **hidden from `coral log` by default** — pass `coral log --all` to see them. They don't drive plateau triggers either. Drop the flag once tuning settles.
 
