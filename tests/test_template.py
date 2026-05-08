@@ -1,7 +1,6 @@
 """Tests for CORAL.md template generation."""
 
 from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig
-from coral.grader.task_grader import DEFAULT_TUNE_DESCRIPTION
 from coral.template.coral_md import generate_coral_md
 
 
@@ -105,34 +104,6 @@ def test_generate_coral_md_single_agent():
     assert "Record Knowledge" in md
 
 
-def test_generate_coral_md_default_tune_description_used():
-    """When no tune_description passed, the default is templated in."""
-    config = CoralConfig(
-        task=TaskConfig(name="t", description="d"),
-        grader=GraderConfig(),
-    )
-    md = generate_coral_md(config, "agent-1")
-    default = DEFAULT_TUNE_DESCRIPTION
-    assert default in md
-    assert "What this grader does in tune mode" in md
-
-
-def test_generate_coral_md_custom_tune_description_used():
-    """A grader-provided description replaces the default verbatim."""
-    config = CoralConfig(
-        task=TaskConfig(name="t", description="d"),
-        grader=GraderConfig(),
-    )
-    custom = (
-        "scored on a 10% subset of the validation split; runs in ~30s "
-        "instead of the ~5m a real eval takes"
-    )
-    md = generate_coral_md(config, "agent-1", tune_description=custom)
-    assert custom in md
-    # Default must NOT appear when a custom description is supplied.
-    assert DEFAULT_TUNE_DESCRIPTION not in md
-
-
 def test_generate_coral_md_tune_guardrails_present():
     """The when-to / when-not-to guardrails are explicit in both templates."""
     config = CoralConfig(
@@ -148,16 +119,22 @@ def test_generate_coral_md_tune_guardrails_present():
         assert "final" in md.lower()
         # Plateau-dodge guardrail.
         assert "plateau" in md.lower()
+        # Per-grader description now ships in feedback, not in CORAL.md.
+        # The template should advertise that contract so the agent knows
+        # to look for the [--tune mode] line in their next eval result.
+        assert "[--tune mode]" in md
 
 
-def test_generate_coral_md_blank_tune_description_falls_back():
-    """Empty / whitespace tune_description must fall back to the default."""
+def test_generate_coral_md_does_not_describe_tune_per_grader():
+    """Per-grader tune description is now delivered via feedback, not CORAL.md."""
     config = CoralConfig(
         task=TaskConfig(name="t", description="d"),
         grader=GraderConfig(),
     )
-    md = generate_coral_md(config, "agent-1", tune_description="   ")
-    assert DEFAULT_TUNE_DESCRIPTION in md
+    md = generate_coral_md(config, "agent-1")
+    # Old placeholder must be gone.
+    assert "{tune_description}" not in md
+    assert "What this grader does in tune mode" not in md
 
 
 def test_generate_coral_md_score_direction_from_config():

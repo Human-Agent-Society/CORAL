@@ -81,11 +81,11 @@ This is not optional — every eval should produce at least one note or skill up
 coral eval --tune -m "Sweep lr=1e-3 vs 3e-4"
 ```
 
-**What this grader does in tune mode:** {tune_description}
+The first time you submit with `--tune` on this task, the result feedback will start with a `[--tune mode]` line that explains what the grader actually does in tune mode (cheaper target? identical to a real eval?). Read it before relying on tune scores.
 
 **Use `--tune` for:** hyperparameter sweeps, ablations, and smoke tests after a tooling change — work where most variants will be thrown away.
 
-**Do NOT use `--tune` for:** your final/best answer (must be a normal `coral eval` to count on the leaderboard), or to dodge plateau pivot prompts when you're actually stuck (pivots exist for a reason). If this grader uses a cheaper target in tune mode, tune scores may not be directly comparable to real ones — check the description above.
+**Do NOT use `--tune` for:** your final/best answer (must be a normal `coral eval` to count on the leaderboard), or to dodge plateau pivot prompts when you're actually stuck (pivots exist for a reason). If this grader uses a cheaper target in tune mode, tune scores may not be directly comparable to real ones — check the `[--tune mode]` note in the feedback.
 
 Tune attempts are scored and recorded normally, but **hidden from `coral log` by default** — pass `coral log --all` to see them. They don't drive plateau triggers either. Drop the flag once tuning settles.
 

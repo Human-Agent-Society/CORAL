@@ -25,9 +25,9 @@ from typing import Any
 from coral.config import GraderConfig
 from coral.types import Score, ScoreBundle, Task
 
-# Single source of truth for the default tune-mode description. Used by
-# `TaskGrader.describe_tune()`, by CORAL.md generation, and by the
-# SubprocessGrader fallback path when the worker can't be reached.
+# Default text returned by `TaskGrader.describe_tune()`. Surfaced to the
+# agent only on tune-mode submissions, prepended to the eval feedback by
+# `grade()`.
 DEFAULT_TUNE_DESCRIPTION = (
     "This grader does not differentiate tune mode from a real "
     "submission: scoring runs the full evaluation either way and "
@@ -94,10 +94,11 @@ class TaskGrader(ABC):
     def describe_tune(self) -> str:
         """Override to describe what `--tune` actually does on this grader.
 
-        Returned text is rendered into the agent's CORAL.md alongside the
-        `--tune` documentation, so the agent knows whether tune mode uses
-        a cheaper target (subset, dev split, smoke harness) or is identical
-        to a real eval. The default is honest about doing nothing special.
+        Surfaced to the agent only on tune-mode submissions: `grade()`
+        prepends the returned text to the eval feedback when ``self.tune``
+        is true. Use it to tell the agent whether tune mode uses a cheaper
+        target (subset, dev split, smoke harness) or is identical to a real
+        eval. The default is honest about doing nothing special.
         """
         return DEFAULT_TUNE_DESCRIPTION
 
@@ -281,7 +282,10 @@ class TaskGrader(ABC):
     ) -> ScoreBundle:
         """GraderInterface implementation. Sets context and calls evaluate().
 
-        Enforces self.timeout around the entire evaluate() call.
+        Enforces self.timeout around the entire evaluate() call. On tune-mode
+        attempts, prepends ``describe_tune()`` to the bundle's feedback so the
+        agent learns the per-grader tune contract from the eval result itself
+        — no startup RPC, no CORAL.md plumbing.
         """
         self.codebase_path = codebase_path
         self.tasks = tasks
@@ -294,14 +298,29 @@ class TaskGrader(ABC):
                     timeout=self.timeout,
                 )
             except TimeoutError:
-                return self.fail(f"Evaluation timed out after {self.timeout}s")
+                bundle = self.fail(f"Evaluation timed out after {self.timeout}s")
+                return self._annotate_tune(bundle)
 
         if isinstance(result, ScoreBundle):
-            return result
+            return self._annotate_tune(result)
 
         # float/int — wrap in a ScoreBundle
         value = float(result)
-        return ScoreBundle(
+        bundle = ScoreBundle(
             scores={"eval": Score(value=value, name="eval")},
             aggregated=value,
         )
+        return self._annotate_tune(bundle)
+
+    def _annotate_tune(self, bundle: ScoreBundle) -> ScoreBundle:
+        """Prepend the tune-mode description to bundle feedback when self.tune.
+
+        No-op on real submissions. Keeps the per-grader tune contract attached
+        to the result instead of templated into CORAL.md at startup.
+        """
+        if not self.tune:
+            return bundle
+        description = (self.describe_tune() or "").strip() or DEFAULT_TUNE_DESCRIPTION
+        prefix = f"[--tune mode] {description}"
+        bundle.feedback = f"{prefix}\n\n{bundle.feedback}" if bundle.feedback else prefix
+        return bundle

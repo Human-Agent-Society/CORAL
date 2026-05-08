@@ -85,7 +85,7 @@ This is not optional — every eval should produce at least one note or skill up
 coral eval --tune -m "Sweep lr=1e-3 vs 3e-4"
 ```
 
-**What this grader does in tune mode:** {tune_description}
+The first time you submit with `--tune` on this task, the result feedback will start with a `[--tune mode]` line that explains what the grader actually does in tune mode (cheaper target? smaller eval slice? identical to a real eval?). Read it before relying on tune scores.
 
 **Use `--tune` for:**
 - Hyperparameter sweeps and ablations where most variants will be thrown away.
@@ -95,7 +95,7 @@ coral eval --tune -m "Sweep lr=1e-3 vs 3e-4"
 **Do NOT use `--tune` for:**
 - Your final or best-effort answer — that must be a normal `coral eval` so it lands as a `real` attempt and counts on the leaderboard.
 - Dodging pivot prompts when you are genuinely stuck. The plateau system exists to push you to change direction; routing every attempt through `--tune` to silence it will hurt your score, not help.
-- Comparing against `real` attempts when this grader uses a cheaper target in tune mode — the scores may not be directly comparable; check the description above.
+- Comparing against `real` attempts when this grader uses a cheaper target in tune mode — the scores may not be directly comparable; check the `[--tune mode]` note in the feedback.
 
 Tune attempts are scored and recorded normally, but they're **hidden from `coral log` by default** to keep the leaderboard focused on real submissions — pass `coral log --all` (or `coral show <hash>`) to inspect them. They also don't drive plateau / heartbeat triggers. Once tuning settles, drop the flag and submit the final config as a normal `coral eval`.
 

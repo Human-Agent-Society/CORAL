@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from coral.config import CoralConfig
-from coral.grader.task_grader import DEFAULT_TUNE_DESCRIPTION
 
 _TEMPLATE_PATH = Path(__file__).parent / "coral.md.template"
 _SINGLE_TEMPLATE_PATH = Path(__file__).parent / "coral_single.md.template"
@@ -16,7 +15,6 @@ def generate_coral_md(
     agent_id: str,
     single_agent: bool = False,
     shared_dir: str = ".claude",
-    tune_description: str | None = None,
 ) -> str:
     """Produce the CORAL.md file that agents read at startup.
 
@@ -85,12 +83,6 @@ def generate_coral_md(
         research_back_reference = ""
         repeat_research_hint = "research new techniques, "
 
-    resolved_tune_description = (
-        tune_description.strip()
-        if tune_description and tune_description.strip()
-        else DEFAULT_TUNE_DESCRIPTION
-    )
-
     return template.format(
         task_name=config.task.name,
         task_description=config.task.description,
@@ -107,7 +99,6 @@ def generate_coral_md(
         knowledge_step_num=step_offset + 4,
         research_back_reference=research_back_reference,
         repeat_research_hint=repeat_research_hint,
-        tune_description=resolved_tune_description,
     )
 
 

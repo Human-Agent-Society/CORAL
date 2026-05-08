@@ -20,18 +20,15 @@ from pathlib import Path
 from typing import Any
 
 from coral.config import GraderConfig
-from coral.grader.task_grader import DEFAULT_TUNE_DESCRIPTION
 from coral.types import Score, ScoreBundle, Task
 
 logger = logging.getLogger(__name__)
 
 
-# Shared scaffolding for both worker scripts below. The two scripts run in
-# the grader venv (where coral and the user's grader package are installed),
-# read a JSON payload from stdin, and write a JSON response to stdout.
-# Errors always go back as `{"error": ..., "traceback": ...}` — the worker
-# itself exits 0 in all cases so the parent can read the response cleanly.
-_WORKER_PROLOGUE = r"""
+# Inline worker script. Runs in the grader venv (where coral and the user's
+# grader package are installed). Reads JSON payload from stdin, writes JSON
+# response to stdout. Exits 0 in all cases — error info goes in the JSON.
+_WORKER_SCRIPT = r"""
 import sys, json, asyncio, traceback, importlib
 
 
@@ -50,22 +47,30 @@ def _resolve_entrypoint(spec):
     return cls
 
 
-def _instantiate(payload):
+def _main():
+    payload = json.loads(sys.stdin.read())
+
     cls = _resolve_entrypoint(payload["entrypoint"])
+
     from coral.config import GraderConfig
     from coral.grader.task_grader import TaskGrader
+    from coral.types import Task
+
     if not isinstance(cls, type) or not issubclass(cls, TaskGrader):
         raise TypeError(
             f"{payload['entrypoint']} must resolve to a TaskGrader subclass, "
             f"got {cls!r}"
         )
+
     config = GraderConfig(**payload["config"])
     grader = cls(config=config)
     grader.private_dir = payload["private_dir"]
-    return grader
-"""
 
-_WORKER_EPILOGUE = r"""
+    tasks = [Task.from_dict(t) for t in payload["tasks"]]
+    bundle = asyncio.run(grader.grade(payload["codebase_path"], tasks))
+
+    sys.stdout.write(json.dumps({"bundle": bundle.to_dict()}))
+
 
 try:
     _main()
@@ -74,40 +79,6 @@ except Exception as exc:  # noqa: BLE001
         json.dumps({"error": f"{type(exc).__name__}: {exc}", "traceback": traceback.format_exc()})
     )
 """
-
-# Worker that grades an attempt: needs codebase_path + tasks, returns a
-# ScoreBundle. This is the long-running path — its timeout is the grader's
-# configured timeout, possibly minutes.
-_GRADE_WORKER_SCRIPT = (
-    _WORKER_PROLOGUE
-    + r"""
-
-def _main():
-    from coral.types import Task
-    payload = json.loads(sys.stdin.read())
-    grader = _instantiate(payload)
-    tasks = [Task.from_dict(t) for t in payload["tasks"]]
-    bundle = asyncio.run(grader.grade(payload["codebase_path"], tasks))
-    sys.stdout.write(json.dumps({"bundle": bundle.to_dict()}))
-"""
-    + _WORKER_EPILOGUE
-)
-
-# Worker that fetches static metadata about the grader: no codebase, no
-# tasks, hard 30s timeout in the parent. Currently only used for
-# `describe_tune()`; if we add more read-only RPCs we can either reuse this
-# script with an extra payload field or grow another sibling.
-_DESCRIBE_TUNE_WORKER_SCRIPT = (
-    _WORKER_PROLOGUE
-    + r"""
-
-def _main():
-    payload = json.loads(sys.stdin.read())
-    grader = _instantiate(payload)
-    sys.stdout.write(json.dumps({"description": str(grader.describe_tune())}))
-"""
-    + _WORKER_EPILOGUE
-)
 
 
 def _grader_config_to_dict(config: GraderConfig) -> dict[str, Any]:
@@ -174,41 +145,10 @@ class SubprocessGrader:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._run_worker, payload)
 
-    def describe_tune(self) -> str:
-        """Fetch the grader's tune-mode description via a one-shot worker.
-
-        Falls back to the TaskGrader default on any failure — a broken
-        describe call must never block run startup.
-        """
-        payload = {
-            "entrypoint": self.entrypoint,
-            "config": _grader_config_to_dict(self.config),
-            "private_dir": self.private_dir,
-        }
-        try:
-            result = subprocess.run(
-                [str(self.worker_python), "-c", _DESCRIBE_TUNE_WORKER_SCRIPT],
-                input=json.dumps(payload),
-                capture_output=True,
-                text=True,
-                timeout=30,
-                check=True,
-            )
-            response = _parse_worker_response(result.stdout)
-            if "error" in response:
-                raise RuntimeError(response["error"])
-            description = response.get("description")
-            if not isinstance(description, str) or not description.strip():
-                raise RuntimeError("worker returned empty description")
-            return description
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(f"describe_tune worker failed ({exc}); using default")
-            return DEFAULT_TUNE_DESCRIPTION
-
     def _run_worker(self, payload: dict[str, Any]) -> ScoreBundle:
         try:
             result = subprocess.run(
-                [str(self.worker_python), "-c", _GRADE_WORKER_SCRIPT],
+                [str(self.worker_python), "-c", _WORKER_SCRIPT],
                 input=json.dumps(payload),
                 capture_output=True,
                 text=True,

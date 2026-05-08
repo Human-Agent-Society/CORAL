@@ -1,5 +1,6 @@
 """Tests for grader system."""
 
+import asyncio
 import tempfile
 from pathlib import Path
 
@@ -10,7 +11,8 @@ from coral.grader.builtin.function_grader import FunctionGrader, function_grader
 from coral.grader.loader import load_grader
 from coral.grader.protocol import GraderInterface
 from coral.grader.subprocess_grader import SubprocessGrader
-from coral.types import Task
+from coral.grader.task_grader import DEFAULT_TUNE_DESCRIPTION, TaskGrader
+from coral.types import ScoreBundle, Task
 
 
 def test_function_grader_sync():
@@ -47,6 +49,79 @@ def test_grader_protocol_compliance():
 
     grader = FunctionGrader(name="test", func=my_grader)
     assert isinstance(grader, GraderInterface)
+
+
+def _real_task() -> Task:
+    return Task(id="t", name="t", description="d", metadata={"budget_class": "real"})
+
+
+def _tune_task() -> Task:
+    return Task(id="t", name="t", description="d", metadata={"budget_class": "tune"})
+
+
+class _StaticGrader(TaskGrader):
+    """Returns a hand-built ScoreBundle so tests can probe feedback exactly."""
+
+    def __init__(self, config: GraderConfig, bundle: ScoreBundle) -> None:
+        super().__init__(config=config)
+        self._bundle = bundle
+
+    def evaluate(self) -> ScoreBundle:
+        return self._bundle
+
+
+class _OverrideTuneGrader(_StaticGrader):
+    def describe_tune(self) -> str:
+        return "scored on a 10% slice; ~30s instead of ~5m"
+
+
+def test_grade_does_not_annotate_real_attempts():
+    """Real attempts must not get a [--tune mode] prefix in feedback."""
+    grader = _StaticGrader(
+        config=GraderConfig(),
+        bundle=ScoreBundle(scores={}, aggregated=0.5, feedback="ok"),
+    )
+    bundle = asyncio.run(grader.grade("/tmp/x", [_real_task()]))
+    assert bundle.feedback == "ok"
+
+
+def test_grade_annotates_tune_attempts_with_default_description():
+    """Tune attempts get the default describe_tune text prepended to feedback."""
+    grader = _StaticGrader(
+        config=GraderConfig(),
+        bundle=ScoreBundle(scores={}, aggregated=0.5, feedback="raw eval feedback"),
+    )
+    bundle = asyncio.run(grader.grade("/tmp/x", [_tune_task()]))
+    assert bundle.feedback is not None
+    assert bundle.feedback.startswith("[--tune mode]")
+    assert DEFAULT_TUNE_DESCRIPTION in bundle.feedback
+    assert "raw eval feedback" in bundle.feedback
+
+
+def test_grade_annotates_tune_attempts_with_overridden_description():
+    """Per-grader override is what the agent sees."""
+    grader = _OverrideTuneGrader(
+        config=GraderConfig(),
+        bundle=ScoreBundle(scores={}, aggregated=0.5, feedback=None),
+    )
+    bundle = asyncio.run(grader.grade("/tmp/x", [_tune_task()]))
+    assert bundle.feedback == "[--tune mode] scored on a 10% slice; ~30s instead of ~5m"
+    # Default text must NOT appear once a grader overrides describe_tune.
+    assert DEFAULT_TUNE_DESCRIPTION not in bundle.feedback
+
+
+def test_grade_annotates_tune_attempts_when_evaluate_returns_float():
+    """Feedback annotation also fires when evaluate() returns a bare float."""
+
+    class _FloatGrader(TaskGrader):
+        def evaluate(self) -> float:
+            return 0.42
+
+    grader = _FloatGrader(config=GraderConfig())
+    bundle = asyncio.run(grader.grade("/tmp/x", [_tune_task()]))
+    assert bundle.aggregated == pytest.approx(0.42)
+    assert bundle.feedback is not None
+    assert bundle.feedback.startswith("[--tune mode]")
 
 
 def _create_grader_file(directory: Path) -> None:
