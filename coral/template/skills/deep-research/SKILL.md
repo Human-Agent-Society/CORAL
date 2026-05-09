@@ -84,6 +84,12 @@ Summarize your findings in `{shared_dir}/notes/research/`. For each technique or
 
 Keep notes specific and actionable. "X might work" is weak. "X reduces Y by 30% when Z > 10 (see raw/paper-name.md)" is useful. See `references/research-note-template.md` for a structured format.
 
+After writing or substantially updating a note, **optionally** spawn the Synthesis Reviewer subagent to verify grounding before adding the note to the index. The reviewer reads the note alongside its linked raw sources and returns a per-claim verdict (`grounded` / `partially-grounded` / `inferred` / `contradicted` / `unverifiable`) — useful because the author of a synthesis cannot objectively grade its own grounding. See [`agents/synthesis-reviewer.md`](agents/synthesis-reviewer.md) for inputs and output schema. Spawn it especially when:
+
+- The note synthesizes 3+ raw sources and you want confidence the merge is faithful.
+- A subsequent agent is auditing older notes during organize-files.
+- The note's `confidence` field will be set to `high` and you want to back that up.
+
 ### 6. Update Index
 
 Create or update `{shared_dir}/notes/index.md`. The index only lists research notes and experiment notes — not raw sources:

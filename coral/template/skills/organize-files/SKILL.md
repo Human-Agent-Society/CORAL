@@ -87,6 +87,14 @@ Find near-duplicates:
 python .coral/public/skills/organize-files/scripts/find_duplicates.py .coral/public/notes --threshold 0.5
 ```
 
+For pairs above the threshold where the verdict is not immediately obvious from a quick read — same topic vs. different angle vs. different topic with shared boilerplate vs. genuinely contradicting — spawn the **Dedup Judge** subagent. It reads both notes blinded (no author / timestamp / length metadata) and returns a structured verdict (`same-topic-merge` / `different-angle-fold` / `contradicting-do-not-merge` / `keep-both-rename`) with concrete merge or rename instructions. See [`agents/dedup-judge.md`](agents/dedup-judge.md). Use it especially when:
+
+- The two notes were written by different agents (recency / author bias is highest).
+- One note is much longer than the other (length bias makes the long one feel authoritative).
+- The notes appear to disagree but you can't tell if it's a real conflict or a scope difference.
+
+For obvious cases — verbatim duplicates, or clearly different topics that shared a paragraph — just decide directly.
+
 When merging confirmed duplicates, **preserve provenance from both notes** — never just pick one and discard:
 
 - **Union the `## References` lists** (de-duplicated by URL or `raw/` filename). Losing a citation loses an audit trail that an agent may need months later.
