@@ -453,7 +453,14 @@ def test_grader_marks_grader_error_on_exception():
 
 
 def test_grader_marks_grader_error_on_timeout():
-    """A grader that exceeds its timeout is classified as 'grader_error'."""
+    """A grader that hangs past the daemon's safety-net deadline is killed
+    and classified as 'grader_error'.
+
+    The hard-kill fires at ``timeout + _TIMEOUT_GRACE_SECONDS`` (see
+    daemon._TIMEOUT_GRACE_SECONDS). The sleep here is well past that so the
+    safety net is the only thing that can end the eval — which is exactly
+    the path this test is meant to cover.
+    """
     with tempfile.TemporaryDirectory() as d:
         repo = _init_repo_and_coral(Path(d))
         # Tighten the timeout so the test runs quickly.
@@ -461,13 +468,15 @@ def test_grader_marks_grader_error_on_timeout():
         config = yaml.safe_load(config_path.read_text())
         config["grader"]["timeout"] = 2
         config_path.write_text(yaml.dump(config))
-        # Overwrite grader to sleep past the timeout.
+        # Sleep must exceed timeout + _TIMEOUT_GRACE_SECONDS so the inner
+        # asyncio.wait_for path can't return a graceful self.fail bundle
+        # before the daemon hard-kills the worker.
         (repo / ".coral" / "private" / "eval" / "grader.py").write_text(
             "import time\n"
             "from coral.grader.task_grader import TaskGrader\n"
             "class Grader(TaskGrader):\n"
             "    def evaluate(self):\n"
-            "        time.sleep(30)\n"
+            "        time.sleep(120)\n"
             "        return 0.5\n"
         )
         sys.path.insert(0, str(repo))
@@ -549,9 +558,7 @@ def test_run_daemon_subprocess_grades_pending():
 
 def test_default_max_workers_is_1():
     """Configs without `grader.parallel` get max_workers=1 (legacy behavior)."""
-    cfg = CoralConfig.from_dict(
-        {"task": {"name": "x", "description": "y"}, "agents": {"count": 1}}
-    )
+    cfg = CoralConfig.from_dict({"task": {"name": "x", "description": "y"}, "agents": {"count": 1}})
     assert cfg.grader.parallel.max_workers == 1
 
 
@@ -618,7 +625,10 @@ def _submit_n(repo: Path, n: int) -> list[str]:
     for i in range(n):
         (repo / "main.py").write_text(f"print('v{i}')\n")
         attempt = submit_eval(
-            message=f"v{i}", agent_id="agent-1", workdir=str(repo), wait=False,
+            message=f"v{i}",
+            agent_id="agent-1",
+            workdir=str(repo),
+            wait=False,
         )
         hashes.append(attempt.commit_hash)
     return hashes

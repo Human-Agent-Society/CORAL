@@ -50,6 +50,20 @@ logger = logging.getLogger(__name__)
 
 _POLL_INTERVAL_SEC = 0.5
 
+# Headroom on top of `grader.timeout` before the daemon SIGKILLs the worker.
+# Inner timers (asyncio.wait_for in TaskGrader, subprocess.run(timeout=...) in
+# per-grader code) all use the user-configured `grader.timeout`. Without
+# headroom they race the daemon's outer hard-kill — a kernel that just barely
+# overruns can land as either status="failure"/budget_class="real" (inner
+# timer wins, returns a clean self.fail bundle) or status="timeout"/
+# budget_class="grader_error" (outer wins). Same wall-clock condition, two
+# different leaderboard accountings.
+#
+# Giving the outer timer a grace window means the inner timer is the
+# *intended* one to fire; the daemon hard-kill is the safety net for graders
+# that hang past it (e.g. C extensions or sleeps that ignore cancellation).
+_TIMEOUT_GRACE_SECONDS = 30
+
 # Guards `increment_eval_count` (read-modify-write on .coral/public/eval_count).
 # The daemon is the sole writer; this lock is only needed because pending
 # attempts can be drained in parallel by multiple worker threads.
@@ -95,6 +109,14 @@ def _run_grader_with_timeout(
     synchronous blocking code (numpy, Docker calls, etc.) on timeout.
     asyncio.wait_for can't.
 
+    The hard-kill fires at ``timeout + _TIMEOUT_GRACE_SECONDS``, not at
+    ``timeout`` exactly. The user-configured ``timeout`` is also threaded
+    through inner timers (TaskGrader.grade's asyncio.wait_for, per-grader
+    subprocess.run(timeout=...)). Without headroom the outer hard-kill races
+    them — see the comment on _TIMEOUT_GRACE_SECONDS for why. Inner timers
+    should fire first and return a clean self.fail bundle; the daemon kill
+    is the safety net.
+
     For entrypoint-based graders we skip the multiprocessing wrapper —
     SubprocessGrader already shells out to its own venv and applies the
     same timeout via subprocess.run, so doubling up would just add a
@@ -109,6 +131,7 @@ def _run_grader_with_timeout(
         grader = load_grader(config, coral_dir=coral_dir)
         return asyncio.run(grader.grade(codebase_path, tasks))
 
+    hard_kill_deadline = timeout + _TIMEOUT_GRACE_SECONDS
     result_queue: multiprocessing.Queue = multiprocessing.Queue()
     proc = multiprocessing.Process(
         target=_grader_worker,
@@ -116,12 +139,14 @@ def _run_grader_with_timeout(
     )
     try:
         proc.start()
-        proc.join(timeout=timeout)
+        proc.join(timeout=hard_kill_deadline)
 
         if proc.is_alive():
             proc.kill()
             proc.join(timeout=5)
-            raise TimeoutError(f"Grader timed out after {timeout}s")
+            raise TimeoutError(
+                f"Grader exceeded {timeout}s + {_TIMEOUT_GRACE_SECONDS}s grace and was killed"
+            )
 
         if result_queue.empty():
             raise RuntimeError("Grader process exited without returning a result")
@@ -389,9 +414,7 @@ def _safe_grade_one(
     try:
         return _grade_one(attempt, config_path, coral_dir, config)
     except Exception:
-        logger.exception(
-            "Unhandled error grading %s; marking crashed", attempt.commit_hash[:12]
-        )
+        logger.exception("Unhandled error grading %s; marking crashed", attempt.commit_hash[:12])
         try:
             crashed = Attempt(
                 commit_hash=attempt.commit_hash,
@@ -503,7 +526,8 @@ def run_daemon(coral_dir: str | Path, stop_event: Any = None) -> None:
 
     logger.info(
         "Grader daemon started (coral_dir=%s, max_workers=%d)",
-        coral_dir, max_workers,
+        coral_dir,
+        max_workers,
     )
     started_at = datetime.now(UTC).isoformat()
     heartbeat_file = coral_dir / "public" / "grader_daemon_heartbeat"
