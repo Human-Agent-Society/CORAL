@@ -1,0 +1,82 @@
+task:
+  name: "Pfly Detectability"
+  description: |
+    Predict the 4-class detectability of tryptic peptides from amino-acid
+    sequence alone — the task introduced by the Pfly model
+    (Abdul-Khalek et al., J. Proteome Res. 2025) and packaged in dlomix.
+
+    Each peptide belongs to exactly one of:
+      0 = Non-Flyer
+      1 = Weak Flyer
+      2 = Intermediate Flyer
+      3 = Strong Flyer
+
+    The classes encode whether a peptide will be detected at all (0) and, if so,
+    with what relative intensity (1–3). Source dataset:
+    `Wilhelmlab/detectability-proteometools` on HuggingFace, frozen here into
+    parquet splits.
+
+    **Data format** (parquet — columns `sequence: str`, `label: int64`):
+
+    - `data/train.parquet` — 236,758 rows (sequence + label)
+    - `data/val.parquet`   —  59,190 rows (sequence + label)
+    - `data/test.parquet`  —  32,884 rows (`sequence` ONLY — labels are hidden)
+
+    All splits are class-balanced (~25% per class). Sequences are bare amino-acid
+    strings using the standard 20-letter alphabet, length 7–40, no termini, no PTMs.
+
+    **Your program** (`solution.py`) must define:
+
+        run(train_path: str, val_path: str, test_path: str) -> np.ndarray
+
+    returning an int64 array of shape (32884,) with class predictions in {0,1,2,3},
+    in the same row order as `data/test.parquet`.
+
+    **Environment:** A single ~24GB consumer GPU is available (CUDA visible).
+    The grader has access to `numpy`, `pandas`, `pyarrow`, `scikit-learn`. Agents
+    may install additional libraries (`uv pip install ...`) for richer models —
+    e.g. `torch`, `tensorflow`, `dlomix`, `transformers`.
+
+  tips: |
+    - Metric is classification accuracy (higher is better, 0–1 scale). Macro-F1
+      and per-class F1 are reported as feedback. Classes are balanced so accuracy
+      ≈ macro-F1 here.
+    - Random baseline scores ~0.25. The seed (AA-composition + multinomial
+      logistic regression) lands around 0.30–0.35.
+    - Pfly's published BiGRU (encoder-decoder w/ attention) reaches ~0.78 on the
+      benchmark — there's plenty of headroom.
+    - The eval timeout is 600s. A small NN trains in <60s on a 4090; budget
+      training time so the grader doesn't time out.
+    - Useful directions: k-mer / dipeptide features, BiLSTM/BiGRU, transformer
+      encoders with attention pooling, ESM2 / protein-LM embeddings, MLM
+      pretraining over `train.parquet` sequences, ensembling.
+    - `dlomix` itself ships a Pfly reference implementation — you can install it
+      and use it as a starting point, but you can also write a model from scratch.
+
+grader:
+  entrypoint: "dlomix_pfly_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 600
+  direction: maximize
+  args:
+    program_file: "solution.py"
+    train_file: "data/train.parquet"
+    val_file: "data/val.parquet"
+    test_file: "data/test.parquet"
+
+agents:
+  count: 1
+  runtime: claude_code
+  model: opus
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/dlomix-pfly/seed"
+  setup:
+    - "uv pip install numpy pandas pyarrow scikit-learn"
+
+run:
+  verbose: false
+  ui: false
+  session: tmux
