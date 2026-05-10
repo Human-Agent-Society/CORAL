@@ -1,0 +1,29 @@
+[project]
+name = "pfly-solution"
+version = "0.1.0"
+description = "Solution code for the Pfly 4-class peptide detectability task."
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "pandas",
+    "pyarrow",
+    "scikit-learn",
+    "torch",
+]
+
+# Marks this as an application project, not a buildable package — uv manages
+# the .venv but skips building/installing the project itself.
+[tool.uv]
+package = false
+
+# CUDA wheel index. The default torch on PyPI is CPU-only on Linux x86_64;
+# without this index uv installs a CPU build that can't see the grader's pinned
+# GPU. Adjust the cu128 suffix to match the host's CUDA version (cu121 / cu118 /
+# etc.) — `nvidia-smi` shows the driver's CUDA version on the host.
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
