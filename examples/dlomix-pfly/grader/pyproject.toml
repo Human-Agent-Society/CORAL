@@ -5,6 +5,11 @@ description = "CORAL grader for the Pfly 4-class peptide detectability task."
 requires-python = ">=3.11"
 dependencies = [
     "coral",
+    "numpy>=2.1",
+    "pandas>=2.2",
+    "pyarrow>=17.0",
+    "scikit-learn>=1.5",
+    "torch"
 ]
 
 [build-system]

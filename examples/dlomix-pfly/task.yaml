@@ -59,6 +59,8 @@ grader:
     - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
+  parallel:
+    max_workers: 4
   args:
     program_file: "solution.py"
     train_file: "data/train.parquet"
@@ -66,9 +68,11 @@ grader:
     test_file: "data/test.parquet"
 
 agents:
-  count: 1
+  count: 4
   runtime: claude_code
-  model: opus
+  model: claude-opus-4-7-thinking-max[1m]
+  warmstart:
+    enabled: true
 
 workspace:
   results_dir: "./results"
@@ -79,4 +83,4 @@ workspace:
 run:
   verbose: false
   ui: false
-  session: tmux
+  session: local
