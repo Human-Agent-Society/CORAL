@@ -1,49 +1,66 @@
-## Heartbeat: Plateau Detected — Change Direction
+## Heartbeat: Plateau Detected — Pick the Hardest Unexplored Idea and Commit
 
-**You have not improved your score in several consecutive evals.** You are likely stuck in a local optimum. Incremental tweaks to your current approach are unlikely to help. It's time to try something fundamentally different.
+**You have not improved your score in several consecutive evals.** Tweaks to your current approach are unlikely to help. This prompt is not a stop signal — it is a *direction-change* signal. **Do not treat it as permission to write a "final summary" and wind down.** Your job right now is to identify the highest-EV idea that nobody on the team has actually tried, and commit a real budget to it.
 
-### Step 1: Diagnose the ceiling
+### Step 1: Diagnose the ceiling honestly
 
 Before changing direction, understand *why* you're stuck:
 
-- Run `coral log --agent {agent_id}` to see your recent score trajectory
-- Look at your last 5+ attempts. Are scores flat? Oscillating around the same value?
-- What is the theoretical limit of your current approach? Is there a structural reason it can't go higher?
+- Run `coral log --agent {agent_id}` to see your recent score trajectory.
+- Run `coral log -n 10` to see the team's leaderboard.
+- Look at your last 5+ attempts. Are scores flat? Oscillating around the same value? Is every agent stuck at the *same* value?
 
-*Example: "I've been tuning hyperparameters of a linear model. Scores are stuck at 0.73. A linear model probably can't capture the non-linear relationships in this data — no amount of tuning will fix that."*
+If multiple agents are all stuck at the same score, do **not** read that as proof of a structural floor. Read it as evidence that the whole team is exploring the same local basin. The strongest possible signal that you should attempt the *hardest* unexplored idea is "everyone agrees the easy ideas don't work."
 
-### Step 2: Study what's different at the top
+*Example: "Four of us are at 0.73. We've all tried tuning, ablation, and one-shot scheduler swaps. Nobody has actually implemented the ILP solver from the open-questions list. That's the next move."*
 
-- Run `coral log -n 10` to see the global leaderboard
-- Run `coral show <hash>` on the top 3 attempts — especially from *other agents*
-- Are the best scores using a fundamentally different approach than yours? What's their core idea?
+### Step 2: Find the highest-EV unexplored idea
 
-### Step 3: Choose a new direction
+Read — don't skim — the team's open questions and "what might still work" sections.
 
-**You must try a fundamentally different approach.** Not a tweak — a different algorithm, architecture, or problem formulation. Think about:
+- Open `{shared_dir}/notes/index.md` and any `_synthesis/` notes. Find the section that lists *what has not been tried*.
+- For each candidate, ask honestly: was it ruled out by *evidence* (someone implemented it well and it failed) or by *reluctance* (everyone said "high implementation cost, uncertain payoff" and moved on)?
+- The candidates ruled out by reluctance are your shortlist. Pick the one with the highest plausible payoff.
 
-- **Different algorithm family**: If you've been doing gradient-based optimization, try evolutionary/search-based. If you've been doing greedy, try dynamic programming. If neural, try symbolic.
-- **Different problem framing**: Can you reformulate the objective? Decompose it differently? Solve a relaxed version first?
-- **Different representation**: Can you change how the data/state is represented? Different features, encodings, or abstractions?
-- **Techniques from other domains**: Search the web for how similar problems are solved in other fields.
+If a teammate already wrote "this idea probably won't work" without actually building it, that is a hypothesis, not a result. Do not let speculation rule out an unexplored direction.
 
-### Step 4: Start fresh from a strong base
+### Step 3: Commit, do not dabble
 
-- Run `coral checkout <hash>` to reset to the best-scoring attempt (yours or another agent's)
-- Build your new approach from that foundation
-- Do NOT carry over assumptions from your previous approach
+Once you pick a direction, **commit at least 3 real evals to it before judging.** Structural changes are almost never right on the first attempt:
 
-### Step 5: Commit to the new direction
+- Eval 1 will likely have a correctness bug or a tuning issue. That is *expected*. Fix and continue.
+- Eval 2 establishes whether the idea is correct and whether it moves the score in *some* direction (even regression is information).
+- Eval 3 is where you tune the implementation and decide whether it can break the plateau.
 
-Make a quick, minimal implementation of the new idea and eval it immediately. Even if the first attempt scores lower, that's fine — you're exploring a new region of the solution space. Give the new approach at least 2-3 evals to develop before judging it.
+Mark each eval message clearly: `"structural attempt 1/3 on <name>"`, `"2/3"`, `"3/3"`. This signals to teammates that you are mid-investigation and they should not use your intermediate scores as evidence the direction is dead.
 
-Write a note in `{shared_dir}/notes/` documenting:
-- What approach you were stuck on and why it plateaued
-- What new direction you're trying and why you think it has higher potential
+If you abandon the direction before eval 3, you have not actually tested it.
 
-### Use `coral eval --tune` while exploring
+### Step 4: Claim the lane and the posture
 
-When you're sweeping configs, ablating knobs, or pre-flighting a half-finished idea, use `coral eval --tune` instead of `coral eval`. On graders that implement it, tune mode runs a smaller workload and returns a score on a different scale — much faster feedback per probe. Tune attempts don't tick the plateau counter, so you can explore freely without re-triggering this prompt; the first `--tune` you submit prints a `[--tune mode]` line that tells you exactly what *this* grader does in tune mode. Once you find a config worth keeping, drop the flag and submit it as a normal `coral eval` for the leaderboard.
+Write a focus note at `{shared_dir}/notes/focus-<short-topic>.md` declaring:
+
+- **Posture** — what functional role you are playing for the team (implementer / scout / profiler / integrator / skeptic / synthesist). See the *Pick a complementary lane and a posture* section of CORAL.md for definitions. Pick the posture that is **most missing** from the current team, not the most comfortable.
+- **Lane** — the specific technique, area, or composite you are attempting.
+- **Budget** — how many evals you intend to spend before judging.
+- **Abandon-if** — specific score or failure mode that would convince you to stop.
+- **Why you think this has positive EV** — including which other agents' work this builds on or complements.
+
+This is the contract you are making with the team. It also lets other agents pick a *different* lane and posture instead of duplicating yours.
+
+**Posture imbalance is itself a pivot reason.** Read the active focus notes (`ls {shared_dir}/notes/focus-*.md`). If every agent on the team is an implementer and the team is stuck, the highest-EV move may not be a different technique — it may be becoming the *profiler* who finds the real bottleneck, or the *skeptic* who designs an experiment that would falsify the team's "this is the floor" synthesis, or the *scout* who returns with techniques nobody has considered. Filling an absent posture is often higher EV than picking yet another lane.
+
+### Step 5: Start from the right base
+
+- `coral checkout <hash>` to reset to the best-scoring attempt (yours or another agent's), so your structural change builds on the strongest current foundation.
+- Do not carry over assumptions from your previous approach.
+
+### Use `coral eval --tune` carefully during the pivot
+
+Tune mode is useful for sweeping configs *within* your new approach (it does not tick the plateau counter). It is **not** a substitute for real evals on the new direction itself. If a structural change improves tune but not real, that is a finding to write down — not a reason to keep iterating in tune. Real-mode evidence is what counts.
+
+The first time you submit `--tune` on this task, the result feedback prints a `[--tune mode]` line that explains what tune actually does in this grader. Read it. If tune mode is on a non-binding constraint relative to real, tune scores will not predict real and you should treat them as smoke tests, not gates.
 
 ---
-**Remember:** The goal is not to find the best tweak — it's to find a better *mountain to climb*. Break out of your local optimum.
+
+**Remember:** "It's hard to implement" and "I think it probably won't work" are not results. The team has measured what's easy. Now measure what's hard.

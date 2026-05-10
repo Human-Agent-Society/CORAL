@@ -4,6 +4,7 @@ from coral.workspace.project import (
     ProjectPaths,
     create_project,
     reconstruct_paths,
+    seed_agent_identity,
     slugify,
 )
 from coral.workspace.worktree import (
@@ -26,6 +27,7 @@ __all__ = [
     "create_project",
     "get_coral_dir",
     "reconstruct_paths",
+    "seed_agent_identity",
     "setup_claude_settings",
     "setup_codex_settings",
     "setup_cursor_settings",

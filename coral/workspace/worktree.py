@@ -149,6 +149,11 @@ def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: st
         "attempts",
         "logs",
         "heartbeat",
+        # Per-agent identity certificates. Visible to all agents; only the
+        # owner edits their own. Must be a symlink to public so per-agent
+        # writes via .claude/identities/<id>.md land in the shared space
+        # rather than getting siloed in the worktree.
+        "identities",
         # Per-attempt eval artifacts (subprocess logs, terminal recordings,
         # verifier output, etc.) that the grader writes via TaskGrader.eval_logs_dir.
         # Lives outside the grader checkout so it survives daemon cleanup.
@@ -157,6 +162,23 @@ def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: st
     for item in shared_items:
         src = coral_public / item
         dst = shared_dir / item
+        # Self-healing: if a previous (buggy) run wrote into a real local
+        # directory at this path instead of a symlink, migrate any files
+        # into the shared dir, then replace the local dir with a symlink.
+        # Only triggers when src/dst would have collided — for new worktrees
+        # the symlink branch below runs first.
+        if dst.exists() and not dst.is_symlink() and dst.is_dir():
+            src.mkdir(parents=True, exist_ok=True)
+            for entry in dst.iterdir():
+                target = src / entry.name
+                if not target.exists():
+                    shutil.move(str(entry), str(target))
+            try:
+                dst.rmdir()
+            except OSError:
+                # Directory still has unmoved entries (collisions). Leave it
+                # in place and skip the symlink so we don't lose data.
+                continue
         if not dst.exists() and not dst.is_symlink():
             try:
                 rel = os.path.relpath(src.resolve(), shared_dir.resolve())

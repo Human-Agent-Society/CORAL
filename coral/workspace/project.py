@@ -44,6 +44,27 @@ def slugify(name: str) -> str:
 
 _SEED_SKILLS_DIR = Path(__file__).parent.parent / "template" / "skills"
 _SEED_AGENTS_DIR = Path(__file__).parent.parent / "template" / "agents"
+_IDENTITY_TEMPLATE_PATH = Path(__file__).parent.parent / "template" / "identity_template.md"
+
+
+def seed_agent_identity(coral_dir: Path, agent_id: str) -> Path:
+    """Write the per-agent identity certificate at .coral/public/identities/<agent_id>.md.
+
+    Idempotent: does nothing if the file already exists, so an agent's evolved
+    certificate is never clobbered by a re-setup or resume.
+    """
+    identities_dir = coral_dir / "public" / "identities"
+    identities_dir.mkdir(parents=True, exist_ok=True)
+    dst = identities_dir / f"{agent_id}.md"
+    if dst.exists():
+        return dst
+    template = _IDENTITY_TEMPLATE_PATH.read_text()
+    rendered = template.format(
+        agent_id=agent_id,
+        created_at=datetime.now().isoformat(),
+    )
+    dst.write_text(rendered)
+    return dst
 
 
 def create_project(config: CoralConfig, config_dir: Path | None = None) -> ProjectPaths:
@@ -99,6 +120,7 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     (coral_dir / "public" / "notes").mkdir(parents=True, exist_ok=True)
     (coral_dir / "public" / "heartbeat").mkdir(parents=True, exist_ok=True)
     (coral_dir / "public" / "eval_logs").mkdir(parents=True, exist_ok=True)
+    (coral_dir / "public" / "identities").mkdir(parents=True, exist_ok=True)
     (coral_dir / "private").mkdir(parents=True, exist_ok=True)
     agents_dir.mkdir(parents=True, exist_ok=True)
 

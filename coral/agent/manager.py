@@ -49,6 +49,7 @@ from coral.workspace import (
     ProjectPaths,
     create_agent_worktree,
     create_project,
+    seed_agent_identity,
     setup_claude_settings,
     setup_codex_settings,
     setup_cursor_settings,
@@ -413,6 +414,9 @@ class AgentManager:
 
         # Write agent ID
         write_agent_id(worktree_path, agent_id)
+
+        # Seed identity certificate (idempotent — preserves evolved certificates on resume)
+        seed_agent_identity(self.paths.coral_dir, agent_id)
 
         # Generate instruction file (CLAUDE.md, AGENTS.md, etc.)
         instruction_file = self.runtime.instruction_filename
