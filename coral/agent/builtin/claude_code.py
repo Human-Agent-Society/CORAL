@@ -90,10 +90,10 @@ class ClaudeCodeRuntime:
 
         if prompt is None:
             if resume_session_id:
-                prompt = "Session resumed. Continue where you left off."
+                prompt = "Session resumed. Continue evolving your solutions where you left off. There is no user in the loop — make decisions, run evals, accumulate knowledge, and iterate without waiting for input."
                 logger.info(f"Resuming agent {agent_id} session {resume_session_id}")
             else:
-                prompt = "Begin."
+                prompt = "Begin working on your task and iterating on the seed solution. There is no user in the loop — make decisions, run evals, accumulate knowledge, and iterate without waiting for input."
 
         cmd = [
             "claude",
