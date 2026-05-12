@@ -29,14 +29,16 @@ class WarmStartRunner:
     """Orchestrate the warm-start research phase.
 
     Usage from AgentManager:
-        runner = WarmStartRunner(config, shared_dir_name)
+        runner = WarmStartRunner(config)
         if runner.enabled:
-            # spawn agents with runner.research_prompt(), wait, collect sessions
-        prompt = runner.main_prompt()
+            # spawn each agent with runner.research_prompt(agent_shared_dir)
+        prompt = runner.main_prompt(agent_shared_dir)
     """
 
     def __init__(self, config: CoralConfig, shared_dir: str = ".claude") -> None:
         self.config = config
+        # Default shared_dir used when callers omit it on per-prompt calls.
+        # In mix-and-match runs each agent passes its own shared_dir explicitly.
         self.shared_dir = shared_dir
         self.ws = config.agents.warmstart
 
@@ -44,20 +46,22 @@ class WarmStartRunner:
     def enabled(self) -> bool:
         return self.ws.enabled
 
-    def research_prompt(self) -> str:
+    def research_prompt(self, shared_dir: str | None = None) -> str:
         """Return the research-phase prompt, formatted with the agent's shared dir."""
+        sd = shared_dir or self.shared_dir
         if RESEARCH_PROMPT_TEMPLATE:
-            return RESEARCH_PROMPT_TEMPLATE.format(shared_dir=self.shared_dir)
+            return RESEARCH_PROMPT_TEMPLATE.format(shared_dir=sd)
         # Fallback if template file is missing
         return (
             "Research the task thoroughly using web search. "
-            f"Write findings to `{self.shared_dir}/notes/`. "
+            f"Write findings to `{sd}/notes/`. "
             "Do NOT run `coral eval` or write code."
         )
 
-    def main_prompt(self) -> str:
+    def main_prompt(self, shared_dir: str | None = None) -> str:
         """Return the prompt for the main coding phase after research."""
-        return f"Begin. Review the research notes in `{self.shared_dir}/notes/` before coding."
+        sd = shared_dir or self.shared_dir
+        return f"Begin. Review the research notes in `{sd}/notes/` before coding."
 
     def wait_for_research(self, handles: list[AgentHandle], poll_interval: int = 3) -> None:
         """Block until all research-phase agents have exited."""

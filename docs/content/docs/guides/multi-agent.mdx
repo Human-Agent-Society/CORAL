@@ -20,6 +20,114 @@ Or override at launch:
 coral start -c task.yaml --agents 4
 ```
 
+### Mix-and-match runtimes
+
+When you want to compare different agent runtimes (or different models within
+the same runtime) on the same task, use `agents.assignments` instead of
+`agents.count`. Each entry spawns its own group of agents with its own
+`runtime` / `model` / `runtime_options`:
+
+```yaml
+agents:
+  # agents.count is ignored when assignments is set.
+  assignments:
+    - runtime: claude_code
+      model: opus
+      count: 2
+    - runtime: codex
+      model: gpt-5.4
+      count: 1
+    - runtime: opencode
+      model: openai/gpt-5
+      count: 1
+```
+
+This spawns four agents (`agent-1` through `agent-4`), each with its own
+runtime-native shared directory (`.claude`, `.codex`, `.opencode`, ...). Notes,
+skills, and the attempt leaderboard live in `.coral/public/` and are symlinked
+into every agent's shared directory, so all agents still see each other's work
+even though they're running different CLIs.
+
+Empty fields on an assignment inherit from the top-level `agents.*` defaults
+(or from the runtime's default model when only `runtime` is set).
+
+Mix-and-match runs require `run.session=tmux` or `run.session=local` —
+`run.session=docker` is single-runtime only.
+
+#### Full task.yaml example
+
+A complete `task.yaml` that runs MNIST with four agents across three runtimes:
+
+```yaml
+task:
+  name: "MNIST"
+  description: |
+    Classify handwritten digits (0-9) from MNIST.
+
+    Your program (`solution.py`) must define `run(train_path, test_path)` that
+    returns a numpy int array of shape (10000,) with predicted labels.
+  tips: |
+    Metric is classification accuracy (higher is better, 0-1 scale).
+
+grader:
+  timeout: 300
+  direction: maximize
+  args:
+    program_file: "solution.py"
+    train_file: "data/train.npz"
+    test_file: "data/test.npz"
+
+agents:
+  # Top-level fields act as defaults for any assignment that omits them.
+  # `count` is IGNORED when `assignments` is set — total agents = sum of
+  # assignment counts (here: 2 + 1 + 1 = 4).
+  runtime: claude_code
+  model: opus
+  max_turns: 200
+
+  assignments:
+    # Two Claude Code agents on Opus (inherits runtime=claude_code from above)
+    - model: opus
+      count: 2
+
+    # One Codex agent on gpt-5.4
+    - runtime: codex
+      model: gpt-5.4
+      count: 1
+      runtime_options:
+        model_reasoning_effort: high
+
+    # One OpenCode agent — model omitted, so it uses the runtime default
+    - runtime: opencode
+      count: 1
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./mnist/repo"
+
+run:
+  verbose: false
+  ui: false
+  session: tmux   # docker is not supported with assignments
+```
+
+Launch the run normally:
+
+```bash
+coral start -c task.yaml
+```
+
+Verbose mode prints the per-agent runtime / model assignment up front so you
+can confirm what's about to spawn:
+
+```
+[coral] Agents:     4 (mix-and-match)
+[coral]   agent-1: runtime=claude_code  model=opus
+[coral]   agent-2: runtime=claude_code  model=opus
+[coral]   agent-3: runtime=codex        model=gpt-5.4
+[coral]   agent-4: runtime=opencode     model=openai/gpt-5
+```
+
 ## How agents collaborate
 
 ### Shared attempts

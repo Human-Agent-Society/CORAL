@@ -237,6 +237,50 @@ def test_to_dict_excludes_task_dir():
 # --- Warm-start config tests ---
 
 
+def test_assignments_yaml_roundtrip():
+    """agents.assignments survives a YAML to_yaml/from_yaml roundtrip."""
+    from coral.config import AgentAssignmentConfig
+
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+        agents=AgentConfig(
+            assignments=[
+                AgentAssignmentConfig(runtime="claude_code", model="opus", count=2),
+                AgentAssignmentConfig(
+                    runtime="codex",
+                    model="gpt-5.4",
+                    count=1,
+                    runtime_options={"fast_mode": True},
+                ),
+            ],
+        ),
+    )
+    with tempfile.NamedTemporaryFile(suffix=".yaml", mode="w", delete=False) as f:
+        config.to_yaml(f.name)
+        restored = CoralConfig.from_yaml(f.name)
+
+    assert len(restored.agents.assignments) == 2
+    assert restored.agents.assignments[0].runtime == "claude_code"
+    assert restored.agents.assignments[0].model == "opus"
+    assert restored.agents.assignments[0].count == 2
+    assert restored.agents.assignments[1].runtime == "codex"
+    assert restored.agents.assignments[1].runtime_options == {"fast_mode": True}
+
+
+def test_assignments_model_default_from_runtime_via_preprocess():
+    """Empty model on an assignment is back-filled from the runtime default."""
+    data = {
+        "task": {"name": "t", "description": "d"},
+        "agents": {
+            "assignments": [
+                {"runtime": "codex", "count": 1},
+            ],
+        },
+    }
+    config = CoralConfig.from_dict(data)
+    assert config.agents.assignments[0].model == "gpt-5.4"
+
+
 def test_warmstart_config_defaults():
     data = {
         "task": {"name": "t", "description": "d"},
@@ -277,7 +321,10 @@ def test_warmstart_dotlist_override():
     config = CoralConfig(
         task=TaskConfig(name="t", description="d"),
     )
-    merged = CoralConfig.merge_dotlist(config, [
-        "agents.warmstart.enabled=true",
-    ])
+    merged = CoralConfig.merge_dotlist(
+        config,
+        [
+            "agents.warmstart.enabled=true",
+        ],
+    )
     assert merged.agents.warmstart.enabled is True
