@@ -230,6 +230,14 @@ def setup_claude_settings(
     deny_rules: list[str] = [
         "Bash(git *)",
         f"Read(/{private_pattern})",
+        # Tools that block on human approval — there is no human in the
+        # loop in CORAL. Leaving them enabled causes the agent to stall
+        # indefinitely waiting for a reply that never comes. Planning
+        # belongs in TodoWrite / focus notes; uncertainty belongs in an
+        # eval message, not a question.
+        "AskUserQuestion",
+        "EnterPlanMode",
+        "ExitPlanMode",
     ]
     if not research:
         deny_rules.extend(["WebSearch", "WebFetch"])

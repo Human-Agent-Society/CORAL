@@ -77,7 +77,7 @@ class KiroRuntime:
         log_path = log_dir / f"{agent_id}.{log_idx}.log"
 
         if prompt is None:
-            prompt = "Begin."
+            prompt = "Begin working on your task and iterating on the seed solution. There is no user in the loop — make decisions, run evals, accumulate knowledge, and iterate without waiting for input."
 
         cmd = [
             "kiro-cli", "chat",
