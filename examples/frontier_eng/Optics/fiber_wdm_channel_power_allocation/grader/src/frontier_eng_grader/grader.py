@@ -91,6 +91,11 @@ class Grader(TaskGrader):
                 sandbox_benchmark,
                 ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
             )
+            # Some tasks (e.g. ComputerSystems/DuckDBWorkloadOptimization)
+            # discover the repo via `_is_repo_root(p) := (p/"benchmarks").is_dir()
+            # and (p/"frontier_eval").is_dir()`. Drop an empty marker so the
+            # synthetic repo_root looks like upstream's checkout.
+            (fake_repo_root / "frontier_eval").mkdir(exist_ok=True)
 
             python_cmd_str = _make_python_wrapper(sandbox_root, self.get_python_command())
             effective_benchmark = sandbox_benchmark
