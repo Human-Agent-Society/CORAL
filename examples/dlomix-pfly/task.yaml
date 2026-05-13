@@ -1,0 +1,152 @@
+task:
+  name: "Pfly Detectability"
+  description: |
+    Predict the 4-class detectability of tryptic peptides from amino-acid
+    sequence alone — the task introduced by the Pfly model
+    (Abdul-Khalek et al., J. Proteome Res. 2025) and packaged in dlomix.
+
+    Each peptide belongs to exactly one of:
+      0 = Non-Flyer
+      1 = Weak Flyer
+      2 = Intermediate Flyer
+      3 = Strong Flyer
+
+    The classes encode whether a peptide will be detected at all (0) and, if so,
+    with what relative intensity (1–3). Source dataset:
+    `Wilhelmlab/detectability-proteometools` on HuggingFace, frozen here into
+    parquet splits.
+
+    **Data format** (parquet — columns `sequence: str`, `label: int64`):
+
+    - `data/train.parquet` — 236,758 rows (sequence + label)
+    - `data/val.parquet`   —  59,190 rows (sequence + label)
+    - `data/test.parquet`  —  32,884 rows (`sequence` ONLY — labels are hidden)
+
+    All splits are class-balanced (~25% per class). Sequences are bare amino-acid
+    strings using the standard 20-letter alphabet, length 7–40, no termini, no PTMs.
+
+    **Your program** (`solution.py`) must define:
+
+        run(train_path: str, val_path: str, test_path: str) -> np.ndarray
+
+    returning EITHER:
+      - a `(32884, 4)` float array of softmax probabilities (rows sum to 1.0),
+        column `c` = P(class `c`) — **preferred**, this unlocks per-class AUC,
+        macro AUC, and binary AUC in feedback (the metric set the Pfly paper
+        reports); OR
+      - a `(32884,)` int64 array of hard class predictions in {0,1,2,3} — still
+        scored on accuracy / F1, but AUC fields will be reported as `N/A`.
+
+    Predictions must be in the same row order as `data/test.parquet`.
+
+    **Use PyTorch on GPU.** This is a deep-learning benchmark — Pfly itself is
+    a BiGRU + attention model, and the dataset (236k peptide sequences) is sized
+    for neural-net training, not CPU-bound boosting. Each grader subprocess is
+    pinned to ONE RTX 6000 Ada GPU (CUDA_VISIBLE_DEVICES is set for you — your
+    code just sees one device as `cuda:0`). Build your model in `torch`, train
+    on GPU, return softmax probabilities. The seed is a tiny torch MLP showing
+    the pattern.
+
+    **Anti-pattern: CPU-only classifiers as the main model.** LightGBM,
+    sklearn ensembles (RandomForest, HistGradientBoosting), and CatBoost-CPU all
+    run on CPU regardless of which GPU is pinned. At this dataset size they
+    typically take 10–30 minutes to fit and frequently exceed the eval timeout
+    while leaving the pinned GPU at 0% utilization. If you really want gradient
+    boosting, use **XGBoost with `tree_method="hist", device="cuda"`** — but
+    plain torch is simpler and usually wins.
+
+    **Pre-installed:** `numpy`, `pandas`, `pyarrow`, `scikit-learn`, `torch` (CUDA
+    build, see `pyproject.toml`). Add anything else with `uv add transformers
+    dlomix xgboost ...` — the venv lives next to your worktree.
+
+  tips: |
+    - Optimization target = 4-class categorical accuracy (higher is better,
+      0–1 scale). Feedback additionally reports the rest of the Pfly paper's
+      metric set (Abdul-Khalek et al., J. Proteome Res. 2025, §3.1):
+        - Per-class AUC (one-vs-rest), 4 values
+        - Neighbor-class misclassification rate (fraction of errors landing in
+          an adjacent class — paper reports ~87%)
+        - Binary (flyer vs non-flyer): accuracy, MCC, precision, recall, F1, AUC
+    - Random baseline scores ~0.25 accuracy. The seed (AA-composition + tiny
+      torch MLP, ~5 epochs on GPU, trains in <10s) lands around ~0.35–0.40.
+    - Pfly's published encoder-decoder (BiGRU + attention) reports, on this
+      exact ProteomeTools test split:
+        - 4-class categorical accuracy ≈ 0.66
+        - Per-class AUC: non-flyer 0.97, strong flyer 0.90, weak flyer 0.85,
+          intermediate flyer 0.78 (the hardest class)
+        - Neighbor-class errors ≈ 87%
+        - Binary: accuracy 0.94, MCC 0.85, precision 0.96, recall 0.97,
+          F1 0.96, AUC 0.97
+      Plenty of headroom — especially on the weak/intermediate flyer boundary.
+    - The eval timeout is 1000s wall-clock for the whole grader subprocess
+      (Python startup + imports + your `run()` end-to-end). A small NN trains
+      in <60s on a 6000 Ada; budget training time so the grader doesn't time out.
+    - **PRIMARY GOAL: design a better deep neural network architecture.**
+      This task is about *what model* to build, not how to tune one. Your eval
+      budget is best spent exploring distinct architectural ideas. Hyperparameter
+      tweaks rarely move 4-class accuracy by more than 1–2 points; a better
+      architecture can move it 5–20 points.
+
+    - **Anti-pattern: training-trick rabbit holes.** The following burn evals
+      and rarely yield big gains *without* an architectural change underneath:
+      learning-rate sweeps, dropout tuning, batch-size sweeps, weight-decay
+      tuning, optimizer swaps (Adam → AdamW → SGD), schedule swaps (cosine →
+      onecycle → step), mixup / cutmix variants, label smoothing, focal loss,
+      SWA / EMA, pseudo-labeling, seed-ensembling the same architecture. If you
+      find yourself running 3+ evals without changing the *forward pass*, stop
+      and design a new architecture instead.
+
+    - **Architecture > tricks heuristic.** Ensembling, mixup, focal loss, etc.
+      are powerful as the *last 5%* on top of a strong backbone — never as the
+      first 50%. Get a new backbone working first, *then* add tricks.
+
+    - **Don't run `python -c "from solution import run"` as a smoke test before
+      `coral eval`.** The full pipeline takes minutes and blocks your session
+      past its turn budget. The grader is the source of truth and runs in its
+      own GPU-pinned subprocess — submit `coral eval` directly. If you must
+      sanity-check, do it on a tiny subset (`train.head(500), test.head(100)`).
+    - `dlomix` itself ships a Pfly reference implementation — `uv add dlomix`
+      and use it as a starting point, or write a torch model from scratch.
+
+grader:
+  entrypoint: "dlomix_pfly_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 1000
+  direction: maximize
+  parallel:
+    max_workers: 4
+  args:
+    program_file: "solution.py"
+    train_file: "data/train.parquet"
+    val_file: "data/val.parquet"
+    test_file: "data/test.parquet"
+    # GPU pool — each eval acquires an exclusive flock on one of these GPUs
+    # and runs the subprocess with CUDA_VISIBLE_DEVICES set to that single id.
+    # Set to null/[]/omit to disable pinning and inherit the parent env.
+    gpu_pool: [0, 1, 3]
+
+agents:
+  count: 4
+  runtime: claude_code
+  model: claude-opus-4-7-thinking-max[1m]
+  # Force a research-only phase before any coding. The manager spawns each
+  # agent with the warmstart prompt ("RESEARCH-ONLY ... do NOT run coral eval
+  # or write code"), blocks until they exit, then starts the main coding loop
+  # with notes already on disk in .claude/notes/research and .claude/notes/raw.
+  warmstart:
+    enabled: true
+
+workspace:
+  results_dir: "./results"
+  repo_path: "./examples/dlomix-pfly/seed"
+  setup:
+    # Pre-warm the codebase venv so the first eval doesn't pay the install
+    # cost. Deps come from seed/pyproject.toml; agents can extend with
+    # `uv add torch transformers dlomix ...` as needed.
+    - "uv sync"
+
+run:
+  verbose: false
+  ui: false
+  session: local

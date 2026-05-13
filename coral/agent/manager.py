@@ -467,18 +467,6 @@ class AgentManager:
         if mounts:
             apply_runtime_mounts(worktree_path, mounts, self._mounts_base_dir())
 
-        # Seed the agent's initial identity from a user-provided .md if one
-        # is configured. Idempotent — never overwrites an evolved identity
-        # from a prior run, so resume preserves agent self-evolution.
-        identity_file = (runtime_options or {}).get("identity_file")
-        if identity_file:
-            seed_agent_identity(
-                self.paths.coral_dir,
-                agent_id,
-                identity_file,
-                self._mounts_base_dir(),
-            )
-
         # Seed local heartbeat config from task YAML if not already present
         if not read_agent_heartbeat(self.paths.coral_dir, agent_id):
             write_agent_heartbeat(
@@ -488,6 +476,18 @@ class AgentManager:
 
         # Write agent ID
         write_agent_id(worktree_path, agent_id)
+
+        # Seed the agent's identity certificate (idempotent — preserves the
+        # evolved certificate on resume). When ``runtime_options.identity_file``
+        # is set, the user-provided .md is copied as the gen-0 seed; otherwise
+        # the bundled blank template is rendered.
+        identity_file = (runtime_options or {}).get("identity_file")
+        seed_agent_identity(
+            self.paths.coral_dir,
+            agent_id,
+            source=identity_file,
+            base_dir=self._mounts_base_dir() if identity_file else None,
+        )
 
         # Generate instruction file (CLAUDE.md, AGENTS.md, etc.)
         instruction_file = runtime.instruction_filename
@@ -1131,8 +1131,45 @@ class AgentManager:
         ]
         if feedback:
             lines.append(f"Feedback: {feedback}")
-        lines.append("")
-        lines.append("Continue optimizing.")
+        lines.extend(
+            [
+                "",
+                "Keep working. Do NOT exit just because progress has stalled, the "
+                "obvious next steps are exhausted, or you concluded last session that "
+                "the task is intractable / saturated / done. Even when no immediate "
+                "path forward is visible, there is always productive work to do:",
+                "",
+                "- **Gather new information.** Read parts of the codebase, docs, or "
+                "data you haven't touched. Profile or instrument what you've been "
+                "guessing at. Search the web for related work. Check what other "
+                "agents have tried via `coral log -n 10`, `coral notes`, and "
+                "`coral skills`.",
+                "- **Run trial experiments.** Probe assumptions you've been treating "
+                "as facts. Ablate components you've been treating as load-bearing. "
+                "Where the grader supports it, sweep variants cheaply with "
+                "`coral eval --tune` before committing a real eval.",
+                "- **Organize existing knowledge.** Consolidate scattered notes, "
+                "distill reusable skills, write down what you've ruled out and *why* "
+                "so the next iteration starts informed instead of repeating dead "
+                "ends.",
+            ]
+        )
+        if self.config.agents.count > 1:
+            lines.append(
+                "- **Find a complementary role on the team.** Reflect on what you've "
+                "contributed so far and on what your teammates are working on "
+                "(`coral log -n 10 --recent`, `coral notes --recent`). Pick a niche "
+                "that complements rather than duplicates them — investigate a "
+                "sub-problem nobody is owning, build a shared tool they're missing, "
+                "or pursue a direction they haven't explored."
+            )
+        lines.extend(
+            [
+                "",
+                "A short acknowledgment of the current state is not an acceptable "
+                "session. Pick one of the above and act on it.",
+            ]
+        )
         return "\n".join(lines)
 
     def monitor_loop(self, check_interval: int = 5) -> None:

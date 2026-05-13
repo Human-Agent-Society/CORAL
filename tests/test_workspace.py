@@ -522,6 +522,28 @@ def test_seed_agent_identity_per_agent_distinct_content():
         assert (ids / "agent-2.md").read_text() == "B's identity"
 
 
+def test_seed_agent_identity_default_template_when_no_source():
+    """source=None falls back to the bundled gen-0 identity template."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir, _ = _identity_workspace(Path(d))
+
+        dst = seed_agent_identity(coral_dir, "agent-1")
+
+        assert dst.exists()
+        body = dst.read_text()
+        # Bundled template renders the agent_id and frontmatter
+        assert "agent_id: agent-1" in body
+        assert "generation: 0" in body
+
+
+def test_seed_agent_identity_relative_source_without_base_dir_raises():
+    """A relative source with no base_dir surfaces as ValueError, not silent cwd resolution."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir, _ = _identity_workspace(Path(d))
+        with pytest.raises(ValueError, match="base_dir is required"):
+            seed_agent_identity(coral_dir, "agent-1", "relative.md")
+
+
 # --- setup_shared_state identity-symlink tests ---
 
 

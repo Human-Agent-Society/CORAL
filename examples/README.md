@@ -154,6 +154,7 @@ uv pip install -e ./examples/drug_design/grader[ml]
 | [kernel_builder](#kernel_builder) | Optimize VLIW SIMD kernel for tree traversal | Minimize |
 | [kernel_engineering](#kernel_engineering) | Triton kernel for Triangle Multiplicative Update (AlphaFold3) | Maximize |
 | [mnist](#mnist) | Handwritten digit classification (accuracy) | Maximize |
+| [dlomix-pfly](#dlomix-pfly) | Pfly 4-class peptide detectability (accuracy) | Maximize |
 | [spaceship_titanic](#spaceship_titanic) | Kaggle: predict passenger transportation (accuracy) | Maximize |
 | [stanford_covid_vaccine](#stanford_covid_vaccine) | Predict mRNA degradation rates (MCRMSE) | Minimize |
 | [math](#math) | 17 mathematical optimization problems | Maximize |
@@ -203,6 +204,16 @@ Classify 28x28 handwritten digit images. 60k training / 10k test samples. Scored
 
 - **Agents**: 4
 - **Timeout**: 300s
+
+### dlomix-pfly
+
+Predict 4-class peptide detectability (Non-Flyer / Weak / Intermediate / Strong) from amino-acid sequence alone — the task introduced by the [Pfly model](https://pubs.acs.org/doi/10.1021/acs.jproteome.4c00973) (Abdul-Khalek et al., J. Proteome Res. 2025), packaged in [dlomix](https://github.com/wilhelm-lab/dlomix). Source dataset: [`Wilhelmlab/detectability-proteometools`](https://huggingface.co/datasets/Wilhelmlab/detectability-proteometools), frozen as parquet splits (236k train / 59k val / 33k test, class-balanced). Hidden test labels live inside the grader package.
+
+- **Agents**: 1
+- **Timeout**: 600s
+- **Scoring**: Accuracy (macro-F1 + per-class F1 reported as feedback)
+- **Baselines**: Random ≈ 0.25; AA-composition + LogReg seed ≈ 0.30–0.35; Pfly (BiGRU) ≈ 0.78
+- **Packaged grader**: `dlomix_pfly_grader`
 
 ### spaceship_titanic
 

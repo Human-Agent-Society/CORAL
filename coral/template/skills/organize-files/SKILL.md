@@ -7,6 +7,10 @@ description: "Organize the shared notes directory when it becomes hard to naviga
 
 Restructure the shared notes directory so every agent can find what they need quickly.
 
+For a complete before/after walkthrough on a realistic messy notes/ tree — including the dedup pass, naming fixes, subdirectory creation, link repair, and audit-log entry — see [`references/worked-example.md`](references/worked-example.md). Read it once before your first reorganization; it makes the abstract steps below concrete.
+
+For recovery procedures and judgment calls (move script aborted partway, false-positive duplicates, files that look misplaced in `_synthesis/`, contradicting `_open-questions.md`, races between agents…), see [`references/edge-cases.md`](references/edge-cases.md).
+
 ## When to Use
 
 - Too many flat files in `research/` or `experiments/`
@@ -83,7 +87,26 @@ Find near-duplicates:
 python .coral/public/skills/organize-files/scripts/find_duplicates.py .coral/public/notes --threshold 0.5
 ```
 
-Merge confirmed duplicates. Move originals to `_archive/`. Don't merge notes that contradict each other — flag those in `_open-questions.md`.
+For pairs above the threshold where the verdict is not immediately obvious from a quick read — same topic vs. different angle vs. different topic with shared boilerplate vs. genuinely contradicting — spawn the **Dedup Judge** subagent. It reads both notes blinded (no author / timestamp / length metadata) and returns a structured verdict (`same-topic-merge` / `different-angle-fold` / `contradicting-do-not-merge` / `keep-both-rename`) with concrete merge or rename instructions. See [`agents/dedup-judge.md`](agents/dedup-judge.md). Use it especially when:
+
+- The two notes were written by different agents (recency / author bias is highest).
+- One note is much longer than the other (length bias makes the long one feel authoritative).
+- The notes appear to disagree but you can't tell if it's a real conflict or a scope difference.
+
+For obvious cases — verbatim duplicates, or clearly different topics that shared a paragraph — just decide directly.
+
+When merging confirmed duplicates, **preserve provenance from both notes** — never just pick one and discard:
+
+- **Union the `## References` lists** (de-duplicated by URL or `raw/` filename). Losing a citation loses an audit trail that an agent may need months later.
+- **Keep the more specific claims from each note**, not just whichever was longer. A short note with concrete numbers usually has higher information density than a long one with vague prose.
+- **Combine `tags` and `aliases`** rather than picking one set. Both were correct in their original context.
+
+Move originals to `_archive/` so the merge is reversible.
+
+When two notes **contradict** each other, don't merge:
+
+- Flag the conflict in `_open-questions.md` (existing rule).
+- Also stamp `contradictedBy: [other-note-slug]` into each note's frontmatter so future readers see the conflict at the note level — `_open-questions.md` collects them, but agents reading the note directly should see the warning without a separate lookup.
 
 ### 4. Move and Rename
 
@@ -104,6 +127,16 @@ python .coral/public/skills/organize-files/scripts/generate_index.py .coral/publ
 ```
 
 The index should only list `research/` and `experiments/` entries — not `raw/`.
+
+Then resolve cross-links — moves and renames break any `[[old-slug]]` references in note bodies:
+
+```bash
+python .coral/public/skills/organize-files/scripts/resolve_links.py .coral/public/notes --dry-run
+# review the diff, then:
+python .coral/public/skills/organize-files/scripts/resolve_links.py .coral/public/notes
+```
+
+The resolver walks every note, scans the body for plain-text mentions of every other note's title, and wraps them as `[[slug|Title]]`. It skips text already inside wikilinks, citation markers, code blocks, and inline code. Run this **after** moves and renames, not before — the resolver needs final paths.
 
 ### 6. Log
 

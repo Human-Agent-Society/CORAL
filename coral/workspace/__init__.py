@@ -4,13 +4,13 @@ from coral.workspace.project import (
     ProjectPaths,
     create_project,
     reconstruct_paths,
+    seed_agent_identity,
     slugify,
 )
 from coral.workspace.worktree import (
     apply_runtime_mounts,
     create_agent_worktree,
     get_coral_dir,
-    seed_agent_identity,
     setup_claude_settings,
     setup_codex_settings,
     setup_cursor_settings,

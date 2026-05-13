@@ -1,0 +1,23 @@
+[project]
+name = "dlomix-pfly-grader"
+version = "0.1.0"
+description = "CORAL grader for the Pfly 4-class peptide detectability task."
+requires-python = ">=3.11"
+dependencies = [
+    "coral",
+    "numpy>=2.1",
+    "pandas>=2.2",
+    "pyarrow>=17.0",
+    "scikit-learn>=1.5",
+    "torch"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dlomix_pfly_grader"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/dlomix_pfly_grader/data/test_labels.parquet" = "dlomix_pfly_grader/data/test_labels.parquet"
