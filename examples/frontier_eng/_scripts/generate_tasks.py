@@ -8,7 +8,8 @@ For each leaf benchmark (a directory whose ``frontier_eval/`` contains an
     ├── seed/
     │   ├── (the benchmark's own files)
     │   └── _parent/   # parent-domain shared files (frontier_eval/, data/, ...)
-    └── task.yaml      # CORAL config wired to examples/frontier_eng/_grader/
+    ├── grader/        # copy of examples/frontier_eng/_grader/ (self-contained)
+    └── task.yaml      # CORAL config wired to ./grader
 
 The generator rewrites placeholders in ``frontier_eval/eval_command.txt``:
 ``{repo_root}/benchmarks/<Domain>/<file>`` becomes
@@ -37,6 +38,8 @@ from pathlib import Path
 LEAF_MARKER = "frontier_eval/eval_command.txt"
 PARENT_DIRNAME = "_parent"
 RUNTIME_DIRNAME = "_runtime"
+GRADER_SOURCE_DIRNAME = "_grader"
+GRADER_DEST_DIRNAME = "grader"
 DEFAULT_TIMEOUT_S = 600
 DEFAULT_MODEL = "claude-opus-4-6"
 
@@ -252,7 +255,7 @@ def _generate_one(
     tips = _read_tips(seed_dir, env_name=env_name)
     timeout = _detect_timeout(benchmark_id)
 
-    rel_grader = _relative_grader_path(target_dir)
+    _copy_grader_into_task(target_dir=target_dir)
 
     yaml_text = _render_task_yaml(
         benchmark_id=benchmark_id,
@@ -261,7 +264,6 @@ def _generate_one(
         tips=tips,
         timeout=timeout,
         extra_setup=extra_setup,
-        relative_grader=rel_grader,
     )
     (target_dir / "task.yaml").write_text(yaml_text, encoding="utf-8")
 
@@ -561,14 +563,44 @@ def _detect_timeout(benchmark_id: str) -> int:
     return overrides.get(benchmark_id, DEFAULT_TIMEOUT_S)
 
 
-def _relative_grader_path(target_dir: Path) -> str:
-    parts = target_dir.parts
+def _copy_grader_into_task(*, target_dir: Path) -> None:
+    """Copy the canonical ``_grader/`` package into the task dir as ``grader/``.
+
+    The shared ``_grader/`` directory at ``examples/frontier_eng/_grader/`` is
+    the source of truth. We copy it into each task dir so each task is fully
+    self-contained — ``task.yaml`` then says ``uv pip install -e ./grader``,
+    matching the convention used by ``examples/swebench-verified/`` and
+    ``examples/erdos/``. Self-containment matters for:
+      - ``run.session=docker`` (only the task dir is mounted at ``/task``)
+      - copying a single task dir somewhere else for distribution / debug
+
+    The source is found by walking up from ``target_dir`` to the
+    ``frontier_eng/`` root that contains ``_grader/``.
+    """
+    grader_src = _find_grader_source(target_dir)
+    if grader_src is None:
+        raise RuntimeError(
+            f"could not locate {GRADER_SOURCE_DIRNAME}/ above {target_dir} "
+            f"(walked up looking for a 'frontier_eng' parent)."
+        )
+    grader_dst = target_dir / GRADER_DEST_DIRNAME
+    if grader_dst.exists():
+        shutil.rmtree(grader_dst)
+    shutil.copytree(
+        grader_src,
+        grader_dst,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store", "*.egg-info"),
+    )
+
+
+def _find_grader_source(target_dir: Path) -> Path | None:
+    parts = target_dir.resolve().parts
     try:
         idx = parts.index("frontier_eng")
     except ValueError:
-        return "../_grader"
-    depth = len(parts) - idx - 1
-    return "/".join([".."] * depth + ["_grader"])
+        return None
+    candidate = Path(*parts[: idx + 1]) / GRADER_SOURCE_DIRNAME
+    return candidate if candidate.is_dir() else None
 
 
 def _trim_long(text: str, *, max_chars: int) -> str:
@@ -589,7 +621,6 @@ def _render_task_yaml(
     tips: str | None,
     timeout: int,
     extra_setup: list[str],
-    relative_grader: str,
 ) -> str:
     indent = "    "
     description_block = textwrap.indent(description.rstrip(), indent)
@@ -617,7 +648,7 @@ def _render_task_yaml(
             "grader:",
             '  entrypoint: "frontier_eng_grader.grader:Grader"',
             "  setup:",
-            f'    - "uv pip install -e {relative_grader}"',
+            f'    - "uv pip install -e ./{GRADER_DEST_DIRNAME}"',
             f"  timeout: {timeout}",
             "  direction: maximize",
             "  args:",

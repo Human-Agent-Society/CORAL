@@ -7,21 +7,23 @@ The integration is two pieces:
 
 | Piece | Purpose |
 |-------|---------|
-| [`_grader/`](_grader/) | One reusable `TaskGrader` (`frontier_eng_grader.grader:Grader`) that reads each benchmark's `frontier_eval/` metadata, runs the documented eval command in a sandbox, and parses `metrics.json` for `combined_score` / `valid`. Every per-task `task.yaml` points at the same entrypoint. |
-| [`_scripts/generate_tasks.py`](_scripts/generate_tasks.py) | Walks a Frontier-Eng checkout's `benchmarks/` tree and emits one `<Domain>/<Task>/{seed,task.yaml}` per leaf benchmark. Re-runnable; `--clean` wipes existing dirs first. |
+| [`_grader/`](_grader/) | Source-of-truth `TaskGrader` package (`frontier_eng_grader.grader:Grader`) that reads each benchmark's `frontier_eval/` metadata, runs the documented eval command in a sandbox, and parses `metrics.json` for `combined_score` / `valid`. The generator copies this into every task dir as `./grader/` so each task is self-contained — `task.yaml` installs it via `uv pip install -e ./grader`. Edit here, then re-run the generator to propagate. |
+| [`_scripts/generate_tasks.py`](_scripts/generate_tasks.py) | Walks a Frontier-Eng checkout's `benchmarks/` tree and emits one `<Domain>/<Task>/{seed,grader,task.yaml}` per leaf benchmark. Re-runnable; `--clean` wipes existing dirs first. |
 
 ## Layout
 
 ```
 examples/frontier_eng/
 ├── README.md                  ← you are here
-├── _grader/                   ← shared TaskGrader package (uv pip install -e _grader)
+├── _grader/                   ← source-of-truth TaskGrader package
 │   ├── pyproject.toml
 │   └── src/frontier_eng_grader/{__init__.py,grader.py}
 ├── _scripts/
-│   └── generate_tasks.py      ← regenerator
+│   └── generate_tasks.py      ← regenerator (also copies _grader → each task as ./grader)
 ├── <Domain>/<Task>/
-│   ├── task.yaml              ← wires shared grader, sets timeout / env / model
+│   ├── task.yaml              ← wires ./grader, sets timeout / env / model
+│   ├── grader/                ← copy of _grader/ (so the task dir is self-contained:
+│   │                            survives docker mount of /task and standalone copies)
 │   └── seed/                  ← copy of upstream `benchmarks/<Domain>/<Task>/`
 │       ├── frontier_eval/     ← upstream metadata: eval_command.txt, etc.
 │       ├── pyproject.toml     ← generated; pins runtime deps for the worktree

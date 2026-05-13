@@ -81,7 +81,7 @@ task:
 grader:
   entrypoint: "frontier_eng_grader.grader:Grader"
   setup:
-    - "uv pip install -e ../../_grader"
+    - "uv pip install -e ./grader"
   timeout: 1800
   direction: maximize
   args:
@@ -90,7 +90,7 @@ grader:
 agents:
   count: 1
   runtime: claude_code
-  model: claude-opus-4-6
+  model: claude-opus-4-7-thinking-max[1m]
 
 workspace:
   results_dir: "./results"
@@ -102,4 +102,4 @@ workspace:
 run:
   verbose: false
   ui: false
-  session: tmux
+  session: local

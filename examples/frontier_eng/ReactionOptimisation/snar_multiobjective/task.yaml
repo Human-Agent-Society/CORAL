@@ -149,7 +149,7 @@ task:
 grader:
   entrypoint: "frontier_eng_grader.grader:Grader"
   setup:
-    - "uv pip install -e ../../_grader"
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:
