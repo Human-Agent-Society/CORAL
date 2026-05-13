@@ -121,6 +121,15 @@ def _ensure_docker_image(config: CoralConfig) -> str:
     if config.run.docker_image:
         return config.run.docker_image
 
+    if config.agents.assignments:
+        print(
+            "Error: run.session=docker is not supported with agents.assignments "
+            "(mix-and-match runtimes). Use run.session=tmux or run.session=local "
+            "to run mixed-runtime agents on the host.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     runtime = config.agents.runtime
     docker_dir = _RUNTIME_DOCKER_DIR.get(runtime)
     if docker_dir is None:
@@ -399,11 +408,20 @@ def cmd_start(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     if verbose:
+        from coral.agent.assignments import resolve_agent_specs
+
+        specs = resolve_agent_specs(config)
         print(f"[coral] Config:     {args.config}")
         print(f"[coral] Task:       {config.task.name}")
         print(f"[coral] Grader:     {config.grader.entrypoint or 'eval/grader.py (deprecated)'}")
-        print(f"[coral] Agents:     {config.agents.count}")
-        print(f"[coral] Model:      {config.agents.model}")
+        if config.agents.assignments:
+            print(f"[coral] Agents:     {len(specs)} (mix-and-match)")
+            for s in specs:
+                print(f"[coral]   {s.agent_id}: runtime={s.runtime}  model={s.model}")
+        else:
+            print(f"[coral] Agents:     {len(specs)}")
+            print(f"[coral] Runtime:    {config.agents.runtime}")
+            print(f"[coral] Model:      {config.agents.model}")
         print(f"[coral] Max turns:  {config.agents.max_turns}")
         print(f"[coral] Results:    {config.workspace.results_dir}")
         print(f"[coral] Repo path:  {config.workspace.repo_path}")
@@ -448,7 +466,7 @@ def cmd_start(args: argparse.Namespace) -> None:
 
         start_ui_background(manager.paths.coral_dir)
 
-    if config.agents.count == 1 and verbose:
+    if len(manager.specs) == 1 and verbose:
         print("\nAgent running...\n")
         manager.wait_for_completion()
     else:
