@@ -92,7 +92,7 @@ class Grader(TaskGrader):
                 ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
             )
 
-            python_cmd_str = " ".join(shlex.quote(p) for p in self.get_python_command())
+            python_cmd_str = _make_python_wrapper(sandbox_root, self.get_python_command())
             effective_benchmark = sandbox_benchmark
             candidate_path = (
                 (effective_benchmark / candidate_dest_rel).resolve()
@@ -277,9 +277,23 @@ def _build_placeholders(
     }
     out: dict[str, str] = {}
     for key, value in raw.items():
-        out[key] = shlex.quote(value) if key != "python" else value
+        out[key] = shlex.quote(value)
         out[f"{key}_raw"] = value
     return out
+
+
+def _make_python_wrapper(sandbox_root: Path, python_cmd: list[str]) -> str:
+    # Some benchmarks pass {python} as a positional argument to a shell wrapper
+    # (e.g. Optics' ``bash run_eval.sh {python} {benchmark} {candidate}``), so
+    # expanding to a multi-word ``uv run --project X python`` would split into
+    # several args and break the script's positional indexing. Write a tiny
+    # exec'ing wrapper into the sandbox so {python} is always one shell word
+    # whether it leads the command or sits in an argument slot.
+    wrapper = sandbox_root / "python_cmd.sh"
+    body = "#!/usr/bin/env bash\nexec " + " ".join(shlex.quote(p) for p in python_cmd) + ' "$@"\n'
+    wrapper.write_text(body)
+    wrapper.chmod(0o755)
+    return str(wrapper)
 
 
 def _safe_slug(value: str) -> str:
