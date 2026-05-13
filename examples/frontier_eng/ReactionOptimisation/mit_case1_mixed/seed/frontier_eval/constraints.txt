@@ -1,0 +1,6 @@
+MIT case 1 mixed-variable reaction optimisation constraints:
+1) Edit only `baseline/solution.py`.
+2) Keep the `solve(seed: int = 0, budget: int = task.DEFAULT_BUDGET) -> dict` entry point working.
+3) Preserve the `# EVOLVE-BLOCK-START` / `# EVOLVE-BLOCK-END` markers.
+4) Respect the evaluation budget and return a result dict with `history` and `summary`.
+5) Do not modify task definitions or verification/reference files.

@@ -1,0 +1,335 @@
+### Task Description
+
+Your task is to design the read function for a virtio block device driver. The relevant data structures have been provided.
+Please follow the function headers provided, complete the specified helper functions, and finally put the helper functions together to complete the read function.
+
+The relevant data structures and some helper functions you can use are:
+```python
+
+from dataclasses import dataclass, field
+from typing import Optional, Union, List, Callable, Optional
+
+# COMPILE-TIME PARAMETERS
+VIOBLK_INTR_PRIO = 1
+VIOBLK_NAME = "vioblk"
+VIOBLK_IRQ_PRIO = 1
+
+# INTERNAL CONSTANT DEFINITIONS
+VIRTIO_BLK_F_SIZE_MAX = 1
+VIRTIO_BLK_F_SEG_MAX = 2
+VIRTIO_BLK_F_GEOMETRY = 4
+VIRTIO_BLK_F_RO = 5
+VIRTIO_BLK_F_BLK_SIZE = 6
+VIRTIO_BLK_F_FLUSH = 9
+VIRTIO_BLK_F_TOPOLOGY = 10
+VIRTIO_BLK_F_CONFIG_WCE = 11
+VIRTIO_BLK_F_MQ = 12
+VIRTIO_BLK_F_DISCARD = 13
+VIRTIO_BLK_F_WRITE_ZEROES = 14
+VIRTIO_BLK_F_LIFETIME = 15
+VIRTIO_BLK_F_SECURE_ERASE = 16
+
+# Virtio device status bits
+VIRTIO_STAT_ACKNOWLEDGE = (1 << 0)
+VIRTIO_STAT_DRIVER = (1 << 1)
+VIRTIO_STAT_FEATURES_OK = (1 << 3)
+VIRTIO_STAT_DRIVER_OK = (1 << 2)
+VIRTIO_STAT_DEVICE_NEEDS_RESET = (1 << 6)
+VIRTIO_STAT_FAILED = (1 << 7)
+
+# Virtio feature bits (number, not mask)
+VIRTIO_F_INDIRECT_DESC = 28
+VIRTIO_F_EVENT_IDX = 29
+VIRTIO_F_ANY_LAYOUT = 27
+VIRTIO_F_RING_RESET = 40
+VIRTIO_F_IN_ORDER = 35
+
+# Virtqueue constants
+VIRTQ_LEN_MAX = 32768
+
+VIRTQ_USED_F_NO_NOTIFY = 1
+VIRTQ_AVAIL_F_NO_INTERRUPT = 1
+
+VIRTQ_DESC_F_NEXT = (1 << 0)
+VIRTQ_DESC_F_WRITE = (1 << 1)
+VIRTQ_DESC_F_INDIRECT = (1 << 2)
+
+# Feature vector length
+VIRTIO_FEATLEN = 4
+
+# Virtio interrupt status bits
+USED_BUFFER_NOTIFICATION = (1 << 0)
+CONFIGURATION_CHANGE_NOTIFICATION = (1 << 1)
+
+
+# vioblk vq request type
+VIRTIO_BLK_T_IN = 0
+VIRTIO_BLK_T_OUT = 1
+
+
+@dataclass
+class Geometry:
+    cylinders: int  # uint16_t
+    heads: int      # uint8_t
+    sectors: int    # uint8_t
+
+@dataclass
+class Topology:
+    physical_block_exp: int   # uint8_t
+    alignment_offset: int     # uint8_t
+    min_io_size: int          # uint16_t
+    opt_io_size: int          # uint32_t
+
+@dataclass
+class BlockConfig:
+    capacity: int                  # uint64_t
+    size_max: int                  # uint32_t
+    seg_max: int                   # uint32_t
+    geometry: Geometry
+    blk_size: int                  # uint32_t
+    topology: Topology
+    writeback: int                 # uint8_t
+    unused0: int                   # char
+    num_queues: int                # uint16_t
+    max_discard_sectors: int        # uint32_t
+    max_discard_seg: int            # uint32_t
+    discard_sector_alignment: int  # uint32_t
+    max_write_zeroes_sectors: int   # uint32_t
+    max_write_zeroes_seg: int       # uint32_t
+    write_zeroes_may_unmap: int     # uint8_t
+    max_secure_erase_sectors: int   # uint32_t
+    max_secure_erase_seg: int       # uint32_t
+    secure_erase_sector_alignment: int  # uint32_t
+
+@dataclass
+class VirtioMmioRegs:
+    magic_value: int               = 0  # uint32_t
+    version: int                   = 0  # uint32_t
+    device_id: int                 = 0  # uint32_t
+    vendor_id: int                 = 0  # uint32_t
+    device_features: int           = 0  # uint32_t
+    device_features_sel: int       = 0  # uint32_t
+    driver_features: int           = 0  # uint32_t
+    driver_features_sel: int       = 0  # uint32_t
+    queue_sel: int                 = 0  # uint32_t
+    queue_num_max: int             = 0  # uint32_t
+    queue_num: int                 = 0  # uint32_t
+    queue_ready: int               = 0  # uint32_t
+    queue_notify: int              = 0  # uint32_t
+    interrupt_status: int          = 0  # uint32_t
+    interrupt_ack: int             = 0  # uint32_t
+    status: int                    = 0  # uint32_t
+    queue_desc: int                = 0  # uint64_t
+    queue_driver: int              = 0  # uint64_t
+    queue_device: int              = 0  # uint64_t
+    shm_sel: int                   = 0  # uint32_t
+    shm_len: int                   = 0  # uint64_t
+    shm_base: int                  = 0  # uint64_t
+    queue_reset: int               = 0  # uint32_t
+    
+
+    config: Union[BlockConfig, bytes] = field(default_factory=lambda: BlockConfig(
+        capacity=4,
+        size_max=512,
+        seg_max=1,
+        geometry=Geometry(cylinders=1, heads=1, sectors=4),
+        blk_size=512,
+        topology=Topology(physical_block_exp=0, alignment_offset=0, min_io_size=512, opt_io_size=512),
+        writeback=0,
+        unused0=0,
+        num_queues=1,
+        max_discard_sectors=0,
+        max_discard_seg=0,
+        discard_sector_alignment=0,
+        max_write_zeroes_sectors=0,
+        max_write_zeroes_seg=0,
+        write_zeroes_may_unmap=0,
+        max_secure_erase_sectors=0,
+        max_secure_erase_seg=0,
+        secure_erase_sector_alignment=0
+    ))
+
+
+
+# define the iointf interface
+@dataclass
+class IoIntf:
+    close: Optional[Callable[['Io'], None]]
+    cntl: Optional[Callable[['Io', int, object], int]]
+    read: Optional[Callable[['Io', int, object, int], int]]
+    write: Optional[Callable[['Io', int, object, int], int]]
+
+# define the io struct
+@dataclass
+class Io:
+    intf: Optional[IoIntf]
+    refcnt: int
+
+
+@dataclass
+class VirtqDesc:
+    addr: int = 0        # uint64_t
+    len: int = 0        # uint32_t
+    flags: int = 0      # uint16_t
+    next: int = 0        # int16_t
+
+@dataclass
+class VirtqAvail:
+    flags: int = 0       # uint16_t
+    idx: int = 0        # uint16_t
+    ring: List[int] = field(default_factory=list)
+
+
+@dataclass
+class VirtqUsedElem:
+    id: int = 0   # uint32_t
+    len: int = 0  # uint32_t
+
+@dataclass
+class VirtqUsed:
+    flags: int = 0        # uint16_t
+    idx: int  = 0         # uint16_t
+    ring: List[VirtqUsedElem] = field(default_factory=list)
+
+def virtio_notify_avail(regs: VirtioMmioRegs, qid: int) -> None:
+    regs.queue_notify = qid
+
+## Thread and Condition Variable
+@dataclass
+class Thread:
+    id: int = -1
+
+## Your program will be running on curr_thread:
+curr_thread = Thread(id = 1)
+
+@dataclass
+class ThreadList:
+    threads: List[Thread] = field(default_factory=list)
+
+    def add_thread(self, thread: Thread):
+        self.threads.append(thread)
+
+    def clear(self):
+        self.threads.clear()
+
+@dataclass
+class Condition:
+    name: Optional[str] = None
+    wait_list: ThreadList = field(default_factory=ThreadList)
+```
+
+Here are some functions for condition variables you can use.
+You should use condition_wait but you don't need to know the details.
+`condition_init(cond: Condition, name: Optional[str] = None)`
+`condition_wait(cond: Condition, thread: Thread)`
+`condition_broadcast(cond: Condition)`
+
+
+```python
+# Lock
+@dataclass
+class Lock:
+    owner: Optional[Thread] = None
+    lkrelease: Condition = field(default_factory=Condition)
+```
+Here are some functions for condition variables you can use.
+You should use lock_acquire and lock_release but you don't need to know the details.
+`lock_init(lock: Lock)`
+`lock_acquire(lock: Lock, thread: Thread)`
+`lock_release(lock: Lock)`
+
+```python
+# vioblk_req
+@dataclass
+class VioblkReq:
+    type: int
+    reserved: int
+    sector: int
+
+# vioblk_device
+@dataclass
+class VioblkDevice:
+    regs: VirtioMmioRegs
+    io: Io
+    irqno: int = 2
+    instno: int = 0
+
+    @dataclass
+    class Vq:
+        last_used_idx: int = 0
+
+        avail: Union[VirtqAvail, bytes] = field(default_factory=lambda: VirtqAvail())
+
+        used: Union[VirtqUsed, bytes] = field(default_factory=lambda: VirtqUsed())   # 填充
+        desc: list = field(default_factory=lambda: [VirtqDesc() for _ in range(4)])  # 4 descriptors
+
+        req: VioblkReq = field(default_factory=lambda: VioblkReq(-1, -1, -1))
+        status: int = 0
+    
+    vq: Vq = field(default_factory=Vq)
+
+    readbufcnt: int = 0
+    readbuf: Optional[bytes] = None
+
+    writebufcnt: int = 0
+    writebuf: Optional[bytes] = None
+
+    vioblk_used_updated: Condition = field(default_factory=Condition)
+    vioblk_lock: Lock = field(default_factory=Lock)
+
+    blksz: int = 512
+    is_open: int = 1
+    pos: int = 0
+    capacity: int = 2048
+```
+
+About interrupts, you only need to know these three functions:
+
+`disable_interrupts()` Disables interrupts and returns an identifier used to restore interrupts.
+`restore_interrupts(orig: int)` Restores interrupts using an identifier /orig/.
+`enable_interrupts()` Enables interrupts and returns an identifier used to restore interrupts.
+
+
+Here are two tasks for you:
+First, please implement a vioblk_read function, which:
+- Reads bufsz number of bytes (must be aligned to VirtIO block size) from the disk and writes them to buf.
+- Achieves this by repeatedly setting the appropriate registers to request a block from the disk.
+- Thread sleeps while waiting for the disk to service the request.
+- Return the number of bytes successfully read from the disk, or -1 on failure.
+- Remember to check input.
+
+```python
+def vioblk_read(vioblk:VioblkDevice, pos: int, buf: bytes, bufsz: int):
+    # vioblk - a VioblkDevice instance
+    # pos - the position to read data from, may not be multiples of block size
+    # buf - the buffer to pass your read data into
+    # bufsz - number of bytes needed to be read, may not be multiples of block size
+    # Your Implementation here:
+    return -1
+```
+
+Second, please implement a vioblk_write function, which:
+- Writes bufsz number of bytes (must be aligned to VirtIO block size) into the disk from buf.
+- Achieves this by repeatedly setting the appropriate registers to send requests to the device.
+- Data should be written into vioblk device's writebuf only from which the driver will read data into its disk.
+- But you still need to set up relevant virt queue descriptors.
+- Thread sleeps while waiting for the disk to service the request.
+- Return the number of bytes successfully written to the disk, or -1 on failure.
+- Remember to check input.
+- Hint: you should call your read function.
+
+```python
+def vioblk_write(vioblk:VioblkDevice, pos: int, buf: bytes, bufsz: int):
+    # vioblk - a VioblkDevice instance
+    # pos - the position to write data into, may not be multiples of block size
+    # buf - the buffer where your data is from
+    # bufsz - number of bytes needed to be written, may not be multiples of block size
+    # Your Implementation here:
+    return -1
+```
+
+Please give me your code in two python code_blocks:
+
+```python
+Your code here
+```

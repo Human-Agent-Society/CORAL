@@ -1,0 +1,6 @@
+Starting position at t=0 is correct: 10 points
+Hits Goal A at some point in time: 10 points
+Hits Goal B at some point in time: 10 points
+No collision between robot and static obstacles: 25 points
+No collision between robot and walking pedestrians: 25 points
+Does not exceed top speed: 20 points

@@ -1,0 +1,6 @@
+{
+  "case_id": "clifford_t_case_01",
+  "benchmark": "qft",
+  "num_qubits": 3,
+  "target_gateset": "clifford+t"
+}

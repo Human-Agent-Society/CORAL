@@ -1,0 +1,1 @@
+batchsize: 4; nheads: 32; seqlen_q: 2048; seqlen_kv: 2048; headdim: 128; causal: 1; seed: 5923

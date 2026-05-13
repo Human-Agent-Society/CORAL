@@ -1,0 +1,18 @@
+{
+  "benchmark_id": "pymoto_simp_compliance",
+  "nelx": 50,
+  "nely": 16,
+  "volfrac": 0.5,
+  "penal": 3.0,
+  "E0": 1.0,
+  "Emin": 1e-9,
+  "nu": 0.3,
+  "rho_min": 1e-9,
+  "filter_radius": 2.0,
+  "move_limit": 0.1,
+  "max_iter": 25,
+  "force_direction": 1,
+  "force_magnitude": 1.0,
+  "boundary_condition": "left_edge_clamped",
+  "load_case": "point_load_at_right_mid"
+}

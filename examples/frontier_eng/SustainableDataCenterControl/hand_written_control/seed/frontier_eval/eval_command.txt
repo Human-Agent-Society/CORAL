@@ -1,0 +1,1 @@
+{python} verification/evaluate.py --solution {candidate} --save-json verification/last_eval.json --metrics-out metrics.json --artifacts-out artifacts.json

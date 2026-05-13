@@ -1,0 +1,7 @@
+# Python-level packages used by the MolecularMechanics benchmark runtime.
+# Install binary-heavy dependencies such as rdkit/openmm/ambertools via conda first.
+numpy>=2.0
+scipy>=1.17
+openff-toolkit>=0.18
+openff-units>=0.3
+openff-utilities>=0.1

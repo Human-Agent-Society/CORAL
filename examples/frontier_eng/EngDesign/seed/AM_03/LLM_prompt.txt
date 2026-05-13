@@ -1,0 +1,128 @@
+## Task Description
+Your task is to navigate a robot around static obstacles and walking pedestrians. 
+The map is a 30 by 30 grid. The origin, i.e. (x,y) = (0,0), is at the bottom left of the grid.
+x-axis grows to the right and y-axis grows upwards.
+
+There are three static rectangular obstacles formatted in ((x1, y1), (x2, y2)) that describe the
+bottom left and top right corners of the obstacle box:
+[
+    ((5, 0), (7, 15)),
+    ((10,20), (20,30)),
+    ((15, 5), (30, 10))
+]
+
+There are pedestrians walking around and their trajectory is 
+stored as a list of tuples (t, x, y), where t is number of seconds from 0 to 29, 
+and x and y are the coordinates of the bottom left corner in the grid.
+The pedestrians and robots are both 2 by 2 in size.
+Their paths are as follows:
+'ped1': [   (0,1,1),
+            (1,1,2),
+            (2,1,4),
+            (3,1,6),
+            (4,1,7),
+            (5,1,9),
+            (6,1,11),
+            (7,2,13),
+            (8,2,14),
+            (9,3,16),
+            (10,6,16),
+            (11,7,15),
+            (12,8,13),
+            (13,9,12),
+            (14,10,11),
+            (15,11,11),
+            (16,12,11),
+            (17,13,11),
+            (18,14,11),
+            (19,15,11),
+            (20,16,11),
+            (21,17,11),
+            (22,18,11),
+            (23,19,11),
+            (24,20,11),
+            (25,21,11),
+            (26,22,11),
+            (27,23,11),
+            (28,24,11),
+            (29,25,11)
+        ],  
+'ped2': [   (0,25,28),
+            (1,25,28),
+            (2,25,26),
+            (3,25,24),
+            (4,25,22),
+            (5,25,20),
+            (6,25,18),
+            (7,25,16),
+            (8,25,14),
+            (9,24,12),
+            (10,22,12),
+            (11,20,12),
+            (12,19,12),
+            (13,17,12),
+            (14,16,12),
+            (15,16,12),
+            (16,15,13),
+            (17,14,15),
+            (18,12,16),
+            (19,10,16),
+            (20,8,16),
+            (21,6,16),
+            (22,5,16),
+            (23,4,16),
+            (24,4,17),
+            (25,4,18),
+            (26,4,19),
+            (27,4,20),
+            (28,4,21),
+            (29,4,22)
+        ], 
+'ped3': [   (0, 25, 2),
+            (1, 24, 2),
+            (2, 23, 2),
+            (3, 22, 2),
+            (4, 21, 2),
+            (5, 20, 2),
+            (6, 19, 2),
+            (7, 18, 2),
+            (8, 17, 2),
+            (9, 16, 2),
+            (10,15,2),
+            (11,14,2),
+            (12,13,2),
+            (13,12,2),
+            (14,11,2),
+            (15,10,2),
+            (16,9,3),
+            (17,8,4),
+            (18,8,6),
+            (19,8,8),
+            (20,8,10),
+            (21,8,12),
+            (22,8,14),
+            (23,8,16),
+            (24,8,18),
+            (25,8,20),
+            (26,8,22),
+            (27,8,24),
+            (28,8,26),
+            (29,8,28)
+        ]
+
+The robot must start at (17, 2), and hit goals A and B one after another in any order. 
+Goal A is positioned at (5, 20) and Goal B at (25, 24).
+
+You must provide a list of tuples in (t,x,y) format that is free of collisions from
+both pedestrians and static rectangular obstacles. 
+
+The speed limit of robot in either x and y direction is 2 between each time step.
+This means that the robot can move in the x direction 2 steps and y direction 2 steps and be ok.
+
+You will be evaluated on the following:
+- Starting position at t=0 is correct
+- Hits Goal A at some point in time
+- Hits Goal B at some point in time
+- No collision between robot and static obstacles
+- No collision between robot and walking pedestrians
+- Does not exceed top speed

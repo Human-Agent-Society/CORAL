@@ -1,0 +1,4 @@
+The evaluation script will check:
+1.Whether the ports_table matches expected control signals
+2.Whether short explanations are present for each instruction
+3.Whether the next state matches the correct answer

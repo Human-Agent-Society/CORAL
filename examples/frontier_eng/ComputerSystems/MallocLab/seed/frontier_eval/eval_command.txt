@@ -1,0 +1,5 @@
+# Placeholders in UnifiedTask:
+# - {python} / {candidate} / {benchmark} are shell-escaped values (safe by default).
+# - *_raw placeholders are unescaped original text and should only be used when you
+#   need custom quoting behavior.
+bash frontier_eval/run_eval.sh {python} {benchmark} {candidate}

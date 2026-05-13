@@ -1,0 +1,112 @@
+{
+  "battery": {
+    "name": "example_spme_3ah_cell",
+    "capacity_ah": 3.0,
+    "initial_soc": 0.1,
+    "target_soc": 0.9,
+    "ambient_temp_c": 25.0,
+    "theta_n_min": 0.05,
+    "theta_n_max": 0.92,
+    "theta_p_min": 0.08,
+    "theta_p_max": 0.95
+  },
+  "limits": {
+    "max_voltage_v": 4.2,
+    "hard_voltage_cutoff_v": 4.25,
+    "soft_temp_c": 43.0,
+    "hard_temp_c": 46.0,
+    "soft_plating_margin_v": 0.02,
+    "hard_plating_margin_v": -0.015
+  },
+  "simulation": {
+    "dt_s": 1.0,
+    "max_time_s": 3600.0,
+    "temperature_ref_k": 298.15
+  },
+  "profile_bounds": {
+    "min_stages": 1,
+    "max_stages": 8,
+    "min_current_c": 0.2,
+    "max_current_c": 7.0,
+    "min_switch_soc": 0.12
+  },
+  "solid_diffusion": {
+    "tau_n_ref_s": 90.0,
+    "tau_p_ref_s": 120.0,
+    "surface_gain_n_per_a": 0.0014,
+    "surface_gain_p_per_a": 0.0012,
+    "activation_energy_n_j_per_mol": 18000.0,
+    "activation_energy_p_j_per_mol": 22000.0
+  },
+  "electrolyte": {
+    "tau_ref_s": 65.0,
+    "polarization_gain_per_a": 0.0045,
+    "phi_e_coeff_v": 0.08,
+    "activation_energy_j_per_mol": 12000.0
+  },
+  "kinetics": {
+    "i0_n_ref_a": 16.0,
+    "i0_p_ref_a": 14.0,
+    "activation_energy_j_per_mol": 23000.0,
+    "electrolyte_factor": 0.15
+  },
+  "resistance": {
+    "r_ohm_ref_ohm": 0.009,
+    "high_soc_coeff": 0.18,
+    "low_soc_coeff": 0.22,
+    "activation_energy_j_per_mol": 15000.0
+  },
+  "thermal": {
+    "mass_cp_j_per_k": 92.0,
+    "h_a_w_per_k": 1.1,
+    "entropy_coeff_p_v_per_k": 0.00011,
+    "entropy_coeff_n_v_per_k": 8.0e-05,
+    "entropy_scale": 0.6
+  },
+  "aging": {
+    "sei_rate_ref_ah_per_s": 1.5e-09,
+    "sei_activation_energy_j_per_mol": 35000.0,
+    "sei_stress_coeff": 9.0,
+    "sei_margin_v": 0.045,
+    "plating_loss_coeff": 6.5e-04,
+    "plating_power": 2.0,
+    "temperature_penalty_coeff": 0.04
+  },
+  "ocv_positive": {
+    "base_v": 4.35,
+    "linear_coeff": -0.85,
+    "plateau_amp_1_v": 0.11,
+    "plateau_center_1": 0.25,
+    "plateau_gain_1": 10.0,
+    "plateau_amp_2_v": 0.08,
+    "plateau_center_2": 0.82,
+    "plateau_gain_2": 12.0,
+    "temp_coeff_v_per_k": -0.0002
+  },
+  "ocv_negative": {
+    "base_v": 0.08,
+    "linear_coeff": 0.75,
+    "plateau_amp_1_v": 0.1,
+    "plateau_center_1": 0.12,
+    "plateau_gain_1": 11.0,
+    "plateau_amp_2_v": -0.06,
+    "plateau_center_2": 0.82,
+    "plateau_gain_2": 10.0,
+    "temp_coeff_v_per_k": 0.0001
+  },
+  "scoring": {
+    "time_reference_s": 900.0,
+    "time_scale_s": 320.0,
+    "aging_coeff": 70000.0,
+    "plating_coeff": 140.0,
+    "thermal_reference_c": 33.0,
+    "thermal_scale_c": 6.0,
+    "voltage_scale_v": 0.015,
+    "weight_time": 0.4,
+    "weight_aging": 0.25,
+    "weight_plating": 0.15,
+    "weight_thermal": 0.1,
+    "weight_voltage": 0.1,
+    "score_scale": 100.0
+  }
+}

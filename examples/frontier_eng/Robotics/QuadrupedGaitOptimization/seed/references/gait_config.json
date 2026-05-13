@@ -1,0 +1,20 @@
+﻿{
+  "ranges": {
+    "step_frequency": [0.5, 4.0],
+    "duty_factor": [0.30, 0.85],
+    "step_length": [0.04, 0.40],
+    "step_height": [0.02, 0.15],
+    "phase_FR": [0.0, 1.0],
+    "phase_RL": [0.0, 1.0],
+    "phase_RR": [0.0, 1.0],
+    "lateral_distance": [0.08, 0.20]
+  },
+  "eval": {
+    "duration_s": 8.0,
+    "torque_limit": 1.0,
+    "pitch_roll_limit_rad": 0.65,
+    "min_distance_m": 0.15,
+    "control_kp": 3.5,
+    "control_kd": 0.18
+  }
+}

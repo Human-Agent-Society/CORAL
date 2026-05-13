@@ -1,0 +1,1 @@
+{python} verification/evaluator.py {candidate} --json-out metrics.json --artifacts-out artifacts.json

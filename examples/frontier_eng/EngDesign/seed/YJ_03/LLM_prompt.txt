@@ -1,0 +1,31 @@
+## Task Description
+
+This optimisation problem aims to minimise the Mode I stress-intensity factor (SIF) at the crack tip, thereby maximising fatigue-crack-propagation life and enhancing damage tolerance of the structural component. Material is selectively distributed within the design domain so that the resulting layout reduces the SIF while respecting a prescribed material-usage limit.
+
+## Input Parameters
+
+### Material properties
+young       = 1        # Young’s modulus (normalised)
+poisson     = 0.3      # Poisson’s ratio
+ext_stiff   = 0.0      # Stiffness of surrounding “void” (external) material
+
+### Constraints
+Emin        = 1e-9     # Minimum ersatz stiffness for void elements
+volfrac     = 1.1      # Maximum allowable volume fraction
+move        = 0.25     # Maximum density change per iteration
+
+### Mesh definition
+nelx        = 10      # Number of finite-element columns (x-direction)
+nely = int(np.round(nelx/1.25*1.2/2))
+crack_length= 2       # Initial edge-crack length in elements
+
+## Task
+Use the input parameters to set up a topology optimization problem to minimize the stress-intensity factor. Your task is to:
+
+- Simulate the optimization process.
+
+- Ensure that the design adheres to the specified material properties, constraints, and mesh definitions.
+
+- Output the final material distribution, y_hat, and report the minimal stress-intensity factor, named K_y_hat, obtained after convergence.
+
+- y_hat must be a matrix where each element ranges from 0 to 1 inclusively. 

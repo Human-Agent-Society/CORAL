@@ -1,0 +1,8 @@
+PMD Simulation Task Constraints:
+
+1) Implement `PMDSampler` class that inherits from `SamplerBase`.
+2) Implement `simulate_variance_controlled()` method with the required signature.
+3) The method must return a tuple or dict with: (outages_log, weights_log, outage_prob, total_samples, actual_std, converged).
+4) Use importance sampling to bias PMD evolution toward high-DGD regions.
+5) The solution should estimate outage probability accurately and efficiently.
+

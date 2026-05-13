@@ -1,0 +1,9 @@
+Baseline run (local):
+
+$ (cd benchmarks/Robotics/CoFlyersVasarhelyiTuning && python verification/evaluator.py scripts/init.py)
+{"combined_score": 45.62863404341821, "valid": 1.0, "case_count": 8.0, "mean_original_fitness": 0.543713659565818, "mean_phi_corr": 0.7330864721083022, "mean_phi_vel": 0.9650699605341613, "mean_phi_coll": 0.0015924505452638489, "mean_phi_wall": 0.014693734413965088, "mean_phi_mnd": 0.5758380736461941, "worst_min_pairwise_distance": 0.012056512026988802}
+
+Notes:
+- Baseline returns the original CoFlyers Vasarhelyi params_for_parallel parameters for each released case.
+- Evaluator uses the original CoFlyers Vasarhelyi control law and evaluation_0 metric structure in a deterministic Python reimplementation.
+- The current baseline is feasible and reproducible, but still leaves room for case-wise parameter tuning improvements.

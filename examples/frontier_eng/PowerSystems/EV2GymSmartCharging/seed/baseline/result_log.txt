@@ -1,0 +1,30 @@
+EV2GymSmartCharging verification log
+===================================
+
+Source repository:
+- https://github.com/StavrosOrf/EV2Gym
+
+1) Basic functionality test
+Command:
+`python benchmarks/PowerSystems/EV2GymSmartCharging/verification/evaluator.py benchmarks/PowerSystems/EV2GymSmartCharging/scripts/init.py`
+
+Output:
+`{"score": 99.96840069399254, "valid": 1.0, "runtime_s": 13.947000741958618, "mean_total_reward": -368768.90256949054, "mean_total_profits": -110.56453684223534, "mean_energy_user_satisfaction": 100.0}`
+
+2) Official baseline reference
+Command:
+`python benchmarks/PowerSystems/EV2GymSmartCharging/verification/evaluator.py benchmarks/PowerSystems/EV2GymSmartCharging/baseline/solution.py`
+
+Output:
+`{"score": 100.0, "valid": 1.0, "runtime_s": 13.144893407821655, "mean_total_reward": -368673.20842002024, "mean_total_profits": -110.55324022258272, "mean_energy_user_satisfaction": 100.0}`
+
+3) Frontier framework integration
+Command:
+`python -m frontier_eval task=unified task.benchmark=PowerSystems/EV2GymSmartCharging task.runtime.use_conda_run=false algorithm.iterations=0`
+
+Observed result:
+- benchmark loaded successfully
+- initial program evaluated successfully
+- `valid=1.0000`
+- `score=99.9684`
+- run completed without framework errors

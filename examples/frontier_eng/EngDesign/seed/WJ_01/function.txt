@@ -1,0 +1,3 @@
+def denoise_image(noisy_img):
+    import numpy as np
+    return np.zeros_like(noisy_img)

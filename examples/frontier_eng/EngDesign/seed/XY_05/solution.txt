@@ -1,0 +1,35 @@
+    correct_ports = {
+        'ADD': {'ld_reg': '1', 'ld_ir': '0', 'ld_pc': '0', 'ld_cc': '1', 'gateALU': '1', 'gateMDR': '0', 'mem_en': '0', 'mem_we': '0'},
+        'AND': {'ld_reg': '1', 'ld_ir': '0', 'ld_pc': '0', 'ld_cc': '1', 'gateALU': '1', 'gateMDR': '0', 'mem_en': '0', 'mem_we': '0'},
+        'NOT': {'ld_reg': '1', 'ld_ir': '0', 'ld_pc': '0', 'ld_cc': '1', 'gateALU': '1', 'gateMDR': '0', 'mem_en': '0', 'mem_we': '0'},
+        'LDR': {'ld_reg': '1', 'ld_ir': '0', 'ld_pc': '0', 'ld_cc': '1', 'gateALU': '0', 'gateMDR': '1', 'mem_en': '1', 'mem_we': '0'}, 
+        'STR': {'ld_reg': '0', 'ld_ir': '0', 'ld_pc': '0', 'ld_cc': '0', 'gateALU': '0', 'gateMDR': '0', 'mem_en': '1', 'mem_we': '1'}, 
+        'BR':  {'ld_reg': '0', 'ld_ir': '0', 'ld_pc': '1', 'ld_cc': '0', 'gateALU': '0', 'gateMDR': '0', 'mem_en': '0', 'mem_we': '0'}, 
+        'JMP': {'ld_reg': '0', 'ld_ir': '0', 'ld_pc': '1', 'ld_cc': '0', 'gateALU': '0', 'gateMDR': '0', 'mem_en': '0', 'mem_we': '0'}, 
+        'JSR': {'ld_reg': '1', 'ld_ir': '0', 'ld_pc': '1', 'ld_cc': '0', 'gateALU': '0', 'gateMDR': '0', 'mem_en': '0', 'mem_we': '0'}, 
+        'SWAP': {'ld_reg': '1', 'ld_ir': '0', 'ld_pc': '0', 'ld_cc': '1', 'gateALU': '1', 'gateMDR': '0', 'mem_en': '0', 'mem_we': '0'} 
+    }
+    
+    #these are additional operation i add to increase difficulty
+    alternative_ports = {
+        'STR': {'ld_reg': '0', 'ld_ir': '0', 'ld_pc': '0', 'ld_cc': 'X', 'gateALU': 'X', 'gateMDR': 'X', 'mem_en': '1', 'mem_we': '1'}, 
+        'STR': {'ld_reg': '0', 'ld_ir': '0', 'ld_pc': '0', 'ld_cc': '0', 'gateALU': '1', 'gateMDR': '0', 'mem_en': '1', 'mem_we': '1'}, 
+        'BR': {'ld_reg': '0', 'ld_ir': '0', 'ld_pc': '1', 'ld_cc': 'X', 'gateALU': 'X', 'gateMDR': 'X', 'mem_en': '0', 'mem_we': '0'},
+        'JMP': {'ld_reg': '0', 'ld_ir': '0', 'ld_pc': '1', 'ld_cc': 'X', 'gateALU': 'X', 'gateMDR': 'X', 'mem_en': '0', 'mem_we': '0'}, 
+        'JSR': {'ld_reg': '1', 'ld_ir': '0', 'ld_pc': '1', 'ld_cc': 'X', 'gateALU': 'X', 'gateMDR': 'X', 'mem_en': '0', 'mem_we': '0'}, 
+        'LDR': {'ld_reg': '1', 'ld_ir': '0', 'ld_pc': '0', 'ld_cc': '0', 'gateALU': '0', 'gateMDR': '1', 'mem_en': '1', 'mem_we': '0'}, 
+        'JSR': {'ld_reg': '1', 'ld_ir': '0', 'ld_pc': '1', 'ld_cc': '0', 'gateALU': '1', 'gateMDR': '0', 'mem_en': '0', 'mem_we': '0'}
+    }
+
+    # Correct state transitions for each instruction
+    correct_states = {
+        'ADD': {'current': 's_1', 'next': 's_18'},
+        'AND': {'current': 's_5', 'next': 's_18'},
+        'NOT': {'current': 's_9', 'next': 's_18'},
+        'LDR': {'current': 's_6', 'next': 's_25_1', 'sequence': 's_25_1,s_25_2,s_25_3,s_27,s_18'},
+        'STR': {'current': 's_7', 'next': 's_23', 'sequence': 's_23,s_16_1,s_16_2,s_16_3,s_18'},
+        'BR': {'current': 's_0', 'next_taken': 's_22', 'next_not_taken': 's_18', 'sequence_taken': 's_22,s_18'},
+        'JMP': {'current': 's_12', 'next': 's_18'},
+        'JSR': {'current': 's_4', 'next': 's_21', 'sequence': 's_21,s_18'},
+        'SWAP': {'current': None, 'next': None}
+    }

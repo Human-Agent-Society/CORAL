@@ -1,0 +1,37 @@
+{
+  "task": "disruption_eoqd",
+  "method": "baseline",
+  "algorithm": "classic EOQ with manual disruption multiplier",
+  "safety_multiplier": 1.1142857142857143,
+  "baseline": {
+    "order_quantity": 103.27955589886444,
+    "model_cost": 325.2973060495552,
+    "simulation": {
+      "fill_rate": 0.06910964579420194,
+      "stockout_event_rate": 0.9708333333333333,
+      "avg_on_hand": 0.3713370021429635
+    }
+  },
+  "solution": {
+    "order_quantity": 115.08293371587753,
+    "model_cost": 322.86608757528006,
+    "simulation": {
+      "fill_rate": 0.23438435681831044,
+      "stockout_event_rate": 0.8888888888888888,
+      "avg_on_hand": 2.1338279407017384
+    }
+  },
+  "metrics": {
+    "cost_score": 0.4982556836595779,
+    "service_score": 0.0,
+    "risk_score": 0.5627086313781595,
+    "capital_score": 0.9832715074122826
+  },
+  "weights": {
+    "cost_score": 0.35,
+    "service_score": 0.35,
+    "risk_score": 0.25,
+    "capital_score": 0.05
+  },
+  "final_score": 0.36423022249600623
+}

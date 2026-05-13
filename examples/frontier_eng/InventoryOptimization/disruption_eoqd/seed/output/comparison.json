@@ -1,0 +1,7 @@
+{
+  "task": "disruption_eoqd",
+  "baseline_final_score": 0.36423022249600623,
+  "reference_final_score": 0.603055104472446,
+  "gap_reference_minus_baseline": 0.2388248819764398,
+  "winner": "reference"
+}

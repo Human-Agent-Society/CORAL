@@ -1,0 +1,36 @@
+{
+  "task": "disruption_eoqd",
+  "method": "reference",
+  "algorithm": "stockpyl EOQD optimization",
+  "baseline": {
+    "order_quantity": 103.27955589886444,
+    "model_cost": 325.2973060495552,
+    "simulation": {
+      "fill_rate": 0.06910964579420194,
+      "stockout_event_rate": 0.9708333333333333,
+      "avg_on_hand": 0.3713370021429635
+    }
+  },
+  "solution": {
+    "order_quantity": 128.00018748761158,
+    "model_cost": 322.0635739214233,
+    "simulation": {
+      "fill_rate": 0.33667827351247953,
+      "stockout_event_rate": 0.8166666666666667,
+      "avg_on_hand": 4.492218341492575
+    }
+  },
+  "metrics": {
+    "cost_score": 0.6627234159837003,
+    "service_score": 0.24765221003565582,
+    "risk_score": 1.0,
+    "capital_score": 0.6884727073134281
+  },
+  "weights": {
+    "cost_score": 0.35,
+    "service_score": 0.35,
+    "risk_score": 0.25,
+    "capital_score": 0.05
+  },
+  "final_score": 0.603055104472446
+}

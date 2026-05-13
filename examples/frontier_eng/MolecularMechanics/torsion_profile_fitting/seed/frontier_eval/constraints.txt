@@ -1,0 +1,5 @@
+1) Only modify `baseline/init.py`.
+2) Keep the CLI contract unchanged: the candidate must accept `--prepared-input` and `--solution-output`.
+3) Output JSON must provide every `term_scale` required by the prepared input and keep each value inside its declared bounds.
+4) Keep the solver deterministic. If you use randomness, seed it explicitly and reproducibly.
+5) Optimize the evaluated torsion-profile score, not just the candidate's internal predicted score.

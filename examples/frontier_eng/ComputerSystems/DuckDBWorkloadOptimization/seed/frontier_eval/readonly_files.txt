@@ -1,0 +1,4 @@
+verification/evaluator.py
+baseline/solution.py
+references/problem_config.json
+references/duckdb_official/

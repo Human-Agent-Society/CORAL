@@ -1,0 +1,6 @@
+[1] Privileged Horizontal Committee, “The RISC‑V Instruction Set Manual Volume II: Privileged Architecture,” Version 20240411, RISC‑V Tech Hub, May 2024. [Online]. 
+Available: https://drive.google.com/file/d/17GeetSnT5wW3xNuAHI95-SI1gPGd5sJ_/view?usp=drive_link :contentReference[oaicite:0]{index=0}
+
+[2] OASIS Virtual I/O Device (VIRTIO) Technical Committee, “Virtual I/O Device (VIRTIO) Version 1.1,” Version 1.1, OASIS, April 2019. [Online]. Available: https://docs.oasis-open.org/virtio/virtio/v1.1/cs01/virtio-v1.1-cs01.pdf
+
+[3] Professor [Krill Levchenko], "File System", Lecture Slides, [UIUC], ECE391 Course Materials, Spring 2025.

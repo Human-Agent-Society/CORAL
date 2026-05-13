@@ -1,0 +1,125 @@
+{
+  "problem_name": "ISCSO 2015 - 45 Bar 2D Truss Size + Shape Optimization",
+  "source": "International Student Competition in Structural Optimization (ISCSO) 2015",
+  "dimension": 54,
+  "num_bars": 45,
+  "num_nodes": 20,
+  "num_load_cases": 1,
+  "spatial_dimension": 2,
+  "units": {
+    "length": "mm",
+    "area": "mm^2",
+    "force": "N",
+    "stress": "MPa",
+    "density": "kg/mm^3",
+    "weight": "kg"
+  },
+  "material": {
+    "E": 206842.0,
+    "rho": 7.86e-6
+  },
+  "nodes": [
+    {"id": 1,  "x": 0.0,     "y": 0.0,    "is_shape_variable": false},
+    {"id": 2,  "x": 2000.0,  "y": 5080.0, "is_shape_variable": true, "variable_dim": "y"},
+    {"id": 3,  "x": 2000.0,  "y": 0.0,    "is_shape_variable": false},
+    {"id": 4,  "x": 4000.0,  "y": 5080.0, "is_shape_variable": true, "variable_dim": "y"},
+    {"id": 5,  "x": 4000.0,  "y": 0.0,    "is_shape_variable": false},
+    {"id": 6,  "x": 6000.0,  "y": 5080.0, "is_shape_variable": true, "variable_dim": "y"},
+    {"id": 7,  "x": 6000.0,  "y": 0.0,    "is_shape_variable": false},
+    {"id": 8,  "x": 8000.0,  "y": 5080.0, "is_shape_variable": true, "variable_dim": "y"},
+    {"id": 9,  "x": 8000.0,  "y": 0.0,    "is_shape_variable": false},
+    {"id": 10, "x": 10000.0, "y": 5080.0, "is_shape_variable": true, "variable_dim": "y"},
+    {"id": 11, "x": 10000.0, "y": 0.0,    "is_shape_variable": false},
+    {"id": 12, "x": 12000.0, "y": 5080.0, "is_shape_variable": true, "variable_dim": "y"},
+    {"id": 13, "x": 12000.0, "y": 0.0,    "is_shape_variable": false},
+    {"id": 14, "x": 14000.0, "y": 5080.0, "is_shape_variable": true, "variable_dim": "y"},
+    {"id": 15, "x": 14000.0, "y": 0.0,    "is_shape_variable": false},
+    {"id": 16, "x": 16000.0, "y": 5080.0, "is_shape_variable": true, "variable_dim": "y"},
+    {"id": 17, "x": 16000.0, "y": 0.0,    "is_shape_variable": false},
+    {"id": 18, "x": 18000.0, "y": 5080.0, "is_shape_variable": true, "variable_dim": "y"},
+    {"id": 19, "x": 18000.0, "y": 0.0,    "is_shape_variable": false},
+    {"id": 20, "x": 20000.0, "y": 0.0,    "is_shape_variable": false}
+  ],
+  "bars": [
+    {"id": 1,  "node_i": 1,  "node_j": 2,  "group": "left_diagonal"},
+    {"id": 2,  "node_i": 1,  "node_j": 3,  "group": "bottom_chord"},
+    {"id": 3,  "node_i": 2,  "node_j": 3,  "group": "top_chord"},
+    {"id": 4,  "node_i": 2,  "node_j": 4,  "group": "top_chord"},
+    {"id": 5,  "node_i": 3,  "node_j": 4,  "group": "right_diagonal"},
+    {"id": 6,  "node_i": 3,  "node_j": 5,  "group": "bottom_chord"},
+    {"id": 7,  "node_i": 4,  "node_j": 5,  "group": "vertical"},
+    {"id": 8,  "node_i": 4,  "node_j": 6,  "group": "top_chord"},
+    {"id": 9,  "node_i": 5,  "node_j": 6,  "group": "right_diagonal"},
+    {"id": 10, "node_i": 5,  "node_j": 7,  "group": "bottom_chord"},
+    {"id": 11, "node_i": 6,  "node_j": 7,  "group": "vertical"},
+    {"id": 12, "node_i": 6,  "node_j": 8,  "group": "top_chord"},
+    {"id": 13, "node_i": 7,  "node_j": 8,  "group": "right_diagonal"},
+    {"id": 14, "node_i": 7,  "node_j": 9,  "group": "bottom_chord"},
+    {"id": 15, "node_i": 8,  "node_j": 9,  "group": "vertical"},
+    {"id": 16, "node_i": 8,  "node_j": 10, "group": "top_chord"},
+    {"id": 17, "node_i": 9,  "node_j": 10, "group": "right_diagonal"},
+    {"id": 18, "node_i": 9,  "node_j": 11, "group": "bottom_chord"},
+    {"id": 19, "node_i": 10, "node_j": 11, "group": "vertical"},
+    {"id": 20, "node_i": 10, "node_j": 12, "group": "top_chord"},
+    {"id": 21, "node_i": 11, "node_j": 12, "group": "right_diagonal"},
+    {"id": 22, "node_i": 11, "node_j": 13, "group": "bottom_chord"},
+    {"id": 23, "node_i": 12, "node_j": 13, "group": "vertical"},
+    {"id": 24, "node_i": 12, "node_j": 14, "group": "top_chord"},
+    {"id": 25, "node_i": 13, "node_j": 14, "group": "right_diagonal"},
+    {"id": 26, "node_i": 13, "node_j": 15, "group": "bottom_chord"},
+    {"id": 27, "node_i": 14, "node_j": 15, "group": "vertical"},
+    {"id": 28, "node_i": 14, "node_j": 16, "group": "top_chord"},
+    {"id": 29, "node_i": 15, "node_j": 16, "group": "right_diagonal"},
+    {"id": 30, "node_i": 15, "node_j": 17, "group": "bottom_chord"},
+    {"id": 31, "node_i": 16, "node_j": 17, "group": "vertical"},
+    {"id": 32, "node_i": 16, "node_j": 18, "group": "top_chord"},
+    {"id": 33, "node_i": 17, "node_j": 18, "group": "right_diagonal"},
+    {"id": 34, "node_i": 17, "node_j": 19, "group": "bottom_chord"},
+    {"id": 35, "node_i": 18, "node_j": 19, "group": "vertical"},
+    {"id": 36, "node_i": 18, "node_j": 20, "group": "right_diagonal"},
+    {"id": 37, "node_i": 19, "node_j": 20, "group": "bottom_chord"},
+    {"id": 38, "node_i": 2,  "node_j": 3,  "group": "left_diagonal"},
+    {"id": 39, "node_i": 4,  "node_j": 5,  "group": "left_diagonal"},
+    {"id": 40, "node_i": 6,  "node_j": 7,  "group": "left_diagonal"},
+    {"id": 41, "node_i": 8,  "node_j": 9,  "group": "left_diagonal"},
+    {"id": 42, "node_i": 10, "node_j": 11, "group": "left_diagonal"},
+    {"id": 43, "node_i": 12, "node_j": 13, "group": "left_diagonal"},
+    {"id": 44, "node_i": 14, "node_j": 15, "group": "left_diagonal"},
+    {"id": 45, "node_i": 16, "node_j": 17, "group": "left_diagonal"}
+  ],
+  "supports": [
+    {"node": 1,  "fix_x": true, "fix_y": true},
+    {"node": 20, "fix_x": false, "fix_y": true}
+  ],
+  "load_cases": [
+    {
+      "id": 0,
+      "name": "Three vertical loads",
+      "description": "P1=60 kips at nodes 15 and 19, P2=80 kips at node 17",
+      "loads": [
+        {"node": 15, "fx": 0.0, "fy": -266893.0},
+        {"node": 17, "fx": 0.0, "fy": -355857.0},
+        {"node": 19, "fx": 0.0, "fy": -266893.0}
+      ]
+    }
+  ],
+  "constraints": {
+    "stress_limit": 206.8,
+    "displacement_limit": 50.8,
+    "tolerance": 1e-6
+  },
+  "variable_bounds": {
+    "area_min": 64.516,
+    "area_max": 9677.4,
+    "y_min": 2540.0,
+    "y_max": 35560.0,
+    "area_discrete": true,
+    "area_step": 64.516,
+    "y_discrete": true,
+    "y_step": 25.4
+  },
+  "shape_variable_node_ids": [2, 4, 6, 8, 10, 12, 14, 16, 18],
+  "optimization": {
+    "max_evaluations": 7000
+  }
+}

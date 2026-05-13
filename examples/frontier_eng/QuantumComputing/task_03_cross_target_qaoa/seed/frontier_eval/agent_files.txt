@@ -1,0 +1,10 @@
+README.md
+README_zh-CN.md
+TASK.md
+TASK_zh-CN.md
+baseline/structural_optimizer.py
+frontier_eval/constraints.txt
+verification/evaluate.py
+tests/case_01.json
+tests/case_02.json
+tests/case_03.json

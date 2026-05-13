@@ -1,0 +1,9 @@
+eval.stdout.txt
+eval.stderr.txt
+run_meta.txt
+metrics.json
+artifacts.json
+verification/outputs/*.json
+verification/outputs/*.png
+verification/artifacts/*.json
+verification/artifacts/*.png

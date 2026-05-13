@@ -1,0 +1,7 @@
+{
+  "task": "joint_replenishment",
+  "baseline_final_score": 0.3034231848949367,
+  "reference_final_score": 0.8243922787656859,
+  "gap_reference_minus_baseline": 0.5209690938707492,
+  "winner": "reference"
+}

@@ -1,0 +1,6 @@
+QuantumComputing unified constraints:
+1) Only modify `baseline/solve.py`.
+2) Keep function signature: `optimize_circuit(input_circuit, target, case)`.
+3) Return a valid Qiskit `QuantumCircuit`.
+4) Do not modify benchmark evaluator/test infrastructure files under `verification/`, `tests/`, or `frontier_eval/`.
+5) Keep imports and code compatible with the benchmark runtime environment.

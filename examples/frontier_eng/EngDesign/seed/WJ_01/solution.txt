@@ -1,0 +1,1 @@
+Original image is the ground truth, no solution needed. 

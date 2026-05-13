@@ -1,0 +1,8 @@
+## Evaluation Rubric
+- Job completed: 10 points
+- The output material distribution, y_hat, is in correct shape: 20 points
+- Stress-intensity factor error (KE) = (K(y_hat) - K(y))/K(y) is less than certain threshold: 70 points
+
+Note: y is the ground truth toplogy
+
+

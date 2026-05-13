@@ -1,0 +1,74 @@
+# name: mla-decode-py
+
+files:
+  - {"name": "submission.py", "source": "@SUBMISSION@"}
+  - {"name": "task.py", "source": "task.py"}
+  - {"name": "utils.py", "source": "utils.py"}
+  - {"name": "reference.py", "source": "reference.py"}
+  - {"name": "eval.py", "source": "eval.py"}
+
+lang: "py"
+
+description: |
+  You will implement a custom mla decode kernel optimized for MI300, a few things simplified here:
+
+  1. Q, K, V data type as bfloat16
+    
+  2. decode only with pre-allocated non-paged latent kv cache
+
+  3. return the update kv cache with MLA output
+
+  The shapes of all outer and inner dimensions of tensors are from DeepSeek-R1, and split number of heads to fit in one GPU. 
+  To be explicit, you will be given a tuple to tensors:
+
+  ```yml
+  input [bs, sq, dim]
+  attn_output [bs, n_heads, sq, v_head_dim]
+  kv_cache [bs, sq, kv_lora_rank + qk_rope_head_dim]
+  ``` 
+
+  where 
+
+  0. bs::128 # batch size
+  1. prefill::[512, 2048, 4096, 6144] # as kv length
+  2. sq::1 # as only consider decoding
+  3. dim::7168 # hidden size of deepseek v3
+  4. kv_lora_rank::[512] # kv lora rank of deepseek v3
+  5. qk_rope_head_dim::[64] # rope embedding dimension
+  6. v_head_dim::128 # head size
+  7. n_heads::128 # num of attn heads
+
+  The ranking criteria is the geometric mean of the benchmark results.
+
+  For the grand prize, your kernel will be evaluated against the speed of light analysis
+  and the solution closest to the speed of light will be awarded the grand prize.
+ 
+  The speed of light analysis is::
+  | bs | prefill | sq | dtype |  roofline time(us) |
+  |---|---|---|---|---|
+  | 128 | 512 | 1 | bf16 | 54.62 |
+  | 128 | 2048 | 1 | bf16 | 141.16 |
+  | 128 | 4096 | 1 | bf16 | 210.75 |
+  | 128 | 6144 | 1 | bf16 | 280.87 | 
+
+config:
+  main: "eval.py"
+
+templates:
+  Python: "submission.py"
+
+test_timeout: 900
+benchmark_timeout: 900
+ranked_timeout: 1200
+
+tests:
+  - {"batchsize": 128, "dim": 7168, "dq": 1536, "prefill": 128, "seed": 9247}
+  - {"batchsize": 128, "dim": 7168, "dq": 1536, "prefill": 512, "seed": 2197}
+  - {"batchsize": 128, "dim": 7168, "dq": 1536, "prefill": 1024, "seed": 9107}
+  - {"batchsize": 128, "dim": 7168, "dq": 1536, "prefill": 2048, "seed": 5291}
+
+benchmarks:
+  - {"batchsize": 128, "dim": 7168, "dq": 1536, "prefill": 4096, "seed": 9817}
+  - {"batchsize": 128, "dim": 7168, "dq": 1536, "prefill": 6144, "seed": 5291}
+
+ranking_by: "geom"

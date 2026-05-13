@@ -1,0 +1,42 @@
+{
+  "robot": "KUKA LBR iiwa 14 R820 (7-DOF, simplified model)",
+  "dh_parameters": {
+    "convention": "standard DH: T_i = Rz(theta_i) * Tz(d_i) * Tx(a_i) * Rx(alpha_i)",
+    "joints": [
+      {"joint": 1, "a_m": 0.0, "d_m": 0.340, "alpha_rad":  1.5707963},
+      {"joint": 2, "a_m": 0.0, "d_m": 0.000, "alpha_rad": -1.5707963},
+      {"joint": 3, "a_m": 0.0, "d_m": 0.400, "alpha_rad": -1.5707963},
+      {"joint": 4, "a_m": 0.0, "d_m": 0.000, "alpha_rad":  1.5707963},
+      {"joint": 5, "a_m": 0.0, "d_m": 0.400, "alpha_rad":  1.5707963},
+      {"joint": 6, "a_m": 0.0, "d_m": 0.000, "alpha_rad": -1.5707963},
+      {"joint": 7, "a_m": 0.0, "d_m": 0.126, "alpha_rad":  0.0}
+    ]
+  },
+  "joint_limits_rad": [
+    [-2.9671, 2.9671],
+    [-2.0944, 2.0944],
+    [-2.9671, 2.9671],
+    [-2.0944, 2.0944],
+    [-2.9671, 2.9671],
+    [-2.0944, 2.0944],
+    [-3.0543, 3.0543]
+  ],
+  "max_joint_velocities_rad_s": [1.48, 1.48, 1.74, 1.74, 2.27, 2.27, 2.27],
+  "max_joint_accelerations_rad_s2": [3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0],
+  "link_capsule_radii_m": [0.10, 0.10, 0.10, 0.08, 0.08, 0.08, 0.06],
+  "task": {
+    "q_start_rad": [0.0, 0.5, 0.0, -1.5, 0.0, 1.0, 0.0],
+    "q_goal_rad":  [1.2, -0.3, 0.8, -0.8, 0.5, 0.8, 1.0],
+    "goal_tolerance_rad": 0.01
+  },
+  "obstacle": {
+    "type": "AABB",
+    "center_m": [0.45, -0.35, 0.65],
+    "half_extents_m": [0.08, 0.20, 0.08]
+  },
+  "evaluation": {
+    "interpolation": "cubic_spline_clamped",
+    "samples_per_segment": 30,
+    "collision_check": "capsule_vs_aabb"
+  }
+}

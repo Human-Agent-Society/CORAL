@@ -1,0 +1,8 @@
+ev2gym
+numpy
+pandas
+PyYAML
+pandapower
+multicopula
+numba
+psutil

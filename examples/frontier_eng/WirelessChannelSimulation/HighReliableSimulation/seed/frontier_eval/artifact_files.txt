@@ -1,0 +1,2 @@
+# No extra artifact files are auto-collected by default for this benchmark.
+# metrics.json and artifacts.json are handled separately by UnifiedTask.

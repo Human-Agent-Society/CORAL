@@ -1,0 +1,108 @@
+Task Description
+
+Consider an image denoising task where a grayscale image is corrupted by additive noise. 
+The image is represented as a NumPy array in Python. The goal is to design a filter pipeline using a Large Language Model (LLM) 
+that reads the noisy image and returns a denoised version 'filtered_img'
+The input image 'img' is available as a NumPy array and you will get the image encoded using base64 method. 
+You need to analyze the type of noise added into the image carefully. If only one type of noise is added maybe one or two carefully selected filters which are specially designed for the noise is enough. 
+If the image is corrupted by a mixture of different noise task will be complicated. One to two filters may not be enough so 
+you may need to use a series of filters. No prior knowledge is given on the exact noise parameters.
+Explore and combine **a diverse set of filters** available in OpenCV when the task is complicated. Do not just simply rely on gaussian and median filters when you think they are not sufficient, try more filters. 
+Feel free to use simple function deisgn when you think that the noise is simple and one or two single filters such as gaussian filter or median filter are enough to finish the task. In this case, do not make the design complicated, 
+if a single filter may work, just use a single filter. 
+Make sure the generated code is executable so you must carefully review your code after you finish the function. 
+Input image is a color image so the output image should also be a color image with shape (3, 512, 512). 
+
+Task
+
+Design a sequence of filters to denoise the input image. The LLM should:
+1. Read and analyze the data in the image. If there's only a single type of noise, tell me the name and if there's a mixture of different noise list the types of noise. 
+
+2. Review common types of noise, their characteristic and their filter strateg. Explain the filtering strategy: list each filter to be applied in order, along with the motivation for its use (e.g., remove salt-and-pepper noise, preserve edges while reducing Gaussian noise).
+
+3. Specify filter parameters: for each filter, clearly define its parameters (e.g., kernel size, sigma, threshold).
+
+4. Generate executable code: write a Python function named denoise_image that takes 'img' as input, applies the filter pipeline step by step using standard Python libraries (e.g., NumPy, OpenCV, SciPy), and outputs the denoised image in the variable 'filtered_img'.
+
+The function must be a single Python code block, like this: 
+    def denoise_image(noisy_img):
+        # your code 
+    
+        return filtered_img
+
+When I evaluate the results, I focuses on how much information you can recover from the noisy image 
+and I will use MSE and PSNR as matrics. So please denoise the image as much as possible while keeping the original detailed informarion and texture. 
+Here shows how I will evaluate your response by running the function you provide: 
+
+def evaluate_llm_response(llm_response):
+    """
+    Evaluate the image filtering code returned by the LLM.
+    Load the only image in 'images', denoise it using LLM code, save result to 'results' folder,
+    and compute MSE and PSNR using a known reference (if needed).
+    """
+
+    confidence = 100  # Confidence score assigned to the evaluation
+
+    # === Step 1: Locate the only image in 'images' ===
+    input_folder = 'images'
+    image_files = [f for f in os.listdir(input_folder)
+                   if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+
+    if len(image_files) != 1:
+        raise ValueError("The 'images' folder must contain exactly one image.")
+
+    image_name = image_files[0]
+    image_path = os.path.join(input_folder, image_name)
+    noisy_img = cv2.imread(image_path)
+
+    original_img = cv2.imread('original_image.png')
+
+    if noisy_img is None:
+        raise IOError(f"Failed to read image: {image_path}")
+
+    # === Step 2: Execute LLM code to perform denoising ===
+    function_code = llm_response.config.function_code
+
+    with open("function.txt", "w", encoding="utf-8") as file:
+        file.write(function_code)
+
+    exec_globals = {'np': np, 'cv2': cv2, 'img_noisy': noisy_img}
+    exec(function_code, exec_globals)
+
+    filtered_img = exec_globals['denoise_image'](noisy_img)
+
+    # === Step 3: Save result to 'results' folder ===
+    os.makedirs('results', exist_ok=True)
+    base_name, ext = os.path.splitext(image_name)
+    output_path = os.path.join('results', f"{base_name}_filtered{ext}")
+    cv2.imwrite(output_path, filtered_img)
+
+    # === Step 4: Evaluation step (optional) ===
+    # Since we don't have a clean original image here, we cannot compute real MSE/PSNR.
+    # You can skip this part or use dummy values if reference is unavailable.
+    mse = mean_squared_error(original_img.flatten(), filtered_img.flatten())
+    psnr = cv2.PSNR(original_img, filtered_img)
+    passed = mse < 100 
+
+
+    MSE_best = 0           
+    MSE_worst = 500        
+    PSNR_best = 40         
+    PSNR_worst = 10 
+
+    w_psnr = 0.7
+    w_mse = 0.3
+    mse_norm = max(0, min(1, (MSE_worst - mse) / (MSE_worst - MSE_best)))
+    psnr_norm = max(0, min(1, (psnr - PSNR_worst) / (PSNR_best - PSNR_worst)))  
+    score = 100 * (w_mse * mse_norm + w_psnr * psnr_norm)    
+
+    metrics = {"mse": mse, "psnr": psnr}
+    print(score)
+    # print(llm_response.config.denoising_strategy)
+    details = {
+        "strategy": llm_response.config.denoising_strategy,
+        "score": metrics,
+        "denoising function": function_code
+    }
+
+    return passed, details, score, confidence

@@ -1,0 +1,8 @@
+Rayleigh Fading BER Analysis Task Constraints:
+
+1) Implement `DeepFadeSampler` class that inherits from `SamplerBase`.
+2) Implement `simulate_variance_controlled()` method with the required signature.
+3) The method must return a tuple or dict with: (errors_log, weights_log, err_ratio, total_samples, actual_std, converged).
+4) Use importance sampling to bias channel gain distribution toward deep fade events.
+5) The solution should estimate average BER accurately and efficiently under Rayleigh fading.
+

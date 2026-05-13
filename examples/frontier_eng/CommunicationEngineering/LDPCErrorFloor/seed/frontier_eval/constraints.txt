@@ -1,0 +1,8 @@
+LDPC Error Floor Estimation Task Constraints:
+
+1) Implement `TrappingSetSampler` class that inherits from `SamplerBase`.
+2) Implement `simulate_variance_controlled()` method with the required signature.
+3) The method must return a tuple or dict with: (errors_log, weights_log, err_ratio, total_samples, actual_std, converged).
+4) Use importance sampling to bias toward noise vectors that cause trapping set failures.
+5) The solution should estimate error floor BER accurately and efficiently.
+

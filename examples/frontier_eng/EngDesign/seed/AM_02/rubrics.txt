@@ -1,0 +1,13 @@
+Robot1:
+Starting position at t=0 is correct: 5 points
+Ending position at t=19 is correct: 10 points
+No collision between robot and static obstacles: 12.5 points
+No collision between robot and walking pedestrians: 12.5 positions
+Does not exceed top speed: 10 points
+
+Robot2:
+Starting position at t=0 is correct: 5 points
+Ending position at t=19 is correct: 10 points
+No collision between robot and static obstacles: 12.5 points
+No collision between robot and walking pedestrians: 12.5 positions
+Does not exceed top speed: 10 points

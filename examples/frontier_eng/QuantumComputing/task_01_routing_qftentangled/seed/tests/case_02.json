@@ -1,0 +1,7 @@
+{
+  "case_id": "routing_case_02",
+  "benchmark": "qftentangled",
+  "num_qubits": 11,
+  "input_opt_level": 1,
+  "target": "ibm_falcon_27"
+}

@@ -1,0 +1,7 @@
+{
+  "task": "general_meio",
+  "baseline_final_score": 0.18253152886847146,
+  "reference_final_score": 0.6055514679753219,
+  "gap_reference_minus_baseline": 0.42301993910685043,
+  "winner": "reference"
+}

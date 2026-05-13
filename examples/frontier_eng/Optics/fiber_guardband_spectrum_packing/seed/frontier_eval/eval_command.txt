@@ -1,0 +1,1 @@
+bash {benchmark}/_parent/frontier_eval/run_eval.sh {python} {benchmark} {candidate}

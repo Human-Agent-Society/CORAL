@@ -1,0 +1,6 @@
+UnifiedTask constraints:
+1) Only modify `scripts/init.py`.
+2) Preserve the public entrypoint, function signatures, and output contract expected by `frontier_eval/evaluator.py`.
+3) Do not modify benchmark assets, documentation, references, verification code, runtime helpers, tests, or `frontier_eval/` metadata.
+4) If the task produces named outputs such as `submission.json`, `results.txt`, `solution.json`, or `prediction.h5ad`, keep the expected filename and schema unchanged.
+5) Prioritize validity and correctness before optimization.

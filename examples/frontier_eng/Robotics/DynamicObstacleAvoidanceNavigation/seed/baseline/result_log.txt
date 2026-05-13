@@ -1,0 +1,6 @@
+Baseline run (local):
+{"score": 12.850000000000046, "feasible": true, "details": {"scene_1": {"success": true, "time": 12.150000000000038}, "scene_2": {"success": true, "time": 12.30000000000004}, "scene_3": {"success": true, "time": 14.100000000000065}}}
+
+Notes:
+- Baseline uses A* static path planning + constrained differential-drive tracking.
+- Baseline is a feasible starter and solves all 3/3 fixed scenarios.

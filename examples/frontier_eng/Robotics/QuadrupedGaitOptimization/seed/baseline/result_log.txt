@@ -1,0 +1,6 @@
+Baseline run (local):
+{"score": 0.02215433702997223, "feasible": true}
+
+Notes:
+- Baseline uses a trot-like phase pattern with wider lateral stance for stable forward progress.
+- Evaluator accepts UTF-8 files with or without BOM.

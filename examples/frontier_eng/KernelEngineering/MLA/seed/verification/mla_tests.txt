@@ -1,0 +1,4 @@
+batchsize: 128; dim: 7168; dq: 1536; prefill: 128; seed: 9247
+batchsize: 128; dim: 7168; dq: 1536; prefill: 512; seed: 2197
+batchsize: 128; dim: 7168; dq: 1536; prefill: 1024; seed: 9107
+batchsize: 128; dim: 7168; dq: 1536; prefill: 2048; seed: 5291

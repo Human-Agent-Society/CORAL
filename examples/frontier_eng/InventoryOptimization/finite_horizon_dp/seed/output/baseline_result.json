@@ -1,0 +1,48 @@
+{
+  "task": "finite_horizon_dp",
+  "method": "baseline",
+  "algorithm": "manual moment-based policy",
+  "policy": {
+    "reorder_points": [
+      24,
+      27,
+      33,
+      48,
+      57,
+      42,
+      30,
+      27
+    ],
+    "order_up_to_levels": [
+      81,
+      87,
+      100,
+      128,
+      147,
+      117,
+      93,
+      87
+    ]
+  },
+  "baseline_eval": {
+    "avg_total_cost": 3108.355830984549,
+    "avg_fill_rate": 0.964214575844033,
+    "avg_order_count": 8.0
+  },
+  "solution_eval": {
+    "avg_total_cost": 2785.5505672465833,
+    "avg_fill_rate": 0.9123478723223031,
+    "avg_order_count": 4.308
+  },
+  "metrics": {
+    "cost_score": 0.5769489317939496,
+    "service_score": 0.0,
+    "cadence_score": 1.0
+  },
+  "weights": {
+    "cost_score": 0.55,
+    "service_score": 0.4,
+    "cadence_score": 0.05
+  },
+  "final_score": 0.3673219124866723
+}

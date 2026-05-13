@@ -1,0 +1,7 @@
+{
+  "task": "tree_gsm_safety_stock",
+  "baseline_final_score": 0.38125997730251027,
+  "reference_final_score": 0.6606070711644478,
+  "gap_reference_minus_baseline": 0.27934709386193757,
+  "winner": "reference"
+}

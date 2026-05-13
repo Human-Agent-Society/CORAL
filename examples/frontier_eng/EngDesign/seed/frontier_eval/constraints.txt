@@ -1,0 +1,15 @@
+EngDesign UnifiedTask constraints:
+1) Only modify `submission/engdesign_submission.py`.
+2) Keep the top-level variable name `SUBMISSION` as a Python dict.
+3) Keep all benchmark/evaluator infrastructure files unchanged under `frontier_eval/` and task folders.
+4) Keep required task keys in `SUBMISSION`:
+   - AM_02, AM_03, CY_03, WJ_01, XY_05, YJ_02, YJ_03
+5) `CY_03` must provide Python function source strings for:
+   - `vioblk_read`
+   - `vioblk_write`
+6) `CY_03` submissions must NOT reference benchmark-internal gold helpers:
+   - `gold_vioblk_read`
+   - `gold_vioblk_write`
+7) `WJ_01` must provide `function_code` that defines:
+   - `def denoise_image(noisy_img): ...`
+8) Keep output format compatible with each task's `output_structure.py`.

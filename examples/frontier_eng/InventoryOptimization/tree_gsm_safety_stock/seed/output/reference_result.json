@@ -1,0 +1,28 @@
+{
+  "task": "tree_gsm_safety_stock",
+  "method": "reference",
+  "algorithm": "stockpyl GSM tree DP",
+  "solution_cst": {
+    "1": 0,
+    "3": 0,
+    "2": 0,
+    "4": 1
+  },
+  "metrics": {
+    "baseline_cost_nominal": 85.41152534957988,
+    "solution_cost_nominal": 63.41152534957988,
+    "baseline_cost_stress": 111.03498295445385,
+    "solution_cost_stress": 82.43498295445386,
+    "cost_score": 0.515152958806354,
+    "robustness_score": 0.515152958806354,
+    "sla_compliance": 1.0,
+    "complexity_score": 1.0
+  },
+  "weights": {
+    "cost_score": 0.35,
+    "robustness_score": 0.35,
+    "sla_compliance": 0.1,
+    "complexity_score": 0.2
+  },
+  "final_score": 0.6606070711644478
+}

@@ -1,0 +1,58 @@
+# name: flash-attention-py
+
+files:
+  - {"name": "submission.py", "source": "@SUBMISSION@"}
+  - {"name": "task.py", "source": "task.py"}
+  - {"name": "utils.py", "source": "utils.py"}
+  - {"name": "reference.py", "source": "reference.py"}
+  - {"name": "eval.py", "source": "eval.py"}
+
+lang: "py"
+
+description: |
+  Optimize a standard multi-head attention forward pass kernel.
+
+  Given Q, K, V tensors in shape (batch_size, n_heads, seq_len, head_dim),
+  compute scaled dot-product attention with optional causal masking.
+
+  The naive implementation materializes the full N×N attention matrix.
+  The goal is to implement a memory-efficient / fused kernel (e.g. flash attention)
+  that avoids O(N^2) memory and runs faster on GPU.
+
+  Tensor shapes:
+  ```yml
+  Q [batch_size, n_heads, seq_len_q, head_dim]
+  K [batch_size, n_heads, seq_len_kv, head_dim]
+  V [batch_size, n_heads, seq_len_kv, head_dim]
+  output [batch_size, n_heads, seq_len_q, head_dim]
+  ```
+
+  Parameters:
+  0. batch_size: 4
+  1. n_heads: 32
+  2. head_dim: 128
+  3. seq_len_q == seq_len_kv: [512, 1024, 2048, 4096]
+  4. causal: 1 (True)
+  5. dtype: bfloat16
+
+  The ranking criteria is the geometric mean of the benchmark results.
+
+config:
+  main: "eval.py"
+
+templates:
+  Python: "submission.py"
+
+test_timeout: 900
+benchmark_timeout: 900
+
+tests:
+  - {"batchsize": 4, "nheads": 32, "seqlen_q": 512, "seqlen_kv": 512, "headdim": 128, "causal": 1, "seed": 4217}
+  - {"batchsize": 4, "nheads": 32, "seqlen_q": 1024, "seqlen_kv": 1024, "headdim": 128, "causal": 1, "seed": 7831}
+  - {"batchsize": 4, "nheads": 32, "seqlen_q": 2048, "seqlen_kv": 2048, "headdim": 128, "causal": 1, "seed": 1259}
+
+benchmarks:
+  - {"batchsize": 4, "nheads": 32, "seqlen_q": 2048, "seqlen_kv": 2048, "headdim": 128, "causal": 1, "seed": 5923}
+  - {"batchsize": 4, "nheads": 32, "seqlen_q": 4096, "seqlen_kv": 4096, "headdim": 128, "causal": 1, "seed": 3847}
+
+ranking_by: "geom"

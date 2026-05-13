@@ -1,0 +1,240 @@
+{
+  "source_repo": "https://github.com/micros-uav/CoFlyers",
+  "source_readme": "https://github.com/micros-uav/CoFlyers/blob/main/README.md",
+  "source_description": "CoFlyers Prototype_Simulator Vasarhelyi auto-tuning cases extracted from original params_for_parallel files.",
+  "source_files": {
+    "xml_config": "https://github.com/micros-uav/CoFlyers/blob/main/matlab_simulink_ws/Prototype_Simulator/xml_config_files/parameters.xml",
+    "swarm_module": "https://github.com/micros-uav/CoFlyers/blob/main/matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/Vasarhelyi_module_generate_desire_i.m",
+    "evaluation_one": "https://github.com/micros-uav/CoFlyers/blob/main/matlab_simulink_ws/Prototype_Simulator/lower_layers/evaluation_module/evaluation_0_module/evaluation_0_module_one.m",
+    "evaluation_average": "https://github.com/micros-uav/CoFlyers/blob/main/matlab_simulink_ws/Prototype_Simulator/lower_layers/evaluation_module/evaluation_0_module/evaluation_0_module_average.m"
+  },
+  "global_config": {
+    "number": 64,
+    "time_max": 401.0,
+    "sample_time_motion": 0.0025,
+    "sample_time_control_upper": 0.1,
+    "sample_time_control_bottom": 0.0025,
+    "motion_model_type": "quadcopter",
+    "swarm_algorithm_type": "Vasarhelyi",
+    "evaluation_metric_type": "evaluation_0",
+    "delta_r": 1.8,
+    "initial_height": 1.0,
+    "map_x_range": [
+      -20.0,
+      20.0
+    ],
+    "map_y_range": [
+      -20.0,
+      20.0
+    ],
+    "map_z_range": [
+      0.0,
+      2.0
+    ],
+    "point_mass": {
+      "a_max": 2.0,
+      "v_max": 1.5,
+      "T_p": 1.0,
+      "T_v": 1.0
+    },
+    "evaluation_0": {
+      "v_flock": 0.2,
+      "r_coll": 0.4,
+      "a_tol": 3e-05
+    }
+  },
+  "cases": [
+    {
+      "case_id": "vasarhelyi_parallel_1",
+      "source_path": "matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_1.m",
+      "source_url": "https://github.com/micros-uav/CoFlyers/blob/main/matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_1.m",
+      "baseline_params": {
+        "r_com": 8.0,
+        "v_flock": 0.2,
+        "r_rep_0": 1.8812,
+        "p_rep": 0.43591,
+        "r_frict_0": 4.2922,
+        "c_frict": 0.37193,
+        "v_frict": 0.12361,
+        "p_frict": 2.7267,
+        "a_frict": 0.97505,
+        "r_shill_0": 0.69786,
+        "v_shill": 0.90614,
+        "p_shill": 4.6549,
+        "a_shill": 0.50718,
+        "v_max": 0.24,
+        "dim": 2.0,
+        "height": 0.7,
+        "dr_shill": 1.0
+      }
+    },
+    {
+      "case_id": "vasarhelyi_parallel_2",
+      "source_path": "matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_2.m",
+      "source_url": "https://github.com/micros-uav/CoFlyers/blob/main/matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_2.m",
+      "baseline_params": {
+        "r_com": 8.0,
+        "v_flock": 0.2,
+        "r_rep_0": 1.0737,
+        "p_rep": 0.47621,
+        "r_frict_0": 6.579,
+        "c_frict": 0.31016,
+        "v_frict": 0.12081,
+        "p_frict": 0.34884,
+        "a_frict": 0.97323,
+        "r_shill_0": 0.43363,
+        "v_shill": 1.0692,
+        "p_shill": 4.7163,
+        "a_shill": 0.1383,
+        "v_max": 0.24,
+        "dim": 2.0,
+        "height": 0.7,
+        "dr_shill": 1.0
+      }
+    },
+    {
+      "case_id": "vasarhelyi_parallel_3",
+      "source_path": "matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_3.m",
+      "source_url": "https://github.com/micros-uav/CoFlyers/blob/main/matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_3.m",
+      "baseline_params": {
+        "r_com": 8.0,
+        "v_flock": 0.2,
+        "r_rep_0": 1.9271,
+        "p_rep": 0.23539,
+        "r_frict_0": 3.3189,
+        "c_frict": 0.25407,
+        "v_frict": 0.026385,
+        "p_frict": 7.3689,
+        "a_frict": 0.62408,
+        "r_shill_0": 0.52182,
+        "v_shill": 1.3462,
+        "p_shill": 6.1571,
+        "a_shill": 0.59674,
+        "v_max": 0.24,
+        "dim": 2.0,
+        "height": 0.7,
+        "dr_shill": 1.0
+      }
+    },
+    {
+      "case_id": "vasarhelyi_parallel_4",
+      "source_path": "matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_4.m",
+      "source_url": "https://github.com/micros-uav/CoFlyers/blob/main/matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_4.m",
+      "baseline_params": {
+        "r_com": 8.0,
+        "v_flock": 0.2,
+        "r_rep_0": 0.4554,
+        "p_rep": 0.84587,
+        "r_frict_0": 8.2178,
+        "c_frict": 0.26856,
+        "v_frict": 0.054617,
+        "p_frict": 1.9226,
+        "a_frict": 0.67045,
+        "r_shill_0": 0.62385,
+        "v_shill": 1.893,
+        "p_shill": 1.8005,
+        "a_shill": 0.35651,
+        "v_max": 0.24,
+        "dim": 2.0,
+        "height": 0.7,
+        "dr_shill": 1.0
+      }
+    },
+    {
+      "case_id": "vasarhelyi_parallel_5",
+      "source_path": "matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_5.m",
+      "source_url": "https://github.com/micros-uav/CoFlyers/blob/main/matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_5.m",
+      "baseline_params": {
+        "r_com": 8.0,
+        "v_flock": 0.2,
+        "r_rep_0": 1.9471,
+        "p_rep": 0.21566,
+        "r_frict_0": 3.264,
+        "c_frict": 0.010256,
+        "v_frict": 0.13422,
+        "p_frict": 3.9337,
+        "a_frict": 0.96389,
+        "r_shill_0": 0.21005,
+        "v_shill": 0.521,
+        "p_shill": 3.2751,
+        "a_shill": 0.89334,
+        "v_max": 0.24,
+        "dim": 2.0,
+        "height": 0.7,
+        "dr_shill": 1.0
+      }
+    },
+    {
+      "case_id": "vasarhelyi_parallel_6",
+      "source_path": "matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_6.m",
+      "source_url": "https://github.com/micros-uav/CoFlyers/blob/main/matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_6.m",
+      "baseline_params": {
+        "r_com": 8.0,
+        "v_flock": 0.2,
+        "r_rep_0": 1.8483,
+        "p_rep": 0.23366,
+        "r_frict_0": 9.6896,
+        "c_frict": 0.40266,
+        "v_frict": 0.19441,
+        "p_frict": 3.7666,
+        "a_frict": 0.67836,
+        "r_shill_0": 0.72296,
+        "v_shill": 0.79144,
+        "p_shill": 4.0805,
+        "a_shill": 0.92821,
+        "v_max": 0.24,
+        "dim": 2.0,
+        "height": 0.7,
+        "dr_shill": 1.0
+      }
+    },
+    {
+      "case_id": "vasarhelyi_parallel_7",
+      "source_path": "matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_7.m",
+      "source_url": "https://github.com/micros-uav/CoFlyers/blob/main/matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_7.m",
+      "baseline_params": {
+        "r_com": 8.0,
+        "v_flock": 0.2,
+        "r_rep_0": 0.26428,
+        "p_rep": 0.31799,
+        "r_frict_0": 6.1485,
+        "c_frict": 0.29158,
+        "v_frict": 0.080148,
+        "p_frict": 1.8509,
+        "a_frict": 0.029065,
+        "r_shill_0": 0.16493,
+        "v_shill": 1.9433,
+        "p_shill": 8.773,
+        "a_shill": 0.84002,
+        "v_max": 0.24,
+        "dim": 2.0,
+        "height": 0.7,
+        "dr_shill": 1.0
+      }
+    },
+    {
+      "case_id": "vasarhelyi_parallel_8",
+      "source_path": "matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_8.m",
+      "source_url": "https://github.com/micros-uav/CoFlyers/blob/main/matlab_simulink_ws/Prototype_Simulator/lower_layers/swarm_module/Vasarhelyi_module/params_for_parallel/Vasarhelyi_module_parameters_8.m",
+      "baseline_params": {
+        "r_com": 8.0,
+        "v_flock": 0.2,
+        "r_rep_0": 1.5639,
+        "p_rep": 0.90583,
+        "r_frict_0": 2.7381,
+        "c_frict": 0.1309,
+        "v_frict": 0.079854,
+        "p_frict": 2.3153,
+        "a_frict": 0.23893,
+        "r_shill_0": 0.83791,
+        "v_shill": 1.3764,
+        "p_shill": 8.9855,
+        "a_shill": 0.36185,
+        "v_max": 0.24,
+        "dim": 2.0,
+        "height": 0.7,
+        "dr_shill": 1.0
+      }
+    }
+  ]
+}

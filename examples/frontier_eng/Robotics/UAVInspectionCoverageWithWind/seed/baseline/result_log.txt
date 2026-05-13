@@ -1,0 +1,6 @@
+Baseline run (local):
+{"score": 595822.2514256956, "feasible": true, "details": {"scene_1": {"success": true, "coverage_ratio": 0.7, "energy": 18.223949618555416, "scene_score": 489981.77605038136}, "scene_2": {"success": true, "coverage_ratio": 1.0, "energy": 14.113850501252912, "scene_score": 999985.8861494988}, "scene_3": {"success": true, "coverage_ratio": 0.5454545454545454, "energy": 21.569079817824605, "scene_score": 297499.09207720694}}}
+
+Notes:
+- Benchmark difficulty increased: tighter `T_max`, dynamic obstacle collision checks, and squared coverage scoring.
+- Baseline remains a feasible reference, not a near-optimal solver.

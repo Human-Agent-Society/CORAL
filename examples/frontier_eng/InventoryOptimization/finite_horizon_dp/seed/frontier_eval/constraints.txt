@@ -1,0 +1,6 @@
+InventoryOptimization unified-task constraints:
+1) Candidate code is `baseline/init.py`; keep public function names and return schema compatible with `verification/evaluate.py`.
+2) Do not modify evaluator/reference logic (`verification/evaluate.py`, `verification/reference.py`).
+3) Keep task contracts in `Task.md` / `Task_zh-CN.md` unchanged.
+4) Ensure the candidate remains deterministic and executable under conda env `stock`.
+5) Evaluation score is read from `output/comparison.json` (`baseline_final_score`).

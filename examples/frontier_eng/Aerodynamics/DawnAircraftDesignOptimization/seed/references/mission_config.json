@@ -1,0 +1,70 @@
+{
+  "benchmark_id": "dawn_aircraft_design_optimization",
+  "source_repo": "https://github.com/peterdsharpe/DawnDesignTool",
+  "source_note": "Simplified conceptual sizing benchmark inspired by DawnDesignTool design_opt.py optimization flow.",
+  "mission": {
+    "payload_kg": 25.0,
+    "cruise_altitude_m": 5500.0,
+    "endurance_hr": 8.0
+  },
+  "constraints": {
+    "max_takeoff_distance_m": 380.0,
+    "max_stall_speed_mps": 24.0,
+    "max_wing_loading_n_m2": 420.0,
+    "allowable_root_stress_pa": 95000000.0,
+    "min_fuselage_fineness": 6.0,
+    "min_aspect_ratio": 6.0,
+    "max_aspect_ratio": 24.0,
+    "required_power_headroom_fraction": 0.92
+  },
+  "bounds": {
+    "wing_span_m": [14.0, 42.0],
+    "wing_area_m2": [10.0, 55.0],
+    "fuselage_length_m": [5.0, 16.0],
+    "fuselage_diameter_m": [0.45, 1.8],
+    "motor_power_kw": [8.0, 160.0],
+    "battery_mass_kg": [20.0, 320.0],
+    "cruise_speed_mps": [18.0, 62.0]
+  },
+  "baseline_initial_guess": {
+    "wing_span_m": 26.0,
+    "wing_area_m2": 24.0,
+    "fuselage_length_m": 9.0,
+    "fuselage_diameter_m": 0.9,
+    "motor_power_kw": 45.0,
+    "battery_mass_kg": 170.0,
+    "cruise_speed_mps": 27.0
+  },
+  "constants": {
+    "gravity_mps2": 9.80665,
+    "rho0_kgpm3": 1.225,
+    "temperature0_k": 288.15,
+    "lapse_rate_kpm": 0.0065,
+    "gas_constant_air": 287.058,
+    "eta_prop_cruise": 0.84,
+    "eta_prop_takeoff": 0.72,
+    "avionics_power_w": 450.0,
+    "battery_specific_energy_wh_per_kg": 360.0,
+    "usable_battery_fraction": 0.82,
+    "battery_discharge_efficiency": 0.95,
+    "cl_max_cruise": 1.0,
+    "cl_max_takeoff": 1.7,
+    "cd0_base": 0.022,
+    "cd0_fuselage_factor": 0.016,
+    "oswald_efficiency": 0.82,
+    "rolling_friction_coeff": 0.07,
+    "load_factor_limit": 3.5,
+    "thickness_to_chord": 0.12,
+    "section_modulus_factor": 0.0025,
+    "wing_mass_coeff": 1.2,
+    "fuselage_mass_coeff": 5.2,
+    "tail_mass_coeff": 1.3,
+    "landing_gear_mass_coeff": 0.6,
+    "motor_mass_coeff": 0.32,
+    "propulsion_fixed_mass_kg": 5.0,
+    "systems_fixed_mass_kg": 18.0
+  },
+  "scoring": {
+    "mass_reference_kg": 400.0
+  }
+}

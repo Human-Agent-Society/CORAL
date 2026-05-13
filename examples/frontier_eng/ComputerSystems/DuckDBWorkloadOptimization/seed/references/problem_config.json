@@ -1,0 +1,78 @@
+{
+  "benchmark_id": "duckdb_workload_optimization",
+  "source_repo": "https://github.com/duckdb/duckdb",
+  "source_commit": "ff4f70eeee83cfd3dae6577fc9b2b448d5fbdb35",
+  "source_scope": [
+    "benchmark/tpch/sf1/load.sql",
+    "benchmark/tpch_plan_cost/queries/q03.sql",
+    "benchmark/tpch_plan_cost/queries/q05.sql",
+    "benchmark/tpch_plan_cost/queries/q10.sql",
+    "benchmark/tpch_plan_cost/queries/q12.sql",
+    "benchmark/tpch_plan_cost/queries/q07.sql",
+    "benchmark/tpch_plan_cost/queries/q18.sql",
+    "benchmark/micro/window/window_partition.benchmark"
+  ],
+  "data_setup": {
+    "load_scripts": [
+      {
+        "id": "tpch_sf1_load",
+        "source_file": "references/duckdb_official/benchmark/tpch/sf1/load.sql"
+      },
+      {
+        "id": "window_partition_load",
+        "source_file": "references/duckdb_official/benchmark/micro/window/window_partition.benchmark",
+        "source_section": "load"
+      }
+    ],
+    "official_row_counts": {
+      "customer": 150000,
+      "lineitem": 6001215,
+      "nation": 25,
+      "orders": 1500000,
+      "part": 200000,
+      "partsupp": 800000,
+      "region": 5,
+      "supplier": 10000,
+      "df": 1000000
+    }
+  },
+  "limits": {
+    "max_indexes": 12,
+    "max_materialized_views": 4,
+    "max_rewrites": 3,
+    "max_sql_chars": 12000
+  },
+  "index_workload": [
+    {
+      "id": "tpch_q03",
+      "source_file": "references/duckdb_official/benchmark/tpch_plan_cost/queries/q03.sql"
+    },
+    {
+      "id": "tpch_q05",
+      "source_file": "references/duckdb_official/benchmark/tpch_plan_cost/queries/q05.sql"
+    },
+    {
+      "id": "tpch_q10",
+      "source_file": "references/duckdb_official/benchmark/tpch_plan_cost/queries/q10.sql"
+    },
+    {
+      "id": "tpch_q12",
+      "source_file": "references/duckdb_official/benchmark/tpch_plan_cost/queries/q12.sql"
+    }
+  ],
+  "rewrite_workload": [
+    {
+      "id": "tpch_q07",
+      "source_file": "references/duckdb_official/benchmark/tpch_plan_cost/queries/q07.sql"
+    },
+    {
+      "id": "tpch_q18",
+      "source_file": "references/duckdb_official/benchmark/tpch_plan_cost/queries/q18.sql"
+    },
+    {
+      "id": "micro_window_partition",
+      "source_file": "references/duckdb_official/benchmark/micro/window/window_partition.benchmark",
+      "source_section": "run"
+    }
+  ]
+}

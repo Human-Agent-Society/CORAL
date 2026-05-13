@@ -1,0 +1,91 @@
+{
+  "battery": {
+    "name": "example_nmc_3ah_cell",
+    "capacity_ah": 3.0,
+    "initial_soc": 0.1,
+    "target_soc": 0.8,
+    "ambient_temp_c": 25.0
+  },
+  "limits": {
+    "max_voltage_v": 4.2,
+    "hard_voltage_cutoff_v": 4.25,
+    "soft_temp_c": 45.0,
+    "hard_temp_c": 47.0
+  },
+  "simulation": {
+    "dt_s": 1.0,
+    "max_time_s": 2400.0
+  },
+  "profile_bounds": {
+    "min_stages": 1,
+    "max_stages": 6,
+    "min_current_c": 0.2,
+    "max_current_c": 6.0,
+    "min_switch_soc": 0.12
+  },
+  "electrical_model": {
+    "ocv_base_v": 3.05,
+    "ocv_linear_v_per_soc": 1.02,
+    "ocv_tanh_1_amplitude_v": 0.12,
+    "ocv_tanh_1_center_soc": 0.18,
+    "ocv_tanh_1_gain": 9.0,
+    "ocv_tanh_2_amplitude_v": 0.1,
+    "ocv_tanh_2_center_soc": 0.82,
+    "ocv_tanh_2_gain": 12.0,
+    "r0_base_ohm": 0.01,
+    "r0_high_soc_gain_ohm": 0.01,
+    "r0_high_soc_center": 0.6,
+    "r0_low_soc_gain_ohm": 0.02,
+    "r0_low_soc_center": 0.22,
+    "r0_temp_gain_ohm_per_c": 0.00035
+  },
+  "polarization_model": {
+    "tau_pol_s": 28.0,
+    "tau_diff_s": 110.0,
+    "eta_pol_base_coeff": 0.0065,
+    "eta_pol_high_soc_coeff": 0.003,
+    "eta_pol_high_soc_center": 0.55,
+    "eta_diff_base_coeff": 0.004,
+    "eta_diff_high_soc_coeff": 0.006,
+    "eta_diff_high_soc_center": 0.68
+  },
+  "plating_model": {
+    "base_margin_v": 0.14,
+    "soc_margin_coeff_v": 0.6,
+    "current_coeff_v_per_c": 0.06,
+    "diff_coeff_v_per_v": 0.8,
+    "cold_coeff_v_per_c": 0.0035,
+    "plating_loss_coeff": 0.00023
+  },
+  "thermal_model": {
+    "heat_pol_coeff": 0.3,
+    "heat_capacity_j_per_k": 88.0,
+    "cooling_w_per_k": 0.95
+  },
+  "aging_model": {
+    "aging_base_rate": 1.5e-05,
+    "aging_current_coeff": 0.12,
+    "aging_current_exp": 1.15,
+    "aging_temp_exp_coeff": 0.025,
+    "plating_to_aging_coeff": 0.32
+  },
+  "efficiency_model": {
+    "base_efficiency": 0.998,
+    "plating_efficiency_penalty": 0.18,
+    "min_efficiency": 0.9
+  },
+  "scoring": {
+    "time_reference_s": 620.0,
+    "time_scale_s": 480.0,
+    "degradation_plating_coeff": 17.0,
+    "degradation_aging_coeff": 9.0,
+    "thermal_reference_c": 35.0,
+    "thermal_scale_c": 7.0,
+    "voltage_scale_v": 0.015,
+    "weight_time": 0.5,
+    "weight_degradation": 0.25,
+    "weight_thermal": 0.15,
+    "weight_voltage": 0.1,
+    "score_scale": 100.0
+  }
+}

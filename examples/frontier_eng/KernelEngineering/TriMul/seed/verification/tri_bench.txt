@@ -1,0 +1,7 @@
+seqlen: 256; bs: 2; dim: 128; hiddendim: 128; seed: 9371; nomask: 1; distribution: normal
+seqlen: 768; bs: 1; dim: 128; hiddendim: 128; seed: 381; nomask: 1; distribution: cauchy
+seqlen: 256; bs: 2; dim: 384; hiddendim: 128; seed: 2301; nomask: 0; distribution: normal
+seqlen: 512; bs: 1; dim: 128; hiddendim: 128; seed: 12819; nomask: 1; distribution: normal
+seqlen: 1024; bs: 1; dim: 128; hiddendim: 128; seed: 381; nomask: 1; distribution: cauchy
+seqlen: 768; bs: 1; dim: 384; hiddendim: 128; seed: 481; nomask: 0; distribution: normal
+seqlen: 1024; bs: 1; dim: 384; hiddendim: 128; seed: 23291; nomask: 1; distribution: normal

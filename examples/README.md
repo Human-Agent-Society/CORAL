@@ -160,6 +160,7 @@ uv pip install -e ./examples/drug_design/grader[ml]
 | [ADRS](#adrs) | 5 systems optimization problems (scheduling, placement, etc.) | Maximize |
 | [frontier_cs_algo](#frontier_cs_algo) | 172 algorithmic competition problems (C++) | Maximize |
 | [frontier_cs_research](#frontier_cs_research) | 127 research-level CS problems (Python) | Maximize |
+| [frontier_eng](frontier_eng/README.md) | 74 generative-optimization benchmarks ported from EinsiaLab/Frontier-Engineering (KernelEngineering, JobShop, Optics, Cryptographic, ...) | Maximize |
 | [dna_design](#dna_design) | Design cell-type-specific DNA enhancer sequences (SAGA) | Maximize |
 | [drug_design](#drug_design) | Design novel small-molecule antibiotics (SAGA) | Maximize |
 | [swebench-verified](#swebench-verified) | Optimize a solver program across 500 SWE-bench instances | Maximize |
@@ -238,6 +239,15 @@ Predict mRNA degradation rates at each base position. Scored by Mean Columnwise 
 ### frontier_cs_research
 
 127 research-level CS problems with multiple variants (e.g. scheduling under different availability/deadline/overhead configurations). Solutions in Python with 1800s timeouts.
+
+### frontier_eng
+
+74 generative-optimization benchmarks ported from [EinsiaLab/Frontier-Engineering](https://github.com/EinsiaLab/Frontier-Engineering) — KernelEngineering, JobShop families, Optics (16 sub-tasks), Cryptographic, Robotics, EngDesign, etc. All share one packaged grader (`examples/frontier_eng/_grader/`) that reads each benchmark's upstream `frontier_eval/` metadata, runs the documented eval command in a sandbox, and parses `metrics.json`. See [examples/frontier_eng/README.md](frontier_eng/README.md) for the full task list, runtime-environment notes, and regeneration instructions.
+
+- **Tasks**: 74 (one CORAL example per upstream leaf benchmark; EngDesign is one example with 7 sub-instances)
+- **Direction**: Maximize (combined_score per upstream contract)
+- **Grader**: `frontier_eng_grader.grader:Grader`
+- **Generator**: `examples/frontier_eng/_scripts/generate_tasks.py` (re-runnable from a fresh upstream checkout)
 
 ### dna_design
 

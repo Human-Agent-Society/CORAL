@@ -1,0 +1,5 @@
+We will use exact code to evaluate the correctness of LLM responses.
+
+Ideally, the LLM should generate a write function calling its read function.
+Although it can generate a write function without calling its read, it is very likely that this method will fail.
+The goal of this test is to estimate the LLM's ability to write code pieces that fits together.

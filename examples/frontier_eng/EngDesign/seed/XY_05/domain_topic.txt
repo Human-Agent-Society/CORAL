@@ -1,0 +1,2 @@
+Domain: Computer Architecture
+Subdomain: CPU Control Logic, Instruction Control Signals

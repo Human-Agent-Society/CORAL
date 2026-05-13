@@ -1,0 +1,89 @@
+{
+  "dt": 0.05,
+  "goal_tolerance": 0.15,
+  "scenarios": [
+    {
+      "id": "scene_1",
+      "bounds": [-1.0, 11.0, -1.0, 9.0],
+      "robot": {
+        "radius": 0.20,
+        "v_max": 1.20,
+        "omega_max": 1.80,
+        "a_max": 1.50
+      },
+      "start": [0.0, 0.0, 0.0],
+      "goal": [9.0, 7.2],
+      "T_max": 24.0,
+      "static_obstacles": [
+        {"type": "rect", "center": [2.0, 6.8], "half_extents": [0.7, 0.6]},
+        {"type": "circle", "center": [7.8, 1.4], "radius": 0.45}
+      ],
+      "dynamic_obstacles": [
+        {
+          "radius": 0.22,
+          "trajectory": [
+            [0.0, 9.5, 1.0],
+            [12.0, 9.5, 7.8],
+            [24.0, 9.5, 1.0]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene_2",
+      "bounds": [-1.0, 12.0, -1.5, 9.5],
+      "robot": {
+        "radius": 0.20,
+        "v_max": 1.25,
+        "omega_max": 1.90,
+        "a_max": 1.60
+      },
+      "start": [0.5, 0.2, 0.0],
+      "goal": [10.0, 7.5],
+      "T_max": 25.0,
+      "static_obstacles": [
+        {"type": "rect", "center": [5.0, -0.2], "half_extents": [1.2, 0.5]},
+        {"type": "rect", "center": [8.2, 6.9], "half_extents": [0.7, 0.5]},
+        {"type": "circle", "center": [2.4, 7.2], "radius": 0.4}
+      ],
+      "dynamic_obstacles": [
+        {
+          "radius": 0.22,
+          "trajectory": [
+            [0.0, 10.6, 2.0],
+            [12.5, 10.6, 8.2],
+            [25.0, 10.6, 2.0]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scene_3",
+      "bounds": [-1.0, 12.0, -1.0, 10.0],
+      "robot": {
+        "radius": 0.20,
+        "v_max": 1.15,
+        "omega_max": 1.80,
+        "a_max": 1.40
+      },
+      "start": [0.0, 0.0, 0.0],
+      "goal": [10.4, 8.3],
+      "T_max": 28.0,
+      "static_obstacles": [
+        {"type": "rect", "center": [6.0, 1.3], "half_extents": [0.8, 0.5]},
+        {"type": "rect", "center": [3.0, 8.0], "half_extents": [0.7, 0.6]},
+        {"type": "circle", "center": [9.2, 4.0], "radius": 0.45}
+      ],
+      "dynamic_obstacles": [
+        {
+          "radius": 0.24,
+          "trajectory": [
+            [0.0, 11.0, 1.4],
+            [14.0, 11.0, 9.0],
+            [28.0, 11.0, 1.4]
+          ]
+        }
+      ]
+    }
+  ]
+}

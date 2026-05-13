@@ -1,0 +1,69 @@
+{
+  "task": "general_meio",
+  "method": "reference",
+  "algorithm": "stockpyl MEIO enumeration",
+  "solution_base_stock": {
+    "10": 30,
+    "20": 14,
+    "30": 14,
+    "40": 16,
+    "50": 16
+  },
+  "nominal": {
+    "baseline": {
+      "cost_per_period": 43.19312500000002,
+      "holding_per_period": 37.060625,
+      "stockout_per_period": 0.0,
+      "fill_rate": 1.0,
+      "fill_by_sink": {
+        "40": 1.0,
+        "50": 1.0
+      }
+    },
+    "solution": {
+      "cost_per_period": 33.63187500000002,
+      "holding_per_period": 26.486875000000065,
+      "stockout_per_period": 1.0125,
+      "fill_rate": 0.9925,
+      "fill_by_sink": {
+        "40": 1.0,
+        "50": 0.9839285714285715
+      }
+    }
+  },
+  "stress": {
+    "baseline": {
+      "cost_per_period": 43.48750000000001,
+      "holding_per_period": 33.13625000000001,
+      "stockout_per_period": 3.20625,
+      "fill_rate": 0.9802083333333333,
+      "fill_by_sink": {
+        "40": 1.0,
+        "50": 0.9575892857142857
+      }
+    },
+    "solution": {
+      "cost_per_period": 42.018750000000075,
+      "holding_per_period": 23.230000000000054,
+      "stockout_per_period": 11.64375,
+      "fill_rate": 0.928125,
+      "fill_by_sink": {
+        "40": 1.0,
+        "50": 0.8459821428571428
+      }
+    }
+  },
+  "metrics": {
+    "cost_score": 0.6324584558967922,
+    "service_score": 0.833333333333337,
+    "robustness_score": 0.22516048672989342,
+    "balance_score": 0.6785714285714297
+  },
+  "weights": {
+    "cost_score": 0.3,
+    "service_score": 0.35,
+    "robustness_score": 0.25,
+    "balance_score": 0.1
+  },
+  "final_score": 0.6055514679753219
+}

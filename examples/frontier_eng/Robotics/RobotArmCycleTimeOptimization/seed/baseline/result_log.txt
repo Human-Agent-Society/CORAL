@@ -1,0 +1,6 @@
+Baseline run (local):
+{"score": 2.4224005284777377, "feasible": true}
+
+Notes:
+- Obstacle placement is chosen so the published start and goal states are collision-free in PyBullet.
+- Baseline uses a fixed via-point and binary-searches the shortest feasible total time.

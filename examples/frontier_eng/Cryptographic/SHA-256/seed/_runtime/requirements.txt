@@ -1,0 +1,24 @@
+# from frontier_eval/requirements.txt
+hydra-core>=1.3.2,<2
+openevolve==0.2.26
+PyYAML>=6.0.0
+joblib>=1.5.2
+ulid-py>=1.1.0
+numpy
+pandas
+anndata
+scipy
+
+# from benchmarks/ComputerSystems/DuckDBWorkloadOptimization/verification/requirements.txt
+duckdb>=1.1.0
+
+# from benchmarks/PowerSystems/EV2GymSmartCharging/verification/requirements.txt
+ev2gym
+numpy
+pandas
+PyYAML
+pandapower
+multicopula
+numba
+psutil
+

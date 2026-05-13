@@ -1,0 +1,4 @@
+# Shared dependencies for JobShop benchmark verification scripts.
+# Install from repository root:
+#   pip install -r JobShop/requirements.txt
+ortools>=9.9,<9.13

@@ -1,0 +1,6 @@
+BatteryFastChargingSPMe constraints:
+1) Only modify `scripts/init.py`.
+2) Candidate must define `build_charging_policy()` and return `currents_c` plus `switch_soc`.
+3) Keep the policy deterministic. Do not use randomness.
+4) Optimize charging time while respecting hard voltage, temperature, and plating-margin limits.
+5) Lower aging loss and lower plating loss improve the score even among feasible solutions.

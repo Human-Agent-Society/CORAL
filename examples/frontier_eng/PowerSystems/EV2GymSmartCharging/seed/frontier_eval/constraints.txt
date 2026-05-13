@@ -1,0 +1,7 @@
+EV2GymSmartCharging unified constraints:
+1) Only modify optimization logic inside `scripts/init.py` between `EVOLVE-BLOCK-START` and `EVOLVE-BLOCK-END`.
+2) Keep the public function signature compatible: `solve(case, max_sim_calls=0, simulate_fn=None)`.
+3) Return one normalized EV2Gym action per charging port for the current step; every action must stay in `[-1, 1]`.
+4) The evaluator runs the real upstream EV2Gym simulator on three fixed workplace cases derived from copied upstream `V2GProfitPlusLoads.yaml` data.
+5) Score is the mean baseline-normalized upstream `total_reward`; the official `ChargeAsFastAsPossibleToDesiredCapacity` heuristic corresponds to a score of `100`.
+6) Do not modify `verification/evaluator.py` or files under `references/upstream/`.

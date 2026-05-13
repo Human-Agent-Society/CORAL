@@ -1,0 +1,6 @@
+Discrete Rebalance MIP constraints:
+1) Edit only `baseline/init.py`.
+2) Keep function signature `solve_instance(instance: dict) -> dict`.
+3) Return `{"lots": np.ndarray}` with integer lot counts and shape `(N,)`.
+4) Respect budget, turnover notional limit, max lots, and lot integrality.
+5) Do not modify evaluator/reference files.

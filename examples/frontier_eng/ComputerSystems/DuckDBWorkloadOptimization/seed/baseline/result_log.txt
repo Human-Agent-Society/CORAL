@@ -1,0 +1,17 @@
+{
+  "combined_score": 1.0360054377685777,
+  "valid": 1.0,
+  "timeout": 0.0,
+  "runtime_s": 17.248182773590088,
+  "data_build_s": 9.484423791989684,
+  "base_table_count": 9.0,
+  "baseline_returncode": 0.0,
+  "candidate_returncode": 0.0,
+  "index_baseline_total_s": 0.1861712499812711,
+  "index_candidate_total_s": 0.1734790409973357,
+  "rewrite_baseline_total_s": 0.3273396669974318,
+  "rewrite_candidate_total_s": 0.3277171660010936,
+  "index_speedup": 1.073162780419857,
+  "rewrite_speedup": 0.9988480951172983,
+  "rewrite_semantics_valid": 1.0
+}

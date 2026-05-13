@@ -1,0 +1,51 @@
+{
+  "task": "finite_horizon_dp",
+  "method": "reference",
+  "algorithm": "stockpyl finite-horizon DP",
+  "policy": {
+    "reorder_points": [
+      0.0,
+      27.0,
+      31.0,
+      40.0,
+      62.0,
+      81.0,
+      54.0,
+      39.0,
+      33.0
+    ],
+    "order_up_to_levels": [
+      0.0,
+      93.0,
+      109.0,
+      147.0,
+      97.0,
+      182.0,
+      143.0,
+      99.0,
+      50.0
+    ],
+    "dp_expected_cost": 2571.762911787041
+  },
+  "baseline_eval": {
+    "avg_total_cost": 3108.355830984549,
+    "avg_fill_rate": 0.964214575844033,
+    "avg_order_count": 8.0
+  },
+  "solution_eval": {
+    "avg_total_cost": 2570.467096447495,
+    "avg_fill_rate": 0.959823710607235,
+    "avg_order_count": 4.058
+  },
+  "metrics": {
+    "cost_score": 0.9613670087705382,
+    "service_score": 0.5663917316352878,
+    "cadence_score": 1.0
+  },
+  "weights": {
+    "cost_score": 0.55,
+    "service_score": 0.4,
+    "cadence_score": 0.05
+  },
+  "final_score": 0.8053085474779113
+}

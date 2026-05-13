@@ -1,0 +1,5 @@
+Optics unified constraints:
+1) Edit only `baseline/init.py`.
+2) Keep the required public function signatures used by verification scripts.
+3) Do not modify files under `verification/`.
+4) Candidate outputs must be deterministic and finite (no NaN/Inf).

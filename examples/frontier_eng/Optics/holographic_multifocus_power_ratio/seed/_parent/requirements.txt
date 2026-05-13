@@ -1,0 +1,24 @@
+# Broad unified dependencies for all 16 Optics tasks.
+# Install from repository root:
+#   python -m pip install -r benchmarks/Optics/requirements.txt
+
+numpy>=1.24,<2.0
+scipy>=1.10
+matplotlib>=3.7
+numba>=0.57
+scikit-learn>=1.3
+pandas>=1.5
+psutil>=5.9
+
+# Task-family specific dependencies
+slmsuite>=0.3.0
+ortools>=9.9,<9.11
+
+torch>=2.2
+torchoptics>=0.3.0
+
+aotools>=1.0
+OptiCommPy>=0.9
+diffractio>=0.2.4
+
+opencv-python>=4.10,<4.12

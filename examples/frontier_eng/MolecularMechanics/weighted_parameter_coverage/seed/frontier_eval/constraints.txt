@@ -1,0 +1,5 @@
+1) Only modify `baseline/init.py`.
+2) Keep the CLI contract unchanged: the candidate must accept `--prepared-input` and `--solution-output`.
+3) Output JSON must contain `selected_candidate_ids` as a duplicate-free list whose length does not exceed `budget`.
+4) Keep the solver deterministic. If you use randomness, seed it explicitly and reproducibly.
+5) Optimize the evaluated coverage score, not just the candidate's internal predicted score.

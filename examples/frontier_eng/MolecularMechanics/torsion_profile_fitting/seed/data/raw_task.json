@@ -1,0 +1,21 @@
+{
+  "task_name": "torsion_profile_fitting_demo",
+  "force_field": "openff_unconstrained-2.2.1.offxml",
+  "molecule": {
+    "name": "butane",
+    "smiles": "CCCC"
+  },
+  "torsion_atom_indices": [0, 1, 2, 3],
+  "angles_degrees": [60, 120, 180, 240, 300],
+  "target_relative_energies_kcal_per_mol": [4.611308, 6.283482, 0.0, 6.5094, 8.641846],
+  "tunable_terms": ["k1", "k2", "k3"],
+  "known_optimal_score": 100.0,
+  "score_penalty_per_rmse": 250.0,
+  "scale_bounds": {
+    "k1": [0.6, 1.8],
+    "k2": [0.6, 1.8],
+    "k3": [0.6, 1.8]
+  },
+  "num_public_samples": 96,
+  "sampling_seed": 20260316
+}

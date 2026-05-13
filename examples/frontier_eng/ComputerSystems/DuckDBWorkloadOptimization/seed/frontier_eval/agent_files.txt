@@ -1,0 +1,10 @@
+README.md
+README_zh-CN.md
+Task.md
+Task_zh-CN.md
+scripts/init.py
+verification/evaluator.py
+baseline/solution.py
+references/problem_config.json
+references/duckdb_official/
+frontier_eval/constraints.txt

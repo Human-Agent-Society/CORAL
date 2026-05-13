@@ -1,0 +1,37 @@
+{
+  "task_name": "diverse_conformer_portfolio_demo",
+  "force_field": "openff_unconstrained-2.2.1.offxml",
+  "portfolio_size": 8,
+  "energy_weight": 0.5,
+  "diversity_weight": 3.0,
+  "energy_cap_kcal_per_mol": 4.0,
+  "rmsd_cap_angstrom": 2.5,
+  "diversity_reward_exponent": 2.0,
+  "conformer_generation": {
+    "n_conformers": 28,
+    "rms_cutoff_angstrom": 0.2,
+    "minimize": true
+  },
+  "molecules": [
+    {
+      "molecule_id": "mol_000",
+      "name": "triethylene_glycol_ethyl_ether",
+      "smiles": "CCOCCOCCO"
+    },
+    {
+      "molecule_id": "mol_001",
+      "name": "diethylaminoethyl_ether",
+      "smiles": "CCOCCN(CC)CC"
+    },
+    {
+      "molecule_id": "mol_002",
+      "name": "ethoxyethyl_propionate",
+      "smiles": "CCOC(=O)CCOCC"
+    },
+    {
+      "molecule_id": "mol_003",
+      "name": "dibutyl_ether",
+      "smiles": "CCCCOCCCC"
+    }
+  ]
+}

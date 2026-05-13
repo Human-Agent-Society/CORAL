@@ -1,0 +1,6 @@
+Robotics/CoFlyersVasarhelyiTuning unified-task constraints:
+1) Candidate code is `scripts/init.py` and must keep `solve(problem)` callable.
+2) `solve(problem)` must return a dict containing tuned Vasarhelyi `params`, or a dict of parameter updates directly.
+3) Only tune the released CoFlyers Vasarhelyi parameters: r_rep_0, p_rep, r_frict_0, c_frict, v_frict, p_frict, a_frict, r_shill_0, v_shill, p_shill, a_shill.
+4) Do not modify `verification/evaluator.py`, `references/coflyers_cases.json`, or files under `frontier_eval/`.
+5) Optimize the original CoFlyers evaluation_0 behavior: stronger alignment and speed with fewer collisions and wall contacts.

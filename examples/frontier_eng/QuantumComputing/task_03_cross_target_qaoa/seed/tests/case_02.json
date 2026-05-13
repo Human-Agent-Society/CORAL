@@ -1,0 +1,11 @@
+{
+  "case_id": "cross_target_case_02",
+  "benchmark": "qaoa",
+  "num_qubits": 12,
+  "repetitions": 2,
+  "seed": 17,
+  "targets": [
+    "ibm_falcon_27",
+    "ionq_aria_25"
+  ]
+}

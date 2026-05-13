@@ -1,0 +1,2 @@
+We will use exact code in Python to evaluate the correctness of LLM responses.
+An MP4 is generated for visualization. Purple is robot1 and orange is robot2. 

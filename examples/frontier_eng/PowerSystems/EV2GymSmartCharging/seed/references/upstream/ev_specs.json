@@ -1,0 +1,145 @@
+{
+    "Tesla Model 3": {
+        "number_of_registrations": 45545,
+        "battery_capacity": 57.5,
+        "ac_v2g": "no",
+        "dc_v2g": "no",
+        "max_ac_charge_power": 11,
+        "max_dc_charge_power": 170,
+        "avg_dc_charge_power": 100,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 0
+    },
+    "Kia Niro": {
+        "number_of_registrations": 23105,
+        "battery_capacity": 64.8,
+        "ac_v2g": "no",
+        "dc_v2g": "no",
+        "max_ac_charge_power": 11,
+        "max_dc_charge_power": 80,
+        "avg_dc_charge_power": 70,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 0
+    },
+    "Volkswagen ID.3": {
+        "number_of_registrations": 19950,
+        "battery_capacity": 58,
+        "ac_v2g": "no",
+        "dc_v2g": "no",
+        "max_ac_charge_power": 11,
+        "max_dc_charge_power": 120,
+        "avg_dc_charge_power": 80,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 0
+    },
+    "Hyundai Kona": {
+        "number_of_registrations": 17752,
+        "battery_capacity": 64,
+        "ac_v2g": "no",
+        "dc_v2g": "no",
+        "max_ac_charge_power": 11,
+        "max_dc_charge_power": 77,
+        "avg_dc_charge_power": 64,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 0
+    },
+    "Tesla Model Y": {
+        "number_of_registrations": 16186,
+        "battery_capacity": 57.5,
+        "ac_v2g": "no",
+        "dc_v2g": "no",
+        "max_ac_charge_power": 11,
+        "max_dc_charge_power": 170,
+        "avg_dc_charge_power": 100,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 0
+    },
+    "Skoda Enyaq": {
+        "number_of_registrations": 16165,
+        "battery_capacity": 58,
+        "ac_v2g": "no",
+        "dc_v2g": "no",
+        "max_ac_charge_power": 11,
+        "max_dc_charge_power": 124,
+        "avg_dc_charge_power": 82,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 0
+    },
+    "Peugeot 208": {
+        "number_of_registrations": 14017,
+        "battery_capacity": 46.3,
+        "ac_v2g": "no",
+        "dc_v2g": "no",
+        "max_ac_charge_power": 7.4,
+        "max_dc_charge_power": 101,
+        "avg_dc_charge_power": 78,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 0
+    },
+    "Renault Zoe": {
+        "number_of_registrations": 14008,
+        "battery_capacity": 52,
+        "ac_v2g": "no",
+        "dc_v2g": "no",
+        "max_ac_charge_power": 22,
+        "max_dc_charge_power": 46,
+        "avg_dc_charge_power": 41,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 0
+    },
+    "Volkswagen ID.4": {
+        "number_of_registrations": 13283,
+        "battery_capacity": 77,
+        "ac_v2g": "no",
+        "dc_v2g": "yes",
+        "max_ac_charge_power": 11,
+        "max_dc_charge_power": 135,
+        "avg_dc_charge_power": 120,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 10
+    },
+    "Volvo XC40": {
+        "number_of_registrations": 12520,
+        "battery_capacity": 66,
+        "ac_v2g": "no",
+        "dc_v2g": "no",
+        "max_ac_charge_power": 11,
+        "max_dc_charge_power": 135,
+        "avg_dc_charge_power": 85,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 0
+    },
+    "Nissan Leaf": {
+        "number_of_registrations": 11977,
+        "battery_capacity": 39,
+        "ac_v2g": "no",
+        "dc_v2g": "yes",
+        "max_ac_charge_power": 3.6,
+        "max_dc_charge_power": 46,
+        "avg_dc_charge_power": 40,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 7
+    },
+    "Tesla Model S": {
+        "number_of_registrations": 10899,
+        "battery_capacity": 75,
+        "ac_v2g": "no",
+        "dc_v2g": "no",
+        "max_ac_charge_power": 11,
+        "max_dc_charge_power": 250,
+        "avg_dc_charge_power": 124,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 0
+    },
+    "Volkswagen Golf": {
+        "number_of_registrations": 10019,
+        "battery_capacity": 32,
+        "ac_v2g": "no",
+        "dc_v2g": "no",
+        "max_ac_charge_power": 7.2,
+        "max_dc_charge_power": 40,
+        "avg_dc_charge_power": 39,
+        "max_ac_discharge_power": 0,
+        "max_dc_discharge_power": 0
+    }
+}

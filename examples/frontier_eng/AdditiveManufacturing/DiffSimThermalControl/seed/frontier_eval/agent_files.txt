@@ -1,0 +1,11 @@
+README.md
+README_zh-CN.md
+Task.md
+Task_zh-CN.md
+scripts/init.py
+baseline/solution.py
+verification/evaluator.py
+references/cases.json
+references/original/0.k
+references/original/toolpath.crs
+frontier_eval/constraints.txt

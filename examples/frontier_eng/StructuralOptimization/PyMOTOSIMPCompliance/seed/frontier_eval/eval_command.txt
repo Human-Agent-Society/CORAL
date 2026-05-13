@@ -1,0 +1,7 @@
+{python} verification/evaluator.py {candidate} \
+  --timeout-s 300 \
+  --metrics-out metrics.json \
+  --artifacts-out artifacts.json \
+  --stdout-out eval.stdout.txt \
+  --stderr-out eval.stderr.txt \
+  --run-meta-out run_meta.txt

@@ -1,0 +1,16 @@
+DawnAircraftDesignOptimization constraints:
+1) Candidate file is `scripts/init.py` and must output `submission.json`.
+2) `submission.json` must be a JSON object with numeric keys:
+   - wing_span_m
+   - wing_area_m2
+   - fuselage_length_m
+   - fuselage_diameter_m
+   - motor_power_kw
+   - battery_mass_kg
+   - cruise_speed_mps
+3) All design values must stay within bounds in `references/mission_config.json`.
+4) Feasibility requires all margins >= 0:
+   - takeoff distance, stall speed, cruise lift, structural stress,
+     endurance energy, cruise power headroom, wing loading,
+     fuselage fineness ratio, and aspect-ratio bounds.
+5) Objective: minimize total_mass_kg under constraints.

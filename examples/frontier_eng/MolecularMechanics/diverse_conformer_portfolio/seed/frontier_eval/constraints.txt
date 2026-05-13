@@ -1,0 +1,5 @@
+1) Only modify `baseline/init.py`.
+2) Keep the CLI contract unchanged: the candidate must accept `--prepared-input` and `--solution-output`.
+3) Output JSON must contain `selected_conformer_ids` as a mapping from molecule id to exactly `portfolio_size` distinct conformer ids.
+4) Keep the solver deterministic. If you use randomness, seed it explicitly and reproducibly.
+5) Optimize the evaluated portfolio score, not just the candidate's internal predicted score.

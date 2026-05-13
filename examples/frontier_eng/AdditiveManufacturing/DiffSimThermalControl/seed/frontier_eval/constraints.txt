@@ -1,0 +1,10 @@
+DiffSimThermalControl unified constraints:
+1) Only modify optimization logic inside `scripts/init.py` between `EVOLVE-BLOCK-START` and `EVOLVE-BLOCK-END`.
+2) Keep function signatures unchanged:
+   - load_cases(case_file=None)
+   - simulate(params, case)
+   - baseline_solve(case, max_sim_calls=..., simulate_fn=...)
+   - solve(case, max_sim_calls=..., simulate_fn=...)
+3) Candidate parameters are normalized laser-power control knots and must remain in [0, 1].
+4) Optimize mean thermal-control loss across the real toolpath layers extracted from the upstream repository.
+5) Do not modify `verification/evaluator.py` or files under `references/original/`.

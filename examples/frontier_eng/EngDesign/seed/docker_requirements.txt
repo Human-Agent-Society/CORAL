@@ -1,0 +1,14 @@
+anthropic==0.50.0
+control==0.10.1
+google-generativeai==0.8.5
+instructor==1.7.9
+matlab==0.1
+matplotlib==3.10.1
+numpy==2.2.4
+openai==1.74.0
+opencv-python==4.11.0.86
+pydantic==2.11.3
+scikit-image==0.25.2
+scikit-learn==1.6.1
+cvxopt==1.3.2
+oct2py==5.8.0

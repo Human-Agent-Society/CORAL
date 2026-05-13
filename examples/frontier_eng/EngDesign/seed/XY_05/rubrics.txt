@@ -1,0 +1,58 @@
+# SLC-3 CPU Advanced Design Evaluation Rubric
+
+## Control Signal Assignment (54 points)
+- Each instruction's control signals are worth up to 6 points
+- Points are awarded based on correctness of each signal:
+  - Full credit (1 point) for signals that exactly match the reference solution
+  - Partial credit (0.75 points) for acceptable alternative values
+  - Minimal credit (0.5 points) for "don't care" (X) values that should be explicit
+  - No credit for completely incorrect signal values
+
+### Critical Signal Requirements:
+- LDR must update condition codes (ld_cc=1)
+- JSR must save return address (ld_reg=1)
+- No bus conflicts allowed (only one of gateALU or gateMDR can be 1)
+- Memory write requires memory enable (if mem_we=1, then mem_en must be 1)
+
+## Technical Explanations (22 points)
+- Each instruction's explanation is evaluated on:
+  - Basic completeness (1 point)
+  - Technical precision and terminology (1 point)
+  - Functional accuracy (0.5 points)
+  - Explanation of inactive signals (0.5 points)
+
+### Explanation Requirements:
+- Must reference specific hardware components (ALU, PC, registers, etc.)
+- Must explain datapath traversal (how data flows)
+- Must justify both active AND inactive signals
+- Must describe condition code handling
+
+## State Transition Mapping (15 points)
+- Each instruction's state transition is evaluated on:
+  - Correct current state identification (1 point)
+  - Correct next state identification (1 point) 
+  - Complete sequence for multi-cycle instructions (1 point)
+
+### State Transition Requirements:
+- Single-cycle instructions: Current state and next state
+- Multi-cycle instructions: Complete state sequence
+- BR instruction: Both taken and not-taken paths
+- Correctly identify the fetch cycle return state (s_18)
+
+## Format and Completeness (9 points)
+- Complete coverage of all instructions (3 points)
+- Complete coverage of all control signals (3 points)
+- Complete explanations for all instructions (3 points)
+
+## Critical Error Penalties (-20 points)
+Any of the following will result in significant point deduction:
+- Bus contention (multiple components driving bus)
+- Invalid memory operations
+- Other hardware safety violations
+
+## Passing Requirements
+- Minimum total score: 85/100 points
+- No critical errors
+- Demonstrated understanding of both control signals and state machine
+
+This rubric evaluates comprehensive understanding of CPU design principles, including control signal assignments, state machine implementation, and hardware safety considerations.

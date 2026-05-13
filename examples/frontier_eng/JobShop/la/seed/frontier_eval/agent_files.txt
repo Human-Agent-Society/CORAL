@@ -1,0 +1,7 @@
+Task_zh-CN.md
+Task.md
+README_zh-CN.md
+README.md
+baseline/init.py
+verification/evaluate.py
+verification/reference.py

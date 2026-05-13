@@ -1,0 +1,8 @@
+can recognize s&p
+cannot perfectly recognize gaussian (add s&p)
+cannot recognize poission 
+cannot recognize speckle  
+can realize it when a mixture of noise is added
+
+
+Likely to recognize noise to be gaussian noise, maybe the word gaussian appears frequently in training dataset compared to other types of noise. 

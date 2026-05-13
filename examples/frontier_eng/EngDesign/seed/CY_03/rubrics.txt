@@ -1,0 +1,17 @@
+## Evaluation Rubric
+- Robustness : 10pts
+    - Can handle no device : 2.5pts
+    - Can handle no buf : 2.5pts
+    - Can handle pos out of capacity: 2.5pts
+    - Can handle write range out of capacity: 2.5pts
+- Correctly acquires and releases the lock : 5pts
+- Correctly disables and restores the interrupt: 5pts
+- Correctly sets up the vq : 20pts
+    - Correctly sets up the vq descriptors and request header : 18pts
+    - Correctly sets up the used queue : 2pts
+- Full read : 10 pts
+- Full write : 10pts
+- Correctly notifies the device : 10pts
+- Correctly waits for the condition variable : 10pts
+- Correctly reads the data : 10pts
+- Correctly writes the data : 10pts

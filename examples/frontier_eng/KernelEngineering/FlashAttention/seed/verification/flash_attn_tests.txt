@@ -1,0 +1,3 @@
+batchsize: 4; nheads: 32; seqlen_q: 512; seqlen_kv: 512; headdim: 128; causal: 1; seed: 4217
+batchsize: 4; nheads: 32; seqlen_q: 1024; seqlen_kv: 1024; headdim: 128; causal: 1; seed: 7831
+batchsize: 4; nheads: 32; seqlen_q: 2048; seqlen_kv: 2048; headdim: 128; causal: 1; seed: 1259

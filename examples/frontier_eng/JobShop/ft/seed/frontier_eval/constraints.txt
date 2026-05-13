@@ -1,0 +1,4 @@
+Optimize baseline/init.py for this JobShop family.
+Objective: minimize makespan for classical JSSP instances.
+Keep solution as pure Python (standard library only), no external solver/library usage in baseline.
+Preserve expected interfaces used by verification/evaluate.py (e.g., solve_instance output fields).

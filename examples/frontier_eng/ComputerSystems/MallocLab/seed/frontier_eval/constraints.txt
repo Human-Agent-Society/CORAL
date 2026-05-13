@@ -1,0 +1,10 @@
+MallocLab UnifiedTask constraints:
+1) Only modify allocator implementation logic in `malloclab-handout/mm.c`.
+2) Keep required function signatures unchanged:
+   - mm_init
+   - mm_malloc
+   - mm_free
+   - mm_realloc
+3) Do not modify benchmark runner files (`mdriver.c`, trace files, build scripts).
+4) Candidate should target correctness first, then optimize throughput/utilization.
+5) Evaluator compiles with `make` and runs `./mdriver -V`.

@@ -1,0 +1,49 @@
+{
+  "source_repo": "https://github.com/mojtabamozaffar/differentiable-simulation-am",
+  "source_files": [
+    "references/original/0.k",
+    "references/original/toolpath.crs"
+  ],
+  "source_note": "This benchmark uses the original committed mesh/toolpath case from the upstream repository. The upstream notebook references target.npy and target_q.npy, but those files are not published in the repository. Therefore, this task uses the original geometry/toolpath/material constants and defines a reproducible thermal-control objective on top of the real case.",
+  "constants": {
+    "dt": 0.05,
+    "ambient": 300.0,
+    "q_in": 250.0,
+    "r_beam": 1.0,
+    "h_conv": 5e-05,
+    "h_rad": 0.2,
+    "solidus": 1533.15,
+    "liquidus": 1609.15,
+    "max_temp": 2000.0,
+    "memory": 0.995,
+    "heat_gain": 0.075,
+    "speed_weight": 0.15,
+    "turn_weight": 0.4,
+    "cooling_gain": 0.0,
+    "nominal_power": 0.65,
+    "ramp_limit": 0.14,
+    "control_knots": 10
+  },
+  "cases": [
+    {
+      "case_id": "toolpath_layer_01",
+      "layer": 1,
+      "cooldown_s": 1.0
+    },
+    {
+      "case_id": "toolpath_layer_02",
+      "layer": 2,
+      "cooldown_s": 1.0
+    },
+    {
+      "case_id": "toolpath_layer_27",
+      "layer": 27,
+      "cooldown_s": 1.0
+    },
+    {
+      "case_id": "toolpath_layer_28",
+      "layer": 28,
+      "cooldown_s": 1.0
+    }
+  ]
+}

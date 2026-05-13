@@ -1,0 +1,1 @@
+{python} {benchmark}/_parent/frontier_eval/evaluate_unified.py --benchmark-dir {benchmark} --candidate {candidate} --reference-time-limit 2

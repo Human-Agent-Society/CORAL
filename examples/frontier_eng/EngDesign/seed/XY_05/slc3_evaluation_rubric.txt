@@ -1,0 +1,48 @@
+SLC-3 CPU Evaluation Rubric (Revised, No Reasoning)
+
+This rubric reflects the updated `evaluate_no_reasoning.py` scoring, which removes the reasoning component and redistributes its weight across control signals, state transitions, and formatting.
+
+1. Control Signal Assignment – 60 points
+- Each instruction contributes equally toward the control signal score.
+- There are 9 instructions × 8 signals = 72 signal slots total.
+- Each signal is evaluated against a reference:
+  - 1 point — exactly matches reference value
+  - 0.5 point — alternate valid but suboptimal
+  - 0 point — incorrect or missing
+- Total is normalized to 60 points.
+
+Key Constraints (Critical Checkpoints):
+- No bus contention: gateALU and gateMDR must not both be 1
+- Memory write requires enable: if mem_we = 1, then mem_en must also = 1
+- LDR must update condition codes: ld_cc = 1
+- JSR must save return address: ld_reg = 1
+
+Any constraint violation → 0 points for that instruction.
+
+2. State Transition Mapping – 25 points
+- Each instruction’s state mapping is evaluated:
+  - 1 point — correct "current" state
+  - 1 point — correct "next" (or "next_taken"/"next_not_taken")
+  - 1 point — complete "sequence" for multi-cycle instructions or BR
+
+Requirement by type:
+- Single-cycle: current + next
+- Multi-cycle (e.g., LDR, STR): complete sequence
+- BR: next_taken + next_not_taken + sequence_taken
+
+3. Format and Completeness – 15 points
+- Instruction coverage (5 points): All 9 instructions present
+- Field completeness (5 points): All 8 control signals per instruction
+- JSON formatting (5 points): All values are strings, sequences comma-separated, no arrays
+
+4. Critical Error Penalties
+Any of the following → instruction scores 0 in control signals(score-20):
+- Bus conflict (e.g., gateALU = 1 and gateMDR = 1)
+- mem_we = 1 but mem_en = 0
+- Missing required flags for JSR, LDR, etc.
+
+Passing Threshold
+- Final score ≥ 85 / 100
+- No critical errors
+- All 9 instructions fully specified
+

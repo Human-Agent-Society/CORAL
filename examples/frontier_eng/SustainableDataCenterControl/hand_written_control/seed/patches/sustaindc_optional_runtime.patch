@@ -1,0 +1,51 @@
+diff --git a/sustaindc_env.py b/sustaindc_env.py
+index 12d2078..11d7f7d 100644
+--- a/sustaindc_env.py
++++ b/sustaindc_env.py
+@@ -19,17 +19,28 @@ from utils.managers import (CI_Manager, Time_Manager, Weather_Manager,
+                             Workload_Manager)
+ from utils.utils_cf import get_energy_variables, get_init_day, obtain_paths
+ 
+-import matplotlib
+-matplotlib.use('Agg')  # Use a non-interactive backend suitable for servers without display
+-import matplotlib.pyplot as plt
+-import matplotlib.image as mpimg  # For reading images
+-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
++try:
++    import matplotlib
++    matplotlib.use('Agg')  # Use a non-interactive backend suitable for servers without display
++    import matplotlib.pyplot as plt
++    import matplotlib.image as mpimg  # For reading images
++    from matplotlib.offsetbox import OffsetImage, AnnotationBbox
++except ImportError:
++    matplotlib = None
++    plt = None
++    mpimg = None
++    OffsetImage = None
++    AnnotationBbox = None
+ 
+ from collections import deque
+ 
+ import threading
+ import queue
+-from harl.envs.sustaindc.dashboard_v2 import Dashboard  # Import the Dashboard class
++
++try:
++    from harl.envs.sustaindc.dashboard_v2 import Dashboard  # Import the Dashboard class
++except ImportError:
++    Dashboard = None
+ 
+ class EnvConfig(dict):
+ 
+@@ -233,6 +244,11 @@ class SustainDC(gym.Env):
+         # Only launch this dashboard for the render environment
+         self.is_render = env_config.get("is_render", False)
+         if self.is_render:
++            if Dashboard is None:
++                raise ImportError(
++                    "Render mode requires optional dashboard dependencies that are not "
++                    "installed in the current Python environment."
++                )
+             self.evaluation_render_dir = './results/evaluation_render'
+             self.dashboard = Dashboard(self.evaluation_render_dir)
+             self.dashboard.start()

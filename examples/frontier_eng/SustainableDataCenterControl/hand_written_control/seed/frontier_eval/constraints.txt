@@ -1,0 +1,6 @@
+SustainDC hand-written control constraints:
+1) Edit only `baseline/solution.py`.
+2) Keep `decide_actions(observations) -> dict` working; `reset_policy()` is optional.
+3) Return exactly one valid discrete action for `agent_ls`, `agent_dc`, and `agent_bat`.
+4) Keep the policy deterministic and self-contained at evaluation time.
+5) Do not modify the evaluator, benchmark core, or the vendored `sustaindc/` checkout.

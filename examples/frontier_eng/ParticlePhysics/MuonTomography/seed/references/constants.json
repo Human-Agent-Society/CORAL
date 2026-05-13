@@ -1,0 +1,12 @@
+{
+    "physical_constants": {
+      "EXPOSURE_TIME_MULTIPLIER": 100000.0,
+      "DETECTOR_AREA_SQM": 1.0,
+      "TARGET_ROI_CENTER": [0.0, 0.0, 30.0]
+    },
+    "economic_constants": {
+      "BASE_COST_PER_DETECTOR": 20.0,
+      "DIGGING_COST_PER_METER": 1.5,
+      "INSIDE_PYRAMID_PENALTY": 10000.0
+    }
+  }

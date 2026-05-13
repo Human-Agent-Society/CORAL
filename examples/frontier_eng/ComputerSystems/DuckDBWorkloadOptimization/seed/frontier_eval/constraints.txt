@@ -1,0 +1,20 @@
+DuckDBWorkloadOptimization constraints:
+1) Candidate file is `scripts/init.py` and must return JSON fields:
+   - `index_statements`: list[str]
+   - `materialized_view_statements`: list[str]
+   - `query_rewrites`: dict[str, str]
+2) Official source fidelity:
+   - Workload SQL and base data setup come from `duckdb/duckdb` benchmark files listed in `references/problem_config.json`.
+   - Do not fabricate replacement workload/data files.
+3) SQL safety:
+   - Rewrite SQL must be single read-only SELECT/CTE statement.
+   - Index SQL must be `CREATE INDEX ... ON table(col, ...)` on allowed tables/columns.
+   - Materialized-view SQL must be `CREATE TABLE/CREATE MATERIALIZED VIEW mv_* AS SELECT ...`.
+4) Semantic correctness:
+   - For each rewrite workload query, rewritten SQL must be result-equivalent to baseline SQL.
+5) Limits:
+   - max indexes = 12
+   - max materialized views = 4
+   - max rewrites = 3
+6) Read-only benchmark assets:
+   - `verification/evaluator.py`, `baseline/solution.py`, `references/problem_config.json`, `references/duckdb_official/`.

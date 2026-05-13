@@ -1,0 +1,7 @@
+{
+  "task": "finite_horizon_dp",
+  "baseline_final_score": 0.3673219124866723,
+  "reference_final_score": 0.8053085474779113,
+  "gap_reference_minus_baseline": 0.43798663499123897,
+  "winner": "reference"
+}

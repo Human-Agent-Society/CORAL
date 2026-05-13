@@ -1,0 +1,6 @@
+CVaR Stress-Controlled Allocation constraints:
+1) Edit only `baseline/init.py`.
+2) Keep function signature `solve_instance(instance: dict) -> dict`.
+3) Return `{"weights": np.ndarray}` with shape `(N,)` and numeric dtype.
+4) Respect long-only bounds, target return, sector limits, turnover cap, and budget sum.
+5) Do not modify evaluator/reference files.

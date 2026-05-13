@@ -1,0 +1,8 @@
+## Evaluation Rubric
+- Job completed: 10 points
+- The output material distribution, y_hat, is in correct shape: 20 points
+- Compliance error (CE) = (C(y_hat) - C(y))/C(y) is less than certain threshold: 70 points
+
+Note: y is the ground truth toplogy generated using the SIMP-based TO library
+
+

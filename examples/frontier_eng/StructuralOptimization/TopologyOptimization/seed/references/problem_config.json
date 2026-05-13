@@ -1,0 +1,15 @@
+{
+  "nelx": 60,
+  "nely": 20,
+  "volfrac": 0.5,
+  "penal": 3.0,
+  "rmin": 1.5,
+  "E0": 1.0,
+  "Emin": 1e-9,
+  "nu": 0.3,
+  "force": {
+    "node": "top-left",
+    "fy": -1.0
+  },
+  "boundary": "mbb_half_symmetry"
+}

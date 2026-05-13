@@ -1,0 +1,29 @@
+## Task Description
+
+In this task, you are required to perform a topology optimization to design an optimal cantilever beam structure that minimizes the compliance (maximizes stiffness) under a given volume constraint. The beam is fixed on the left edge and subjected to a downward load at the bottom right corner. The design domain is discretized into a uniform rectangular grid, and material is distributed in this domain to achieve the best structural performance.
+
+## Input Parameters
+
+### Material properties
+young = 1
+poisson = 0.3
+
+#### Constraints
+Emin = 1e-9
+volfrac = 0.4
+move = 1
+
+#### Mesh dimensions
+nelx = 10
+nely = 10
+
+## Task
+Use the input parameters to set up a topology optimization problem for a cantilever beam. Your task is to:
+
+- Simulate the optimization process.
+
+- Ensure that the design adheres to the specified volume fraction.
+
+- Output the final material distribution, y_hat, and report the minimal compliance value, named C_y_hat, obtained after convergence.
+
+- y_hat must be a matrix where each element ranges from 0 to 1 inclusively. 

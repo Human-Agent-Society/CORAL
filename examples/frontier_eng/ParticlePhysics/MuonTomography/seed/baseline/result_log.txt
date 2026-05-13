@@ -1,0 +1,4 @@
+cd benchmarks/ParticlePhysics/MuonTomography
+python baseline/solution.py
+python verification/evaluator.py solution.json
+{"score": 199.32012533144325, "status": "success", "metrics": {"total_signal": 309.32012533144325, "total_cost": 110.0, "valid_detectors": 4}}

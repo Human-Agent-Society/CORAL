@@ -1,0 +1,119 @@
+#####################################################################
+# CS:APP Malloc Lab
+# Traces
+#
+# Copyright (c) 2002, R. Bryant and D. O'Hallaron, All rights reserved.
+# May not be used, modified, or copied without permission.
+#
+######################################################################
+
+This directory contains traces of allocate and free requests that are
+used by the test harness to evaluate the student malloc packages.
+
+*********
+1. Files
+*********
+
+*.rep		Original traces
+*-bal.rep	Balanced versions of the original traces
+gen_XXX.pl	Perl script that generates *.rep	
+checktrace.pl	Checks trace for consistency and outputs a balanced version
+Makefile	Generates traces
+
+Note: A "balanced" trace has a matching free request for each allocate
+request.
+
+**********************
+2. Building the traces
+**********************
+To rebuild the traces from scratch, type 
+
+	unix> make
+
+********************
+3. Trace file format
+********************
+
+A trace file is an ASCII file. It begins with a 4-line header:
+
+<sugg_heapsize>   /* suggested heap size (unused) */
+<num_ids>         /* number of request id's */
+<num_ops>         /* number of requests (operations) */
+<weight>          /* weight for this trace (unused) */
+
+The header is followed by num_ops text lines. Each line denotes either
+an allocate [a], reallocate [r], or free [f] request. The <alloc_id>
+is an integer that uniquely identifies an allocate or reallocate
+request.
+
+a <id> <bytes>  /* ptr_<id> = malloc(<bytes>) */
+r <id> <bytes>  /* realloc(ptr_<id>, <bytes>) */ 
+f <id>          /* free(ptr_<id>) */
+
+For example, the following trace file:
+
+<beginning of file>
+20000
+3
+8
+1
+a 0 512
+a 1 128
+r 0 640
+a 2 128
+f 1
+r 0 768
+f 0
+f 2
+<end of file>
+
+is balanced. It has a recommended heap size of 20000 bytes (ignored),
+three distinct request ids (0, 1, and 2), eight different requests
+(one per line), and a weight of 1 (ignored).
+
+************************
+4. Description of traces
+************************
+
+* short{1,2}-bal.rep
+
+Tiny synthetic tracefiles for debugging
+
+* {amptjp,cccp,cp-decl,expr}-bal.rep
+
+Traces generated from real programs.
+
+* {binary,binary2}-bal.rep
+
+The allocation pattern is to alternatively allocate a small-sized
+chunk of memory and a large-sized chunk. The small-sized chunks
+(either 16 or 64 ) are deliberately set to be power of 2 while the
+large-size chunks (either 112 or 448) are not a power of 2. Defeats
+buddy algorithms. However, a simple-minded algorithm might prevail in
+this scenario because a first-fit scheme will be good enough.
+
+* coalescing-bal.rep
+
+Repeatedly allocate two equal-sized chunks (4095 in size) and release
+them, and then immediately allocate and free a chunk twice as big
+(8190). This tests if the students' algorithm ever really releases
+memory and does coalescing. The size is chosen to give advantage to
+tree-based or segrated fits algorithms where there is no header or
+footer overhead.
+
+* {random,random2}-bal.rep
+	
+Random allocate and free requesets that simply test the correctness
+and robustness of the algorithm.
+
+
+* {realloc,realloc2}-bal.rep
+	
+Reallocate previously allocated blocks interleaved by other allocation
+request. The purpose is to test whether a certain amount of internal
+fragments are allocated or not. Naive realloc implementations that
+always realloc a brand new block will suffer.
+
+* {gcc,clang,curl,python3}-bal.rep
+
+Traces captured from real-world applications.
