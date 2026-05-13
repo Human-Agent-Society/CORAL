@@ -1,5 +1,0 @@
-*.pth
-*.pyc
-data
-submission.json
-references/car_surface_points.npy

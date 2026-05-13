@@ -1,3 +1,0 @@
-frontier_eval
-verification/evaluate.py
-verification/reference_solver.py

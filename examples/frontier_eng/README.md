@@ -1,7 +1,8 @@
 # Frontier-Engineering tasks
 
-48 leaf benchmarks ported from [EinsiaLab/Frontier-Engineering](https://github.com/EinsiaLab/Frontier-Engineering)
-into the CORAL example layout.
+42 leaf benchmarks ported from [EinsiaLab/Frontier-Engineering](https://github.com/EinsiaLab/Frontier-Engineering)
+into the CORAL example layout. Every task here passes `coral validate` from
+a clean PyPI-only host.
 
 The integration is two pieces:
 
@@ -30,7 +31,7 @@ examples/frontier_eng/
 │       ├── _runtime/
 │       │   ├── README.md      ← upstream env spec notes
 │       │   └── requirements.txt   ← raw upstream requirement files, concatenated
-│       ├── _parent/           ← OPTIONAL: parent-domain shared files (Optics/JobShop/MolecularMechanics)
+│       ├── _parent/           ← OPTIONAL: parent-domain shared files (Optics/JobShop)
 │       └── (the benchmark's own baseline/, verification/, references/, ...)
 └── ...
 ```
@@ -38,7 +39,7 @@ examples/frontier_eng/
 ## Running a task
 
 ```bash
-coral start -c examples/frontier_eng/Aerodynamics/CarAerodynamicsSensing/task.yaml
+coral start -c examples/frontier_eng/Aerodynamics/DawnAircraftDesignOptimization/task.yaml
 coral start -c examples/frontier_eng/JobShop/abz/task.yaml
 coral start -c examples/frontier_eng/Optics/phase_dammann_uniform_orders/task.yaml
 ```
@@ -89,33 +90,21 @@ Each CORAL worktree gets its own `.venv`, so different tasks can have different 
 
 ## Task list
 
-The leaf-benchmark coverage is a curated 48-task subset of upstream's `v1` problem set — the ones whose generated `workspace.setup` works against the modern Python uv selects for the worktree (Python 3.13 by default). Per-task descriptions are pulled from each seed's `Task.md` / `README.md`; `frontier_eval/constraints.txt` is rendered into the `tips` section.
+The leaf-benchmark coverage is a curated 42-task subset of upstream's `v1` problem set — every task here passes `coral validate` against the unmodified seed (the prune dropped tasks blocked by missing external assets, network-restricted asset downloads, upstream package yanks, or upstream code bugs in the seed). Per-task descriptions are pulled from each seed's `Task.md` / `README.md`; `frontier_eval/constraints.txt` is rendered into the `tips` section.
 
 | Domain | Tasks |
 |---|---|
 | AdditiveManufacturing | DiffSimThermalControl |
-| Aerodynamics | CarAerodynamicsSensing, DawnAircraftDesignOptimization |
+| Aerodynamics | DawnAircraftDesignOptimization |
 | CommunicationEngineering | LDPCErrorFloor, PMDSimulation, RayleighFadingBER |
-| ComputerSystems | DuckDBWorkloadOptimization |
 | EnergyStorage | BatteryFastChargingProfile, BatteryFastChargingSPMe |
 | JobShop | abz, ft, la, orb, swv, ta, yn |
-| MolecularMechanics | diverse_conformer_portfolio, torsion_profile_fitting, weighted_parameter_coverage |
-| Optics | 16 sub-tasks (`adaptive_*`, `fiber_*`, `holographic_*`, `phase_*`) |
+| Optics | 15 sub-tasks (`adaptive_*`, `fiber_*`, `holographic_*`, `phase_*`) |
 | ParticlePhysics | MuonTomography |
 | PowerSystems | EV2GymSmartCharging |
 | Robotics | CoFlyersVasarhelyiTuning, DynamicObstacleAvoidanceNavigation, PIDTuning, QuadrupedGaitOptimization, RobotArmCycleTimeOptimization, UAVInspectionCoverageWithWind |
 | StructuralOptimization | ISCSO2015, ISCSO2023, PyMOTOSIMPCompliance, TopologyOptimization |
 | WirelessChannelSimulation | HighReliableSimulation |
-
-## Host prerequisites for some tasks
-
-A small number of benchmarks need host-level extras the integration cannot install for you:
-
-| Tasks | Needs |
-|---|---|
-| `Aerodynamics/CarAerodynamicsSensing` | NVIDIA GPU + working CUDA stack |
-
-Skip / parametrize these tasks at agent-launch time if your host lacks the prerequisites.
 
 ## Regenerating
 
@@ -129,7 +118,7 @@ python examples/frontier_eng/_scripts/generate_tasks.py \
     --clean
 ```
 
-Note: `--clean` regenerates **every** leaf benchmark in upstream's tree, not just the curated 48 listed above. Re-prune afterwards if you want to keep the curated subset.
+Note: `--clean` regenerates **every** leaf benchmark in upstream's tree, not just the curated 42 listed above. Re-prune afterwards if you want to keep the curated subset.
 
 Generate a single task:
 
