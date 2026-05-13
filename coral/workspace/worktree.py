@@ -37,7 +37,8 @@ def create_agent_worktree(repo_path: Path, agent_id: str, agents_dir: Path) -> P
     # Get current HEAD
     result = subprocess.run(
         ["git", "--git-dir", str(git_dir), "rev-parse", "HEAD"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
 
     if result.returncode == 0:
@@ -45,7 +46,8 @@ def create_agent_worktree(repo_path: Path, agent_id: str, agents_dir: Path) -> P
         logger.debug(f"HEAD={head[:12]}, creating branch {branch_name}")
         result = subprocess.run(
             ["git", "--git-dir", str(git_dir), "branch", branch_name, head],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result.returncode != 0 and "already exists" not in result.stderr:
             logger.warning(f"Branch creation: {result.stderr.strip()}")
@@ -53,20 +55,32 @@ def create_agent_worktree(repo_path: Path, agent_id: str, agents_dir: Path) -> P
         # No commits yet — create an initial commit
         logger.info("No commits found, creating initial empty commit")
         subprocess.run(
-            ["git", "--git-dir", str(git_dir), "--work-tree", str(repo_path),
-             "commit", "--allow-empty", "-m", "Initial commit"],
-            capture_output=True, text=True,
+            [
+                "git",
+                "--git-dir",
+                str(git_dir),
+                "--work-tree",
+                str(repo_path),
+                "commit",
+                "--allow-empty",
+                "-m",
+                "Initial commit",
+            ],
+            capture_output=True,
+            text=True,
         )
         subprocess.run(
             ["git", "--git-dir", str(git_dir), "branch", branch_name],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
 
     # Create worktree
     logger.info(f"Creating worktree at {worktree_path} on branch {branch_name}")
     result = subprocess.run(
         ["git", "--git-dir", str(git_dir), "worktree", "add", str(worktree_path), branch_name],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     if result.returncode != 0:
         raise RuntimeError(
@@ -84,7 +98,17 @@ def create_agent_worktree(repo_path: Path, agent_id: str, agents_dir: Path) -> P
 def setup_gitignore(worktree_path: Path) -> None:
     """Write .gitignore to exclude CORAL-managed files from git."""
     gitignore_path = worktree_path / ".gitignore"
-    entries = {".coral_agent_id", ".coral_dir", "CLAUDE.md", "AGENTS.md", ".claude/", ".codex/", ".cursor/", ".opencode/", ".venv/"}
+    entries = {
+        ".coral_agent_id",
+        ".coral_dir",
+        "CLAUDE.md",
+        "AGENTS.md",
+        ".claude/",
+        ".codex/",
+        ".cursor/",
+        ".opencode/",
+        ".venv/",
+    }
 
     # Preserve existing entries
     existing = set()
@@ -120,7 +144,9 @@ def get_coral_dir(worktree_path: Path) -> Path | None:
     return None
 
 
-def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: str = ".claude") -> None:
+def setup_shared_state(
+    worktree_path: Path, coral_dir: Path, shared_dir_name: str = ".claude"
+) -> None:
     """Create a shared state directory in the worktree with symlinks to .coral/public/.
 
     Symlinks notes, skills, attempts, and logs from .coral/public/ into
@@ -165,6 +191,35 @@ def setup_shared_state(worktree_path: Path, coral_dir: Path, shared_dir_name: st
                 dst.symlink_to(src.resolve())
 
 
+def _deep_merge_settings(base: dict, overlay: dict) -> dict:
+    """Deep-merge ``overlay`` onto ``base`` and return a new dict.
+
+    Semantics:
+        - Dicts merge recursively: keys present only in one side are kept;
+          keys in both recurse if both values are dicts, otherwise overlay wins.
+        - Lists concatenate: ``base`` entries first, then ``overlay`` entries.
+          Lets a user *add* permission rules / hooks / MCP servers without
+          having to repeat CORAL's required defaults. Duplicates are not
+          deduped — Claude Code tolerates them in the affected fields.
+        - Scalars: overlay wins.
+
+    The base dict is not mutated.
+    """
+    result = dict(base)
+    for key, overlay_value in overlay.items():
+        if key not in result:
+            result[key] = overlay_value
+            continue
+        base_value = result[key]
+        if isinstance(base_value, dict) and isinstance(overlay_value, dict):
+            result[key] = _deep_merge_settings(base_value, overlay_value)
+        elif isinstance(base_value, list) and isinstance(overlay_value, list):
+            result[key] = base_value + overlay_value
+        else:
+            result[key] = overlay_value
+    return result
+
+
 def setup_claude_settings(
     worktree_path: Path,
     coral_dir: Path,
@@ -172,6 +227,7 @@ def setup_claude_settings(
     research: bool = True,
     gateway_url: str | None = None,
     gateway_api_key: str | None = None,
+    settings_overrides: dict | None = None,
 ) -> None:
     """Write Claude Code settings.json with permissions and gateway env.
 
@@ -179,6 +235,12 @@ def setup_claude_settings(
     --dangerously-skip-permissions).  When a gateway is configured, sets
     ANTHROPIC_BASE_URL and ANTHROPIC_API_KEY in the settings ``env`` so
     they override the user's global ``~/.claude/settings.json``.
+
+    ``settings_overrides`` is a dict that gets deep-merged onto the
+    generated settings before write — used by per-agent overrides
+    (``agents.assignments[].runtime_options.settings_path``) so each agent
+    can ship its own MCP servers, hooks, env, or extra permission rules
+    without losing CORAL's required worktree-scoped defaults.
     """
     claude_dir = worktree_path / ".claude"
     claude_dir.mkdir(exist_ok=True)
@@ -245,6 +307,9 @@ def setup_claude_settings(
         env["ANTHROPIC_CUSTOM_HEADERS"] = ""
         settings["env"] = env
 
+    if settings_overrides:
+        settings = _deep_merge_settings(settings, settings_overrides)
+
     settings_path = claude_dir / "settings.local.json"
     # Always overwrite — each agent needs its own copy
     settings_path.write_text(json.dumps(settings, indent=2) + "\n")
@@ -307,13 +372,9 @@ def setup_opencode_settings(
                 "name": "openai",
                 "options": provider_options,
                 "models": {
-                    "gpt-5.4": {
-                        "name": "gpt-5.4"
-                    },
-                    "claude-opus-4-6": {
-                        "name": "claude-opus-4-6"
-                    }
-                }
+                    "gpt-5.4": {"name": "gpt-5.4"},
+                    "claude-opus-4-6": {"name": "claude-opus-4-6"},
+                },
             },
         }
 
@@ -352,7 +413,7 @@ def setup_codex_settings(
     if gateway_url:
         lines += [
             'model_provider = "litellm"\n',
-            '[model_providers.litellm]',
+            "[model_providers.litellm]",
             'name = "LiteLLM Proxy"',
             f'base_url = "{gateway_url}/v1"',
             'wire_api = "responses"',
@@ -410,9 +471,7 @@ def setup_cursor_settings(
         "---\n"
         "\n"
         "# CORAL Agent Guardrails\n"
-        "\n"
-        + "\n".join(body_lines)
-        + "\n"
+        "\n" + "\n".join(body_lines) + "\n"
     )
 
     (rules_dir / "coral.mdc").write_text(rules_md)
@@ -444,10 +503,7 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
     worktree_venv = worktree_path / ".venv"
     venv_python = worktree_venv / "bin" / "python"
     if venv_python.exists():
-        logger.debug(
-            f"Worktree venv already populated at {worktree_venv}, "
-            f"skipping setup commands"
-        )
+        logger.debug(f"Worktree venv already populated at {worktree_venv}, skipping setup commands")
         return
 
     env_override = {"UV_PROJECT_ENVIRONMENT": str(worktree_venv)}
@@ -470,6 +526,4 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
                 env=env,
             )
             if result.returncode != 0:
-                logger.warning(
-                    f"Failed to install coral in worktree: {result.stderr.strip()}"
-                )
+                logger.warning(f"Failed to install coral in worktree: {result.stderr.strip()}")

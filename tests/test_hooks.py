@@ -14,6 +14,7 @@ from coral.hooks.post_commit import (
     submit_eval,
 )
 from coral.workspace import setup_claude_settings
+from coral.workspace.worktree import _deep_merge_settings
 
 # These tests deliberately use the deprecated eval/grader.py loading path —
 # silence the warning suite-wide.
@@ -50,14 +51,18 @@ def _setup_repo_with_config(base_dir: Path) -> Path:
     repo = base_dir / "repo"
     repo.mkdir()
     subprocess.run(["git", "init", str(repo)], capture_output=True, check=True)
-    subprocess.run(["git", "-C", str(repo), "config", "user.email", "test@test.com"], capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "config", "user.email", "test@test.com"], capture_output=True
+    )
     subprocess.run(["git", "-C", str(repo), "config", "user.name", "Test"], capture_output=True)
 
     # Create a file and .gitignore, then make an initial commit
     (repo / "hello.py").write_text("print('hello')\n")
     (repo / ".gitignore").write_text(".coral/\n.coral_dir\n.claude/\n.coral_agent_id\nCLAUDE.md\n")
     subprocess.run(["git", "-C", str(repo), "add", "hello.py", ".gitignore"], capture_output=True)
-    subprocess.run(["git", "-C", str(repo), "commit", "-m", "Initial"], capture_output=True, check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "-m", "Initial"], capture_output=True, check=True
+    )
 
     # Set up .coral directory with config + eval/grader.py
     coral_dir = repo / ".coral"
@@ -197,7 +202,9 @@ def _set_grader_config(repo: Path, **fields) -> None:
 def _head_hash(repo: Path) -> str:
     return subprocess.run(
         ["git", "-C", str(repo), "rev-parse", "HEAD"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout.strip()
 
 
@@ -212,7 +219,10 @@ def test_submit_eval_rejects_when_agent_at_pending_limit():
         try:
             (repo / "hello.py").write_text("print('v1')\n")
             first = submit_eval(
-                message="v1", agent_id="agent-test", workdir=str(repo), wait=False,
+                message="v1",
+                agent_id="agent-test",
+                workdir=str(repo),
+                wait=False,
             )
             assert first.status == "pending"
             head_after_first = _head_hash(repo)
@@ -221,7 +231,10 @@ def test_submit_eval_rejects_when_agent_at_pending_limit():
             (repo / "hello.py").write_text("print('v2')\n")
             with pytest.raises(RuntimeError, match=r"pending attempt"):
                 submit_eval(
-                    message="v2", agent_id="agent-test", workdir=str(repo), wait=False,
+                    message="v2",
+                    agent_id="agent-test",
+                    workdir=str(repo),
+                    wait=False,
                 )
 
             # No orphan commit was created by the rejected submit.
@@ -243,7 +256,10 @@ def test_submit_eval_allows_after_drain():
 
             (repo / "hello.py").write_text("print('v2')\n")
             second = submit_eval(
-                message="v2", agent_id="agent-test", workdir=str(repo), wait=False,
+                message="v2",
+                agent_id="agent-test",
+                workdir=str(repo),
+                wait=False,
             )
             assert second.status == "pending"
         finally:
@@ -263,15 +279,19 @@ def test_submit_eval_respects_higher_limit():
             for i in range(3):
                 (repo / "hello.py").write_text(f"print('v{i}')\n")
                 submit_eval(
-                    message=f"v{i}", agent_id="agent-test",
-                    workdir=str(repo), wait=False,
+                    message=f"v{i}",
+                    agent_id="agent-test",
+                    workdir=str(repo),
+                    wait=False,
                 )
 
             (repo / "hello.py").write_text("print('overflow')\n")
             with pytest.raises(RuntimeError, match=r"pending attempt"):
                 submit_eval(
-                    message="overflow", agent_id="agent-test",
-                    workdir=str(repo), wait=False,
+                    message="overflow",
+                    agent_id="agent-test",
+                    workdir=str(repo),
+                    wait=False,
                 )
         finally:
             sys.path.pop(0)
@@ -290,8 +310,10 @@ def test_submit_eval_unlimited_when_zero():
             for i in range(5):
                 (repo / "hello.py").write_text(f"print('v{i}')\n")
                 submit_eval(
-                    message=f"v{i}", agent_id="agent-test",
-                    workdir=str(repo), wait=False,
+                    message=f"v{i}",
+                    agent_id="agent-test",
+                    workdir=str(repo),
+                    wait=False,
                 )
             # All five sit in the queue as pending; nothing was rejected.
             attempts_dir = repo / ".coral" / "public" / "attempts"
@@ -314,7 +336,10 @@ def test_submit_eval_per_agent_isolation():
             # agent-A is at its limit, but agent-B has no pending attempts.
             (repo / "hello.py").write_text("print('b')\n")
             second = submit_eval(
-                message="b", agent_id="agent-B", workdir=str(repo), wait=False,
+                message="b",
+                agent_id="agent-B",
+                workdir=str(repo),
+                wait=False,
             )
             assert second.status == "pending"
             assert second.agent_id == "agent-B"
@@ -422,3 +447,215 @@ def test_setup_claude_settings_no_research():
         assert "WebFetch" not in allow
         assert "WebSearch" in deny
         assert "WebFetch" in deny
+
+
+# --- _deep_merge_settings unit tests ---
+
+
+def test_deep_merge_dicts_recurse():
+    base = {"permissions": {"defaultMode": "auto", "allow": ["Bash"]}}
+    overlay = {"permissions": {"defaultMode": "plan"}}
+    merged = _deep_merge_settings(base, overlay)
+    # Scalar in nested dict: overlay wins, sibling list preserved
+    assert merged["permissions"]["defaultMode"] == "plan"
+    assert merged["permissions"]["allow"] == ["Bash"]
+
+
+def test_deep_merge_lists_concatenate():
+    base = {"permissions": {"allow": ["Bash"], "deny": ["Bash(git *)"]}}
+    overlay = {"permissions": {"allow": ["mcp__db__query"], "deny": ["Bash(rm *)"]}}
+    merged = _deep_merge_settings(base, overlay)
+    # User's permission rules append to CORAL's defaults — they don't replace
+    assert merged["permissions"]["allow"] == ["Bash", "mcp__db__query"]
+    assert merged["permissions"]["deny"] == ["Bash(git *)", "Bash(rm *)"]
+
+
+def test_deep_merge_adds_new_keys():
+    base = {"permissions": {"allow": ["Bash"]}}
+    overlay = {
+        "mcpServers": {"db": {"command": "uvx", "args": ["mcp-db"]}},
+        "env": {"FOO": "bar"},
+    }
+    merged = _deep_merge_settings(base, overlay)
+    assert merged["mcpServers"] == {"db": {"command": "uvx", "args": ["mcp-db"]}}
+    assert merged["env"] == {"FOO": "bar"}
+    # Original keys untouched
+    assert merged["permissions"]["allow"] == ["Bash"]
+
+
+def test_deep_merge_does_not_mutate_base():
+    base = {"permissions": {"allow": ["Bash"]}}
+    overlay = {"permissions": {"allow": ["WebSearch"]}}
+    _deep_merge_settings(base, overlay)
+    assert base == {"permissions": {"allow": ["Bash"]}}
+
+
+def test_deep_merge_scalar_overrides_list():
+    """Type mismatch: overlay wins (defensive — shouldn't happen in practice)."""
+    base = {"foo": [1, 2]}
+    overlay = {"foo": "scalar"}
+    merged = _deep_merge_settings(base, overlay)
+    assert merged["foo"] == "scalar"
+
+
+# --- setup_claude_settings with overrides ---
+
+
+def test_setup_claude_settings_with_overrides_merges_mcp_and_env():
+    """Override dict merges into the generated settings.local.json."""
+    with tempfile.TemporaryDirectory() as d:
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+        coral_dir = Path(d) / ".coral"
+        (coral_dir / "private").mkdir(parents=True)
+        (coral_dir / "public").mkdir(parents=True)
+
+        overrides = {
+            "mcpServers": {"db": {"command": "uvx", "args": ["mcp-db"]}},
+            "env": {"MY_CUSTOM_VAR": "value"},
+            "permissions": {"allow": ["mcp__db__query"]},
+        }
+
+        setup_claude_settings(worktree, coral_dir, settings_overrides=overrides)
+        settings = json.loads((worktree / ".claude" / "settings.local.json").read_text())
+
+        # Override-only fields land verbatim
+        assert settings["mcpServers"] == {"db": {"command": "uvx", "args": ["mcp-db"]}}
+        assert settings["env"] == {"MY_CUSTOM_VAR": "value"}
+
+        # User's allow rule appended to CORAL's defaults — defaults are still there
+        allow = settings["permissions"]["allow"]
+        assert "Bash" in allow  # CORAL default preserved
+        assert "mcp__db__query" in allow  # user addition appended
+
+        # CORAL deny rules still in place (not touched by override)
+        deny = settings["permissions"]["deny"]
+        assert "Bash(git *)" in deny
+
+
+def test_setup_claude_settings_overrides_can_replace_default_mode():
+    """Scalar in nested dict gets overlaid (overlay wins)."""
+    with tempfile.TemporaryDirectory() as d:
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+        coral_dir = Path(d) / ".coral"
+        (coral_dir / "private").mkdir(parents=True)
+        (coral_dir / "public").mkdir(parents=True)
+
+        setup_claude_settings(
+            worktree,
+            coral_dir,
+            settings_overrides={"permissions": {"defaultMode": "plan"}},
+        )
+        settings = json.loads((worktree / ".claude" / "settings.local.json").read_text())
+        assert settings["permissions"]["defaultMode"] == "plan"
+        # Other CORAL-managed permission fields untouched
+        assert "Bash" in settings["permissions"]["allow"]
+
+
+def test_setup_claude_settings_overrides_coexist_with_gateway():
+    """Gateway env block and override env block both end up merged."""
+    with tempfile.TemporaryDirectory() as d:
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+        coral_dir = Path(d) / ".coral"
+        (coral_dir / "private").mkdir(parents=True)
+        (coral_dir / "public").mkdir(parents=True)
+
+        setup_claude_settings(
+            worktree,
+            coral_dir,
+            gateway_url="http://localhost:4000",
+            gateway_api_key="sk-test",
+            settings_overrides={"env": {"USER_VAR": "user-value"}},
+        )
+        settings = json.loads((worktree / ".claude" / "settings.local.json").read_text())
+        # Gateway-injected env vars remain
+        assert settings["env"]["ANTHROPIC_BASE_URL"] == "http://localhost:4000"
+        assert settings["env"]["ANTHROPIC_API_KEY"] == "sk-test"
+        # User-supplied env var added
+        assert settings["env"]["USER_VAR"] == "user-value"
+
+
+def test_setup_claude_settings_no_overrides_unchanged():
+    """settings_overrides=None matches pre-feature behavior exactly."""
+    with tempfile.TemporaryDirectory() as d:
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+        coral_dir = Path(d) / ".coral"
+        (coral_dir / "private").mkdir(parents=True)
+        (coral_dir / "public").mkdir(parents=True)
+
+        setup_claude_settings(worktree, coral_dir)
+        settings = json.loads((worktree / ".claude" / "settings.local.json").read_text())
+        # No surprise fields
+        assert set(settings.keys()) == {"permissions"}
+
+
+# --- AgentManager._load_settings_overrides ---
+
+
+def _make_manager_for_overrides(tmpdir: Path, task_dir: Path | None):
+    """Build a minimal AgentManager that can call _load_settings_overrides."""
+    from coral.agent.manager import AgentManager
+    from coral.config import AgentConfig, CoralConfig, TaskConfig
+
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+        agents=AgentConfig(),
+    )
+    config.task_dir = task_dir
+    return AgentManager(config, config_dir=task_dir)
+
+
+def test_load_settings_overrides_absolute_path():
+    with tempfile.TemporaryDirectory() as d:
+        d_path = Path(d)
+        settings_file = d_path / "claude.json"
+        settings_file.write_text(json.dumps({"env": {"FOO": "bar"}}))
+        manager = _make_manager_for_overrides(d_path, task_dir=d_path)
+        loaded = manager._load_settings_overrides({"settings_path": str(settings_file)})
+        assert loaded == {"env": {"FOO": "bar"}}
+
+
+def test_load_settings_overrides_relative_to_task_dir():
+    with tempfile.TemporaryDirectory() as d:
+        d_path = Path(d)
+        (d_path / "agent1-settings.json").write_text(json.dumps({"env": {"A": "1"}}))
+        manager = _make_manager_for_overrides(d_path, task_dir=d_path)
+        loaded = manager._load_settings_overrides({"settings_path": "agent1-settings.json"})
+        assert loaded == {"env": {"A": "1"}}
+
+
+def test_load_settings_overrides_returns_none_without_key():
+    manager = _make_manager_for_overrides(Path("/tmp"), task_dir=Path("/tmp"))
+    assert manager._load_settings_overrides({}) is None
+    assert manager._load_settings_overrides({"add_dirs": ["/x"]}) is None
+    assert manager._load_settings_overrides(None) is None  # type: ignore[arg-type]
+
+
+def test_load_settings_overrides_missing_file_raises():
+    with tempfile.TemporaryDirectory() as d:
+        manager = _make_manager_for_overrides(Path(d), task_dir=Path(d))
+        with pytest.raises(FileNotFoundError, match="settings_path"):
+            manager._load_settings_overrides({"settings_path": "does-not-exist.json"})
+
+
+def test_load_settings_overrides_invalid_json_raises():
+    with tempfile.TemporaryDirectory() as d:
+        d_path = Path(d)
+        bad = d_path / "bad.json"
+        bad.write_text("{not json")
+        manager = _make_manager_for_overrides(d_path, task_dir=d_path)
+        with pytest.raises(ValueError, match="not valid JSON"):
+            manager._load_settings_overrides({"settings_path": str(bad)})
+
+
+def test_load_settings_overrides_non_dict_raises():
+    with tempfile.TemporaryDirectory() as d:
+        d_path = Path(d)
+        list_file = d_path / "list.json"
+        list_file.write_text(json.dumps(["a", "b"]))
+        manager = _make_manager_for_overrides(d_path, task_dir=d_path)
+        with pytest.raises(ValueError, match="JSON object at the top level"):
+            manager._load_settings_overrides({"settings_path": str(list_file)})

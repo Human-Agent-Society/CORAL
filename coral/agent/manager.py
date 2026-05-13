@@ -135,6 +135,47 @@ class AgentManager:
             self.runtimes[agent_id] = runtime
         return runtime
 
+    def _load_settings_overrides(self, runtime_options: dict[str, Any]) -> dict | None:
+        """Load per-agent Claude Code settings overrides from disk.
+
+        Reads ``runtime_options['settings_path']`` if present and returns
+        the parsed JSON dict. Relative paths resolve against ``config.task_dir``
+        (the directory holding ``task.yaml``), then ``self.config_dir``,
+        then cwd as a last resort. Raises ``FileNotFoundError`` /
+        ``ValueError`` early so a misconfigured path fails at agent start
+        rather than silently producing the default settings.
+
+        Returns ``None`` when no override path is configured.
+        """
+        path_raw = (runtime_options or {}).get("settings_path")
+        if not path_raw:
+            return None
+        path = Path(path_raw)
+        if not path.is_absolute():
+            for base in (self.config.task_dir, self.config_dir, Path.cwd()):
+                if base is None:
+                    continue
+                candidate = Path(base) / path
+                if candidate.exists():
+                    path = candidate
+                    break
+            else:
+                raise FileNotFoundError(
+                    f"settings_path {path_raw!r} not found relative to task_dir, config_dir, or cwd"
+                )
+        if not path.exists():
+            raise FileNotFoundError(f"settings_path {path} does not exist")
+        try:
+            data = json.loads(path.read_text())
+        except json.JSONDecodeError as e:
+            raise ValueError(f"settings_path {path} is not valid JSON: {e}") from e
+        if not isinstance(data, dict):
+            raise ValueError(
+                f"settings_path {path} must contain a JSON object at the top level, "
+                f"got {type(data).__name__}"
+            )
+        return data
+
     def start_all(self) -> list[AgentHandle]:
         """Create workspace structure and spawn all agents."""
         self._start_time = datetime.now(UTC)
@@ -401,6 +442,17 @@ class AgentManager:
         gateway_url = self._gateway.url if self._gateway else None
         gateway_api_key = self._gateway_keys.get(agent_id)
 
+        # Per-agent runtime/model/options come from the resolved spec when
+        # available; resume paths that pre-date the specs map fall back to
+        # the top-level defaults. Resolved here (before settings writers)
+        # so per-agent settings overrides can flow into setup_claude_settings.
+        if spec is not None:
+            model = spec.model
+            runtime_options = spec.runtime_options
+        else:
+            model = self.config.agents.model
+            runtime_options = self.config.agents.runtime_options
+
         # Runtime-specific: write permission settings per worktree
         if shared_dir_name == ".claude":
             setup_claude_settings(
@@ -409,6 +461,7 @@ class AgentManager:
                 research=self.config.agents.research,
                 gateway_url=gateway_url,
                 gateway_api_key=gateway_api_key,
+                settings_overrides=self._load_settings_overrides(runtime_options),
             )
         elif shared_dir_name == ".opencode":
             setup_opencode_settings(
@@ -455,16 +508,6 @@ class AgentManager:
             shared_dir=shared_dir_name,
         )
         (worktree_path / instruction_file).write_text(coral_md)
-
-        # Per-agent runtime/model/options come from the resolved spec when
-        # available; resume paths that pre-date the specs map fall back to
-        # the top-level defaults.
-        if spec is not None:
-            model = spec.model
-            runtime_options = spec.runtime_options
-        else:
-            model = self.config.agents.model
-            runtime_options = self.config.agents.runtime_options
 
         # Start agent
         handle = runtime.start(
