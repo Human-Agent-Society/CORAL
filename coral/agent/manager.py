@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from coral.agent.assignments import AgentSpec, resolve_agent_specs
 from coral.agent.exit_classifier import (
     classify_by_uptime,
 )
@@ -74,7 +75,21 @@ class AgentManager:
     ) -> None:
         self.config = config
         self.config_dir = config_dir
-        self.runtime: AgentRuntime = get_runtime(config.agents.runtime)
+        # Resolve concrete per-agent specs once. In uniform mode this is just
+        # ``agents.count`` copies of the top-level defaults; in mix-and-match
+        # mode each ``agents.assignments`` entry contributes ``count`` specs
+        # with its own runtime/model/runtime_options.
+        self.specs: list[AgentSpec] = resolve_agent_specs(config)
+        self.specs_by_id: dict[str, AgentSpec] = {s.agent_id: s for s in self.specs}
+        # One runtime instance per agent_id. In uniform mode all entries point
+        # to the same class; in mix-and-match mode each agent uses its own.
+        self.runtimes: dict[str, AgentRuntime] = {
+            s.agent_id: get_runtime(s.runtime) for s in self.specs
+        }
+        # Default runtime used for run-level operations that aren't tied to a
+        # specific agent (warmstart fallback prompts, validating resumed
+        # runs whose worktrees still exist). Falls back to the first spec.
+        self.runtime: AgentRuntime = self.runtimes[self.specs[0].agent_id]
         self.handles: list[AgentHandle] = []
         self.paths: ProjectPaths | None = None
         self.verbose = verbose
@@ -107,6 +122,19 @@ class AgentManager:
         self._grader_proc: multiprocessing.Process | None = None
         self._grader_stop_event: Any | None = None  # multiprocessing.Event
 
+    def _runtime_for(self, agent_id: str) -> AgentRuntime:
+        """Return the runtime instance for an agent_id, creating one on demand.
+
+        ``resume_all`` may discover worktrees that the current ``specs`` list
+        doesn't cover (e.g. the saved config no longer mentions them). Falling
+        back to the default runtime keeps resume robust.
+        """
+        runtime = self.runtimes.get(agent_id)
+        if runtime is None:
+            runtime = self.runtime
+            self.runtimes[agent_id] = runtime
+        return runtime
+
     def start_all(self) -> list[AgentHandle]:
         """Create workspace structure and spawn all agents."""
         self._start_time = datetime.now(UTC)
@@ -131,8 +159,8 @@ class AgentManager:
             logger.info("Seeded global heartbeat config")
 
         # 3. Warm-start research phase (optional)
-        agent_ids = [f"agent-{i + 1}" for i in range(self.config.agents.count)]
-        warmstart = WarmStartRunner(self.config, self.runtime.shared_dir_name)
+        agent_ids = [s.agent_id for s in self.specs]
+        warmstart = WarmStartRunner(self.config)
         research_sessions: dict[str, str] = {}
 
         if warmstart.enabled:
@@ -144,10 +172,11 @@ class AgentManager:
             if i > 0 and self.config.agents.stagger_seconds > 0:
                 logger.info(f"Staggering {agent_id} by {self.config.agents.stagger_seconds}s")
                 time.sleep(self.config.agents.stagger_seconds)
+            shared_dir = self._runtime_for(agent_id).shared_dir_name
             handle = self._setup_and_start_agent(
                 agent_id,
                 resume_session_id=research_sessions.get(agent_id),
-                prompt=warmstart.main_prompt() if warmstart.enabled else None,
+                prompt=warmstart.main_prompt(shared_dir) if warmstart.enabled else None,
                 prompt_source="warmstart:main" if warmstart.enabled else None,
             )
             handles.append(handle)
@@ -295,8 +324,6 @@ class AgentManager:
         """Run the warm-start research phase. Returns {agent_id: session_id}."""
         assert self.paths is not None
 
-        research_prompt = warmstart.research_prompt()
-
         if self.verbose:
             print("\n[coral] Warm-start: research phase...\n")
         logger.info("Warm-start: starting research phase")
@@ -305,9 +332,10 @@ class AgentManager:
         for i, agent_id in enumerate(agent_ids):
             if i > 0 and self.config.agents.stagger_seconds > 0:
                 time.sleep(self.config.agents.stagger_seconds)
+            shared_dir = self._runtime_for(agent_id).shared_dir_name
             handle = self._setup_and_start_agent(
                 agent_id,
-                prompt=research_prompt,
+                prompt=warmstart.research_prompt(shared_dir),
                 prompt_source="warmstart:research",
             )
             research_handles.append(handle)
@@ -318,7 +346,7 @@ class AgentManager:
         # Extract session IDs for resumption in the main phase
         sessions: dict[str, str] = {}
         for handle in research_handles:
-            sid = self.runtime.extract_session_id(handle.log_path)
+            sid = self._runtime_for(handle.agent_id).extract_session_id(handle.log_path)
             if sid:
                 sessions[handle.agent_id] = sid
             handle.stop()
@@ -340,6 +368,9 @@ class AgentManager:
         """Set up a single agent and start it."""
         assert self.paths is not None
 
+        runtime = self._runtime_for(agent_id)
+        spec = self.specs_by_id.get(agent_id)
+
         # Create worktree (idempotent)
         logger.info(f"Setting up {agent_id}...")
         worktree_path = create_agent_worktree(
@@ -359,7 +390,7 @@ class AgentManager:
         write_coral_dir(worktree_path, self.paths.coral_dir)
 
         # Set up shared state directory (notes, skills, attempts symlinks)
-        shared_dir_name = self.runtime.shared_dir_name
+        shared_dir_name = runtime.shared_dir_name
         setup_shared_state(worktree_path, self.paths.coral_dir, shared_dir_name)
 
         # Register agent with gateway if active (before settings so we have the key)
@@ -415,8 +446,8 @@ class AgentManager:
         write_agent_id(worktree_path, agent_id)
 
         # Generate instruction file (CLAUDE.md, AGENTS.md, etc.)
-        instruction_file = self.runtime.instruction_filename
-        single_agent = self.config.agents.count == 1
+        instruction_file = runtime.instruction_filename
+        single_agent = len(self.specs) == 1
         coral_md = generate_coral_md(
             self.config,
             agent_id,
@@ -425,12 +456,22 @@ class AgentManager:
         )
         (worktree_path / instruction_file).write_text(coral_md)
 
+        # Per-agent runtime/model/options come from the resolved spec when
+        # available; resume paths that pre-date the specs map fall back to
+        # the top-level defaults.
+        if spec is not None:
+            model = spec.model
+            runtime_options = spec.runtime_options
+        else:
+            model = self.config.agents.model
+            runtime_options = self.config.agents.runtime_options
+
         # Start agent
-        handle = self.runtime.start(
+        handle = runtime.start(
             worktree_path=worktree_path,
             coral_md_path=worktree_path / instruction_file,
-            model=self.config.agents.model,
-            runtime_options=self.config.agents.runtime_options,
+            model=model,
+            runtime_options=runtime_options,
             max_turns=max_turns if max_turns is not None else self.config.agents.max_turns,
             verbose=self.verbose,
             log_dir=self.paths.coral_dir / "public" / "logs",
@@ -464,7 +505,7 @@ class AgentManager:
         session_id: str | None = None
         if not _log_has_session_error(old_handle.log_path):
             # Try to extract session_id from the old log for resumption
-            session_id = self.runtime.extract_session_id(old_handle.log_path)
+            session_id = self._runtime_for(agent_id).extract_session_id(old_handle.log_path)
 
         if session_id:
             logger.info(f"Resuming {agent_id} with session {session_id}")
@@ -595,7 +636,7 @@ class AgentManager:
         for handle in self.handles:
             sid = handle.session_id
             if not sid:
-                sid = self.runtime.extract_session_id(handle.log_path)
+                sid = self._runtime_for(handle.agent_id).extract_session_id(handle.log_path)
             if sid:
                 sessions[handle.agent_id] = sid
         sessions_file = self.paths.coral_dir / "public" / "sessions.json"
@@ -626,7 +667,7 @@ class AgentManager:
             key=lambda p: p.stat().st_mtime,
         )
         if logs:
-            return self.runtime.extract_session_id(logs[-1])
+            return self._runtime_for(agent_id).extract_session_id(logs[-1])
         return None
 
     def stop_all(self) -> None:
@@ -775,7 +816,7 @@ class AgentManager:
         from coral.agent.heartbeat import HeartbeatAction
 
         assert self.paths is not None
-        shared_dir = self.runtime.shared_dir_name
+        shared_dir = self._runtime_for(agent_id).shared_dir_name
 
         local_actions = read_agent_heartbeat(self.paths.coral_dir, agent_id)
         global_actions = read_global_heartbeat(self.paths.coral_dir)
@@ -843,7 +884,7 @@ class AgentManager:
         started = self._started_at.get(agent_id)
         uptime = time.time() - started if started is not None else None
         min_clean = self.config.agents.min_clean_runtime_seconds
-        runtime = self.runtime
+        runtime = self._runtime_for(agent_id)
         if hasattr(runtime, "classify_exit"):
             try:
                 return runtime.classify_exit(

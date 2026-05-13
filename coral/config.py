@@ -38,7 +38,9 @@ class ParallelGraderConfig:
 class GraderConfig:
     """Grader configuration."""
 
-    entrypoint: str = ""  # "module.path:ClassName"; empty = auto-discover from eval/grader.py (deprecated)
+    entrypoint: str = (
+        ""  # "module.path:ClassName"; empty = auto-discover from eval/grader.py (deprecated)
+    )
     setup: list[str] = field(
         default_factory=list
     )  # shell commands run in .coral/private/grader_venv/ before agents start
@@ -100,6 +102,30 @@ class WarmStartConfig:
 
 
 @dataclass
+class AgentAssignmentConfig:
+    """Per-assignment override of runtime/model for mix-and-match multi-agent runs.
+
+    When ``agents.assignments`` is set, it overrides ``agents.count``: the total
+    number of agents spawned is the sum of ``count`` across every assignment.
+    Empty string fields inherit from the top-level ``agents.*`` defaults.
+    Each assignment can override:
+    - ``runtime``:        the agent runtime (claude_code / codex / opencode / ...)
+    - ``model``:          model passed to that runtime
+    - ``count``:          how many agents of this kind to spawn (default 1)
+    - ``runtime_options`` extra options forwarded to that runtime's ``start()``
+    """
+
+    runtime: str = ""  # empty -> inherit from agents.runtime
+    model: str = ""  # empty -> inherit from agents.model (or runtime default)
+    count: int = 1
+    runtime_options: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.count < 1:
+            raise ValueError(f"agents.assignments[].count must be >= 1, got {self.count}")
+
+
+@dataclass
 class AgentConfig:
     """Agent spawning configuration."""
 
@@ -109,6 +135,10 @@ class AgentConfig:
     gateway: GatewayConfig = field(default_factory=GatewayConfig)
     warmstart: WarmStartConfig = field(default_factory=WarmStartConfig)
     runtime_options: dict[str, Any] = field(default_factory=dict)
+    # Mix-and-match: when non-empty, each entry spawns its own runtime/model
+    # combo. ``agents.count`` is ignored (total = sum of assignment counts).
+    # Empty fields on an assignment inherit the agents.* defaults below.
+    assignments: list[AgentAssignmentConfig] = field(default_factory=list)
     max_turns: int = 200
     # Stall watchdog: restart an agent that produces no output for this many
     # seconds. 0 disables the watchdog. Default 1200s (20 min) catches deadlocks
@@ -132,7 +162,9 @@ class AgentConfig:
     # 0 in any of the three knobs disables the breaker entirely.
     restart_burst_threshold: int = 3  # crashes within window before pausing the agent
     restart_burst_window: int = 30  # seconds; sliding window for crash counting
-    restart_pause_seconds: int = 300  # how long the paused state holds before restart attempts resume
+    restart_pause_seconds: int = (
+        300  # how long the paused state holds before restart attempts resume
+    )
 
     # Reliability: grader-queue exemption for stall detection.
     # Skip stall checks for an agent whose latest attempt is pending grading,
@@ -155,9 +187,7 @@ class AgentConfig:
         ):
             value = getattr(self, field_name)
             if value < 0:
-                raise ValueError(
-                    f"agents.{field_name} must be >= 0, got {value}"
-                )
+                raise ValueError(f"agents.{field_name} must be >= 0, got {value}")
         # If the breaker is enabled at all, the pause must outlast the burst window;
         # otherwise the breaker can re-arm before the burst counter has cleared.
         if (
@@ -317,6 +347,25 @@ def _preprocess(data: dict[str, Any]) -> dict[str, Any]:
         default_model = default_model_for_runtime(agents_data["runtime"])
         if default_model:
             agents_data["model"] = default_model
+
+    # Normalize assignments: fill in missing model defaults from the assignment's
+    # runtime so each entry stores a concrete model. Empty fields are kept as ""
+    # (will inherit from the top-level agents.* defaults at resolve time).
+    assignments_raw = agents_data.get("assignments")
+    if isinstance(assignments_raw, list):
+        from coral.agent.registry import default_model_for_runtime
+
+        normalized: list[dict[str, Any]] = []
+        for entry in assignments_raw:
+            if not isinstance(entry, dict):
+                continue
+            entry = dict(entry)
+            if entry.get("runtime") and not entry.get("model"):
+                m = default_model_for_runtime(entry["runtime"])
+                if m:
+                    entry["model"] = m
+            normalized.append(entry)
+        agents_data["assignments"] = normalized
 
     data["agents"] = agents_data
 
