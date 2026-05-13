@@ -51,6 +51,7 @@ from coral.workspace import (
     apply_runtime_mounts,
     create_agent_worktree,
     create_project,
+    seed_agent_identity,
     setup_claude_settings,
     setup_codex_settings,
     setup_cursor_settings,
@@ -465,6 +466,18 @@ class AgentManager:
         mounts = (runtime_options or {}).get("mounts") or {}
         if mounts:
             apply_runtime_mounts(worktree_path, mounts, self._mounts_base_dir())
+
+        # Seed the agent's initial identity from a user-provided .md if one
+        # is configured. Idempotent — never overwrites an evolved identity
+        # from a prior run, so resume preserves agent self-evolution.
+        identity_file = (runtime_options or {}).get("identity_file")
+        if identity_file:
+            seed_agent_identity(
+                self.paths.coral_dir,
+                agent_id,
+                identity_file,
+                self._mounts_base_dir(),
+            )
 
         # Seed local heartbeat config from task YAML if not already present
         if not read_agent_heartbeat(self.paths.coral_dir, agent_id):

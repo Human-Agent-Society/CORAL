@@ -175,6 +175,11 @@ def setup_shared_state(
         "attempts",
         "logs",
         "heartbeat",
+        # Per-agent identity files. Each agent owns and edits its own
+        # identities/<agent_id>.md; everyone reads everyone else's. Must be
+        # a symlink to public/ so per-agent writes via .claude/identities/
+        # land in shared state rather than getting siloed in the worktree.
+        "identities",
         # Per-attempt eval artifacts (subprocess logs, terminal recordings,
         # verifier output, etc.) that the grader writes via TaskGrader.eval_logs_dir.
         # Lives outside the grader checkout so it survives daemon cleanup.
@@ -183,6 +188,20 @@ def setup_shared_state(
     for item in shared_items:
         src = coral_public / item
         dst = shared_dir / item
+        # Self-healing: a previous run (or a buggy migration) may have
+        # written a real local directory at this path instead of a symlink.
+        # Move any contents into the shared dir, then drop the local dir
+        # so the symlink branch below can replace it.
+        if dst.exists() and not dst.is_symlink() and dst.is_dir():
+            src.mkdir(parents=True, exist_ok=True)
+            for entry in dst.iterdir():
+                target = src / entry.name
+                if not target.exists():
+                    shutil.move(str(entry), str(target))
+            try:
+                dst.rmdir()
+            except OSError:
+                continue
         if not dst.exists() and not dst.is_symlink():
             try:
                 rel = os.path.relpath(src.resolve(), shared_dir.resolve())
@@ -257,6 +276,43 @@ def apply_runtime_mounts(
             if dest.is_dir() and not dest.is_symlink():
                 shutil.rmtree(dest)
             shutil.copy2(source, dest)
+
+
+def seed_agent_identity(
+    coral_dir: Path,
+    agent_id: str,
+    source: str,
+    base_dir: Path,
+) -> Path:
+    """Seed an initial identity file at ``.coral/public/identities/<agent_id>.md``.
+
+    Idempotent: if the destination already exists, returns its path without
+    touching it. This preserves an agent's evolved identity across re-setup
+    and ``coral resume`` — only the very first spawn of an agent inherits
+    the user's seed.
+
+    ``source`` is a host path with ``~`` expansion; resolved relative to
+    ``base_dir`` (typically the task directory) when not absolute. Matches
+    the path-resolution convention used by :func:`apply_runtime_mounts`.
+
+    Raises:
+        FileNotFoundError: if ``source`` does not resolve to an existing file.
+    """
+    dst = coral_dir / "public" / "identities" / f"{agent_id}.md"
+    if dst.exists():
+        return dst
+
+    src = Path(source).expanduser()
+    if not src.is_absolute():
+        src = (base_dir / src).resolve()
+    if not src.is_file():
+        raise FileNotFoundError(
+            f"identity_file {source!r} (resolved to {src}) does not exist"
+        )
+
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    return dst
 
 
 def setup_claude_settings(
