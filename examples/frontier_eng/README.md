@@ -1,6 +1,6 @@
 # Frontier-Engineering tasks
 
-74 leaf benchmarks ported from [EinsiaLab/Frontier-Engineering](https://github.com/EinsiaLab/Frontier-Engineering)
+48 leaf benchmarks ported from [EinsiaLab/Frontier-Engineering](https://github.com/EinsiaLab/Frontier-Engineering)
 into the CORAL example layout.
 
 The integration is two pieces:
@@ -38,17 +38,17 @@ examples/frontier_eng/
 ## Running a task
 
 ```bash
-coral start -c examples/frontier_eng/PyPortfolioOpt/discrete_rebalance_mip/task.yaml
-coral start -c examples/frontier_eng/Cryptographic/SHA-256/task.yaml
+coral start -c examples/frontier_eng/Aerodynamics/CarAerodynamicsSensing/task.yaml
+coral start -c examples/frontier_eng/JobShop/abz/task.yaml
 coral start -c examples/frontier_eng/Optics/phase_dammann_uniform_orders/task.yaml
 ```
 
 `coral validate` exercises the grader against the unmodified seed:
 
 ```bash
-uv run coral validate ./examples/frontier_eng/PyPortfolioOpt/discrete_rebalance_mip
-# Score: 37.49509849916293
-#   eval: combined_score=37.495098 valid=1 ... runtime=30.6s
+uv run coral validate ./examples/frontier_eng/JobShop/abz
+# Score: <baseline-score>
+#   eval: combined_score=<baseline-score> valid=1 ... runtime=...
 ```
 
 ## How the grader works
@@ -58,7 +58,7 @@ uv run coral validate ./examples/frontier_eng/PyPortfolioOpt/discrete_rebalance_
 3. The grader copies the codebase into a tempdir laid out as
    `<sandbox>/repo_root/benchmarks/<Domain>/<Task>/`. This mirrors the upstream
    path so tasks that walk up via `Path(__file__).resolve().parents[N]`
-   (Cryptographic / JobShop / Optics) keep working.
+   (JobShop / Optics) keep working.
 4. Placeholders are expanded:
    - `{python}` → `uv run --project <codebase> python` if `pyproject.toml` is present, else `sys.executable`
    - `{benchmark}` → the sandbox benchmark dir
@@ -85,38 +85,26 @@ Each CORAL worktree gets its own `.venv`, so different tasks can have different 
 ## Per-task quirks the integration handles
 
 - **Self-contained sandbox**: every leaf benchmark gets its own seed; nothing is shared across tasks at runtime. Shared parent-domain files (e.g. `benchmarks/JobShop/frontier_eval/evaluate_unified.py`, the Optics shared `run_eval.sh`) are copied into the seed as `_parent/...` and the benchmark's `eval_command.txt` is rewritten so paths resolve inside the sandbox.
-- **Synthetic repo root**: tasks that look up files via `_find_repo_root()` (Cryptographic, EngDesign, ...) get a sandbox layout with `repo_root/benchmarks/<id>/` so their walks succeed.
-- **EngDesign**: upstream represents this domain as a single benchmark with seven sub-instances under one shared `frontier_eval/`. The integration follows that — `examples/frontier_eng/EngDesign/` is one CORAL example, not seven.
+- **Synthetic repo root**: tasks that look up files via `_find_repo_root()` get a sandbox layout with `repo_root/benchmarks/<id>/` so their walks succeed.
 
 ## Task list
 
-The leaf-benchmark coverage matches upstream's `v1` problem set. Per-task descriptions are pulled from each seed's `Task.md` / `README.md`; `frontier_eval/constraints.txt` is rendered into the `tips` section.
+The leaf-benchmark coverage is a curated 48-task subset of upstream's `v1` problem set — the ones whose generated `workspace.setup` works against the modern Python uv selects for the worktree (Python 3.13 by default). Per-task descriptions are pulled from each seed's `Task.md` / `README.md`; `frontier_eval/constraints.txt` is rendered into the `tips` section.
 
 | Domain | Tasks |
 |---|---|
 | AdditiveManufacturing | DiffSimThermalControl |
 | Aerodynamics | CarAerodynamicsSensing, DawnAircraftDesignOptimization |
-| Astrodynamics | MannedLunarLanding |
 | CommunicationEngineering | LDPCErrorFloor, PMDSimulation, RayleighFadingBER |
-| ComputerSystems | DuckDBWorkloadOptimization, MallocLab |
-| Cryptographic | AES-128, SHA-256, SHA3-256 |
-| ElectronicDesignAutomation | _(no v1 metadata; add when upstream ships it)_ |
+| ComputerSystems | DuckDBWorkloadOptimization |
 | EnergyStorage | BatteryFastChargingProfile, BatteryFastChargingSPMe |
-| EngDesign | _(single multi-instance task: AM_02, AM_03, CY_03, WJ_01, XY_05, YJ_02, YJ_03)_ |
-| InventoryOptimization | disruption_eoqd, finite_horizon_dp, general_meio, joint_replenishment, tree_gsm_safety_stock |
 | JobShop | abz, ft, la, orb, swv, ta, yn |
-| KernelEngineering | FlashAttention, MLA, TriMul |
 | MolecularMechanics | diverse_conformer_portfolio, torsion_profile_fitting, weighted_parameter_coverage |
 | Optics | 16 sub-tasks (`adaptive_*`, `fiber_*`, `holographic_*`, `phase_*`) |
 | ParticlePhysics | MuonTomography |
 | PowerSystems | EV2GymSmartCharging |
-| PyPortfolioOpt | cvar_stress_control, discrete_rebalance_mip, robust_mvo_rebalance |
-| QuantumComputing | task_01_routing_qftentangled, task_02_clifford_t_synthesis, task_03_cross_target_qaoa |
-| ReactionOptimisation | dtlz2_pareto, mit_case1_mixed, reizman_suzuki_pareto, snar_multiobjective |
 | Robotics | CoFlyersVasarhelyiTuning, DynamicObstacleAvoidanceNavigation, PIDTuning, QuadrupedGaitOptimization, RobotArmCycleTimeOptimization, UAVInspectionCoverageWithWind |
-| SingleCellAnalysis | predict_modality |
 | StructuralOptimization | ISCSO2015, ISCSO2023, PyMOTOSIMPCompliance, TopologyOptimization |
-| SustainableDataCenterControl | hand_written_control |
 | WirelessChannelSimulation | HighReliableSimulation |
 
 ## Host prerequisites for some tasks
@@ -125,11 +113,7 @@ A small number of benchmarks need host-level extras the integration cannot insta
 
 | Tasks | Needs |
 |---|---|
-| `KernelEngineering/*`, `Aerodynamics/CarAerodynamicsSensing` | NVIDIA GPU + working CUDA stack |
-| `Astrodynamics/MannedLunarLanding` | GNU Octave (`brew install octave` / `apt install octave`) |
-| `EngDesign` | Docker (set `ENGDESIGN_EVAL_MODE=docker`) |
-| `SustainableDataCenterControl/hand_written_control` | Vendored dc-rl checkout + task assets — see the upstream task README |
-| `Cryptographic/*` | A working `g++` (Apple clang or system gcc both fine) |
+| `Aerodynamics/CarAerodynamicsSensing` | NVIDIA GPU + working CUDA stack |
 
 Skip / parametrize these tasks at agent-launch time if your host lacks the prerequisites.
 
@@ -145,13 +129,15 @@ python examples/frontier_eng/_scripts/generate_tasks.py \
     --clean
 ```
 
+Note: `--clean` regenerates **every** leaf benchmark in upstream's tree, not just the curated 48 listed above. Re-prune afterwards if you want to keep the curated subset.
+
 Generate a single task:
 
 ```bash
 python examples/frontier_eng/_scripts/generate_tasks.py \
     --source /tmp/frontier_eng_clone \
     --dest examples/frontier_eng \
-    --only PyPortfolioOpt/discrete_rebalance_mip \
+    --only JobShop/abz \
     --clean
 ```
 
