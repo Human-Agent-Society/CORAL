@@ -1,1 +1,0 @@
-malloclab-handout/mm.c

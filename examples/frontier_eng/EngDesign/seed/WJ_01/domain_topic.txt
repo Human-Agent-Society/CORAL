@@ -1,2 +1,0 @@
-Main Domain Topic: Image Processing
-Sub-Topic: Image Denoising Using Filter Design and LLM-generated Pipelines

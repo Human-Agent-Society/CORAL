@@ -1,2 +1,0 @@
-Main domain topic: Operating system
-Sub-topic: VirtIO Block Device Driver

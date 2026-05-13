@@ -209,7 +209,6 @@ workspace:
   results_dir: "./results"
   repo_path: "./examples/frontier_eng/MolecularMechanics/weighted_parameter_coverage/seed"
   setup:
-    - "uv pip install -r _parent/requirements.txt"
     - "uv sync"
 
 run:

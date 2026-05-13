@@ -1,5 +1,0 @@
-README.md
-Task.md
-task.py
-verification/reference.py
-verification/evaluate.py

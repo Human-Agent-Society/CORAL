@@ -204,7 +204,6 @@ workspace:
   results_dir: "./results"
   repo_path: "./examples/frontier_eng/Optics/fiber_mcs_power_scheduling/seed"
   setup:
-    - "uv pip install -r _parent/requirements.txt"
     - "uv sync"
 
 run:

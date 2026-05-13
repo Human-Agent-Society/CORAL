@@ -1,2 +1,0 @@
-metrics.json
-artifacts.json

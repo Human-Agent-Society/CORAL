@@ -207,13 +207,12 @@ grader:
 agents:
   count: 1
   runtime: claude_code
-  model: claude-opus-4-6
+  model: claude-opus-4-7-thinking-max[1m]
 
 workspace:
   results_dir: "./results"
   repo_path: "./examples/frontier_eng/AdditiveManufacturing/DiffSimThermalControl/seed"
   setup:
-    - "uv pip install -r verification/requirements.txt"
     - "uv sync"
 
 run:

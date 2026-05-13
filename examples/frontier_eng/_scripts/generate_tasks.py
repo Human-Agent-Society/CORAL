@@ -249,7 +249,7 @@ def _generate_one(
         env_specs=env_specs,
     )
 
-    extra_setup = _detect_workspace_setup(seed_dir) + runtime_setup
+    extra_setup = _detect_workspace_setup(seed_dir, has_runtime_pyproject=bool(runtime_setup)) + runtime_setup
 
     description = _read_description(seed_dir, benchmark_id)
     tips = _read_tips(seed_dir, env_name=env_name)
@@ -333,7 +333,13 @@ def _rewrite_eval_command(seed_dir: Path, benchmark_id: str) -> None:
         cmd_path.write_text(new_text, encoding="utf-8")
 
 
-def _detect_workspace_setup(seed_dir: Path) -> list[str]:
+def _detect_workspace_setup(seed_dir: Path, *, has_runtime_pyproject: bool = False) -> list[str]:
+    # When a runtime spec produced pyproject.toml + `uv sync`, the verification
+    # requirements are redundant (and often pin old torch versions that have no
+    # wheels for the Python uv picks for the worktree venv). `uv sync` against
+    # the generated pyproject is the source of truth.
+    if has_runtime_pyproject:
+        return []
     setup: list[str] = []
     seen: set[str] = set()
     for rel in REQUIREMENTS_FILES:

@@ -1,3 +1,0 @@
-- ECE385 Lab 5 Specification: "05 Experiment 5.pdf"
-- ECE385 Course Slides: CPU Control Logic
-- Basic Computer Architecture Textbook (Patterson & Hennessy)

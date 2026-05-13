@@ -109,7 +109,6 @@ workspace:
   results_dir: "./results"
   repo_path: "./examples/frontier_eng/Optics/phase_large_scale_weighted_spot_array/seed"
   setup:
-    - "uv pip install -r _parent/requirements.txt"
     - "uv sync"
 
 run:

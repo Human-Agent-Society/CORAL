@@ -174,7 +174,6 @@ workspace:
   results_dir: "./results"
   repo_path: "./examples/frontier_eng/StructuralOptimization/ISCSO2023/seed"
   setup:
-    - "uv pip install -r verification/requirements.txt"
     - "uv sync"
 
 run:

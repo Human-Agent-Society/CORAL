@@ -219,7 +219,6 @@ workspace:
   results_dir: "./results"
   repo_path: "./examples/frontier_eng/MolecularMechanics/diverse_conformer_portfolio/seed"
   setup:
-    - "uv pip install -r _parent/requirements.txt"
     - "uv sync"
 
 run:

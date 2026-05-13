@@ -136,7 +136,6 @@ workspace:
   results_dir: "./results"
   repo_path: "./examples/frontier_eng/Optics/phase_weighted_multispot_single_plane/seed"
   setup:
-    - "uv pip install -r _parent/requirements.txt"
     - "uv sync"
 
 run:

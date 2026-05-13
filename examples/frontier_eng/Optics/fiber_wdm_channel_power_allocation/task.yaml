@@ -208,7 +208,6 @@ workspace:
   results_dir: "./results"
   repo_path: "./examples/frontier_eng/Optics/fiber_wdm_channel_power_allocation/seed"
   setup:
-    - "uv pip install -r _parent/requirements.txt"
     - "uv sync"
 
 run:

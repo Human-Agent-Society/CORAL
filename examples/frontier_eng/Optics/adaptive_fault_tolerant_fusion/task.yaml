@@ -181,7 +181,6 @@ workspace:
   results_dir: "./results"
   repo_path: "./examples/frontier_eng/Optics/adaptive_fault_tolerant_fusion/seed"
   setup:
-    - "uv pip install -r _parent/requirements.txt"
     - "uv sync"
 
 run:

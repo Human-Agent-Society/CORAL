@@ -171,7 +171,6 @@ workspace:
   results_dir: "./results"
   repo_path: "./examples/frontier_eng/StructuralOptimization/TopologyOptimization/seed"
   setup:
-    - "uv pip install -r verification/requirements.txt"
     - "uv sync"
 
 run:

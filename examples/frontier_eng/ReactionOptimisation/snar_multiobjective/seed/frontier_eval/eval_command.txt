@@ -1,1 +1,0 @@
-{python} {benchmark_source}/verification/evaluate.py {candidate} --metrics-out {benchmark}/metrics.json --artifacts-out {benchmark}/artifacts.json
