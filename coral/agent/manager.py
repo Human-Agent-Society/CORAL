@@ -48,6 +48,7 @@ from coral.template.coral_md import generate_coral_md
 from coral.types import BUDGET_CLASS_REAL, get_budget_class
 from coral.workspace import (
     ProjectPaths,
+    apply_runtime_mounts,
     create_agent_worktree,
     create_project,
     setup_claude_settings,
@@ -135,46 +136,17 @@ class AgentManager:
             self.runtimes[agent_id] = runtime
         return runtime
 
-    def _load_settings_overrides(self, runtime_options: dict[str, Any]) -> dict | None:
-        """Load per-agent Claude Code settings overrides from disk.
+    def _mounts_base_dir(self) -> Path:
+        """Return the directory used to resolve relative ``runtime_options.mounts`` sources.
 
-        Reads ``runtime_options['settings_path']`` if present and returns
-        the parsed JSON dict. Relative paths resolve against ``config.task_dir``
-        (the directory holding ``task.yaml``), then ``self.config_dir``,
-        then cwd as a last resort. Raises ``FileNotFoundError`` /
-        ``ValueError`` early so a misconfigured path fails at agent start
-        rather than silently producing the default settings.
-
-        Returns ``None`` when no override path is configured.
+        Prefers ``config.task_dir`` (where ``task.yaml`` lives — typically
+        what the user means when they write ``./agent-settings.json`` in
+        their task config), falls back to ``self.config_dir``, then cwd.
         """
-        path_raw = (runtime_options or {}).get("settings_path")
-        if not path_raw:
-            return None
-        path = Path(path_raw)
-        if not path.is_absolute():
-            for base in (self.config.task_dir, self.config_dir, Path.cwd()):
-                if base is None:
-                    continue
-                candidate = Path(base) / path
-                if candidate.exists():
-                    path = candidate
-                    break
-            else:
-                raise FileNotFoundError(
-                    f"settings_path {path_raw!r} not found relative to task_dir, config_dir, or cwd"
-                )
-        if not path.exists():
-            raise FileNotFoundError(f"settings_path {path} does not exist")
-        try:
-            data = json.loads(path.read_text())
-        except json.JSONDecodeError as e:
-            raise ValueError(f"settings_path {path} is not valid JSON: {e}") from e
-        if not isinstance(data, dict):
-            raise ValueError(
-                f"settings_path {path} must contain a JSON object at the top level, "
-                f"got {type(data).__name__}"
-            )
-        return data
+        for candidate in (self.config.task_dir, self.config_dir):
+            if candidate is not None:
+                return Path(candidate)
+        return Path.cwd()
 
     def start_all(self) -> list[AgentHandle]:
         """Create workspace structure and spawn all agents."""
@@ -444,8 +416,8 @@ class AgentManager:
 
         # Per-agent runtime/model/options come from the resolved spec when
         # available; resume paths that pre-date the specs map fall back to
-        # the top-level defaults. Resolved here (before settings writers)
-        # so per-agent settings overrides can flow into setup_claude_settings.
+        # the top-level defaults. Resolved here (before mounts apply) so
+        # per-agent ``runtime_options.mounts`` can populate the worktree.
         if spec is not None:
             model = spec.model
             runtime_options = spec.runtime_options
@@ -461,7 +433,6 @@ class AgentManager:
                 research=self.config.agents.research,
                 gateway_url=gateway_url,
                 gateway_api_key=gateway_api_key,
-                settings_overrides=self._load_settings_overrides(runtime_options),
             )
         elif shared_dir_name == ".opencode":
             setup_opencode_settings(
@@ -487,6 +458,13 @@ class AgentManager:
                 gateway_url=gateway_url,
                 gateway_api_key=gateway_api_key,
             )
+
+        # Apply per-agent file mounts last so the user's files win over
+        # CORAL's defaults (e.g. dropping a custom .claude/settings.json
+        # next to CORAL's settings.local.json — Claude Code merges both).
+        mounts = (runtime_options or {}).get("mounts") or {}
+        if mounts:
+            apply_runtime_mounts(worktree_path, mounts, self._mounts_base_dir())
 
         # Seed local heartbeat config from task YAML if not already present
         if not read_agent_heartbeat(self.paths.coral_dir, agent_id):

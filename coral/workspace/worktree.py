@@ -191,33 +191,72 @@ def setup_shared_state(
                 dst.symlink_to(src.resolve())
 
 
-def _deep_merge_settings(base: dict, overlay: dict) -> dict:
-    """Deep-merge ``overlay`` onto ``base`` and return a new dict.
+def apply_runtime_mounts(
+    worktree_path: Path,
+    mounts: dict[str, str],
+    base_dir: Path,
+) -> None:
+    """Copy host files into the agent worktree per ``runtime_options.mounts``.
 
-    Semantics:
-        - Dicts merge recursively: keys present only in one side are kept;
-          keys in both recurse if both values are dicts, otherwise overlay wins.
-        - Lists concatenate: ``base`` entries first, then ``overlay`` entries.
-          Lets a user *add* permission rules / hooks / MCP servers without
-          having to repeat CORAL's required defaults. Duplicates are not
-          deduped — Claude Code tolerates them in the affected fields.
-        - Scalars: overlay wins.
+    ``mounts`` is a ``{source: dest}`` dict (matching ``docker -v`` source-first
+    convention):
 
-    The base dict is not mutated.
+    - **source** is a host path with ``~`` expansion. Resolved relative to
+      ``base_dir`` (typically the task directory) when not absolute.
+    - **dest** is worktree-relative (e.g. ``.claude/settings.json``). Must
+      stay inside the worktree — ``..`` and absolute paths are rejected.
+
+    Files are copied (not symlinked) on every agent setup, so edits to the
+    source propagate at the next agent restart but the worktree owns its own
+    snapshot in between. Parent dirs are created. Existing dest files are
+    overwritten — the call is the last hook before the agent starts, so
+    user-supplied files win over CORAL's defaults (notably, mounting to
+    ``.claude/settings.local.json`` will replace what
+    ``setup_claude_settings`` just wrote).
+
+    For Claude Code settings the recommended dest is ``.claude/settings.json``
+    (no ``.local`` suffix). Claude Code natively merges that with CORAL's
+    ``settings.local.json``, so the user's MCP servers / hooks / env layer
+    on top of CORAL's required worktree-scoped permissions without anyone
+    having to hand-merge JSON.
+
+    Raises:
+        FileNotFoundError: if ``source`` does not resolve to an existing path.
+        ValueError: if ``dest`` escapes ``worktree_path``.
     """
-    result = dict(base)
-    for key, overlay_value in overlay.items():
-        if key not in result:
-            result[key] = overlay_value
-            continue
-        base_value = result[key]
-        if isinstance(base_value, dict) and isinstance(overlay_value, dict):
-            result[key] = _deep_merge_settings(base_value, overlay_value)
-        elif isinstance(base_value, list) and isinstance(overlay_value, list):
-            result[key] = base_value + overlay_value
+    if not mounts:
+        return
+    worktree_resolved = worktree_path.resolve()
+    for source_raw, dest_raw in mounts.items():
+        source = Path(source_raw).expanduser()
+        if not source.is_absolute():
+            source = (base_dir / source).resolve()
+        if not source.exists():
+            raise FileNotFoundError(
+                f"mount source {source_raw!r} (resolved to {source}) does not exist"
+            )
+
+        dest_path = Path(dest_raw)
+        if dest_path.is_absolute():
+            raise ValueError(f"mount dest {dest_raw!r} must be worktree-relative, not absolute")
+        dest = (worktree_resolved / dest_path).resolve()
+        try:
+            dest.relative_to(worktree_resolved)
+        except ValueError as e:
+            raise ValueError(f"mount dest {dest_raw!r} escapes worktree {worktree_path}") from e
+
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if source.is_dir():
+            if dest.exists() or dest.is_symlink():
+                if dest.is_dir() and not dest.is_symlink():
+                    shutil.rmtree(dest)
+                else:
+                    dest.unlink()
+            shutil.copytree(source, dest)
         else:
-            result[key] = overlay_value
-    return result
+            if dest.is_dir() and not dest.is_symlink():
+                shutil.rmtree(dest)
+            shutil.copy2(source, dest)
 
 
 def setup_claude_settings(
@@ -227,7 +266,6 @@ def setup_claude_settings(
     research: bool = True,
     gateway_url: str | None = None,
     gateway_api_key: str | None = None,
-    settings_overrides: dict | None = None,
 ) -> None:
     """Write Claude Code settings.json with permissions and gateway env.
 
@@ -235,12 +273,6 @@ def setup_claude_settings(
     --dangerously-skip-permissions).  When a gateway is configured, sets
     ANTHROPIC_BASE_URL and ANTHROPIC_API_KEY in the settings ``env`` so
     they override the user's global ``~/.claude/settings.json``.
-
-    ``settings_overrides`` is a dict that gets deep-merged onto the
-    generated settings before write — used by per-agent overrides
-    (``agents.assignments[].runtime_options.settings_path``) so each agent
-    can ship its own MCP servers, hooks, env, or extra permission rules
-    without losing CORAL's required worktree-scoped defaults.
     """
     claude_dir = worktree_path / ".claude"
     claude_dir.mkdir(exist_ok=True)
@@ -306,9 +338,6 @@ def setup_claude_settings(
         # config.  Without this, headers from the user's global settings
         env["ANTHROPIC_CUSTOM_HEADERS"] = ""
         settings["env"] = env
-
-    if settings_overrides:
-        settings = _deep_merge_settings(settings, settings_overrides)
 
     settings_path = claude_dir / "settings.local.json"
     # Always overwrite — each agent needs its own copy
