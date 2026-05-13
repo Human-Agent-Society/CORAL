@@ -4,7 +4,7 @@
 [project]
 name = "frontier-eng-task-runtime"
 version = "0.0.0"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "hydra-core>=1.3.2,<2",
     "openevolve==0.2.26",
