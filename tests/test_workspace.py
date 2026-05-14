@@ -12,7 +12,7 @@ from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig, Wor
 from coral.workspace import (
     apply_runtime_mounts,
     create_project,
-    seed_agent_identity,
+    seed_agent_role,
     setup_codex_settings,
     setup_gitignore,
     setup_shared_state,
@@ -429,10 +429,10 @@ def test_apply_runtime_mounts_multiple_files():
         assert (worktree / ".claude" / "b.json").read_text() == "B"
 
 
-# --- seed_agent_identity tests ---
+# --- seed_agent_role tests ---
 
 
-def _identity_workspace(d: Path) -> tuple[Path, Path]:
+def _role_workspace(d: Path) -> tuple[Path, Path]:
     """Create a coral_dir + base_dir under d; return both."""
     coral_dir = d / ".coral"
     coral_dir.mkdir()
@@ -441,93 +441,93 @@ def _identity_workspace(d: Path) -> tuple[Path, Path]:
     return coral_dir, base
 
 
-def test_seed_agent_identity_copies_file():
-    """A user-provided .md is copied to public/identities/<agent_id>.md."""
+def test_seed_agent_role_copies_file():
+    """A user-provided .md is copied to public/roles/<agent_id>.md."""
     with tempfile.TemporaryDirectory() as d:
-        coral_dir, base = _identity_workspace(Path(d))
-        (base / "integrator.md").write_text("# Integrator identity\n")
+        coral_dir, base = _role_workspace(Path(d))
+        (base / "integrator.md").write_text("# Integrator role\n")
 
-        dst = seed_agent_identity(coral_dir, "agent-1", "integrator.md", base)
+        dst = seed_agent_role(coral_dir, "agent-1", "integrator.md", base)
 
-        assert dst == coral_dir / "public" / "identities" / "agent-1.md"
-        assert dst.read_text() == "# Integrator identity\n"
+        assert dst == coral_dir / "public" / "roles" / "agent-1.md"
+        assert dst.read_text() == "# Integrator role\n"
 
 
-def test_seed_agent_identity_idempotent_preserves_existing():
-    """Existing identity is never overwritten — agent evolution is preserved."""
+def test_seed_agent_role_idempotent_preserves_existing():
+    """Existing role file is never overwritten — agent evolution is preserved."""
     with tempfile.TemporaryDirectory() as d:
-        coral_dir, base = _identity_workspace(Path(d))
+        coral_dir, base = _role_workspace(Path(d))
         (base / "seed.md").write_text("# seed")
 
         # First seed
-        seed_agent_identity(coral_dir, "agent-1", "seed.md", base)
-        # Simulate the agent evolving its own identity
-        evolved = coral_dir / "public" / "identities" / "agent-1.md"
+        seed_agent_role(coral_dir, "agent-1", "seed.md", base)
+        # Simulate the agent evolving its own role
+        evolved = coral_dir / "public" / "roles" / "agent-1.md"
         evolved.write_text("# evolved gen 3")
 
         # Re-seed (e.g. on resume) must not clobber
-        seed_agent_identity(coral_dir, "agent-1", "seed.md", base)
+        seed_agent_role(coral_dir, "agent-1", "seed.md", base)
 
         assert evolved.read_text() == "# evolved gen 3"
 
 
-def test_seed_agent_identity_absolute_source():
+def test_seed_agent_role_absolute_source():
     """Absolute source paths are used as-is."""
     with tempfile.TemporaryDirectory() as d:
-        coral_dir, base = _identity_workspace(Path(d))
+        coral_dir, base = _role_workspace(Path(d))
         elsewhere = Path(d) / "elsewhere"
         elsewhere.mkdir()
         src = elsewhere / "skeptic.md"
         src.write_text("# skeptic")
 
-        seed_agent_identity(coral_dir, "agent-2", str(src), base)
+        seed_agent_role(coral_dir, "agent-2", str(src), base)
 
-        assert (coral_dir / "public" / "identities" / "agent-2.md").read_text() == "# skeptic"
+        assert (coral_dir / "public" / "roles" / "agent-2.md").read_text() == "# skeptic"
 
 
-def test_seed_agent_identity_expands_tilde(monkeypatch):
+def test_seed_agent_role_expands_tilde(monkeypatch):
     """``~`` in source expands to $HOME, matching apply_runtime_mounts."""
     with tempfile.TemporaryDirectory() as d:
-        coral_dir, base = _identity_workspace(Path(d))
+        coral_dir, base = _role_workspace(Path(d))
         fake_home = Path(d) / "fake_home"
         fake_home.mkdir()
         (fake_home / "id.md").write_text("from-home")
         monkeypatch.setenv("HOME", str(fake_home))
 
-        seed_agent_identity(coral_dir, "agent-1", "~/id.md", base)
+        seed_agent_role(coral_dir, "agent-1", "~/id.md", base)
 
-        assert (coral_dir / "public" / "identities" / "agent-1.md").read_text() == "from-home"
+        assert (coral_dir / "public" / "roles" / "agent-1.md").read_text() == "from-home"
 
 
-def test_seed_agent_identity_missing_source_raises():
+def test_seed_agent_role_missing_source_raises():
     """A missing source surfaces as FileNotFoundError so misconfig fails loudly."""
     with tempfile.TemporaryDirectory() as d:
-        coral_dir, base = _identity_workspace(Path(d))
-        with pytest.raises(FileNotFoundError, match="identity_file"):
-            seed_agent_identity(coral_dir, "agent-1", "nope.md", base)
+        coral_dir, base = _role_workspace(Path(d))
+        with pytest.raises(FileNotFoundError, match="role_file"):
+            seed_agent_role(coral_dir, "agent-1", "nope.md", base)
 
 
-def test_seed_agent_identity_per_agent_distinct_content():
+def test_seed_agent_role_per_agent_distinct_content():
     """Multiple agents can each be seeded from a different file."""
     with tempfile.TemporaryDirectory() as d:
-        coral_dir, base = _identity_workspace(Path(d))
-        (base / "a.md").write_text("A's identity")
-        (base / "b.md").write_text("B's identity")
+        coral_dir, base = _role_workspace(Path(d))
+        (base / "a.md").write_text("A's role")
+        (base / "b.md").write_text("B's role")
 
-        seed_agent_identity(coral_dir, "agent-1", "a.md", base)
-        seed_agent_identity(coral_dir, "agent-2", "b.md", base)
+        seed_agent_role(coral_dir, "agent-1", "a.md", base)
+        seed_agent_role(coral_dir, "agent-2", "b.md", base)
 
-        ids = coral_dir / "public" / "identities"
-        assert (ids / "agent-1.md").read_text() == "A's identity"
-        assert (ids / "agent-2.md").read_text() == "B's identity"
+        ids = coral_dir / "public" / "roles"
+        assert (ids / "agent-1.md").read_text() == "A's role"
+        assert (ids / "agent-2.md").read_text() == "B's role"
 
 
-def test_seed_agent_identity_default_template_when_no_source():
-    """source=None falls back to the bundled gen-0 identity template."""
+def test_seed_agent_role_default_template_when_no_source():
+    """source=None falls back to the bundled gen-0 role template."""
     with tempfile.TemporaryDirectory() as d:
-        coral_dir, _ = _identity_workspace(Path(d))
+        coral_dir, _ = _role_workspace(Path(d))
 
-        dst = seed_agent_identity(coral_dir, "agent-1")
+        dst = seed_agent_role(coral_dir, "agent-1")
 
         assert dst.exists()
         body = dst.read_text()
@@ -536,45 +536,45 @@ def test_seed_agent_identity_default_template_when_no_source():
         assert "generation: 0" in body
 
 
-def test_seed_agent_identity_relative_source_without_base_dir_raises():
+def test_seed_agent_role_relative_source_without_base_dir_raises():
     """A relative source with no base_dir surfaces as ValueError, not silent cwd resolution."""
     with tempfile.TemporaryDirectory() as d:
-        coral_dir, _ = _identity_workspace(Path(d))
+        coral_dir, _ = _role_workspace(Path(d))
         with pytest.raises(ValueError, match="base_dir is required"):
-            seed_agent_identity(coral_dir, "agent-1", "relative.md")
+            seed_agent_role(coral_dir, "agent-1", "relative.md")
 
 
-# --- setup_shared_state identity-symlink tests ---
+# --- setup_shared_state role-symlink tests ---
 
 
-def test_setup_shared_state_symlinks_identities():
-    """identities/ is symlinked into the worktree's shared dir."""
+def test_setup_shared_state_symlinks_roles():
+    """roles/ is symlinked into the worktree's shared dir."""
     with tempfile.TemporaryDirectory() as d:
         coral_dir = Path(d) / ".coral"
-        (coral_dir / "public" / "identities").mkdir(parents=True)
+        (coral_dir / "public" / "roles").mkdir(parents=True)
         worktree = Path(d) / "worktree"
         worktree.mkdir()
 
         setup_shared_state(worktree, coral_dir, ".claude")
 
-        link = worktree / ".claude" / "identities"
+        link = worktree / ".claude" / "roles"
         assert link.is_symlink()
-        assert link.resolve() == (coral_dir / "public" / "identities").resolve()
+        assert link.resolve() == (coral_dir / "public" / "roles").resolve()
 
 
-def test_setup_shared_state_migrates_real_identities_dir():
-    """A previous run's real identities/ dir is migrated into shared, then symlinked."""
+def test_setup_shared_state_migrates_real_roles_dir():
+    """A previous run's real roles/ dir is migrated into shared, then symlinked."""
     with tempfile.TemporaryDirectory() as d:
         coral_dir = Path(d) / ".coral"
-        (coral_dir / "public" / "identities").mkdir(parents=True)
+        (coral_dir / "public" / "roles").mkdir(parents=True)
         worktree = Path(d) / "worktree"
-        (worktree / ".claude" / "identities").mkdir(parents=True)
-        # An agent wrote its identity into a real local dir before the symlink
+        (worktree / ".claude" / "roles").mkdir(parents=True)
+        # An agent wrote its role into a real local dir before the symlink
         # behavior shipped — make sure we don't lose that file.
-        (worktree / ".claude" / "identities" / "agent-1.md").write_text("local content")
+        (worktree / ".claude" / "roles" / "agent-1.md").write_text("local content")
 
         setup_shared_state(worktree, coral_dir, ".claude")
 
-        link = worktree / ".claude" / "identities"
+        link = worktree / ".claude" / "roles"
         assert link.is_symlink()
-        assert (coral_dir / "public" / "identities" / "agent-1.md").read_text() == "local content"
+        assert (coral_dir / "public" / "roles" / "agent-1.md").read_text() == "local content"

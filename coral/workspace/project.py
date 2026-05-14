@@ -44,22 +44,26 @@ def slugify(name: str) -> str:
 
 _SEED_SKILLS_DIR = Path(__file__).parent.parent / "template" / "skills"
 _SEED_AGENTS_DIR = Path(__file__).parent.parent / "template" / "agents"
-_IDENTITY_TEMPLATE_PATH = Path(__file__).parent.parent / "template" / "identity_template.md"
+_ROLE_TEMPLATE_PATH = Path(__file__).parent.parent / "template" / "role_template.md"
 
 
-def seed_agent_identity(
+def seed_agent_role(
     coral_dir: Path,
     agent_id: str,
     source: str | None = None,
     base_dir: Path | None = None,
 ) -> Path:
-    """Write the per-agent identity certificate at .coral/public/identities/<agent_id>.md.
+    """Write the per-agent role description at .coral/public/roles/<agent_id>.md.
+
+    The role describes *what the agent does* on the team — its posture, lane,
+    objectives, and accumulated self-knowledge. It is mutable and evolves over
+    the run.
 
     Idempotent: does nothing if the file already exists, so an agent's evolved
-    certificate is never clobbered by a re-setup or resume.
+    role description is never clobbered by a re-setup or resume.
 
-    When ``source`` is None (the default), renders the bundled gen-0 identity
-    template — every agent starts with a blank certificate they earn into.
+    When ``source`` is None (the default), renders the bundled gen-0 role
+    template — every agent starts with a blank role they earn into.
 
     When ``source`` is set, copies that user-provided .md file as-is, giving
     each agent a custom starting posture. ``source`` is a host path with ``~``
@@ -71,14 +75,14 @@ def seed_agent_identity(
         ValueError: if ``source`` is given but ``base_dir`` is None and ``source``
             is a relative path.
     """
-    identities_dir = coral_dir / "public" / "identities"
-    identities_dir.mkdir(parents=True, exist_ok=True)
-    dst = identities_dir / f"{agent_id}.md"
+    roles_dir = coral_dir / "public" / "roles"
+    roles_dir.mkdir(parents=True, exist_ok=True)
+    dst = roles_dir / f"{agent_id}.md"
     if dst.exists():
         return dst
 
     if source is None:
-        template = _IDENTITY_TEMPLATE_PATH.read_text()
+        template = _ROLE_TEMPLATE_PATH.read_text()
         rendered = template.format(
             agent_id=agent_id,
             created_at=datetime.now().isoformat(),
@@ -90,12 +94,12 @@ def seed_agent_identity(
     if not src.is_absolute():
         if base_dir is None:
             raise ValueError(
-                f"identity_file {source!r} is relative; base_dir is required to resolve it"
+                f"role_file {source!r} is relative; base_dir is required to resolve it"
             )
         src = (base_dir / src).resolve()
     if not src.is_file():
         raise FileNotFoundError(
-            f"identity_file {source!r} (resolved to {src}) does not exist"
+            f"role_file {source!r} (resolved to {src}) does not exist"
         )
     shutil.copy2(src, dst)
     return dst
@@ -154,7 +158,7 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     (coral_dir / "public" / "notes").mkdir(parents=True, exist_ok=True)
     (coral_dir / "public" / "heartbeat").mkdir(parents=True, exist_ok=True)
     (coral_dir / "public" / "eval_logs").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "public" / "identities").mkdir(parents=True, exist_ok=True)
+    (coral_dir / "public" / "roles").mkdir(parents=True, exist_ok=True)
     (coral_dir / "private").mkdir(parents=True, exist_ok=True)
     agents_dir.mkdir(parents=True, exist_ok=True)
 

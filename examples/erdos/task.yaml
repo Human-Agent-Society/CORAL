@@ -42,9 +42,29 @@ grader:
     program_file: "initial_program.py"
 
 agents:
-  count: 1
   runtime: claude_code
-  model: claude-opus-4-6
+  assignments:
+    # agent-1: Opus 4.7 — researcher / analyst / synthesist.
+    # Stronger reasoning model; spends its budget on literature, structural
+    # analysis, hypothesis generation, and direction-setting. Hands focus
+    # notes off to the implementer pool below rather than implementing
+    # itself.
+    - model: claude-opus-4-7
+      runtime_options:
+        role_file: ./roles/researcher.md
+    # agent-2..agent-N: cheap minimax implementers / closers.
+    # Faster, cheaper model; share an implementer role and coordinate
+    # via shared notes (claim focus notes, sign attempts). All N route
+    # through the minimax gateway with its own auth token; bump `count`
+    # to scale the parallel implementer pool.
+    #
+    # Note: grader.parallel.max_workers (default 1) caps concurrent grades.
+    # If you bump count above 2 and the grader is concurrency-safe, also
+    # bump grader.parallel.max_workers to keep the pool fed.
+    - model: claude-sonnet-4-6
+      count: 3
+      runtime_options:
+        role_file: ./roles/implementer.md
 
 workspace:
   results_dir: "./results"
@@ -55,4 +75,4 @@ workspace:
 run:
   verbose: false
   ui: false
-  session: tmux
+  session: local

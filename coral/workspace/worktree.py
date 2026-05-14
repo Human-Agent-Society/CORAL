@@ -175,11 +175,11 @@ def setup_shared_state(
         "attempts",
         "logs",
         "heartbeat",
-        # Per-agent identity certificates. Each agent owns and edits its own
-        # identities/<agent_id>.md; everyone reads everyone else's. Must be
-        # a symlink to public/ so per-agent writes via .claude/identities/
+        # Per-agent role descriptions. Each agent owns and edits its own
+        # roles/<agent_id>.md; everyone reads everyone else's. Must be
+        # a symlink to public/ so per-agent writes via .claude/roles/
         # land in shared state rather than getting siloed in the worktree.
-        "identities",
+        "roles",
         # Per-attempt eval artifacts (subprocess logs, terminal recordings,
         # verifier output, etc.) that the grader writes via TaskGrader.eval_logs_dir.
         # Lives outside the grader checkout so it survives daemon cleanup.
