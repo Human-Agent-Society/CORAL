@@ -154,7 +154,7 @@ def default_local_actions(config) -> list[dict]:
             actions.append({
                 "name": action_cfg.name,
                 "every": action_cfg.every,
-                "prompt": DEFAULT_PROMPTS.get(action_cfg.name, ""),
+                "prompt": action_cfg.prompt or DEFAULT_PROMPTS.get(action_cfg.name, ""),
                 "trigger": trigger,
             })
     return actions
@@ -170,7 +170,7 @@ def default_global_actions(config) -> list[dict]:
             actions.append({
                 "name": action_cfg.name,
                 "every": action_cfg.every,
-                "prompt": DEFAULT_PROMPTS.get(action_cfg.name, ""),
+                "prompt": action_cfg.prompt or DEFAULT_PROMPTS.get(action_cfg.name, ""),
                 "trigger": trigger,
             })
     return actions

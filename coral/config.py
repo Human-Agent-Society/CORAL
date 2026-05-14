@@ -82,6 +82,7 @@ class HeartbeatActionConfig:
     every: int = MISSING  # trigger every N evals (interval) or stall threshold (plateau)
     is_global: bool = False  # True = use global eval count, False = per-agent
     trigger: str = "interval"  # "interval" or "plateau"
+    prompt: str = ""  # custom prompt; if empty, falls back to built-in DEFAULT_PROMPTS
 
 
 @dataclass
@@ -317,12 +318,18 @@ def _preprocess(data: dict[str, Any]) -> dict[str, Any]:
     old_heartbeat = agents_data.pop("heartbeat_every", None)
 
     if heartbeat_raw is not None:
+        specified = {h["name"] for h in heartbeat_raw}
+        for dflt in AgentConfig().heartbeat:
+            if dflt.name not in specified:
+                heartbeat_raw.append({"name": dflt.name, "every": dflt.every,
+                                      "global": dflt.is_global, "trigger": dflt.trigger})
         agents_data["heartbeat"] = [
             {
                 "name": h["name"],
                 "every": h["every"],
                 "is_global": h.get("global", False),
                 "trigger": h.get("trigger", "interval"),
+                "prompt": h.get("prompt", ""),
             }
             for h in heartbeat_raw
         ]
