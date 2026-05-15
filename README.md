@@ -472,6 +472,7 @@ uv run ruff format .
 
 This project is released under MIT [LICENSE](LICENSE).
 
+
 ### Citation
 
 ⭐ If you find CORAL useful, please consider giving us a Star and/or citing it in your work:
@@ -485,6 +486,14 @@ This project is released under MIT [LICENSE](LICENSE).
   url    = {https://arxiv.org/pdf/2604.01658}
 }
 ```
+
+<a href="https://www.star-history.com/?repos=Human-Agent-Society%2FCoral&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/Coral&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/Coral&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Human-Agent-Society/Coral&type=date&legend=top-left" />
+ </picture>
+</a>
 
 ### Acknowledgement
 
