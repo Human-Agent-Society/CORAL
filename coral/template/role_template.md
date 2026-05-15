@@ -24,7 +24,7 @@ last_revised_after_eval: 0
 description of the role you're playing on this team, grounded in what you have actually
 done. The "Postures" vocabulary in CORAL.md is a useful starting point — you may use
 those words, extend them, combine them, or invent your own. Aim for precise, not generic.
-"Load-bottleneck profiler with skeptic tendencies" is more useful than "implementer."*
+"Performance engineer with reviewer instincts" is more useful than "engineer."*
 
 ## What I've actually done
 
