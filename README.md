@@ -478,12 +478,15 @@ This project is released under MIT [LICENSE](LICENSE).
 ⭐ If you find CORAL useful, please consider giving us a Star and/or citing it in your work:
 
 ```bibtex
-@article{coral2026,
-  title  = {CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery},
-  author = {Qu, Ao and Zheng, Han and Zhou, Zijian and Yan, Yihao and Tang, Yihong and Ong, Shao Yong and Hong, Fenglu and Zhou, Kaichen and Jiang, Chonghe and Kong, Minwei and Zhu, Jiacheng and Jiang, Xuan and Li, Sirui and Wu, Cathy and Low, Bryan Kian Hsiang and Zhao, Jinhua and Liang, Paul Pu},
-  journal = {arXiv preprint arXiv:2604.01658},
-  year   = {2026},
-  url    = {https://arxiv.org/pdf/2604.01658}
+@misc{qu2026coral,
+  title         = {CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery},
+  author        = {Qu, Ao and Zheng, Han and Zhou, Zijian and Yan, Yihao and Tang, Yihong and Ong, Shao Yong and Hong, Fenglu and Zhou, Kaichen and Jiang, Chonghe and Kong, Minwei and Zhu, Jiacheng and Jiang, Xuan and Li, Sirui and Wu, Cathy and Low, Bryan Kian Hsiang and Zhao, Jinhua and Liang, Paul Pu},
+  year          = {2026},
+  eprint        = {2604.01658},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.AI},
+  doi           = {10.48550/arXiv.2604.01658},
+  url           = {https://arxiv.org/abs/2604.01658}
 }
 ```
 
