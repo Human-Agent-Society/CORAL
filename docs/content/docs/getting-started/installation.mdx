@@ -4,58 +4,92 @@ description: Install CORAL and its dependencies.
 ---
 
 
-## Prerequisites
+## Quick install (recommended)
 
-- **Python 3.11+**
-- **uv** — fast Python package manager ([install uv](https://docs.astral.sh/uv/getting-started/installation/))
-- **git** — for worktree management
-- **tmux** — recommended for session management (CORAL auto-wraps in tmux by default)
-
-You'll also need at least one supported agent runtime:
-- **Claude Code** (default) — requires an Anthropic API key
-- **Codex** — OpenAI's coding agent
-- **OpenCode** — open-source alternative
-
-For Harbor-based benchmarks (SWE-bench, terminal-bench), you additionally need:
-- **Docker** — installed and running on the host
-- **Harbor CLI** — invoked via `uvx harbor` (no separate install needed if you have `uv`)
-
-## Install from source
+One line — installs the `coral` CLI globally so you can run it from any directory:
 
 ```bash
-git clone https://github.com/yanyh528/CORAL.git
-cd CORAL
+curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
 ```
 
-### Basic install
+The script:
+
+1. Installs [`uv`](https://docs.astral.sh/uv/) if missing.
+2. Runs `uv tool install git+https://github.com/Human-Agent-Society/CORAL.git` — drops the `coral` binary into `~/.local/bin` inside an isolated venv.
+3. Ensures `~/.local/bin` is on `PATH` for future shells.
+
+Pin a version (any git tag, branch, or commit):
 
 ```bash
-uv sync
+curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | CORAL_VERSION=v0.5.0 sh
 ```
 
-### With development tools
-
-```bash
-uv sync --extra dev        # pytest, ruff, mypy
-```
-
-### Everything
-
-```bash
-uv sync --all-extras       # All optional dependencies
-```
-
-## Verify installation
+Verify:
 
 ```bash
 coral --version
 ```
 
-You should see something like `coral 0.2.0`.
+Upgrade in place at any time:
 
-## Optional dependencies
+```bash
+uv tool upgrade coral
+```
 
-CORAL currently exposes two optional extras:
+## Prerequisites
+
+The installer handles `uv` for you. You still need:
+
+- **Python 3.11+** (uv will fetch one if you don't have it)
+- **git** — CORAL uses git worktrees for agent isolation
+- **curl** — used by the installer to bootstrap uv
+
+Recommended:
+
+- **tmux** — CORAL auto-wraps runs in a tmux session (use `run.session=local` to skip)
+
+At least one supported agent runtime:
+
+- **Claude Code** (default) — requires an Anthropic API key
+- **Codex** — OpenAI's coding agent
+- **OpenCode** — open-source alternative
+
+For Harbor-based benchmarks (SWE-bench, terminal-bench):
+
+- **Docker** — installed and running on the host
+- **Harbor CLI** — invoked via `uvx harbor` (no separate install if you have `uv`)
+
+## Manual install (no curl pipe)
+
+If you'd rather not pipe a remote script into a shell:
+
+```bash
+# Install uv first (skip if already installed):
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install coral as a uv tool (isolated venv, on PATH):
+uv tool install git+https://github.com/Human-Agent-Society/CORAL.git
+
+# Pin a version:
+uv tool install git+https://github.com/Human-Agent-Society/CORAL.git@v0.5.0
+```
+
+## Develop CORAL itself
+
+If you're modifying CORAL's source rather than just using it, clone the repo and use an editable install. In this mode, prefix commands with `uv run`:
+
+```bash
+git clone https://github.com/Human-Agent-Society/CORAL.git
+cd CORAL
+uv sync                       # basic
+uv sync --extra dev           # with pytest, ruff, mypy
+uv sync --extra ui            # with web dashboard
+uv sync --all-extras          # everything
+
+uv run coral --version
+```
+
+### Optional extras
 
 | Extra  | Install                  | Purpose                              |
 |--------|--------------------------|--------------------------------------|

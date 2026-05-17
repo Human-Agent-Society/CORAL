@@ -41,11 +41,43 @@ Want self-improving AI without the configuration overhead? Try Coral.
 
 ### Installation
 
+**One line — installs `coral` globally so you can run it from any directory:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
+```
+
+The script bootstraps [`uv`](https://github.com/astral-sh/uv) if missing, then runs `uv tool install` to drop the `coral` binary into `~/.local/bin`. Pin a version by setting `CORAL_VERSION=v0.5.0` (any git tag/branch/commit works).
+
+<details>
+<summary>Manual install (skip the curl pipe)</summary>
+
+```bash
+# Already have uv? One command:
+uv tool install git+https://github.com/Human-Agent-Society/CORAL.git
+
+# Install / upgrade uv first if needed:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+</details>
+
+<details>
+<summary>Develop CORAL itself (clone + editable install)</summary>
+
 ```bash
 git clone https://github.com/Human-Agent-Society/CORAL.git
 cd CORAL
-# install uv from https://github.com/astral-sh/uv
-uv sync                   # (optionally add --extra ui to include dashboard dependencies)
+uv sync                       # (add --extra ui for the dashboard, --extra dev for tests)
+uv run coral --help           # prefix commands with `uv run` in the dev checkout
+```
+
+</details>
+
+Verify:
+
+```bash
+coral --version
 ```
 
 ### Supported Agents

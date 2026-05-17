@@ -42,11 +42,43 @@
 
 ### 安装
 
+**一行命令 —— 全局安装 `coral`，在任意目录下都可直接调用：**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
+```
+
+该脚本会先检查并按需安装 [`uv`](https://github.com/astral-sh/uv)，然后通过 `uv tool install` 将 `coral` 可执行文件放入 `~/.local/bin`。如需指定版本,设置 `CORAL_VERSION=v0.5.0`(支持任意 git tag/分支/commit)。
+
+<details>
+<summary>手动安装（不使用 curl 管道）</summary>
+
+```bash
+# 已安装 uv,只需一条命令:
+uv tool install git+https://github.com/Human-Agent-Society/CORAL.git
+
+# 若未安装 uv,先安装 uv:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+</details>
+
+<details>
+<summary>参与 CORAL 开发（clone + 可编辑安装）</summary>
+
 ```bash
 git clone https://github.com/Human-Agent-Society/CORAL.git
 cd CORAL
-# 从 https://github.com/astral-sh/uv 安装 uv
-uv sync                   # （可选：添加 --extra ui 以包含看板依赖）
+uv sync                       # （添加 --extra ui 包含看板依赖；--extra dev 包含测试工具）
+uv run coral --help           # 开发模式下需要加 `uv run` 前缀
+```
+
+</details>
+
+验证安装：
+
+```bash
+coral --version
 ```
 
 ### 支持的 Agent
