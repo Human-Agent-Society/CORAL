@@ -1,9 +1,9 @@
 
 <div align="center">
 
-<img src="assets/logo.png" alt="CORAL" width="360">
+<img src="assets/logo.png" alt="CORAL logo —— 多 Agent 自主编程基础设施" width="360">
 
-### **一键启动智能体群组，共享知识，无限进化**
+## **一键启动智能体群组，共享知识，无限进化**
 
 <p>
   <img src="assets/mit_logo.png" alt="MIT" height="50">
@@ -33,7 +33,7 @@
 - **[2026-04-24]** 新增 Rubric 评审 —— 两个开箱即用的 LLM 评审 grader 包，专为开放式任务（报告、备忘、法律分析）设计。详见 [Rubric Judges 文档](https://human-agent-society.github.io/CORAL/guides/rubric-judge)。
 - [更多历史动态 →](https://human-agent-society.github.io/CORAL/blog)
 
-![Demo](assets/demo.gif)
+![CORAL 多 Agent 自主编程演示 —— 多个编程 Agent 在独立 git worktree 中并行运行,通过共享状态目录交换知识](assets/demo.gif)
 
 ### 安装
 
@@ -63,7 +63,7 @@ coral start -c my-task/task.yaml  # 启动 Agent
 ### 工作原理
 
 <p align="center">
-  <img src="assets/coral_diagram_trans.jpg" alt="CORAL Architecture Diagram" width="800">
+  <img src="assets/coral_diagram_trans.jpg" alt="CORAL 架构图:多个编程 Agent 运行在隔离的 git worktree 中,通过 .coral/public/ 共享状态,由 grader 守护进程评分" width="800">
 </p>
 
 每个 Agent 跑在自己的 git worktree 里。共享状态（历史记录、笔记、技能）放在 `.coral/public/`，软链到所有 worktree —— Agent 实时看到彼此的工作。Grader 守护进程为每次提交打分。后台管理器通过心跳机制打断 Agent 并注入指令（`reflect`、`consolidate`、`pivot`）。

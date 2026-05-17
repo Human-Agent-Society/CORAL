@@ -1,9 +1,9 @@
 
 <div align="center">
 
-<img src="assets/logo.png" alt="Coral" width="360">
+<img src="assets/logo.png" alt="CORAL logo — multi-agent autonomous coding infrastructure" width="360">
 
-#### Robust, lightweight infrastructure for multi-agent self-evolution, built for autoresearch.
+## Robust, lightweight infrastructure for multi-agent self-evolution, built for autoresearch.
 
 [![Paper](https://img.shields.io/badge/Paper-arXiv%3A2604.01658-B31B1B.svg?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2604.01658v1)
 [![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://human-agent-society.github.io/CORAL/)
@@ -25,7 +25,7 @@
 - **[2026-04-24]** Rubric judges — two reusable LLM-judge grader packages for open-ended tasks (reports, memos, legal analysis). See the [Rubric Judges guide](https://human-agent-society.github.io/CORAL/guides/rubric-judge).
 - [Older news →](https://human-agent-society.github.io/CORAL/blog)
 
-![Demo](assets/demo.gif)
+![CORAL demo — autonomous AI coding agents running in parallel git worktrees, sharing knowledge through a common state directory](assets/demo.gif)
 
 ### Installation
 
@@ -55,7 +55,7 @@ Each agent must be installed and authenticated separately. Per-runtime config �
 ### How It Works
 
 <p align="center">
-  <img src="assets/coral_diagram_trans.jpg" alt="CORAL Architecture Diagram" width="800">
+  <img src="assets/coral_diagram_trans.jpg" alt="CORAL architecture diagram: multiple coding agents run in isolated git worktrees, share state via .coral/public/, and are scored by a grader daemon" width="800">
 </p>
 
 Each agent runs in its own git worktree. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time. A grader daemon scores every commit. The manager interrupts agents with heartbeat prompts (`reflect`, `consolidate`, `pivot`).
