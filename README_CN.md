@@ -14,7 +14,7 @@
 </p>
 
 [![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://human-agent-society.github.io/CORAL/)
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Apache 2.0 License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
 [![uv](https://img.shields.io/badge/uv-package%20manager-5C4EE5.svg)](https://docs.astral.sh/uv/)
 
@@ -300,7 +300,7 @@ uv run ruff check .
 uv run ruff format .
 ```
 
-本项目在MIT [LICENSE](LICENSE) 许可下开源。
+本项目在 Apache 2.0 [LICENSE](LICENSE) 许可下开源。
 
 ### 引用
 
