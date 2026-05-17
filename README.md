@@ -21,7 +21,7 @@
 </div>
 
 <p align="center">
-<a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#quick-start">Quick Start</a> · <a href="#cli-reference">CLI Reference</a> · <a href="#using-opencode">OpenCode</a> · <a href="#using-cursor-agent">Cursor</a> · <a href="#using-kiro">Kiro</a> · <a href="#using-the-gateway-for-custom-models">Gateway</a> · <a href="#examples">Examples</a> · <a href="#license">License</a>
+<a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#usage">Usage</a> · <a href="#how-it-works">How It Works</a> · <a href="#examples">Examples</a> · <a href="https://human-agent-society.github.io/CORAL/">Docs</a> · <a href="#license">License</a>
 </p>
 
 
@@ -114,26 +114,23 @@ agents:
 
 ```bash
 # start a run
-uv run coral start -c examples/kernel_builder/task.yaml
+coral start -c examples/kernel_builder/task.yaml
 
 # override any config value via dotlist syntax
-uv run coral start -c task.yaml agents.count=4 agents.model=opus
-uv run coral start -c task.yaml run.verbose=true        # stream agent output
-uv run coral start -c task.yaml run.ui=true              # also launch web dashboard
-uv run coral start -c task.yaml run.session=local         # skip tmux, run inline
-uv run coral start -c task.yaml run.session=docker        # run inside Docker container
-
-# warm-start: research phase before coding (agents do literature review first)
-uv run coral start -c task.yaml agents.warmstart.enabled=true agents.research=true
+coral start -c task.yaml agents.count=4 agents.model=opus
+coral start -c task.yaml run.verbose=true        # stream agent output
+coral start -c task.yaml run.ui=true             # also launch web dashboard
 
 # stop and resume
-uv run coral stop                                        # stop anytime
-uv run coral resume                                      # pick up where you left off
-uv run coral resume agents.model=opus run.verbose=true   # resume with overrides
+coral stop                                       # stop anytime
+coral resume                                     # pick up where you left off
 
 # monitor progress
-uv run coral ui                                          # open the web dashboard
+coral status                                     # CLI leaderboard
+coral ui                                         # web dashboard
 ```
+
+Full CLI reference: see [`coral --help`](https://human-agent-society.github.io/CORAL/cli/reference) or run `coral --help`. Configuration options (warm-start, gateway, Docker session, etc.) live in the [Configuration](https://human-agent-society.github.io/CORAL/getting-started/configuration) docs.
 
 ### How It Works
 
@@ -147,327 +144,34 @@ Each agent runs in its own git worktree branch. Shared state (attempts, notes, s
 |---------|-------------|
 | **Agents as optimizers** | Claude Code / Codex / Cursor Agent / Kiro / OpenCode subprocesses, each in its own git worktree |
 | **Shared state** | `.coral/` directory with attempts, notes, and skills — symlinked into every worktree |
-| **Eval loop** | Agents call `uv run coral eval -m "..."` to stage, commit, and grade in one shot |
+| **Eval loop** | Agents call `coral eval -m "..."` to stage, commit, and grade in one shot |
 | **CLI orchestration** | 17+ commands: `start`, `stop`, `status`, `eval`, `log`, `ui`, and more |
-| **Web dashboard** | `uv run coral ui` — real-time leaderboard, attempt diffs, agent monitoring |
+| **Web dashboard** | `coral ui` — real-time leaderboard, attempt diffs, agent monitoring |
 
 **Deep research:** Agents come with a bundled `deep-research` skill that guides structured literature review — web search, saving raw sources, writing research notes, and building an index. It runs automatically during warm-start (`agents.warmstart.enabled=true`), and agents can also invoke it mid-run when pivoting to a new approach. Requires `agents.research=true` for web search.
 
 ### Quick Start
 
-Let's walk through a complete example: agents continually optimize a **100-city Traveling Salesman Problem**.
-
-#### 1. Write a seed codebase
-
-The seed is the starting code that agents will iterate on. Create a working directory:
+Three commands get you running:
 
 ```bash
-mkdir -p examples/tsp/{seed,eval}
+coral init my-task                            # scaffold task.yaml + grader stub + seed/
+# edit my-task/task.yaml and my-task/eval/grader.py for your problem
+coral validate my-task                        # dry-run the grader against seed/
+coral start -c my-task/task.yaml              # launch agents (auto-tmux)
 ```
 
-Then create a naive initial solution (you can choose to start empty, though it can make the job of the agents harder):
+Want a complete walkthrough — seed code, grader, task.yaml, launch — with a worked TSP example? See the [Quick Start guide](https://human-agent-society.github.io/CORAL/getting-started/quickstart).
 
-```python
-# examples/tsp/seed/solution.py
-import random
+### Agent Runtimes & Gateway
 
-# Restate the problem here as the agent cannot read the content of `grader.py`
-random.seed(42)
-CITIES = [(random.random(), random.random()) for _ in range(100)]
+Claude Code (the default) needs no special config beyond an Anthropic API key. To use a different runtime, see the per-runtime guides:
 
-# Naive: visit cities in index order (0, 1, 2, ..., 99)
-for i in range(len(CITIES)):
-    print(i)
-```
+- [OpenCode](https://human-agent-society.github.io/CORAL/guides/agent-runtimes#opencode) — requires an `opencode.json` in your seed directory
+- [Cursor Agent](https://human-agent-society.github.io/CORAL/guides/agent-runtimes#cursor-agent) — `cursor-agent login` once, then set `runtime: cursor`
+- [Kiro](https://human-agent-society.github.io/CORAL/guides/agent-runtimes#kiro) — `kiro-cli` install + setup, then `runtime: kiro`
 
-#### 2. Write a grader
-
-Subclass `TaskGrader` and implement `evaluate()`. The base class provides two helpers: `self.run_program(filename)` which runs a file from the agent's codebase in a subprocess and returns a `CompletedProcess` (with `.stdout`, `.stderr`, `.returncode`), and `self.fail(reason)` which records the failure and returns a null score:
-
-```python
-# examples/tsp/eval/grader.py
-import math
-import random
-from coral.grader import TaskGrader, ScoreBundle
-
-# keep consistent with the problem statement in `solution.py`
-random.seed(42)
-CITIES = [(random.random(), random.random()) for _ in range(100)]
-
-class Grader(TaskGrader):
-    def evaluate(self) -> float | ScoreBundle:
-        try:
-            result = self.run_program("solution.py")  # runs solution.py, returns CompletedProcess
-            order = [int(x) for x in result.stdout.strip().split("\n")]
-            assert sorted(order) == list(range(len(CITIES)))
-            dist = sum(
-                math.dist(CITIES[order[i]], CITIES[order[(i + 1) % len(order)]])
-                for i in range(len(order))
-            )
-            return -dist  # shorter tour = higher score
-        except Exception as e:
-            return self.fail(str(e))  # records failure and returns null score
-```
-
-The naive seed tour scores about `-58.02`. Agents will try nearest-neighbor, 2-opt, simulated annealing, etc. to find shorter routes. With 100 cities, exhaustive search is completely infeasible (99! permutations), so agents must discover and apply real optimization heuristics.
-
-#### 3. Configure the task
-
-Point the config at your seed codebase and grader:
-
-```yaml
-# examples/tsp/task.yaml
-task:
-  name: tsp
-  description: |
-    Find the shortest round-trip tour through 100 cities. The coordinates
-    are generated via numpy with a fixed seed in `solution.py`. DO NOT MODIFY the seed or CITIES generation!
-
-    solution.py must print 100 integers (0-99) to stdout, one per line,
-    representing the visit order. Each city must appear exactly once.
-
-    The grader computes the total Euclidean round-trip distance
-    and returns -distance as the score (shorter = higher).
-
-grader:
-  # Quick-start uses auto-discovered eval/grader.py (emits DeprecationWarning).
-  # For production tasks, package the grader and switch to:
-  #   entrypoint: "tsp_grader.grader:Grader"
-  #   setup: ["uv pip install -e ./grader"]
-  # See docs/guides/custom-grader for the migration walkthrough.
-  timeout: 300
-
-agents:
-  count: 1
-  runtime: claude_code  # or codex, cursor, kiro, opencode
-  model: claude-sonnet-4-6
-  max_turns: 200  # before the agent reboots. dont worry Coral keeps running until you stop
-
-workspace:
-  results_dir: "./results"  # relative to your $PWD
-  repo_path: "./examples/tsp/seed"  # relative to your $PWD
-```
-
-#### 4. Launch
-
-```bash
-uv run coral start -c examples/tsp/task.yaml             # launches in tmux session `coral-tsp`
-uv run coral start -c examples/tsp/task.yaml agents.count=4  # override agent count
-uv sync --extra ui && uv run coral ui                     # open web dashboard (port 8420)
-uv run coral status      # CLI leaderboard
-uv run coral log         # View attempts
-uv run coral stop        # Stop all agents
-```
-
-### CLI Reference
-
-<details>
-<summary>Click to expand all 17+ commands</summary>
-
-| Command                              | Description                         |
-| ------------------------------------ | ----------------------------------- |
-| `uv run coral init <name>`           | Scaffold a new task                 |
-| `uv run coral validate <name>`       | Test the grader                     |
-| `uv run coral start -c task.yaml [overrides...]` | Launch agents (e.g. `agents.count=4 run.verbose=true`) |
-| `uv run coral resume [overrides...]` | Resume a previous run (e.g. `agents.model=opus`)       |
-| `uv run coral stop`                  | Stop all agents                     |
-| `uv run coral status`                | Agent health + leaderboard          |
-| `uv run coral log`                   | Leaderboard (top 20)                |
-| `uv run coral log -n 5 --recent`     | Recent attempts                     |
-| `uv run coral log --search "query"`  | Search attempts                     |
-| `uv run coral show <hash>`           | Attempt details + diff              |
-| `uv run coral notes`                 | Browse shared notes                 |
-| `uv run coral skills`                | Browse shared skills                |
-| `uv run coral runs`                  | List all runs                       |
-| `uv run coral ui`                    | Web dashboard                       |
-| `uv run coral eval -m "description"` | Stage, commit, evaluate (agent use) |
-| `uv run coral diff`                  | Show uncommitted changes            |
-| `uv run coral revert`                | Undo last commit                    |
-| `uv run coral checkout <hash>`       | Reset to previous attempt           |
-| `uv run coral heartbeat`             | View/modify heartbeat actions       |
-
-</details>
-
-
-### Architecture
-
-<details>
-<summary>Click to expand</summary>
-
-```
-coral/
-├── types.py             # Task, Score, ScoreBundle, Attempt
-├── config.py            # YAML-based CoralConfig
-├── agent/
-│   ├── manager.py       # Multi-agent lifecycle
-│   └── runtime.py       # Claude Code / Codex / Cursor Agent / Kiro / OpenCode subprocess
-├── workspace/
-│   └── setup.py         # Worktree creation, hooks, symlinks
-├── grader/
-│   ├── protocol.py      # GraderInterface protocol
-│   ├── base.py          # BaseGrader (helpers: _make_score, _make_bundle)
-│   ├── task_grader.py   # TaskGrader for task-specific graders
-│   ├── loader.py        # Grader discovery and loading
-│   └── builtin/
-│       └── function_grader.py
-├── hub/
-│   ├── attempts.py      # Attempt CRUD + leaderboard + search
-│   ├── notes.py         # Markdown notes with YAML frontmatter
-│   └── skills.py        # Skill directories with SKILL.md
-├── hooks/
-│   └── post_commit.py   # Eval-on-commit implementation
-├── template/
-│   └── coral_md.py      # CORAL.md generator
-├── web/                 # Starlette + React dashboard
-└── cli/                 # 17 commands across 5 modules
-```
-
-</details>
-
-### Using OpenCode
-
-To use [OpenCode](https://github.com/opencode-ai/opencode) as your agent runtime, you need to provide an `opencode.json` configuration file in your seed directory. This file configures OpenCode's permissions and provider settings.
-
-Here is an example from `examples/circle_packing/seed/opencode.json`:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "permission": {
-    "external_directory": "allow",
-    "question": "deny",
-    "doom_loop": "allow",
-    "bash": "allow",
-    "edit": "allow",
-    "read": "allow",
-    "write": "allow",
-    "webfetch": "deny",
-    "websearch": "deny",
-    "codesearch": "allow",
-    "lsp": "allow",
-    "skill": "allow"
-  },
-  "provider": {
-    "claude": {
-      "npm": "@ai-sdk/anthropic",
-      "name": "claude",
-      "options": {
-        "baseURL": "http://localhost:4000/v1",
-        "apiKey": "xxx"
-      },
-      "models": {
-        "claude-opus-4-6": {
-          "name": "claude-opus-4-6"
-        }
-      }
-    }
-  }
-}
-```
-
-Key points:
-- Set all permissions to `"allow"` (except `question`, `webfetch`, `websearch` which should be `"deny"`) so the agent can run autonomously without interactive prompts.
-- The `provider` section configures which model to use. When using the gateway (see below), point `baseURL` at `http://localhost:<gateway_port>/v1` and set `apiKey` to any placeholder value — the gateway handles authentication.
-- Place `opencode.json` in your seed directory so it gets copied into each agent's worktree.
-
-Then set your task config to use OpenCode:
-
-```yaml
-agents:
-  runtime: opencode
-  model: claude/claude-opus-4-6  # must match a model defined in opencode.json
-```
-
-### Using Cursor Agent
-
-To use [Cursor Agent](https://cursor.com/docs/cli/overview), install the headless CLI and authenticate once:
-
-```bash
-curl -fsSL https://cursor.com/install | bash
-cursor-agent login
-```
-
-Then point your task at it:
-
-```yaml
-agents:
-  runtime: cursor          # alias for cursor_agent; "cursor-agent" also works
-  model: auto              # or any model id supported by your Cursor plan
-```
-
-CORAL spawns each agent as `cursor-agent --print --output-format stream-json --force --workspace <wt> [--model] [--mode] [--resume] <prompt>`. The `--force` flag is always passed (cursor-agent requires it for write tools in `--print` mode). The full task brief is written to `AGENTS.md` at the worktree root, and CORAL also drops a `.cursor/rules/coral.mdc` always-apply rule with short guardrails (use `coral eval`, don't touch `.coral/private/`, share via `.cursor/notes/` and `.cursor/skills/`) so they survive context pressure.
-
-Optional `runtime_options`:
-
-```yaml
-agents:
-  runtime: cursor
-  runtime_options:
-    command: /usr/local/bin/cursor-agent  # override binary path
-    mode: plan                            # --mode plan|ask
-    stream_partial_output: true           # --stream-partial-output
-```
-
-> **Note:** Cursor Agent uses its own auth and does **not** route through the LiteLLM gateway. Login state lives in your Cursor account, not in CORAL config.
-
-### Using Kiro
-
-To use [Kiro](https://kiro.dev), install `kiro-cli` and authenticate via Kiro's setup. Then:
-
-```yaml
-agents:
-  runtime: kiro
-  model: auto              # or any Kiro-supported model
-```
-
-CORAL spawns each agent as `kiro-cli chat <prompt> --no-interactive -a` (the `-a` flag trusts all tools). Instructions are read from `KIRO.md` at the worktree root. Kiro does not currently expose a session id we can resume from, so restarted agents start fresh — they still see all prior attempts and notes via the shared `.kiro/` directory.
-
-Like Cursor, Kiro uses its own auth and does not route through the LiteLLM gateway.
-
-### Using the Gateway for Custom Models
-
-CORAL includes a built-in **LiteLLM gateway** that acts as a proxy between agents and model providers. This is useful when you want to:
-
-- Route agent requests through a single proxy with unified API key management
-- Use custom or self-hosted models
-- Add request logging and per-agent tracking
-- Use providers that require non-standard authentication
-
-#### Setting up the gateway
-
-**1. Create a LiteLLM config file** (e.g. `litellm_config.yaml`) alongside your `task.yaml`:
-
-```yaml
-# examples/circle_packing/litellm_config.yaml
-model_list:
-  - model_name: "claude-opus-4-6"
-    litellm_params:
-      model: "anthropic/claude-opus-4-6"
-      api_key: "YOUR_ANTHROPIC_API_KEY"
-
-litellm_settings:
-  drop_params: true
-```
-
-Each entry in `model_list` defines a model the gateway will serve. The `model_name` is what agents request; `litellm_params.model` is the upstream provider model. See the [LiteLLM docs](https://docs.litellm.ai/docs/proxy/configs) for full configuration options (multiple providers, load balancing, fallbacks, etc.).
-
-**2. Enable the gateway in your task config:**
-
-```yaml
-agents:
-  runtime: opencode           # or claude_code, codex (cursor and kiro use their own auth, not the gateway)
-  model: claude/claude-opus-4-6
-  gateway:
-    enabled: true
-    port: 4000                # port the gateway listens on
-    config: "./litellm_config.yaml"  # path relative to task.yaml
-```
-
-**3. Point your agent at the gateway.** For OpenCode, set `baseURL` in `opencode.json` to `http://localhost:<port>/v1`. For Claude Code, the gateway URL is automatically injected.
-
-When you run `coral start`, the gateway starts before agents are spawned, and all agent API requests are routed through it. The gateway automatically assigns each agent a unique proxy key for per-agent request tracking.
-
-See `examples/circle_packing/` for a complete working example using OpenCode with the gateway.
+To route agent traffic through a unified proxy (custom models, request logging, per-agent keys), enable the built-in [LiteLLM Gateway](https://human-agent-society.github.io/CORAL/guides/gateway).
 
 ### Examples
 

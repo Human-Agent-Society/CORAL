@@ -1,0 +1,48 @@
+---
+title: LiteLLM Gateway
+description: Route agent traffic through a unified proxy for custom or self-hosted models.
+---
+
+
+CORAL includes a built-in **LiteLLM gateway** that acts as a proxy between agents and model providers. This is useful when you want to:
+
+- Route agent requests through a single proxy with unified API key management
+- Use custom or self-hosted models
+- Add request logging and per-agent tracking
+- Use providers that require non-standard authentication
+
+## Setup
+
+**1. Create a LiteLLM config file** (e.g. `litellm_config.yaml`) alongside your `task.yaml`:
+
+```yaml
+# examples/circle_packing/litellm_config.yaml
+model_list:
+  - model_name: "claude-opus-4-6"
+    litellm_params:
+      model: "anthropic/claude-opus-4-6"
+      api_key: "YOUR_ANTHROPIC_API_KEY"
+
+litellm_settings:
+  drop_params: true
+```
+
+Each entry in `model_list` defines a model the gateway will serve. The `model_name` is what agents request; `litellm_params.model` is the upstream provider model. See the [LiteLLM docs](https://docs.litellm.ai/docs/proxy/configs) for full configuration options (multiple providers, load balancing, fallbacks, etc.).
+
+**2. Enable the gateway in your task config:**
+
+```yaml
+agents:
+  runtime: opencode           # or claude_code, codex (cursor and kiro use their own auth, not the gateway)
+  model: claude/claude-opus-4-6
+  gateway:
+    enabled: true
+    port: 4000                # port the gateway listens on
+    config: "./litellm_config.yaml"  # path relative to task.yaml
+```
+
+**3. Point your agent at the gateway.** For OpenCode, set `baseURL` in `opencode.json` to `http://localhost:<port>/v1` (see [Agent Runtimes → OpenCode](/guides/agent-runtimes#opencode)). For Claude Code, the gateway URL is automatically injected.
+
+When you run `coral start`, the gateway starts before agents are spawned, and all agent API requests are routed through it. The gateway automatically assigns each agent a unique proxy key for per-agent request tracking.
+
+See `examples/circle_packing/` for a complete working example using OpenCode with the gateway.

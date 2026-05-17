@@ -24,7 +24,7 @@
 
 
 <p align="center">
-<a href="#安装">安装</a> · <a href="#支持的-agent">支持的 Agent</a> · <a href="#使用">使用</a> · <a href="#工作原理">工作原理</a> · <a href="#快速上手">快速上手</a> · <a href="#cli-命令">CLI 命令</a> · <a href="#示例">示例</a> · <a href="#许可证">许可证</a>
+<a href="#安装">安装</a> · <a href="#支持的-agent">支持的 Agent</a> · <a href="#使用">使用</a> · <a href="#工作原理">工作原理</a> · <a href="#示例">示例</a> · <a href="https://human-agent-society.github.io/CORAL/">文档</a> · <a href="#许可证">许可证</a>
 </p>
 
 **CORAL** 是一套用于构建**自主 AI Agent 组织**的基础设施，Agent 们持续运行实验、共享知识、不断进化出更优方案。只需提供代码库和评分脚本，Coral 即可完成剩余工作：隔离工作空间、安全评估、持久化共享知识，以及多 Agent 协作驱动持续进化。原生集成 Claude Code、Codex、Cursor Agent、Kiro、OpenCode 等主流编程 Agent。
@@ -116,15 +116,23 @@ agents:
 
 ```bash
 # 启动
-uv run coral start --config examples/kernel_builder/task.yaml
+coral start -c examples/kernel_builder/task.yaml
+
+# 通过 dotlist 语法覆盖任意配置
+coral start -c task.yaml agents.count=4 agents.model=opus
+coral start -c task.yaml run.verbose=true        # 流式输出 Agent 日志
+coral start -c task.yaml run.ui=true             # 同时启动 Web 看板
 
 # 停止和恢复
-uv run coral stop                                      # 暂停
-uv run coral resume                                    # 继续
+coral stop                                       # 暂停
+coral resume                                     # 继续
 
 # 监控进度
-uv run coral ui                                        # 打开 Web 看板
+coral status                                     # CLI 排行榜
+coral ui                                         # Web 看板
 ```
+
+完整 CLI 参考见 [`coral --help`](https://human-agent-society.github.io/CORAL/cli/reference) 或运行 `coral --help`。配置项（warm-start、Gateway、Docker 会话等）详见[配置文档](https://human-agent-society.github.io/CORAL/getting-started/configuration)。
 
 ### 工作原理
 
@@ -138,170 +146,32 @@ uv run coral ui                                        # 打开 Web 看板
 |------|------|
 | **Agent = 优化器** | Claude Code / Codex / OpenCode 子进程，各占一个 git worktree |
 | **共享状态** | `.coral/` 存放历史记录、笔记和技能，软链到每个 worktree |
-| **Eval 循环** | Agent 调 `uv run coral eval -m "..."` 一步完成暂存 + 提交 + 打分 |
+| **Eval 循环** | Agent 调 `coral eval -m "..."` 一步完成暂存 + 提交 + 打分 |
 | **CLI 调度** | 17+ 条命令：`start`、`stop`、`status`、`eval`、`log`、`ui` 等 |
-| **Web 看板** | `uv run coral ui` —— 实时排行榜、diff 对比、Agent 监控 |
+| **Web 看板** | `coral ui` —— 实时排行榜、diff 对比、Agent 监控 |
 
 ### 快速上手
 
-以一个完整的例子来演示：多个 Agent 持续优化 **100 城市旅行商问题（TSP）**。
-
-#### 1. 写初始代码
-
-初始代码（seed）是 Agent 迭代优化的起点。创建工作目录：
+三条命令即可启动：
 
 ```bash
-mkdir -p examples/tsp/{seed,eval}
+coral init my-task                            # 生成 task.yaml + grader 模板 + seed/
+# 编辑 my-task/task.yaml 和 my-task/eval/grader.py 描述你的问题
+coral validate my-task                        # 用 seed/ 试跑一次评分器
+coral start -c my-task/task.yaml              # 启动 Agent（自动开 tmux）
 ```
 
-然后创建一个最简初始方案（你也可以选择从空开始，虽然这可能会让 Agent 的工作更具挑战性）：
+需要完整流程演示（含 seed 代码、grader、task.yaml、启动）以及 TSP 实战示例？参见[快速上手文档](https://human-agent-society.github.io/CORAL/getting-started/quickstart)。
 
-```python
-# examples/tsp/seed/solution.py
-import random
+### Agent 运行时与 Gateway
 
-# 在此重述问题，因为 Agent 无法读取 `grader.py` 的内容
-random.seed(42)
-CITIES = [(random.random(), random.random()) for _ in range(100)]
+默认 Claude Code 无需额外配置（只需 Anthropic API key）。使用其他运行时请参考对应文档：
 
-# 最简方案：按编号顺序访问 (0, 1, 2, ..., 99)
-for i in range(len(CITIES)):
-    print(i)
-```
+- [OpenCode](https://human-agent-society.github.io/CORAL/guides/agent-runtimes#opencode) —— 需要在 seed 目录提供 `opencode.json`
+- [Cursor Agent](https://human-agent-society.github.io/CORAL/guides/agent-runtimes#cursor-agent) —— 执行 `cursor-agent login` 后设置 `runtime: cursor`
+- [Kiro](https://human-agent-society.github.io/CORAL/guides/agent-runtimes#kiro) —— 安装并配置 `kiro-cli` 后设置 `runtime: kiro`
 
-#### 2. 写评分器
-
-继承 `TaskGrader`，实现 `evaluate()` 方法。基类提供两个辅助方法：`self.run_program(filename)` 在子进程中运行 Agent 代码库里的文件，返回 `CompletedProcess`（含 `.stdout`、`.stderr`、`.returncode`）；`self.fail(reason)` 记录失败并返回 `-inf` 作为得分：
-
-```python
-# examples/tsp/eval/grader.py
-import math
-import random
-from coral.grader import TaskGrader, ScoreBundle
-
-# 保持与 `solution.py` 中的问题描述一致
-random.seed(42)
-CITIES = [(random.random(), random.random()) for _ in range(100)]
-
-class Grader(TaskGrader):
-    def evaluate(self) -> float | ScoreBundle:
-        try:
-            result = self.run_program("solution.py")  # 运行 solution.py，返回 CompletedProcess
-            order = [int(x) for x in result.stdout.strip().split("\n")]
-            assert sorted(order) == list(range(len(CITIES)))
-            dist = sum(
-                math.dist(CITIES[order[i]], CITIES[order[(i + 1) % len(order)]])
-                for i in range(len(order))
-            )
-            return -dist  # 路线越短，得分越高
-        except Exception as e:
-            return self.fail(str(e))  # 记录失败并返回 -inf
-```
-
-初始方案按编号顺序访问，得分约 `-58.02`。Agent 会尝试最近邻、2-opt、模拟退火等策略寻找更短路线。100 个城市的穷举搜索完全不可行（99! 种排列），因此 Agent 必须发现并运用真正的优化启发式算法。
-
-#### 3. 配置任务
-
-把配置指向初始代码和评分器：
-
-```yaml
-# examples/tsp/task.yaml
-task:
-  name: tsp
-  description: |
-    求 100 个城市的最短往返路线。坐标由 `solution.py` 中固定种子随机生成，
-    请勿修改种子或 CITIES 的生成方式！
-
-    solution.py 向 stdout 输出 100 个整数（0–99），每行一个，
-    表示访问顺序，每个城市恰好出现一次。
-    评分器计算往返欧氏距离，返回 -distance 作为得分（越短越高）。
-
-grader:
-  # 快速开始走自动发现的 eval/grader.py（会触发 DeprecationWarning）。
-  # 生产任务建议把 grader 打包,改用 entrypoint:
-  #   entrypoint: "tsp_grader.grader:Grader"
-  #   setup: ["uv pip install -e ./grader"]
-  # 迁移指南见 docs/guides/custom-grader。
-  timeout: 300
-
-agents:
-  count: 1
-  runtime: claude_code  # 或 codex、cursor、kiro、opencode
-  model: claude-sonnet-4-6
-  max_turns: 200  # Agent 重启前的最大轮数，别担心 Coral 会一直运行直到你停止
-
-workspace:
-  results_dir: "./results"  # 相对于你的 $PWD
-  repo_path: "./examples/tsp/seed"  # 相对于你的 $PWD
-```
-
-#### 4. 跑起来
-
-```bash
-uv run coral start --config examples/tsp/task.yaml  # 随后你会在 tmux 会话 `coral-tsp` 中看到 Coral
-uv sync --extra ui && uv run coral ui          # 打开 Web 看板，默认运行在 8420 端口
-uv run coral status      # 看排行榜
-uv run coral log         # 翻记录
-uv run coral stop        # 收工
-```
-
-### CLI 命令
-
-
-| 命令 | 说明 |
-|------|------|
-| `uv run coral init <name>` | 新建任务脚手架 |
-| `uv run coral validate <name>` | 测试评分器 |
-| `uv run coral start -c task.yaml` | 启动 Agent |
-| `uv run coral resume` | 恢复上次运行 |
-| `uv run coral stop` | 停止全部 Agent |
-| `uv run coral status` | Agent 状态 + 排行榜 |
-| `uv run coral log` | 排行榜（前 20） |
-| `uv run coral log -n 5 --recent` | 最近的记录 |
-| `uv run coral log --search "关键词"` | 搜索记录 |
-| `uv run coral show <hash>` | 记录详情 + diff |
-| `uv run coral notes` | 浏览笔记 |
-| `uv run coral skills` | 浏览技能 |
-| `uv run coral runs` | 列出所有运行 |
-| `uv run coral ui` | Web 看板 |
-| `uv run coral eval -m "描述"` | 暂存 + 提交 + 评估（Agent 调用）|
-| `uv run coral diff` | 看未提交的改动 |
-| `uv run coral revert` | 撤销上次提交 |
-| `uv run coral checkout <hash>` | 回退到指定记录 |
-| `uv run coral heartbeat` | 查看/修改心跳动作 |
-
-
-### 项目结构
-
-
-```
-coral/
-├── types.py             # Task, Score, ScoreBundle, Attempt
-├── config.py            # YAML 配置加载
-├── agent/
-│   ├── manager.py       # 多 Agent 生命周期
-│   └── runtime.py       # Claude Code / Codex / Cursor Agent / Kiro / OpenCode 子进程
-├── workspace/
-│   └── setup.py         # Worktree 创建、hook、软链
-├── grader/
-│   ├── protocol.py      # GraderInterface 协议
-│   ├── base.py          # BaseGrader（_make_score, _make_bundle）
-│   ├── task_grader.py   # TaskGrader 任务评分基类
-│   ├── loader.py        # 评分器发现与加载
-│   └── builtin/
-│       └── function_grader.py
-├── hub/
-│   ├── attempts.py      # 记录增删改查 + 排行榜 + 搜索
-│   ├── notes.py         # Markdown 笔记（YAML frontmatter）
-│   └── skills.py        # 技能包（含 SKILL.md）
-├── hooks/
-│   └── post_commit.py   # 提交后自动评估
-├── template/
-│   └── coral_md.py      # CORAL.md 生成器
-├── web/                 # Starlette + React 看板
-└── cli/                 # 5 个模块，17 条命令
-```
-
+如需通过统一代理转发 Agent 流量（自定义模型、请求日志、按 Agent 隔离密钥），启用内置的 [LiteLLM Gateway](https://human-agent-society.github.io/CORAL/guides/gateway)。
 
 ### 示例
 

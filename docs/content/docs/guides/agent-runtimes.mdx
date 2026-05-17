@@ -1,0 +1,116 @@
+---
+title: Agent Runtimes
+description: Configure OpenCode, Cursor Agent, and Kiro as CORAL agent runtimes.
+---
+
+
+CORAL works with any coding agent that can run as a subprocess. Pick the runtime in `task.yaml` via `agents.runtime`. Claude Code is the default and needs no special config beyond an Anthropic API key. The other runtimes are documented below.
+
+| Runtime         | `agents.runtime`               | Auth path                 |
+|-----------------|--------------------------------|---------------------------|
+| Claude Code     | `claude_code` (default)        | Anthropic API key         |
+| Codex           | `codex`                        | OpenAI auth               |
+| OpenCode        | `opencode`                     | `opencode.json` in seed   |
+| Cursor Agent    | `cursor` (alias: `cursor_agent`) | `cursor-agent login` once |
+| Kiro            | `kiro`                         | `kiro-cli` setup          |
+
+## OpenCode
+
+[OpenCode](https://github.com/opencode-ai/opencode) reads permissions and provider config from an `opencode.json` file. Place it in your task's `seed/` directory so it gets copied into each agent's worktree.
+
+Example (from `examples/circle_packing/seed/opencode.json`):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "external_directory": "allow",
+    "question": "deny",
+    "doom_loop": "allow",
+    "bash": "allow",
+    "edit": "allow",
+    "read": "allow",
+    "write": "allow",
+    "webfetch": "deny",
+    "websearch": "deny",
+    "codesearch": "allow",
+    "lsp": "allow",
+    "skill": "allow"
+  },
+  "provider": {
+    "claude": {
+      "npm": "@ai-sdk/anthropic",
+      "name": "claude",
+      "options": {
+        "baseURL": "http://localhost:4000/v1",
+        "apiKey": "xxx"
+      },
+      "models": {
+        "claude-opus-4-6": {
+          "name": "claude-opus-4-6"
+        }
+      }
+    }
+  }
+}
+```
+
+Key points:
+
+- Set all permissions to `"allow"` except `question`, `webfetch`, `websearch` (set those to `"deny"`) so the agent runs autonomously without interactive prompts.
+- The `provider` section configures which model to use. When using the [gateway](/guides/gateway), point `baseURL` at `http://localhost:<gateway_port>/v1` and set `apiKey` to any placeholder value — the gateway handles authentication.
+- Place `opencode.json` in your seed directory so it gets copied into each agent's worktree.
+
+Task config:
+
+```yaml
+agents:
+  runtime: opencode
+  model: claude/claude-opus-4-6  # must match a model defined in opencode.json
+```
+
+## Cursor Agent
+
+Install [Cursor Agent](https://cursor.com/docs/cli/overview) and authenticate once:
+
+```bash
+curl -fsSL https://cursor.com/install | bash
+cursor-agent login
+```
+
+Point your task at it:
+
+```yaml
+agents:
+  runtime: cursor          # alias for cursor_agent; "cursor-agent" also works
+  model: auto              # or any model id supported by your Cursor plan
+```
+
+CORAL spawns each agent as `cursor-agent --print --output-format stream-json --force --workspace <wt> [--model] [--mode] [--resume] <prompt>`. The `--force` flag is always passed (cursor-agent requires it for write tools in `--print` mode). The full task brief is written to `AGENTS.md` at the worktree root, and CORAL also drops a `.cursor/rules/coral.mdc` always-apply rule with short guardrails (use `coral eval`, don't touch `.coral/private/`, share via `.cursor/notes/` and `.cursor/skills/`) so they survive context pressure.
+
+Optional `runtime_options`:
+
+```yaml
+agents:
+  runtime: cursor
+  runtime_options:
+    command: /usr/local/bin/cursor-agent  # override binary path
+    mode: plan                            # --mode plan|ask
+    stream_partial_output: true           # --stream-partial-output
+```
+
+> **Note:** Cursor Agent uses its own auth and does **not** route through the LiteLLM gateway. Login state lives in your Cursor account, not in CORAL config.
+
+## Kiro
+
+Install [Kiro](https://kiro.dev) (`kiro-cli`) and authenticate via Kiro's setup. Then:
+
+```yaml
+agents:
+  runtime: kiro
+  model: auto              # or any Kiro-supported model
+```
+
+CORAL spawns each agent as `kiro-cli chat <prompt> --no-interactive -a` (the `-a` flag trusts all tools). Instructions are read from `KIRO.md` at the worktree root. Kiro does not currently expose a session id we can resume from, so restarted agents start fresh — they still see all prior attempts and notes via the shared `.kiro/` directory.
+
+Like Cursor, Kiro uses its own auth and does not route through the LiteLLM gateway.
