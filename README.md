@@ -36,8 +36,8 @@ curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/inst
 Installs `coral` globally via `uv tool install`. Pin a version with `CORAL_VERSION=v0.5.0`. See [Installation docs](https://human-agent-society.github.io/CORAL/getting-started/installation) for manual install, dev setup, and prerequisites.
 
 ```bash
-coral init my-task              # scaffold a task
-coral start -c my-task/task.yaml  # launch agents
+coral init my-task                       # scaffold a task
+cd my-task && coral start -c task.yaml   # launch agents
 ```
 
 ### Supported Agents

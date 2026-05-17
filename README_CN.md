@@ -44,8 +44,8 @@ curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/inst
 通过 `uv tool install` 全局安装 `coral`。如需指定版本，设置 `CORAL_VERSION=v0.5.0`。手动安装、开发模式、前置依赖等详见[安装文档](https://human-agent-society.github.io/CORAL/getting-started/installation)。
 
 ```bash
-coral init my-task              # 生成任务模板
-coral start -c my-task/task.yaml  # 启动 Agent
+coral init my-task                       # 生成任务模板
+cd my-task && coral start -c task.yaml   # 启动 Agent
 ```
 
 ### 支持的 Agent
