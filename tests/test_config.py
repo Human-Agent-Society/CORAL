@@ -328,3 +328,23 @@ def test_warmstart_dotlist_override():
         ],
     )
     assert merged.agents.warmstart.enabled is True
+
+
+def test_skills_config_roundtrip():
+    """agents.skills survives a YAML to_yaml/from_yaml roundtrip."""
+    skills = ["./skills/test-skill", "./skills/other"]
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+        agents=AgentConfig(skills=skills),
+    )
+    with tempfile.NamedTemporaryFile(suffix=".yaml", mode="w", delete=False) as f:
+        config.to_yaml(f.name)
+        restored = CoralConfig.from_yaml(f.name)
+
+    assert restored.agents.skills == skills
+
+
+def test_skills_config_defaults_empty():
+    data = {"task": {"name": "t", "description": "d"}}
+    config = CoralConfig.from_dict(data)
+    assert config.agents.skills == []

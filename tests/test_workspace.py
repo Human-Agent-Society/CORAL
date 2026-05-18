@@ -578,3 +578,50 @@ def test_setup_shared_state_migrates_real_identities_dir():
         link = worktree / ".claude" / "identities"
         assert link.is_symlink()
         assert (coral_dir / "public" / "identities" / "agent-1.md").read_text() == "local content"
+
+
+def test_create_project_seeds_user_skills():
+    """agents.skills directories are copied into .coral/public/skills/."""
+    with tempfile.TemporaryDirectory() as d:
+        _git_init(d)
+        root = Path(d)
+
+        skill_name = "test-skill"
+        skill_dir = root / "skills" / skill_name
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "run.sh").write_text("#!/bin/bash\necho hello")
+
+        config = CoralConfig(
+            task=TaskConfig(name="Test Task", description="Test task"),
+            grader=GraderConfig(),
+            agents=AgentConfig(count=1, skills=[f"./skills/{skill_name}"]),
+            workspace=WorkspaceConfig(results_dir=str(root / "results"), repo_path=d),
+        )
+        paths = create_project(config, config_dir=root)
+
+        seeded = paths.coral_dir / "public" / "skills" / skill_name / "run.sh"
+        assert seeded.is_file()
+        assert "echo hello" in seeded.read_text()
+
+
+def test_create_project_user_skills_override_builtin():
+    """User skills with the same name as a built-in skill take precedence."""
+    with tempfile.TemporaryDirectory() as d:
+        _git_init(d)
+        root = Path(d)
+
+        skill_name = "coral-workflow"
+        skill_dir = root / "skills" / skill_name
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "custom.txt").write_text("user version")
+
+        config = CoralConfig(
+            task=TaskConfig(name="Test Task", description="Test task"),
+            grader=GraderConfig(),
+            agents=AgentConfig(count=1, skills=[f"./skills/{skill_name}"]),
+            workspace=WorkspaceConfig(results_dir=str(root / "results"), repo_path=d),
+        )
+        paths = create_project(config, config_dir=root)
+
+        dst = paths.coral_dir / "public" / "skills" / skill_name
+        assert (dst / "custom.txt").read_text() == "user version"

@@ -161,6 +161,9 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     # Initialize checkpoint repo for shared state versioning
     init_checkpoint_repo(str(coral_dir))
 
+    # Resolve task directory for relative path resolution
+    effective_config_dir = config.task_dir or config_dir or Path.cwd()
+
     # Seed bundled skills from coral/template/skills/
     seed_skills_dir = _SEED_SKILLS_DIR
     if seed_skills_dir.is_dir():
@@ -170,6 +173,20 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
                 if not dst.exists():
                     shutil.copytree(skill_dir, dst)
                     logger.info(f"Seeded skill: {skill_dir.name}")
+
+    # Seed user-provided skills from agents.skills config
+    for skill_path in config.agents.skills:
+        src = Path(skill_path)
+        if not src.is_absolute():
+            src = (effective_config_dir / src).resolve()
+        if src.is_dir():
+            dst = coral_dir / "public" / "skills" / src.name
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(src, dst)
+            logger.info(f"Seeded user skill: {src.name}")
+        else:
+            logger.warning(f"Skill directory not found: {src}")
 
     # Seed bundled agent templates from coral/template/agents/
     seed_agents_dir = _SEED_AGENTS_DIR
@@ -185,7 +202,6 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     config.to_yaml(coral_dir / "config.yaml")
 
     # Save config_dir so resume can restore task_dir for relative path resolution
-    effective_config_dir = config.task_dir or config_dir or Path.cwd()
     (coral_dir / "config_dir").write_text(str(effective_config_dir))
 
     # Create/update "latest" symlink at task_dir/latest -> this run directory

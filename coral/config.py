@@ -154,6 +154,7 @@ class AgentConfig:
             HeartbeatActionConfig(name="lint_wiki", every=10, is_global=True),
         ]
     )
+    skills: list[str] = field(default_factory=list)  # skill dirs copied to .coral/public/skills/
     research: bool = True  # enable web search / literature review step in workflow
     stagger_seconds: int = 0  # delay between spawning each agent (rate-limit backpressure)
 
