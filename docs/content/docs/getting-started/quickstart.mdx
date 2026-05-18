@@ -12,15 +12,22 @@ This guide walks you through creating a task, writing a grader, and launching ag
 coral init my-task
 ```
 
-This creates a directory with a starter `task.yaml` and `eval/grader.py`:
+This creates a self-contained task with a packaged grader:
 
 ```
 my-task/
-├── task.yaml          # Task configuration
-├── eval/
-│   └── grader.py      # Your evaluation logic
-└── seed/              # Add starting code here (optional)
+├── task.yaml                              # task config + grader entrypoint
+├── seed/
+│   └── solution.py                        # baseline the agent iterates on
+└── grader/                                # standalone Python package
+    ├── pyproject.toml                     # name: my-task-grader, deps: [coral]
+    └── src/
+        └── my_task_grader/
+            ├── __init__.py                # re-exports Grader
+            └── grader.py                  # class Grader(TaskGrader): ...
 ```
+
+The grader ships as a real Python package so it gets its own isolated venv at run time (created from `grader.setup` in `task.yaml`). This avoids the legacy `eval/grader.py` in-process load and the `DeprecationWarning` that came with it.
 
 ## 2. Define your task
 
@@ -29,40 +36,52 @@ Edit `my-task/task.yaml`:
 ```yaml
 task:
   name: my-task
-  description: "Optimize the function in solution.py to run as fast as possible."
+  description: "Optimize the function in solution.py to print a higher score."
 
 grader:
+  entrypoint: "my_task_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 300
   direction: maximize
+  args:
+    program_file: "solution.py"
 
 agents:
   count: 2
+  runtime: claude_code
   model: claude-sonnet-4-6
-  max_turns: 200
+
+workspace:
+  repo_path: "./seed"
 ```
 
 ## 3. Write a grader
 
-Edit `my-task/eval/grader.py`:
+The scaffold already includes a working stub at `my-task/grader/src/my_task_grader/grader.py` that runs `solution.py` and parses a single float from stdout. Customise `evaluate()` for your scoring logic:
 
 ```python
 from coral.grader import TaskGrader
 from coral.types import ScoreBundle
 
+
 class Grader(TaskGrader):
     def evaluate(self) -> float | ScoreBundle:
-        # Run the agent's solution
-        result = self.run_program("solution.py")
+        program_file = self.args.get("program_file", "solution.py")
+        result = self.run_program(program_file)
 
         if result.returncode != 0:
             return self.fail(f"Program crashed: {result.stderr[:200]}")
 
-        # Parse output and return a score (higher is better)
         try:
-            score = float(result.stdout.strip())
-            return score
+            return float(result.stdout.strip())
         except ValueError:
             return self.fail("Could not parse output as a number")
 ```
+
+What you have on `self`: `codebase_path` (agent worktree), `private_dir` (`.coral/private/` for hidden answer keys), `args` (dict from `grader.args`), `timeout`, plus helpers `run_program(filename)`, `score(value, explanation=...)`, `fail(reason)`. See the [Custom Grader guide](/guides/custom-grader) for the full API.
+
+If the grader needs extra dependencies (`numpy`, `torch`, etc.), add them to `my-task/grader/pyproject.toml` under `dependencies` — they'll be installed into the grader's venv by `coral validate` and the daemon.
 
 ## 4. Validate the grader
 
@@ -117,10 +136,16 @@ Each agent autonomously:
 
 Check [Concepts](/concepts) to understand the full architecture, or [CLI Reference](/cli/reference) for all available commands.
 
-## Graduating from `eval/grader.py`
+## Legacy `eval/grader.py` form
 
-The `eval/grader.py` form scaffolded above is a deprecated quick-start
-path — it auto-loads in-process and emits a `DeprecationWarning`. Once
-your grader is non-trivial or you want to share it across tasks, package
-it and switch `task.yaml` to use `grader.entrypoint` instead. See
-[Writing a Custom Grader → Recommended: package your grader](/guides/custom-grader#recommended-package-your-grader).
+Older tasks under `examples/` (and any task you wrote before this release) use a different layout:
+
+```
+my-task/
+├── task.yaml
+├── eval/
+│   └── grader.py
+└── seed/
+```
+
+CORAL still auto-discovers `eval/grader.py` and loads it in-process — it just emits a `DeprecationWarning`. To migrate an existing task to the packaged form, see [Writing a Custom Grader → Migrating from `eval/grader.py`](/guides/custom-grader). New tasks scaffolded by `coral init` use the packaged form by default.

@@ -3,12 +3,41 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
 
+def _module_identifier(name: str) -> str:
+    """Sanitize a task directory name into a valid Python module identifier.
+
+    'my-task'      -> 'my_task_grader'
+    'My.Task!'     -> 'my_task_grader'
+    '123-foo'      -> 'task_123_foo_grader'  (avoid leading digit)
+    """
+    cleaned = re.sub(r"[^A-Za-z0-9_]+", "_", name).lower().strip("_")
+    cleaned = re.sub(r"_+", "_", cleaned)
+    if not cleaned:
+        cleaned = "task"
+    if cleaned[0].isdigit():
+        cleaned = f"task_{cleaned}"
+    return f"{cleaned}_grader"
+
+
+def _distribution_name(name: str) -> str:
+    """Sanitize a task directory name into a PEP 503 distribution name.
+
+    'my-task'  -> 'my-task-grader'
+    'My.Task!' -> 'my-task-grader'
+    """
+    cleaned = re.sub(r"[^A-Za-z0-9]+", "-", name).lower().strip("-")
+    if not cleaned:
+        cleaned = "task"
+    return f"{cleaned}-grader"
+
+
 def cmd_init(args: argparse.Namespace) -> None:
-    """Create a new task directory.
+    """Create a new task directory with a packaged grader.
 
     Examples:
       coral init my-task            Scaffold at ./my-task/
@@ -16,6 +45,8 @@ def cmd_init(args: argparse.Namespace) -> None:
     """
     task_path = Path(args.path).resolve()
     task_name = args.name or task_path.name
+    module_name = _module_identifier(task_path.name)
+    dist_name = _distribution_name(task_path.name)
 
     if task_path.exists() and any(task_path.iterdir()):
         print(f"Error: {task_path} already exists and is not empty.", file=sys.stderr)
@@ -23,51 +54,108 @@ def cmd_init(args: argparse.Namespace) -> None:
 
     task_path.mkdir(parents=True, exist_ok=True)
     (task_path / "seed").mkdir()
-    (task_path / "eval").mkdir()
+    grader_pkg_dir = task_path / "grader" / "src" / module_name
+    grader_pkg_dir.mkdir(parents=True)
 
-    task_yaml = task_path / "task.yaml"
-    task_yaml.write_text(
+    (task_path / "task.yaml").write_text(
         f"task:\n"
         f'  name: "{task_name}"\n'
         f"  description: |\n"
-        f"    Describe your task here.\n"
+        f"    Describe your task here. Agents read this verbatim from CORAL.md.\n"
+        f"    Reference the program file by name (solution.py) and describe what\n"
+        f"    it must do — e.g. \"solution.py must print a single float to stdout\".\n"
         f"\n"
         f"grader:\n"
-        f"  # Quick start: this scaffold ships an eval/grader.py (deprecated path).\n"
-        f"  # For a real task, package your grader and switch to:\n"
-        f"  #   entrypoint: \"my_pkg.grader:Grader\"\n"
-        f"  #   setup: [\"uv pip install -e ./grader\"]\n"
-        f"  # See docs/guides/custom-grader for the migration guide.\n"
+        f'  entrypoint: "{module_name}.grader:Grader"\n'
+        f"  setup:\n"
+        f'    - "uv pip install -e ./grader"\n'
         f"  timeout: 300\n"
-        f"  direction: maximize\n"
+        f"  direction: maximize          # or 'minimize'\n"
+        f"  args:\n"
+        f'    program_file: "solution.py"\n'
         f"\n"
         f"agents:\n"
         f"  count: 1\n"
+        f"  runtime: claude_code         # claude_code | codex | cursor | kiro | opencode\n"
+        f"\n"
+        f"workspace:\n"
+        f'  repo_path: "./seed"          # relative to where you run `coral start`\n'
     )
 
-    grader_py = task_path / "eval" / "grader.py"
-    grader_py.write_text(
-        "from coral.grader import TaskGrader\n"
+    (task_path / "seed" / "solution.py").write_text(
+        f'"""Baseline solution for the {task_name} task.\n'
         "\n"
+        "The grader runs this file and parses a single floating-point number\n"
+        "from stdout as the score. Replace with your real implementation.\n"
+        '"""\n'
         "\n"
-        "class Grader(TaskGrader):\n"
-        '    """Evaluate agent submissions."""\n'
-        "\n"
-        "    def evaluate(self) -> float:\n"
-        "        # self.codebase_path — path to agent's worktree\n"
-        "        # self.private_dir   — path to .coral/private/\n"
-        "        # self.args          — dict from config.grader.args\n"
-        "        #\n"
-        "        # Return a float score, or use self.score(value, explanation)\n"
-        "        # or self.fail(reason) for richer feedback.\n"
-        "        return 0.0\n"
+        "print(0.0)\n"
+    )
+
+    (task_path / "grader" / "pyproject.toml").write_text(
+        f"[project]\n"
+        f'name = "{dist_name}"\n'
+        f'version = "0.1.0"\n'
+        f'description = "CORAL grader for the {task_name} task."\n'
+        f'requires-python = ">=3.11"\n'
+        f"dependencies = [\n"
+        f'    "coral",\n'
+        f"]\n"
+        f"\n"
+        f"[build-system]\n"
+        f'requires = ["hatchling"]\n'
+        f'build-backend = "hatchling.build"\n'
+        f"\n"
+        f"[tool.hatch.build.targets.wheel]\n"
+        f'packages = ["src/{module_name}"]\n'
+    )
+
+    (grader_pkg_dir / "__init__.py").write_text(
+        f'"""{task_name} grader (entrypoint: {module_name}.grader:Grader)."""\n'
+        f"\n"
+        f"from .grader import Grader\n"
+        f"\n"
+        f'__all__ = ["Grader"]\n'
+    )
+
+    (grader_pkg_dir / "grader.py").write_text(
+        f'"""{task_name} grader."""\n'
+        f"\n"
+        f"from coral.grader import TaskGrader\n"
+        f"\n"
+        f"\n"
+        f"class Grader(TaskGrader):\n"
+        f'    """Evaluate agent submissions for the {task_name} task."""\n'
+        f"\n"
+        f"    def evaluate(self) -> float:\n"
+        f"        # self.codebase_path  — agent's worktree (read-only; writes are discarded)\n"
+        f"        # self.private_dir    — .coral/private/ (hidden answer keys, fixtures)\n"
+        f"        # self.args           — dict from task.yaml -> grader.args\n"
+        f"        # self.timeout        — eval timeout in seconds\n"
+        f"        #\n"
+        f"        # Return a float, or use self.score(value, explanation=...)\n"
+        f"        # or self.fail(reason) to record a failure with feedback.\n"
+        f'        program_file = self.args.get("program_file", "solution.py")\n'
+        f"        result = self.run_program(program_file)\n"
+        f"\n"
+        f"        if result.returncode != 0:\n"
+        f'            return self.fail(f"{{program_file}} crashed: {{result.stderr[:200]}}")\n'
+        f"\n"
+        f"        try:\n"
+        f"            return float(result.stdout.strip())\n"
+        f"        except ValueError:\n"
+        f'            return self.fail(f"Expected a single float on stdout, got: {{result.stdout[:80]!r}}")\n'
     )
 
     print(f"Created task at {task_path}/")
-    print("  task.yaml       — configure your task")
-    print("  eval/grader.py  — implement your grader")
-    print("  seed/           — add starting code (optional)")
-    print(f"\nNext: edit eval/grader.py, then run: coral validate {task_path}")
+    print("  task.yaml                 — task config + grader entrypoint")
+    print("  seed/solution.py          — baseline the agent will iterate on")
+    print(f"  grader/                   — packaged grader ({dist_name})")
+    print(f"  grader/src/{module_name}/grader.py")
+    print("\nNext:")
+    print(f"  cd {task_path.name}")
+    print("  coral validate .          # bootstraps grader venv + runs grader on seed/")
+    print("  coral start -c task.yaml  # launch agents")
 
 
 def cmd_validate(args: argparse.Namespace) -> None:

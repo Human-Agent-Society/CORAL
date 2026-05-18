@@ -8,7 +8,7 @@ description: Complete reference for all CORAL CLI commands.
 
 ### `coral init`
 
-Create a new task directory with scaffolded config and grader.
+Create a new task directory with a scaffolded packaged grader.
 
 ```bash
 coral init <path> [--name NAME]
@@ -23,6 +23,8 @@ coral init <path> [--name NAME]
 coral init my-task
 coral init my-task --name "My Task"
 ```
+
+Produces a self-contained layout: `task.yaml` wired to a packaged grader (`grader.entrypoint`), a baseline `seed/solution.py`, and a hatchling-built `grader/` package at `grader/src/<task>_grader/`. Run `coral validate <path>` next to bootstrap the grader venv and dry-run the grader against the seed.
 
 ### `coral validate`
 

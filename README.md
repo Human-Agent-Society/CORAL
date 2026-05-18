@@ -12,7 +12,7 @@
 
 [![Paper](https://img.shields.io/badge/Paper-arXiv%3A2604.01658-B31B1B.svg?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2604.01658v1)
 [![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://human-agent-society.github.io/CORAL/)
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Apache 2.0 License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
 [![uv](https://img.shields.io/badge/uv-package%20manager-5C4EE5.svg)](https://docs.astral.sh/uv/)
 
@@ -470,21 +470,29 @@ uv run ruff format .
 > [!IMPORTANT]
 > **Docker requirement:** Some built-in graders (e.g. SWE-bench, terminal-bench) use [Harbor](https://github.com/corca-ai/harbor) to run evaluations inside Docker containers. CORAL itself must **not** run inside Docker in this case, as Docker-in-Docker (DinD) is not supported. Run CORAL directly on the host machine.
 
-This project is released under MIT [LICENSE](LICENSE).
+This project is released under the Apache 2.0 [LICENSE](LICENSE).
+
 
 ### Citation
 
-⭐ If you find CORAL useful, please consider giving us a Star and/or citing it in your work:
+⭐ If you find CORAL useful, please consider giving us a Star and/or citing it in your work (Please use the official BibTeX below instead of Google Scholar’s auto-generated citation, which may truncate the author list):
 
 ```bibtex
-@article{coral2026,
-  title  = {CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery},
-  author = {Qu, Ao and Zheng, Han and Zhou, Zijian and Yan, Yihao and Tang, Yihong and Ong, Shao Yong and Hong, Fenglu and Zhou, Kaichen and Jiang, Chonghe and Kong, Minwei and Zhu, Jiacheng and Jiang, Xuan and Li, Sirui and Wu, Cathy and Low, Bryan Kian Hsiang and Zhao, Jinhua and Liang, Paul Pu},
-  journal = {arXiv preprint arXiv:2604.01658},
-  year   = {2026},
-  url    = {https://arxiv.org/pdf/2604.01658}
+@article{qu2026coral,
+  title={CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery},
+  author={Qu, Ao and Zheng, Han and Zhou, Zijian and Yan, Yihao and Tang, Yihong and Ong, Shao Yong and Hong, Fenglu and Zhou, Kaichen and Jiang, Chonghe and Kong, Minwei and Zhu, Jiacheng and Jiang, Xuan and Li, Sirui and Wu, Cathy and Low, Bryan Kian Hsiang and Zhao, Jinhua and Liang, Paul Pu},
+  journal={arXiv preprint arXiv:2604.01658},
+  year={2026}
 }
 ```
+
+<a href="https://www.star-history.com/?repos=Human-Agent-Society%2FCoral&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/Coral&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/Coral&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Human-Agent-Society/Coral&type=date&legend=top-left" />
+ </picture>
+</a>
 
 ### Acknowledgement
 
