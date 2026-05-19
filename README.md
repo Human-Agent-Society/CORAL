@@ -15,15 +15,15 @@
 </div>
 
 <p align="center">
-<a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#how-it-works">How It Works</a> · <a href="#examples">Examples</a> · <a href="https://human-agent-society.github.io/CORAL/">Docs</a> · <a href="https://arxiv.org/abs/2604.01658v1">Paper</a>
+<a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#how-it-works">How It Works</a> · <a href="#examples">Examples</a> · <a href="https://docs.coralxyz.com/">Docs</a> · <a href="https://arxiv.org/abs/2604.01658v1">Paper</a>
 </p>
 
 **CORAL** is infrastructure for **autonomous AI agent organizations** that run experiments, share knowledge, and continuously improve solutions. Give it a codebase and a grader, and CORAL handles the rest: isolated workspaces, safe evaluation, persistent shared state, and multi-agent collaboration. Natively integrated with Claude Code, OpenCode, Codex, Cursor Agent, and Kiro.
 
 ### 🔥 News
 
-- **[2026-04-24]** Rubric judges — two reusable LLM-judge grader packages for open-ended tasks (reports, memos, legal analysis). See the [Rubric Judges guide](https://human-agent-society.github.io/CORAL/guides/rubric-judge).
-- [Older news →](https://human-agent-society.github.io/CORAL/blog)
+- **[2026-04-24]** Rubric judges — two reusable LLM-judge grader packages for open-ended tasks (reports, memos, legal analysis). See the [Rubric Judges guide](https://docs.coralxyz.com/guides/rubric-judge).
+- [Older news →](https://docs.coralxyz.com/blog)
 
 ![CORAL demo — autonomous AI coding agents running in parallel git worktrees, sharing knowledge through a common state directory](assets/demo.gif)
 
@@ -33,7 +33,7 @@
 curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
 ```
 
-Installs `coral` globally via `uv tool install`. Pin a version with `CORAL_VERSION=v0.5.0`. See [Installation docs](https://human-agent-society.github.io/CORAL/getting-started/installation) for manual install, dev setup, and prerequisites.
+Installs `coral` globally via `uv tool install`. Pin a version with `CORAL_VERSION=v0.5.0`. See [Installation docs](https://docs.coralxyz.com/getting-started/installation) for manual install, dev setup, and prerequisites.
 
 ```bash
 coral init my-task                       # scaffold a task
@@ -50,7 +50,7 @@ cd my-task && coral start -c task.yaml   # launch agents
 | [Kiro](https://kiro.dev) | `kiro` |
 | [OpenCode](https://github.com/opencode-ai/opencode) | `opencode` |
 
-Each agent must be installed and authenticated separately. Per-runtime config — including the [LiteLLM gateway](https://human-agent-society.github.io/CORAL/guides/gateway) for custom models — is documented at [Agent Runtimes](https://human-agent-society.github.io/CORAL/guides/agent-runtimes).
+Each agent must be installed and authenticated separately. Per-runtime config — including the [LiteLLM gateway](https://docs.coralxyz.com/guides/gateway) for custom models — is documented at [Agent Runtimes](https://docs.coralxyz.com/guides/agent-runtimes).
 
 ### How It Works
 
@@ -60,7 +60,7 @@ Each agent must be installed and authenticated separately. Per-runtime config �
 
 Each agent runs in its own git worktree. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time. A grader daemon scores every commit. The manager interrupts agents with heartbeat prompts (`reflect`, `consolidate`, `pivot`).
 
-Deeper dive: [Concepts](https://human-agent-society.github.io/CORAL/concepts) · [Multi-agent runs](https://human-agent-society.github.io/CORAL/guides/multi-agent) · [Eval loop](https://human-agent-society.github.io/CORAL/concepts/eval-loop)
+Deeper dive: [Concepts](https://docs.coralxyz.com/concepts) · [Multi-agent runs](https://docs.coralxyz.com/guides/multi-agent) · [Eval loop](https://docs.coralxyz.com/concepts/eval-loop)
 
 ### Examples
 
@@ -76,7 +76,7 @@ Ready-to-run task configurations in `examples/`:
 | **spaceship_titanic**      | ML           | Kaggle competition                                          |
 | **stanford_covid_vaccine** | Bio/ML       | mRNA degradation prediction                                 |
 
-Full catalogue and walkthroughs at [Examples docs](https://human-agent-society.github.io/CORAL/examples).
+Full catalogue and walkthroughs at [Examples docs](https://docs.coralxyz.com/examples).
 
 ### Development & License
 
