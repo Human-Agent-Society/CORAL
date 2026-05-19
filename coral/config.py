@@ -322,8 +322,14 @@ def _preprocess(data: dict[str, Any]) -> dict[str, Any]:
         specified = {h["name"] for h in heartbeat_raw}
         for dflt in AgentConfig().heartbeat:
             if dflt.name not in specified:
-                heartbeat_raw.append({"name": dflt.name, "every": dflt.every,
-                                      "global": dflt.is_global, "trigger": dflt.trigger})
+                heartbeat_raw.append(
+                    {
+                        "name": dflt.name,
+                        "every": dflt.every,
+                        "global": dflt.is_global,
+                        "trigger": dflt.trigger,
+                    }
+                )
         agents_data["heartbeat"] = [
             {
                 "name": h["name"],
@@ -348,13 +354,22 @@ def _preprocess(data: dict[str, Any]) -> dict[str, Any]:
             },
         ]
 
-    # If runtime is set but model is not, use the runtime-specific default
+    # If runtime is set but model is not, use the runtime-specific default.
+    # Custom-entrypoint runtimes ('module.path:ClassName') have no default —
+    # require the user to set agents.model explicitly so a footgun like the
+    # builtin "sonnet" default doesn't silently land on a foreign runtime.
     if "runtime" in agents_data and "model" not in agents_data:
         from coral.agent.registry import default_model_for_runtime
 
-        default_model = default_model_for_runtime(agents_data["runtime"])
+        rt = agents_data["runtime"]
+        default_model = default_model_for_runtime(rt)
         if default_model:
             agents_data["model"] = default_model
+        elif isinstance(rt, str) and ":" in rt:
+            raise ValueError(
+                f"agents.runtime={rt!r} is a custom runtime entrypoint; "
+                f"set agents.model explicitly in task.yaml."
+            )
 
     # Normalize assignments: fill in missing model defaults from the assignment's
     # runtime so each entry stores a concrete model. Empty fields are kept as ""

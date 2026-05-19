@@ -63,7 +63,7 @@ def cmd_init(args: argparse.Namespace) -> None:
         f"  description: |\n"
         f"    Describe your task here. Agents read this verbatim from CORAL.md.\n"
         f"    Reference the program file by name (solution.py) and describe what\n"
-        f"    it must do — e.g. \"solution.py must print a single float to stdout\".\n"
+        f'    it must do — e.g. "solution.py must print a single float to stdout".\n'
         f"\n"
         f"grader:\n"
         f'  entrypoint: "{module_name}.grader:Grader"\n'
@@ -76,7 +76,7 @@ def cmd_init(args: argparse.Namespace) -> None:
         f"\n"
         f"agents:\n"
         f"  count: 1\n"
-        f"  runtime: claude_code         # claude_code | codex | cursor | kiro | opencode\n"
+        f"  runtime: claude_code         # claude_code | codex | cursor | kiro | opencode | 'pkg.module:Cls' for a custom runtime\n"
         f"\n"
         f"workspace:\n"
         f'  repo_path: "./seed"          # relative to where you run `coral start`\n'
