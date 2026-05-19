@@ -51,7 +51,7 @@ from coral.workspace import (
     apply_runtime_mounts,
     create_agent_worktree,
     create_project,
-    seed_agent_identity,
+    seed_agent_role,
     setup_claude_settings,
     setup_codex_settings,
     setup_cursor_settings,
@@ -477,16 +477,16 @@ class AgentManager:
         # Write agent ID
         write_agent_id(worktree_path, agent_id)
 
-        # Seed the agent's identity certificate (idempotent — preserves the
-        # evolved certificate on resume). When ``runtime_options.identity_file``
+        # Seed the agent's role description (idempotent — preserves the
+        # evolved role on resume). When ``runtime_options.role_file``
         # is set, the user-provided .md is copied as the gen-0 seed; otherwise
         # the bundled blank template is rendered.
-        identity_file = (runtime_options or {}).get("identity_file")
-        seed_agent_identity(
+        role_file = (runtime_options or {}).get("role_file")
+        seed_agent_role(
             self.paths.coral_dir,
             agent_id,
-            source=identity_file,
-            base_dir=self._mounts_base_dir() if identity_file else None,
+            source=role_file,
+            base_dir=self._mounts_base_dir() if role_file else None,
         )
 
         # Generate instruction file (CLAUDE.md, AGENTS.md, etc.)

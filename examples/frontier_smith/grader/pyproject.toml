@@ -1,0 +1,19 @@
+[project]
+name = "frontier-smith-grader"
+version = "0.1.0"
+description = "CORAL grader for the Frontier-Smith algorithmic tasks (frontiersmith_1 .. frontiersmith_10)."
+requires-python = ">=3.11"
+dependencies = [
+    "coral",
+    "frontier-cs @ git+https://github.com/FrontierCS/Frontier-CS.git",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/frontier_smith_grader"]

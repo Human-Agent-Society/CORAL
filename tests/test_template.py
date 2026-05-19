@@ -24,7 +24,7 @@ def test_generate_coral_md_has_required_sections():
     # Tips
     assert "Profile first!" in md
 
-    # Agent identity
+    # Agent ID
     assert "agent-1" in md
     assert "creator: agent-1" in md
 

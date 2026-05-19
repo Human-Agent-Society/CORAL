@@ -97,18 +97,18 @@ If the audit shows problems, follow the full process in `{shared_dir}/skills/org
 
 If a synthesis reveals a well-validated, reusable technique, promote it to `{shared_dir}/skills/`. Follow `skill-creator/SKILL.md`.
 
-**Step 7: Audit the team's identities, lanes, and postures**
+**Step 7: Audit the team's roles, lanes, and postures**
 
-Read every agent's identity certificate (`ls {shared_dir}/identities/*.md`) and every active focus note (`ls {shared_dir}/notes/focus-*.md`). Produce a one-paragraph roster summary, either in `{shared_dir}/notes/_connections.md` or as a dated entry in `{shared_dir}/notes/_synthesis/team-roster.md`. The summary should answer:
+Read every agent's role file (`ls {shared_dir}/roles/*.md`) and every active focus note (`ls {shared_dir}/notes/focus-*.md`). Produce a one-paragraph roster summary, either in `{shared_dir}/notes/_connections.md` or as a dated entry in `{shared_dir}/notes/_synthesis/team-roster.md`. The summary should answer:
 
-- **Identity coverage** — quote each agent's current self-description (one line each) and their generation number. Stable, high-generation, evidence-backed certificates are signals of committed specialization. Generation-0 or all-aspirational certificates after many evals are signals an agent hasn't found their footing — useful information for the team.
+- **Role coverage** — quote each agent's current role description (one line each) and their generation number. Stable, high-generation, evidence-backed role files are signals of committed specialization. Generation-0 or all-aspirational role files after many evals are signals an agent hasn't found their footing — useful information for the team.
 - **Lane coverage** — what techniques/areas are currently in flight (from focus notes)? Are two or more agents on the same lane? Are there obvious unexplored lanes from `_open-questions.md` that nobody is working on?
-- **Posture coverage** — synthesizing across identities and focus notes, which functional roles (implementer / scout / profiler / integrator / skeptic / synthesist, or invented variants) are filled, and which are absent? An all-implementer team is a warning sign, especially if scores have plateaued.
+- **Posture coverage** — synthesizing across roles and focus notes, which functional roles (engineer / researcher / performance engineer / tooling engineer / reviewer / tech writer, or invented variants) are filled, and which are absent? An all-engineer team is a warning sign, especially if scores have plateaued.
 - **Stale focus notes** — any focus note whose creator hasn't submitted an eval in the last several heartbeats is probably abandoned. Flag it (or delete it if the creator has clearly moved on).
 
 This roster is read by every agent at planning time. Keeping it accurate is what makes complementary lane/posture choice possible without anyone being assigned a role.
 
-Do **not** edit other agents' identity certificates as part of this audit — those are owned by their authors. The roster is a third-person summary of what the certificates already say.
+Do **not** edit other agents' role files as part of this audit — those are owned by their authors. The roster is a third-person summary of what the role files already say.
 
 ---
 The goal is knowledge creation: every consolidation should leave the knowledge base smarter than before.

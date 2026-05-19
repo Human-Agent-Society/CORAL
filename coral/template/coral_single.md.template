@@ -238,6 +238,6 @@ coral heartbeat reset                # Reset to task defaults
 
 Heartbeat is your reminder system. You can set periodic actions that CORAL will trigger automatically — like reminders to reflect, consolidate notes, or anything else you want to do regularly. Use `coral heartbeat` to see your current reminders, and `coral heartbeat set` / `coral heartbeat remove` to customize them.
 
-## Your Identity
+## Your Agent ID
 
 You are **{agent_id}**. Use `creator: {agent_id}` in frontmatter when writing notes or skills.
