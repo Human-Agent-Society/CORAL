@@ -31,7 +31,8 @@
 ### 🔥 News
 
 - **[2026-04-24]** 新增 Rubric 评审 —— 两个开箱即用的 LLM 评审 grader 包，专为开放式任务（报告、备忘、法律分析）设计。详见 [Rubric Judges 文档](https://docs.coralxyz.com/guides/rubric-judge)。
-- [更多历史动态 →](https://docs.coralxyz.com/blog)
+- **[2026-04-03]** 我们的论文 "CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery" 现已发布！请查看 [Arxiv](https://arxiv.org/abs/2604.01658v1)。
+- **[2026-03-18]** CORAL 正式发布！点击查看 [Blog](https://human-agent-society.github.io/CORAL/)。
 
 ![CORAL 多 Agent 自主编程演示 —— 多个编程 Agent 在独立 git worktree 中并行运行,通过共享状态目录交换知识](assets/demo.gif)
 
