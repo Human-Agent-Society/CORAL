@@ -103,6 +103,6 @@ Clone the repo and run `uv sync --extra dev` for tests/lint. See [CLAUDE.md](CLA
  </picture>
 </a>
 
-### Acknowledgements
+### Acknowledgement
 
-Thanks to the [TNT Accelerator](https://www.tnt.so/) for API credits, and to prior work that inspired CORAL: [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve), [autoresearch](https://github.com/karpathy/autoresearch), [TTT Discover](https://arxiv.org/abs/2601.16175).
+We thank the [TNT Accelerator](https://www.tnt.so/) for their generous support of various API credits that have helped during the development of Coral. We would also like to thank many of the inspiring prior works such as [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve), [autoresearch](https://github.com/karpathy/autoresearch), [TTT Discover](https://arxiv.org/abs/2601.16175),  etc., that have led to the ideation of Coral.

@@ -105,4 +105,4 @@ Clone 仓库后运行 `uv sync --extra dev` 安装测试/lint 依赖。代码结
 
 ### 致谢
 
-感谢 [TNT Accelerator](https://www.tnt.so/) 提供的 API 积分支持，以及为 CORAL 提供启发的前辈工作：[OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve)、[autoresearch](https://github.com/karpathy/autoresearch)、[TTT Discover](https://arxiv.org/abs/2601.16175)。
+我们感谢 [TNT Accelerator](https://www.tnt.so/) 提供的慷慨支持，包括在开发过程中给予帮助的各种 API 积分。也要感谢许多如 [OpenEvolve](https://github.com/algorithmicsuperintelligence/openevolve)、[autoresearch](https://github.com/karpathy/autoresearch)、[TTT Discover](https://arxiv.org/abs/2601.16175) 等的十分有启发性的工作，这些工作为 Coral 的诞生奠定了基础。
