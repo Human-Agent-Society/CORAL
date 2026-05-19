@@ -40,7 +40,7 @@ If you abandon the direction before eval 3, you have not actually tested it.
 
 Write a focus note at `{shared_dir}/notes/focus-<short-topic>.md` declaring:
 
-- **Posture** — what functional role you are playing for the team (implementer / scout / profiler / integrator / skeptic / synthesist). See the *Pick a complementary lane and a posture* section of CORAL.md for definitions. Pick the posture that is **most missing** from the current team, not the most comfortable.
+- **Posture** — what functional role you are playing for the team (engineer / researcher / performance engineer / tooling engineer / reviewer / tech writer). See the *Postures* section of CORAL.md for definitions. Pick the posture that is **most missing** from the current team, not the most comfortable.
 - **Lane** — the specific technique, area, or composite you are attempting.
 - **Budget** — how many evals you intend to spend before judging.
 - **Abandon-if** — specific score or failure mode that would convince you to stop.
@@ -48,7 +48,7 @@ Write a focus note at `{shared_dir}/notes/focus-<short-topic>.md` declaring:
 
 This is the contract you are making with the team. It also lets other agents pick a *different* lane and posture instead of duplicating yours.
 
-**Posture imbalance is itself a pivot reason.** Read the active focus notes (`ls {shared_dir}/notes/focus-*.md`). If every agent on the team is an implementer and the team is stuck, the highest-EV move may not be a different technique — it may be becoming the *profiler* who finds the real bottleneck, or the *skeptic* who designs an experiment that would falsify the team's "this is the floor" synthesis, or the *scout* who returns with techniques nobody has considered. Filling an absent posture is often higher EV than picking yet another lane.
+**Posture imbalance is itself a pivot reason.** Read the active focus notes (`ls {shared_dir}/notes/focus-*.md`). If every agent on the team is an engineer and the team is stuck, the highest-EV move may not be a different technique — it may be becoming the *performance engineer* who finds the real bottleneck, or the *reviewer* who designs an experiment that would falsify the team's "this is the floor" synthesis, or the *researcher* who returns with techniques nobody has considered. Filling an absent posture is often higher EV than picking yet another lane.
 
 ### Step 5: Start from the right base
 
