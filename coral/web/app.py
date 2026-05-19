@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from starlette.applications import Starlette
@@ -46,20 +47,24 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
     results_dir = Path(results_dir).resolve()
     static_dir = Path(__file__).parent / "static"
 
-    async def on_startup() -> None:
+    @asynccontextmanager
+    async def lifespan(app):
+        # startup
         app.state.coral_dir = coral_dir
         app.state.results_dir = results_dir
         app.state._switch_lock = asyncio.Lock()
         app.state.watcher = FileWatcher(coral_dir)
         app.state._watcher_task = asyncio.create_task(app.state.watcher.run())
-
-    async def on_shutdown() -> None:
-        app.state.watcher.stop()
-        app.state._watcher_task.cancel()
         try:
-            await app.state._watcher_task
-        except asyncio.CancelledError:
-            pass
+            yield
+        finally:
+            # shutdown
+            app.state.watcher.stop()
+            app.state._watcher_task.cancel()
+            try:
+                await app.state._watcher_task
+            except asyncio.CancelledError:
+                pass
 
     # SPA fallback: serve index.html for any non-API, non-static route
     async def spa_fallback(request: Request) -> Response:
@@ -109,8 +114,7 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
     app = Starlette(
         routes=routes,
         middleware=middleware,
-        on_startup=[on_startup],
-        on_shutdown=[on_shutdown],
+        lifespan=lifespan,
     )
 
     return app
