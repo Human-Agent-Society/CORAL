@@ -86,9 +86,21 @@ cd my-task && coral start -c task.yaml   # 启动 Agent
 
 完整任务清单与详解见[示例文档](https://docs.coralxyz.com/examples)。
 
-### 开发 & 许可证
+### 开发
 
-Clone 仓库后运行 `uv sync --extra dev` 安装测试/lint 依赖。代码结构见 [CLAUDE.md](CLAUDE.md)。基于 [Apache 2.0](LICENSE) 开源。
+```bash
+# 装开发依赖
+uv sync --extra dev
+
+# 跑测试
+uv run pytest tests/ -v
+
+# lint + 格式化
+uv run ruff check .
+uv run ruff format .
+```
+
+本项目在 Apache 2.0 [LICENSE](LICENSE) 许可下开源。
 
 ### 引用
 

@@ -78,9 +78,25 @@ Ready-to-run task configurations in `examples/`:
 
 Full catalogue and walkthroughs at [Examples docs](https://docs.coralxyz.com/examples).
 
-### Development & License
+### Development
 
-Clone the repo and run `uv sync --extra dev` for tests/lint. See [CLAUDE.md](CLAUDE.md) for codebase layout. Released under [Apache 2.0](LICENSE).
+```bash
+# Install dev dependencies
+uv sync --extra dev
+
+# Run tests
+uv run pytest tests/ -v
+
+# Lint & format
+uv run ruff check .
+uv run ruff format .
+```
+
+> [!IMPORTANT]
+> **Docker requirement:** Some built-in graders (e.g. SWE-bench, terminal-bench) use [Harbor](https://github.com/corca-ai/harbor) to run evaluations inside Docker containers. CORAL itself must **not** run inside Docker in this case, as Docker-in-Docker (DinD) is not supported. Run CORAL directly on the host machine.
+
+This project is released under the Apache 2.0 [LICENSE](LICENSE).
+
 
 ### Citation
 
