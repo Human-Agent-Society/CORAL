@@ -14,7 +14,7 @@
 </p>
 
 [![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://human-agent-society.github.io/CORAL/)
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Apache 2.0 License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
 [![uv](https://img.shields.io/badge/uv-package%20manager-5C4EE5.svg)](https://docs.astral.sh/uv/)
 
@@ -300,19 +300,18 @@ uv run ruff check .
 uv run ruff format .
 ```
 
-本项目在MIT [LICENSE](LICENSE) 许可下开源。
+本项目在 Apache 2.0 [LICENSE](LICENSE) 许可下开源。
 
 ### 引用
 
-⭐ 如果觉得 CORAL 对有帮助的话，欢迎给我们的 GitHub Repo 点个 Star。也可以考虑引用我们：
+⭐ 如果觉得 CORAL 对有帮助的话，欢迎给我们的 GitHub Repo 点个 Star。也可以考虑引用我们 (请使用下方的官方 BibTeX，而不要使用 Google Scholar 自动生成的引用，因为后者可能会截断作者列表)：
 
 ```bibtex
-@article{coral2026,
-  title  = {CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery},
-  author = {Qu, Ao and Zheng, Han and Zhou, Zijian and Yan, Yihao and Tang, Yihong and Ong, Shao Yong and Hong, Fenglu and Zhou, Kaichen and Jiang, Chonghe and Kong, Minwei and Zhu, Jiacheng and Jiang, Xuan and Li, Sirui and Wu, Cathy and Low, Bryan Kian Hsiang and Zhao, Jinhua and Liang, Paul Pu},
-  journal = {arXiv preprint arXiv:2604.01658},
-  year   = {2026},
-  url    = {https://arxiv.org/pdf/2604.01658}
+@article{qu2026coral,
+  title={CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery},
+  author={Qu, Ao and Zheng, Han and Zhou, Zijian and Yan, Yihao and Tang, Yihong and Ong, Shao Yong and Hong, Fenglu and Zhou, Kaichen and Jiang, Chonghe and Kong, Minwei and Zhu, Jiacheng and Jiang, Xuan and Li, Sirui and Wu, Cathy and Low, Bryan Kian Hsiang and Zhao, Jinhua and Liang, Paul Pu},
+  journal={arXiv preprint arXiv:2604.01658},
+  year={2026}
 }
 ```
 
