@@ -148,12 +148,14 @@ class PiAgentRuntime:
             cmd.extend(["--thinking", thinking])
         if resume_session_id:
             cmd.extend(["--continue", "--session", resume_session_id])
-        cmd.extend([
-            "--session-dir",
-            str(session_dir),
-            "--tools",
-            _PI_TOOLS,
-        ])
+        cmd.extend(
+            [
+                "--session-dir",
+                str(session_dir),
+                "--tools",
+                _PI_TOOLS,
+            ]
+        )
         cmd.append(prompt)
 
         logger.info(f"Starting Pi agent {agent_id} in {worktree_path}")
