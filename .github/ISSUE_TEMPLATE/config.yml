@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / how do I ...?
+    url: https://github.com/Human-Agent-Society/CORAL/discussions
+    about: Usage questions, setup help, and design discussions belong in GitHub Discussions, not the issue tracker.
+  - name: Documentation
+    url: https://docs.coralxyz.com/
+    about: Concepts, guides, and the eval-loop walkthrough.
+  - name: Security vulnerability
+    url: https://github.com/Human-Agent-Society/CORAL/security/advisories/new
+    about: Please report vulnerabilities privately via GitHub Security Advisories, not as a public issue.

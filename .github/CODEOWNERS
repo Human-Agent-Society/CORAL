@@ -1,0 +1,31 @@
+# CODEOWNERS for CORAL
+#
+# Each line is a file pattern followed by one or more owners. The last matching
+# pattern takes precedence. See:
+#   https://docs.github.com/en/repositories/managing-your-repositories-settings-and-customizations/customizing-your-repository/about-code-owners
+#
+# As the maintainer roster grows, refine the per-subsystem entries below and
+# add additional reviewers. Until then, everything falls back to a single
+# global owner.
+
+* @BobbyZhouZijian
+
+# --- Per-subsystem ownership (uncomment + add co-owners as the team grows) ---
+
+# coral/agent/        @BobbyZhouZijian
+# coral/grader/       @BobbyZhouZijian
+# coral/hub/          @BobbyZhouZijian
+# coral/workspace/    @BobbyZhouZijian
+# coral/cli/          @BobbyZhouZijian
+# coral/hooks/        @BobbyZhouZijian
+# coral/template/     @BobbyZhouZijian
+# coral/gateway/      @BobbyZhouZijian
+# coral/web/          @BobbyZhouZijian
+
+# examples/           @BobbyZhouZijian
+# docs/               @BobbyZhouZijian
+
+# Tooling / CI / packaging — keep these closely reviewed
+/.github/             @BobbyZhouZijian
+/pyproject.toml       @BobbyZhouZijian
+/install.sh           @BobbyZhouZijian

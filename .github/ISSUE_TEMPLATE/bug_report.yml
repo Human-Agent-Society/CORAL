@@ -1,0 +1,103 @@
+name: Bug report
+description: Report something that is broken or not behaving as documented.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report! Please fill in as much as you can —
+        reproductions are by far the most useful thing.
+
+        Before submitting, please search [existing issues](https://github.com/Human-Agent-Society/CORAL/issues)
+        to avoid duplicates. For security vulnerabilities, see [SECURITY.md](https://github.com/Human-Agent-Society/CORAL/blob/main/SECURITY.md)
+        instead of filing a public issue.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences describing what's broken.
+      placeholder: "`coral eval` hangs forever when the grader daemon crashes mid-run."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: |
+        Minimum steps to reproduce. Include the exact command(s), the `task.yaml` (or a link to one),
+        and any agent / runtime configuration you used. A self-contained recipe gets fixed fastest.
+      placeholder: |
+        1. `coral init repro-task`
+        2. Edit `task.yaml` to set `agents.count: 2`
+        3. `coral start -c task.yaml`
+        4. Observe ...
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: The grader daemon should be restarted by the manager and the eval should finalize.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include relevant excerpts from `.coral/public/logs/`, `.coral/public/eval_logs/`, or tracebacks.
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: coral-version
+    attributes:
+      label: "`coral --version`"
+      placeholder: "0.6.0 (or commit sha if installed from source)"
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: "`python --version`"
+      placeholder: "Python 3.12.4"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Agent runtime
+      description: Which `agents.runtime` were you using?
+      multiple: true
+      options:
+        - claude_code
+        - codex
+        - cursor
+        - kiro
+        - opencode
+        - custom (module.path:ClassName)
+        - "n/a — issue is not runtime-specific"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: OS / arch
+      placeholder: "macOS 15.2 arm64 / Ubuntu 24.04 x86_64"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Screenshots, related issues, suspected root cause, anything else.

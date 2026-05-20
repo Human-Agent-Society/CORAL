@@ -1,0 +1,66 @@
+name: Feature request
+description: Propose a new feature, runtime, grader, or framework extension.
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing an idea! For larger changes (new subsystem, new runtime, major refactor),
+        please file this issue **before** opening a PR so we can align on scope. Small self-contained
+        features can go straight to a PR.
+
+        For new benchmark tasks, see also the [`coral-new-task` skill](https://github.com/Human-Agent-Society/CORAL/blob/main/.claude/skills/coral-new-task/SKILL.md).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem does this solve? Who is affected, and how often?
+      placeholder: "When running 8 agents on a SWE-bench-style task, the grader daemon becomes a bottleneck because ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: |
+        High-level sketch. Where in the codebase would this live? Any new config fields,
+        CLI flags, or hooks? Backwards-compat implications?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - coral/agent (runtime, manager, heartbeat)
+        - coral/grader (daemon, TaskGrader, subprocess grader)
+        - coral/hub (attempts, notes, skills, checkpoint)
+        - coral/workspace (worktree, project, grader env)
+        - coral/cli
+        - coral/hooks
+        - coral/template (CORAL.md, bundled skills/agents)
+        - coral/gateway
+        - coral/web (dashboard)
+        - examples/ (new task)
+        - docs
+        - tooling / CI / packaging
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about and why you didn't pick them.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Prior art, related issues, links to similar features in other tools.

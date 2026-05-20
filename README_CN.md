@@ -101,6 +101,15 @@ uv run ruff check .
 uv run ruff format .
 ```
 
+### 参与贡献
+
+欢迎社区贡献 —— bug 报告、`examples/` 下的新任务、新的 agent runtime、文档改进，都很欢迎。先看这里：
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) —— 开发环境、分支与 commit 规范、PR 流程、测试与 lint 命令。
+- [AGENTS.md](AGENTS.md) —— AI 辅助贡献的规则（CORAL 本身就是 agent 基础设施，所以我们对 agent 写的 PR 有一些具体要求）。
+
+想深入了解代码结构，可以读 [CLAUDE.md](CLAUDE.md) 里的架构说明 —— 覆盖 eval loop、`.coral/{public,private}/` 划分、grader daemon、runtime registry。
+
 本项目在 Apache 2.0 [LICENSE](LICENSE) 许可下开源。
 
 ### 引用

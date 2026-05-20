@@ -96,6 +96,15 @@ uv run ruff format .
 > [!IMPORTANT]
 > **Docker requirement:** Some built-in graders (e.g. SWE-bench, terminal-bench) use [Harbor](https://github.com/corca-ai/harbor) to run evaluations inside Docker containers. CORAL itself must **not** run inside Docker in this case, as Docker-in-Docker (DinD) is not supported. Run CORAL directly on the host machine.
 
+### Contributing
+
+Contributions are welcome — bug reports, new tasks under `examples/`, new agent runtimes, docs, the lot. Start here:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, branch & commit conventions, PR workflow, test/lint commands.
+- [AGENTS.md](AGENTS.md) — rules for AI-assisted contributions (CORAL is itself agent infrastructure, so we expect agent-authored PRs and have a few specific asks).
+
+For a deeper dive into the codebase, the architecture notes in [CLAUDE.md](CLAUDE.md) cover the eval loop, `.coral/{public,private}/` split, grader daemon, and runtime registry.
+
 This project is released under the Apache 2.0 [LICENSE](LICENSE).
 
 
