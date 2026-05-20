@@ -9,6 +9,7 @@ from coral.agent.builtin.codex import CodexRuntime
 from coral.agent.builtin.cursor_agent import CursorAgentRuntime
 from coral.agent.builtin.kiro import KiroRuntime
 from coral.agent.builtin.opencode import OpenCodeRuntime
+from coral.agent.builtin.pi_agent import PiAgentRuntime
 from coral.agent.runtime import AgentRuntime
 
 _RUNTIMES: dict[str, type] = {
@@ -17,6 +18,7 @@ _RUNTIMES: dict[str, type] = {
     "cursor_agent": CursorAgentRuntime,
     "kiro": KiroRuntime,
     "opencode": OpenCodeRuntime,
+    "pi": PiAgentRuntime,
 }
 
 # Convenience aliases
@@ -29,6 +31,7 @@ _ALIASES: dict[str, str] = {
     "kiro-cli": "kiro",
     "cursor": "cursor_agent",
     "cursor-agent": "cursor_agent",
+    "pi-agent": "pi",
 }
 
 # Default models per runtime (used when user doesn't specify --model)
@@ -38,6 +41,7 @@ _DEFAULT_MODELS: dict[str, str] = {
     "cursor_agent": "auto",
     "kiro": "auto",
     "opencode": "openai/gpt-5",
+    "pi": "zai/glm-5.1",
 }
 
 

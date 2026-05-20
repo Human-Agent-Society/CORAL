@@ -107,6 +107,7 @@ def setup_gitignore(worktree_path: Path) -> None:
         ".codex/",
         ".cursor/",
         ".opencode/",
+        ".pi/",
         ".venv/",
     }
 
