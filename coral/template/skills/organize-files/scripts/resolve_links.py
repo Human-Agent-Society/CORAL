@@ -30,14 +30,15 @@ Usage:
 
 Exit code 0 always (no error if no changes).
 """
+
 from __future__ import annotations
 
 import argparse
 import re
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 EXCLUDED_DIRS_DEFAULT = {"raw", "_archive", "_synthesis"}
 FRONTMATTER_DELIMITER = "---"
@@ -91,7 +92,7 @@ def extract_title(frontmatter_body: str) -> str | None:
     script dependency-free.
     """
     for line in frontmatter_body.splitlines():
-        match = re.match(r'^\s*title:\s*(.+?)\s*$', line)
+        match = re.match(r"^\s*title:\s*(.+?)\s*$", line)
         if match:
             value = match.group(1).strip()
             # Strip surrounding quotes if present.
@@ -217,11 +218,17 @@ def run_inbound(notes: list[Note], new_slugs: set[str], dry_run: bool) -> int:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("notes_dir", type=Path, help="root of the notes/ directory")
     parser.add_argument("--dry-run", action="store_true", help="print diffs, write nothing")
-    parser.add_argument("--new", type=str, default="", help="comma-separated slugs to also do an inbound pass for")
-    parser.add_argument("--exclude", type=str, default="", help="comma-separated extra dir names to exclude")
+    parser.add_argument(
+        "--new", type=str, default="", help="comma-separated slugs to also do an inbound pass for"
+    )
+    parser.add_argument(
+        "--exclude", type=str, default="", help="comma-separated extra dir names to exclude"
+    )
     return parser.parse_args()
 
 
@@ -242,7 +249,9 @@ def main() -> int:
 
     print(f"loaded {len(notes)} notes from {args.notes_dir}")
     outbound_changes = run_outbound(notes, args.dry_run)
-    print(f"outbound pass: {outbound_changes} note(s) {'would change' if args.dry_run else 'updated'}")
+    print(
+        f"outbound pass: {outbound_changes} note(s) {'would change' if args.dry_run else 'updated'}"
+    )
 
     if args.new:
         new_slugs = {s.strip() for s in args.new.split(",") if s.strip()}
@@ -250,7 +259,9 @@ def main() -> int:
         if not args.dry_run:
             notes = load_notes(args.notes_dir, excluded)
         inbound_changes = run_inbound(notes, new_slugs, args.dry_run)
-        print(f"inbound pass: {inbound_changes} note(s) {'would change' if args.dry_run else 'updated'}")
+        print(
+            f"inbound pass: {inbound_changes} note(s) {'would change' if args.dry_run else 'updated'}"
+        )
 
     return 0
 

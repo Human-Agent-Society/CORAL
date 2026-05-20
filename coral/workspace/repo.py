@@ -39,7 +39,8 @@ def clone_or_init_repo(source: Path, dest: Path) -> Path:
         logger.info(f"Cloning {source} -> {dest}")
         result = subprocess.run(
             ["git", "clone", "--no-hardlinks", str(source), str(dest)],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result.returncode != 0:
             raise RuntimeError(f"git clone failed: {result.stderr}")
@@ -51,7 +52,8 @@ def clone_or_init_repo(source: Path, dest: Path) -> Path:
         logger.info(f"Cloning bare repo {source} -> {dest}")
         result = subprocess.run(
             ["git", "clone", str(source), str(dest)],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result.returncode != 0:
             raise RuntimeError(f"git clone failed: {result.stderr}")
@@ -72,7 +74,9 @@ def clone_or_init_repo(source: Path, dest: Path) -> Path:
 
     subprocess.run(
         ["git", "init", str(dest)],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     )
     subprocess.run(
         ["git", "-C", str(dest), "config", "user.email", "coral@local"],
@@ -106,7 +110,9 @@ def copy_eval_to_private(task_dir: Path, coral_dir: Path) -> None:
     if eval_dst.exists():
         shutil.rmtree(eval_dst)
     shutil.copytree(eval_src, eval_dst)
-    logger.info(f"Copied eval/ to .coral/private/eval/ ({sum(1 for _ in eval_dst.rglob('*') if _.is_file())} files)")
+    logger.info(
+        f"Copied eval/ to .coral/private/eval/ ({sum(1 for _ in eval_dst.rglob('*') if _.is_file())} files)"
+    )
 
 
 def copy_seed_directory(seed_dir: Path, repo_dir: Path) -> None:

@@ -32,9 +32,7 @@ def in_tmux() -> bool:
     return bool(os.environ.get("TMUX"))
 
 
-def save_tmux_session_name(
-    save_dir: Path, session_name: str, *, owned: bool = True
-) -> None:
+def save_tmux_session_name(save_dir: Path, session_name: str, *, owned: bool = True) -> None:
     """Save the tmux session name for coral stop to find.
 
     Args:
@@ -121,10 +119,7 @@ def kill_tmux_session(coral_dir: Path) -> None:
                         )
                         print(f"Killed tmux session: {session_name}")
                     elif session_name and not owned:
-                        print(
-                            f"Left tmux session '{session_name}' running "
-                            "(not created by coral)."
-                        )
+                        print(f"Left tmux session '{session_name}' running (not created by coral).")
                     tmux_file.unlink(missing_ok=True)
                     (task_path / ".coral_tmux_owned").unlink(missing_ok=True)
         except Exception:
@@ -234,10 +229,13 @@ def kill_docker_container(coral_dir: Path) -> None:
         if marker.exists():
             container_name = marker.read_text().strip()
             if container_name:
-                stopped = subprocess.run(
-                    [*docker_cmd(), "stop", container_name],
-                    capture_output=True,
-                ).returncode == 0
+                stopped = (
+                    subprocess.run(
+                        [*docker_cmd(), "stop", container_name],
+                        capture_output=True,
+                    ).returncode
+                    == 0
+                )
                 # Always try rm (container may already be stopped)
                 subprocess.run(
                     [*docker_cmd(), "rm", container_name],
@@ -432,7 +430,9 @@ def pick_run(status_filter: str | None = None, allow_cancel: bool = False) -> Pa
     rw = max(len("RUN"), max(len(r["run"]) for r in runs)) + 2
     sw = max(len("STATUS"), 10) + 2
 
-    header = f"{'#':>3}  {'TASK':<{tw}}{'RUN':<{rw}}{'STATUS':<{sw}}{'AGENTS':>7}{'EVALS':>7}{'BEST':>9}"
+    header = (
+        f"{'#':>3}  {'TASK':<{tw}}{'RUN':<{rw}}{'STATUS':<{sw}}{'AGENTS':>7}{'EVALS':>7}{'BEST':>9}"
+    )
     print(header)
     print("-" * len(header))
 

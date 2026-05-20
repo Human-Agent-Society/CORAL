@@ -30,7 +30,9 @@ def test_full_workspace_creation():
         subprocess.run(["git", "-C", str(repo), "config", "user.name", "T"], capture_output=True)
         (repo / "main.py").write_text("x = 1\n")
         subprocess.run(["git", "-C", str(repo), "add", "."], capture_output=True)
-        subprocess.run(["git", "-C", str(repo), "commit", "-m", "init"], capture_output=True, check=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "commit", "-m", "init"], capture_output=True, check=True
+        )
 
         # Create project
         config = CoralConfig(
@@ -65,25 +67,40 @@ def test_multi_agent_shared_state():
 
         # Agent 1 writes an attempt
         a1 = Attempt(
-            commit_hash="aaa111", agent_id="agent-1", title="Try ReLU",
-            score=0.7, status="improved", parent_hash=None,
-            timestamp="2026-03-11T10:00:00Z", feedback="Better activation",
+            commit_hash="aaa111",
+            agent_id="agent-1",
+            title="Try ReLU",
+            score=0.7,
+            status="improved",
+            parent_hash=None,
+            timestamp="2026-03-11T10:00:00Z",
+            feedback="Better activation",
         )
         write_attempt(str(coral_dir), a1)
 
         # Agent 2 writes an attempt
         a2 = Attempt(
-            commit_hash="bbb222", agent_id="agent-2", title="Try GELU",
-            score=0.65, status="improved", parent_hash=None,
-            timestamp="2026-03-11T10:01:00Z", feedback="Slightly worse",
+            commit_hash="bbb222",
+            agent_id="agent-2",
+            title="Try GELU",
+            score=0.65,
+            status="improved",
+            parent_hash=None,
+            timestamp="2026-03-11T10:01:00Z",
+            feedback="Slightly worse",
         )
         write_attempt(str(coral_dir), a2)
 
         # Agent 3 writes an attempt building on agent-1
         a3 = Attempt(
-            commit_hash="ccc333", agent_id="agent-3", title="ReLU squared",
-            score=0.85, status="improved", parent_hash="aaa111",
-            timestamp="2026-03-11T10:02:00Z", feedback="Big improvement",
+            commit_hash="ccc333",
+            agent_id="agent-3",
+            title="ReLU squared",
+            score=0.85,
+            status="improved",
+            parent_hash="aaa111",
+            timestamp="2026-03-11T10:02:00Z",
+            feedback="Big improvement",
         )
         write_attempt(str(coral_dir), a3)
 
@@ -161,8 +178,12 @@ def test_end_to_end_attempt_lifecycle():
 
         for commit, agent, title, score in attempts_data:
             attempt = Attempt(
-                commit_hash=commit, agent_id=agent, title=title,
-                score=score, status="improved", parent_hash=None,
+                commit_hash=commit,
+                agent_id=agent,
+                title=title,
+                score=score,
+                status="improved",
+                parent_hash=None,
                 timestamp=f"2026-03-11T10:{attempts_data.index((commit, agent, title, score)):02d}:00Z",
             )
             write_attempt(str(coral_dir), attempt)

@@ -67,10 +67,12 @@ def _extract_content_blocks(content_list: list[dict]) -> list[LogEntry]:
         if block_type == "thinking":
             text = block.get("thinking", "")
             if text:
-                entries.append(LogEntry(
-                    type="thinking",
-                    content=_truncate(text, max_lines=50),
-                ))
+                entries.append(
+                    LogEntry(
+                        type="thinking",
+                        content=_truncate(text, max_lines=50),
+                    )
+                )
 
         elif block_type == "text":
             text = block.get("text", "")
@@ -82,23 +84,25 @@ def _extract_content_blocks(content_list: list[dict]) -> list[LogEntry]:
             tool_input = block.get("input", {})
             # Summarize tool input
             summary = _summarize_tool_input(name, tool_input)
-            entries.append(LogEntry(
-                type="tool_call",
-                content=name,
-                details={"input_summary": summary, "tool_use_id": block.get("id", "")},
-            ))
+            entries.append(
+                LogEntry(
+                    type="tool_call",
+                    content=name,
+                    details={"input_summary": summary, "tool_use_id": block.get("id", "")},
+                )
+            )
 
         elif block_type == "tool_result":
             content = block.get("content", "")
             if isinstance(content, list):
-                content = "\n".join(
-                    c.get("text", "") for c in content if isinstance(c, dict)
+                content = "\n".join(c.get("text", "") for c in content if isinstance(c, dict))
+            entries.append(
+                LogEntry(
+                    type="tool_result",
+                    content=_truncate(str(content)),
+                    details={"tool_use_id": block.get("tool_use_id", "")},
                 )
-            entries.append(LogEntry(
-                type="tool_result",
-                content=_truncate(str(content)),
-                details={"tool_use_id": block.get("tool_use_id", "")},
-            ))
+            )
 
     return entries
 
@@ -156,9 +160,7 @@ class SessionMeta:
         }
 
 
-def parse_log_file(
-    path: Path, offset: int = 0
-) -> tuple[list[LogTurn], int, SessionMeta | None]:
+def parse_log_file(path: Path, offset: int = 0) -> tuple[list[LogTurn], int, SessionMeta | None]:
     """Parse a Claude Code NDJSON log file into structured turns.
 
     Args:
@@ -180,7 +182,7 @@ def parse_log_file(
     turn_index = 0
     session_meta: SessionMeta | None = None
 
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
+    with open(path, encoding="utf-8", errors="replace") as f:
         if offset > 0:
             f.seek(offset)
 
@@ -418,11 +420,13 @@ def list_log_files(coral_dir: Path) -> dict[str, list[dict[str, Any]]]:
         agent_id = parts[0] if len(parts) == 2 else log_file.stem
         index = int(parts[1]) if len(parts) == 2 else 0
         stat = log_file.stat()
-        agents.setdefault(agent_id, []).append({
-            "path": str(log_file),
-            "index": index,
-            "size_bytes": stat.st_size,
-            "modified": stat.st_mtime,
-        })
+        agents.setdefault(agent_id, []).append(
+            {
+                "path": str(log_file),
+                "index": index,
+                "size_bytes": stat.st_size,
+                "modified": stat.st_mtime,
+            }
+        )
 
     return agents

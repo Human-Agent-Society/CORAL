@@ -24,7 +24,7 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
         end = text.find("---", 3)
         if end != -1:
             front = text[3:end].strip()
-            body = text[end + 3:].strip()
+            body = text[end + 3 :].strip()
             meta: dict[str, str] = {}
             for line in front.splitlines():
                 if ":" in line:
@@ -134,13 +134,17 @@ def move_note(source: Path, dest: Path, force: bool = False, dry_run: bool = Fal
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Safely move/rename a note with frontmatter tracking")
+    parser = argparse.ArgumentParser(
+        description="Safely move/rename a note with frontmatter tracking"
+    )
     parser.add_argument("source", type=Path, help="Source note file")
     parser.add_argument("dest", type=Path, help="Destination path")
-    parser.add_argument("--force", action="store_true",
-                        help="Override safety checks (age limit, existing dest)")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Show what would be done without making changes")
+    parser.add_argument(
+        "--force", action="store_true", help="Override safety checks (age limit, existing dest)"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would be done without making changes"
+    )
     args = parser.parse_args()
 
     move_note(args.source.resolve(), args.dest.resolve(), force=args.force, dry_run=args.dry_run)

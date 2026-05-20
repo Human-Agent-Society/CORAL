@@ -9,6 +9,7 @@ def _make_runner(*actions: HeartbeatAction) -> HeartbeatRunner:
 
 # --- Interval trigger tests ---
 
+
 def test_interval_trigger_fires_on_multiple():
     action = HeartbeatAction(name="reflect", every=3, prompt="reflect now")
     runner = _make_runner(action)
@@ -38,6 +39,7 @@ def test_interval_zero_count_never_fires():
 
 # --- Plateau trigger tests ---
 
+
 def test_plateau_fires_when_stuck():
     action = HeartbeatAction(name="pivot", every=5, prompt="pivot!", trigger="plateau")
     runner = _make_runner(action)
@@ -47,7 +49,9 @@ def test_plateau_fires_when_stuck():
     assert runner.check(local_eval_count=5, global_eval_count=5, evals_since_improvement=4) == []
 
     # Exactly at threshold
-    assert runner.check(local_eval_count=5, global_eval_count=5, evals_since_improvement=5) == [action]
+    assert runner.check(local_eval_count=5, global_eval_count=5, evals_since_improvement=5) == [
+        action
+    ]
 
 
 def test_plateau_cooldown_prevents_spam():
@@ -55,7 +59,9 @@ def test_plateau_cooldown_prevents_spam():
     runner = _make_runner(action)
 
     # First fire at 5
-    assert runner.check(local_eval_count=5, global_eval_count=5, evals_since_improvement=5) == [action]
+    assert runner.check(local_eval_count=5, global_eval_count=5, evals_since_improvement=5) == [
+        action
+    ]
 
     # Should NOT fire again at 6, 7, 8, 9 (cooldown)
     assert runner.check(local_eval_count=6, global_eval_count=6, evals_since_improvement=6) == []
@@ -63,7 +69,9 @@ def test_plateau_cooldown_prevents_spam():
     assert runner.check(local_eval_count=9, global_eval_count=9, evals_since_improvement=9) == []
 
     # Fires again at 10 (5 more stalled evals since last fire)
-    assert runner.check(local_eval_count=10, global_eval_count=10, evals_since_improvement=10) == [action]
+    assert runner.check(local_eval_count=10, global_eval_count=10, evals_since_improvement=10) == [
+        action
+    ]
 
 
 def test_plateau_resets_on_improvement():
@@ -71,7 +79,9 @@ def test_plateau_resets_on_improvement():
     runner = _make_runner(action)
 
     # Stall to 3 -> fires
-    assert runner.check(local_eval_count=3, global_eval_count=3, evals_since_improvement=3) == [action]
+    assert runner.check(local_eval_count=3, global_eval_count=3, evals_since_improvement=3) == [
+        action
+    ]
 
     # Agent improves (evals_since_improvement resets to 0)
     assert runner.check(local_eval_count=4, global_eval_count=4, evals_since_improvement=0) == []
@@ -79,7 +89,9 @@ def test_plateau_resets_on_improvement():
     # Stall again from scratch -> fires at 3 again
     assert runner.check(local_eval_count=5, global_eval_count=5, evals_since_improvement=1) == []
     assert runner.check(local_eval_count=6, global_eval_count=6, evals_since_improvement=2) == []
-    assert runner.check(local_eval_count=7, global_eval_count=7, evals_since_improvement=3) == [action]
+    assert runner.check(local_eval_count=7, global_eval_count=7, evals_since_improvement=3) == [
+        action
+    ]
 
 
 def test_plateau_does_not_affect_interval_actions():

@@ -43,7 +43,9 @@ async def get_leaderboard(request: Request) -> JSONResponse:
     from coral.hub.attempts import get_leaderboard as _get_leaderboard
 
     top_n = int(request.query_params.get("top", "20"))
-    attempts = _get_leaderboard(str(_coral_dir(request)), top_n=top_n, direction=_direction(request))
+    attempts = _get_leaderboard(
+        str(_coral_dir(request)), top_n=top_n, direction=_direction(request)
+    )
     return JSONResponse([a.to_dict() for a in attempts])
 
 
@@ -166,13 +168,15 @@ async def get_logs(request: Request) -> JSONResponse:
             "usage": agg_usage,
         }
 
-    return JSONResponse({
-        "agent_id": agent_id,
-        "log_files": agent_logs[agent_id],
-        "turns": all_turns,
-        "sessions": sessions,
-        "agent_meta": agent_meta,
-    })
+    return JSONResponse(
+        {
+            "agent_id": agent_id,
+            "log_files": agent_logs[agent_id],
+            "turns": all_turns,
+            "sessions": sessions,
+            "agent_meta": agent_meta,
+        }
+    )
 
 
 async def get_logs_list(request: Request) -> JSONResponse:
@@ -249,12 +253,14 @@ def _enumerate_runs(results_dir: Path, current_coral_dir: Path) -> dict:
             # Check if latest (latest symlink now points to run_dir, not .coral)
             is_latest = latest_target is not None and latest_target == run_dir.resolve()
 
-            runs.append({
-                "timestamp": run_dir.name,
-                "status": status,
-                "attempts": attempt_count,
-                "is_latest": is_latest,
-            })
+            runs.append(
+                {
+                    "timestamp": run_dir.name,
+                    "status": status,
+                    "attempts": attempt_count,
+                    "is_latest": is_latest,
+                }
+            )
 
         if runs:
             tasks.append({"slug": task_slug, "runs": runs})
@@ -311,10 +317,12 @@ async def switch_run(request: Request) -> JSONResponse:
         app.state._watcher_task = asyncio.create_task(new_watcher.run())
 
         # Broadcast switch event
-        new_watcher._broadcast({
-            "event": "run:switched",
-            "data": {"task": task, "run": run},
-        })
+        new_watcher._broadcast(
+            {
+                "event": "run:switched",
+                "data": {"task": task, "run": run},
+            }
+        )
 
     return JSONResponse({"ok": True, "task": task, "run": run})
 
@@ -395,7 +403,7 @@ async def get_status(request: Request) -> JSONResponse:
     import time
 
     for agent_id, logs in agent_logs.items():
-        latest = max(logs, key=lambda l: l["modified"])
+        latest = max(logs, key=lambda log: log["modified"])
         age = time.time() - latest["modified"]
 
         agent_pid = agent_pid_map.get(agent_id)
@@ -417,23 +425,27 @@ async def get_status(request: Request) -> JSONResponse:
         agent_scored = [a for a in agent_attempts if a.score is not None]
         agent_best = best_fn(agent_scored, key=lambda a: a.score or 0.0) if agent_scored else None
 
-        agents_status.append({
-            "agent_id": agent_id,
-            "status": status,
-            "sessions": len(logs),
-            "last_activity": latest["modified"],
-            "attempts": len(agent_attempts),
-            "best_score": agent_best.score if agent_best else None,
-        })
+        agents_status.append(
+            {
+                "agent_id": agent_id,
+                "status": status,
+                "sessions": len(logs),
+                "last_activity": latest["modified"],
+                "attempts": len(agent_attempts),
+                "best_score": agent_best.score if agent_best else None,
+            }
+        )
 
-    return JSONResponse({
-        "manager_alive": manager_alive,
-        "manager_pid": manager_pid,
-        "eval_count": eval_count,
-        "total_attempts": len(attempts),
-        "scored_attempts": len(scored),
-        "crashed_attempts": len([a for a in attempts if a.status == "crashed"]),
-        "best_score": best.score if best else None,
-        "best_title": best.title if best else None,
-        "agents": agents_status,
-    })
+    return JSONResponse(
+        {
+            "manager_alive": manager_alive,
+            "manager_pid": manager_pid,
+            "eval_count": eval_count,
+            "total_attempts": len(attempts),
+            "scored_attempts": len(scored),
+            "crashed_attempts": len([a for a in attempts if a.status == "crashed"]),
+            "best_score": best.score if best else None,
+            "best_title": best.title if best else None,
+            "agents": agents_status,
+        }
+    )

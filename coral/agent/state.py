@@ -109,9 +109,7 @@ def write_agent_state(coral_dir: str | Path, document: AgentStateDocument) -> Pa
     document.updated_at = datetime.utcnow().isoformat(timespec="seconds") + "Z"
     payload = json.dumps(document.to_dict(), indent=2, sort_keys=True)
 
-    fd, tmp_path = tempfile.mkstemp(
-        prefix=".agent_state.", suffix=".tmp", dir=str(target.parent)
-    )
+    fd, tmp_path = tempfile.mkstemp(prefix=".agent_state.", suffix=".tmp", dir=str(target.parent))
     try:
         with os.fdopen(fd, "w") as f:
             f.write(payload)

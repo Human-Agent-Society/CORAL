@@ -80,7 +80,8 @@ class KiroRuntime:
             prompt = "Begin working on your task and iterating on the seed solution. There is no user in the loop — make decisions, run evals, accumulate knowledge, and iterate without waiting for input."
 
         cmd = [
-            "kiro-cli", "chat",
+            "kiro-cli",
+            "chat",
             prompt,
             "--no-interactive",
             "-a",  # trust all tools

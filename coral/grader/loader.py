@@ -47,8 +47,7 @@ def load_grader(config: CoralConfig, coral_dir: str | Path) -> Any:
                 f"`coral.workspace.grader_env.setup_grader_env` can create it."
             )
         logger.info(
-            f"Loading grader entrypoint {config.grader.entrypoint!r} "
-            f"via worker {worker_python}"
+            f"Loading grader entrypoint {config.grader.entrypoint!r} via worker {worker_python}"
         )
         return SubprocessGrader(
             entrypoint=config.grader.entrypoint,
@@ -96,9 +95,7 @@ def _load_eval_grader_py(grader_path: Path, config: CoralConfig, private_dir: Pa
     from coral.grader.task_grader import TaskGrader
 
     if not issubclass(grader_cls, TaskGrader):
-        raise TypeError(
-            f"Grader class must inherit from TaskGrader, got {grader_cls.__bases__}"
-        )
+        raise TypeError(f"Grader class must inherit from TaskGrader, got {grader_cls.__bases__}")
 
     grader = grader_cls(config=config.grader)
     grader.private_dir = str(private_dir)

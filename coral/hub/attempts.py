@@ -150,9 +150,7 @@ def count_agent_pending(
     if attempts is None:
         attempts = read_attempts(coral_dir)
     return sum(
-        1
-        for a in attempts
-        if a.agent_id == agent_id and a.status == "pending" and a.score is None
+        1 for a in attempts if a.agent_id == agent_id and a.status == "pending" and a.score is None
     )
 
 

@@ -26,12 +26,12 @@ logger = logging.getLogger(__name__)
 class ProjectPaths:
     """Paths created by create_project."""
 
-    results_dir: Path   # e.g. results/
-    task_dir: Path      # e.g. results/erdos-minimum-overlap-problem/
-    run_dir: Path       # e.g. results/erdos-minimum-overlap-problem/2026-03-11_163000/
-    coral_dir: Path     # run_dir/.coral/
-    agents_dir: Path    # run_dir/agents/
-    repo_dir: Path      # run_dir/repo/ (cloned per-run)
+    results_dir: Path  # e.g. results/
+    task_dir: Path  # e.g. results/erdos-minimum-overlap-problem/
+    run_dir: Path  # e.g. results/erdos-minimum-overlap-problem/2026-03-11_163000/
+    coral_dir: Path  # run_dir/.coral/
+    agents_dir: Path  # run_dir/agents/
+    repo_dir: Path  # run_dir/repo/ (cloned per-run)
 
 
 def slugify(name: str) -> str:
@@ -98,9 +98,7 @@ def seed_agent_role(
             )
         src = (base_dir / src).resolve()
     if not src.is_file():
-        raise FileNotFoundError(
-            f"role_file {source!r} (resolved to {src}) does not exist"
-        )
+        raise FileNotFoundError(f"role_file {source!r} (resolved to {src}) does not exist")
     shutil.copy2(src, dst)
     return dst
 

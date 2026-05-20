@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from starlette.requests import Request
 from starlette.responses import StreamingResponse
@@ -23,7 +24,9 @@ class FileWatcher:
     ):
         self.coral_dir = coral_dir
         self.poll_interval = poll_interval
-        self._subscribers: list[asyncio.Queue[dict[str, Any]]] = subscribers if subscribers is not None else []
+        self._subscribers: list[asyncio.Queue[dict[str, Any]]] = (
+            subscribers if subscribers is not None else []
+        )
         self._state: dict[str, Any] = {}
         self._running = False
 
@@ -52,9 +55,7 @@ class FileWatcher:
         if attempts_dir.exists():
             files = list(attempts_dir.glob("*.json"))
             state["attempts_count"] = len(files)
-            state["attempts_mtime"] = max(
-                (f.stat().st_mtime for f in files), default=0
-            )
+            state["attempts_mtime"] = max((f.stat().st_mtime for f in files), default=0)
         else:
             state["attempts_count"] = 0
             state["attempts_mtime"] = 0
@@ -98,41 +99,51 @@ class FileWatcher:
 
             # Detect changes
             if new_state["attempts_count"] > self._state.get("attempts_count", 0):
-                self._broadcast({
-                    "event": "attempt:new",
-                    "data": {
-                        "count": new_state["attempts_count"],
-                        "previous": self._state.get("attempts_count", 0),
-                    },
-                })
+                self._broadcast(
+                    {
+                        "event": "attempt:new",
+                        "data": {
+                            "count": new_state["attempts_count"],
+                            "previous": self._state.get("attempts_count", 0),
+                        },
+                    }
+                )
 
             if new_state["attempts_mtime"] > self._state.get("attempts_mtime", 0):
-                self._broadcast({
-                    "event": "attempt:update",
-                    "data": {"mtime": new_state["attempts_mtime"]},
-                })
+                self._broadcast(
+                    {
+                        "event": "attempt:update",
+                        "data": {"mtime": new_state["attempts_mtime"]},
+                    }
+                )
 
             if new_state["notes_mtime"] > self._state.get("notes_mtime", 0):
-                self._broadcast({
-                    "event": "note:update",
-                    "data": {"mtime": new_state["notes_mtime"]},
-                })
+                self._broadcast(
+                    {
+                        "event": "note:update",
+                        "data": {"mtime": new_state["notes_mtime"]},
+                    }
+                )
 
             # Check log file growth
             old_sizes = self._state.get("log_sizes", {})
             for name, size in new_state["log_sizes"].items():
                 old_size = old_sizes.get(name, 0)
                 if size > old_size:
-                    self._broadcast({
-                        "event": "log:update",
-                        "data": {"file": name, "size": size, "delta": size - old_size},
-                    })
+                    self._broadcast(
+                        {
+                            "event": "log:update",
+                            "data": {"file": name, "size": size, "delta": size - old_size},
+                        }
+                    )
 
             if new_state["eval_count"] != self._state.get("eval_count", 0):
-                self._broadcast({
-                    "event": "eval:update",
-                    "data": {"count": new_state["eval_count"]},
-                })
+                self._broadcast(
+                    {
+                        "event": "eval:update",
+                        "data": {"count": new_state["eval_count"]},
+                    }
+                )
 
             self._state = new_state
 
@@ -160,7 +171,7 @@ async def sse_endpoint(request: Request) -> StreamingResponse:
                     event_type = event.get("event", "message")
                     data = json.dumps(event.get("data", {}))
                     yield f"event: {event_type}\ndata: {data}\n\n"
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Send heartbeat if enough time has passed
                     now = time.time()
                     if now - last_heartbeat >= heartbeat_interval:

@@ -32,7 +32,9 @@ def test_init_checkpoint_repo():
         # Verify initial commit exists
         result = subprocess.run(
             ["git", "log", "--oneline"],
-            cwd=str(public), capture_output=True, text=True,
+            cwd=str(public),
+            capture_output=True,
+            text=True,
         )
         assert "init: shared state tracking" in result.stdout
 
@@ -45,7 +47,9 @@ def test_init_is_idempotent():
 
         result = subprocess.run(
             ["git", "log", "--oneline"],
-            cwd=str(coral_dir / "public"), capture_output=True, text=True,
+            cwd=str(coral_dir / "public"),
+            capture_output=True,
+            text=True,
         )
         # Only one commit from init
         lines = [line for line in result.stdout.strip().splitlines() if line]

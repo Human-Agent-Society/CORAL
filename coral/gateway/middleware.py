@@ -7,7 +7,7 @@ import logging
 import subprocess
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -121,9 +121,15 @@ class CoralGatewayMiddleware:
         # Read headers — check both Authorization (OpenAI) and x-api-key (Anthropic)
         auth_header = ""
         for raw_name, raw_value in scope.get("headers", []):
-            name = raw_name.decode("latin-1").lower() if isinstance(raw_name, bytes) else raw_name.lower()
+            name = (
+                raw_name.decode("latin-1").lower()
+                if isinstance(raw_name, bytes)
+                else raw_name.lower()
+            )
             if name == "authorization":
-                auth_header = raw_value.decode("latin-1") if isinstance(raw_value, bytes) else raw_value
+                auth_header = (
+                    raw_value.decode("latin-1") if isinstance(raw_value, bytes) else raw_value
+                )
                 break
             elif name == "x-api-key" and not auth_header:
                 val = raw_value.decode("latin-1") if isinstance(raw_value, bytes) else raw_value
@@ -151,7 +157,11 @@ class CoralGatewayMiddleware:
         # from the agent is swapped for the LiteLLM master key.
         new_headers = []
         for raw_name, raw_value in scope.get("headers", []):
-            name = raw_name.decode("latin-1").lower() if isinstance(raw_name, bytes) else raw_name.lower()
+            name = (
+                raw_name.decode("latin-1").lower()
+                if isinstance(raw_name, bytes)
+                else raw_name.lower()
+            )
             if name == "authorization" and self.master_key:
                 # Replace agent's proxy key with the LiteLLM master key
                 new_headers.append((raw_name, f"Bearer {self.master_key}".encode("latin-1")))
@@ -193,19 +203,21 @@ class CoralGatewayMiddleware:
         if isinstance(request_body_parsed, dict):
             request_model = request_body_parsed.get("model")
 
-        self._log_entry({
-            "request_id": request_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "agent_id": agent_id,
-            "session_id": session_id,
-            "method": method,
-            "path": path,
-            "model": request_model,
-            "request": request_body_parsed,
-            "response": _assemble_response(b"".join(response_body_parts)),
-            "status_code": response_status,
-            "duration_ms": duration_ms,
-        })
+        self._log_entry(
+            {
+                "request_id": request_id,
+                "timestamp": datetime.now(UTC).isoformat(),
+                "agent_id": agent_id,
+                "session_id": session_id,
+                "method": method,
+                "path": path,
+                "model": request_model,
+                "request": request_body_parsed,
+                "response": _assemble_response(b"".join(response_body_parts)),
+                "status_code": response_status,
+                "duration_ms": duration_ms,
+            }
+        )
 
         return None
 

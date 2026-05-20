@@ -30,7 +30,8 @@ def _cmd_heartbeat_show(args: argparse.Namespace) -> None:
     )
 
     coral_dir = find_coral_dir(
-        getattr(args, "task", None), getattr(args, "run", None),
+        getattr(args, "task", None),
+        getattr(args, "run", None),
     )
     agent_id = read_agent_id()
 
@@ -83,7 +84,8 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
     )
 
     coral_dir = find_coral_dir(
-        getattr(args, "task", None), getattr(args, "run", None),
+        getattr(args, "task", None),
+        getattr(args, "run", None),
     )
     agent_id = read_agent_id()
     name = args.name
@@ -137,14 +139,20 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
                 found = True
                 break
         if not found:
-            actions.append({
-                "name": name,
-                "every": every,
-                "prompt": prompt if prompt is not None else DEFAULT_PROMPTS.get(name, ""),
-                "trigger": trigger,
-            })
+            actions.append(
+                {
+                    "name": name,
+                    "every": every,
+                    "prompt": prompt if prompt is not None else DEFAULT_PROMPTS.get(name, ""),
+                    "trigger": trigger,
+                }
+            )
         write_global_heartbeat(coral_dir, actions)
-        label = f"after {every} non-improving eval(s) [plateau]" if trigger == "plateau" else f"every {every} eval(s)"
+        label = (
+            f"after {every} non-improving eval(s) [plateau]"
+            if trigger == "plateau"
+            else f"every {every} eval(s)"
+        )
         print(f"Set '{name}' to {label} (global) for all agents.")
     else:
         actions = read_agent_heartbeat(coral_dir, agent_id)
@@ -158,14 +166,20 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
                 found = True
                 break
         if not found:
-            actions.append({
-                "name": name,
-                "every": every,
-                "prompt": prompt if prompt is not None else DEFAULT_PROMPTS.get(name, ""),
-                "trigger": trigger,
-            })
+            actions.append(
+                {
+                    "name": name,
+                    "every": every,
+                    "prompt": prompt if prompt is not None else DEFAULT_PROMPTS.get(name, ""),
+                    "trigger": trigger,
+                }
+            )
         write_agent_heartbeat(coral_dir, agent_id, actions)
-        label = f"after {every} non-improving eval(s) [plateau]" if trigger == "plateau" else f"every {every} eval(s)"
+        label = (
+            f"after {every} non-improving eval(s) [plateau]"
+            if trigger == "plateau"
+            else f"every {every} eval(s)"
+        )
         print(f"Set '{name}' to {label} (local) for {agent_id}.")
 
 
@@ -180,7 +194,8 @@ def _cmd_heartbeat_remove(args: argparse.Namespace) -> None:
     )
 
     coral_dir = find_coral_dir(
-        getattr(args, "task", None), getattr(args, "run", None),
+        getattr(args, "task", None),
+        getattr(args, "run", None),
     )
     agent_id = read_agent_id()
     name = args.name
@@ -222,7 +237,8 @@ def _cmd_heartbeat_reset(args: argparse.Namespace) -> None:
     )
 
     coral_dir = find_coral_dir(
-        getattr(args, "task", None), getattr(args, "run", None),
+        getattr(args, "task", None),
+        getattr(args, "run", None),
     )
     agent_id = read_agent_id()
 

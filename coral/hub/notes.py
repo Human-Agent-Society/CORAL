@@ -34,7 +34,7 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
         end = text.find("---", 3)
         if end != -1:
             front = text[3:end].strip()
-            body = text[end + 3:].strip()
+            body = text[end + 3 :].strip()
             meta: dict[str, str] = {}
             for line in front.splitlines():
                 if ":" in line:
@@ -66,13 +66,15 @@ def _parse_legacy_entries(text: str) -> list[dict[str, Any]]:
             title = title_line.strip()
             body = body.strip()
 
-        entries.append({
-            "date": date,
-            "title": title,
-            "body": body,
-            "creator": "",
-            "filename": "notes.md",
-        })
+        entries.append(
+            {
+                "date": date,
+                "title": title,
+                "body": body,
+                "creator": "",
+                "filename": "notes.md",
+            }
+        )
     return entries
 
 
@@ -106,8 +108,7 @@ def _collect_from_dir(directory: Path) -> list[dict[str, Any]]:
         return []
 
     md_files = sorted(
-        f for f in directory.rglob("*.md")
-        if f.name != "notes.md" and not f.name.startswith("_")
+        f for f in directory.rglob("*.md") if f.name != "notes.md" and not f.name.startswith("_")
     )
 
     if md_files:

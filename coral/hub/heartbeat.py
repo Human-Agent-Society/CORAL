@@ -98,6 +98,7 @@ def _write_actions(path: Path, actions: list[dict]) -> None:
 
 # --- Local (per-agent) ---
 
+
 def read_agent_heartbeat(coral_dir: Path, agent_id: str) -> list[dict]:
     """Read local heartbeat actions for an agent."""
     return _read_actions(_heartbeat_path(coral_dir, agent_id))
@@ -111,15 +112,18 @@ def write_agent_heartbeat(coral_dir: Path, agent_id: str, actions: list[dict]) -
     present = {a["name"] for a in actions}
     for name in PROTECTED_LOCAL:
         if name not in present:
-            actions.append({
-                "name": name,
-                "every": 1,
-                "prompt": DEFAULT_PROMPTS.get(name, ""),
-            })
+            actions.append(
+                {
+                    "name": name,
+                    "every": 1,
+                    "prompt": DEFAULT_PROMPTS.get(name, ""),
+                }
+            )
     _write_actions(_heartbeat_path(coral_dir, agent_id), actions)
 
 
 # --- Global (shared across all agents) ---
+
 
 def read_global_heartbeat(coral_dir: Path) -> list[dict]:
     """Read global heartbeat actions."""
@@ -134,15 +138,18 @@ def write_global_heartbeat(coral_dir: Path, actions: list[dict]) -> None:
     present = {a["name"] for a in actions}
     for name in PROTECTED_GLOBAL:
         if name not in present:
-            actions.append({
-                "name": name,
-                "every": 10,
-                "prompt": DEFAULT_PROMPTS.get(name, ""),
-            })
+            actions.append(
+                {
+                    "name": name,
+                    "every": 10,
+                    "prompt": DEFAULT_PROMPTS.get(name, ""),
+                }
+            )
     _write_actions(_heartbeat_path(coral_dir, _GLOBAL_ID), actions)
 
 
 # --- Defaults from config ---
+
 
 def default_local_actions(config) -> list[dict]:
     """Extract local actions from config's heartbeat list."""
@@ -150,13 +157,17 @@ def default_local_actions(config) -> list[dict]:
     for action_cfg in config.agents.heartbeat:
         is_global = action_cfg.is_global or DEFAULT_GLOBAL.get(action_cfg.name, False)
         if not is_global:
-            trigger = getattr(action_cfg, "trigger", None) or DEFAULT_TRIGGER.get(action_cfg.name, "interval")
-            actions.append({
-                "name": action_cfg.name,
-                "every": action_cfg.every,
-                "prompt": action_cfg.prompt or DEFAULT_PROMPTS.get(action_cfg.name, ""),
-                "trigger": trigger,
-            })
+            trigger = getattr(action_cfg, "trigger", None) or DEFAULT_TRIGGER.get(
+                action_cfg.name, "interval"
+            )
+            actions.append(
+                {
+                    "name": action_cfg.name,
+                    "every": action_cfg.every,
+                    "prompt": action_cfg.prompt or DEFAULT_PROMPTS.get(action_cfg.name, ""),
+                    "trigger": trigger,
+                }
+            )
     return actions
 
 
@@ -166,11 +177,15 @@ def default_global_actions(config) -> list[dict]:
     for action_cfg in config.agents.heartbeat:
         is_global = action_cfg.is_global or DEFAULT_GLOBAL.get(action_cfg.name, False)
         if is_global:
-            trigger = getattr(action_cfg, "trigger", None) or DEFAULT_TRIGGER.get(action_cfg.name, "interval")
-            actions.append({
-                "name": action_cfg.name,
-                "every": action_cfg.every,
-                "prompt": action_cfg.prompt or DEFAULT_PROMPTS.get(action_cfg.name, ""),
-                "trigger": trigger,
-            })
+            trigger = getattr(action_cfg, "trigger", None) or DEFAULT_TRIGGER.get(
+                action_cfg.name, "interval"
+            )
+            actions.append(
+                {
+                    "name": action_cfg.name,
+                    "every": action_cfg.every,
+                    "prompt": action_cfg.prompt or DEFAULT_PROMPTS.get(action_cfg.name, ""),
+                    "trigger": trigger,
+                }
+            )
     return actions

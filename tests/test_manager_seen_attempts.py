@@ -35,10 +35,12 @@ def _build_manager_with_attempts(tmp_path: Path, attempts: dict[str, str]):
         agents_dir=tmp_path / "agents",
         repo_dir=tmp_path / "repo",
     )
-    cfg = CoralConfig.from_dict({
-        "task": {"name": "t", "description": "d"},
-        "agents": {"runtime": "claude-code"},
-    })
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "agents": {"runtime": "claude-code"},
+        }
+    )
     manager = AgentManager(cfg, verbose=False)
     manager.paths = paths
     return manager, paths
@@ -47,11 +49,14 @@ def _build_manager_with_attempts(tmp_path: Path, attempts: dict[str, str]):
 def test_pending_at_startup_is_not_seen(tmp_path: Path) -> None:
     """Pending attempts at startup must NOT be in the initial seen set so
     heartbeat fires when they later transition to scored."""
-    manager, _ = _build_manager_with_attempts(tmp_path, {
-        "scored1": "improved",
-        "scored2": "regressed",
-        "pending1": "pending",
-    })
+    manager, _ = _build_manager_with_attempts(
+        tmp_path,
+        {
+            "scored1": "improved",
+            "scored2": "regressed",
+            "pending1": "pending",
+        },
+    )
     # This mirrors the initialization in monitor_loop: only already-scored
     # attempts are seen.
     seen = manager._filter_scored(manager._get_seen_attempts())
@@ -63,9 +68,12 @@ def test_pending_at_startup_is_not_seen(tmp_path: Path) -> None:
 def test_pending_then_scored_appears_as_new(tmp_path: Path) -> None:
     """A pending-at-startup attempt that later scores must be visible in
     `current - seen` so the dispatch path picks it up."""
-    manager, paths = _build_manager_with_attempts(tmp_path, {
-        "pending1": "pending",
-    })
+    manager, paths = _build_manager_with_attempts(
+        tmp_path,
+        {
+            "pending1": "pending",
+        },
+    )
     seen = manager._filter_scored(manager._get_seen_attempts())
     assert seen == set()  # nothing scored yet
 
@@ -83,9 +91,12 @@ def test_already_scored_at_startup_does_not_re_fire(tmp_path: Path) -> None:
     """Attempts that were already scored when the manager came up must
     not be in the post-startup new set — we don't want to re-dispatch
     heartbeat for historical evals."""
-    manager, _ = _build_manager_with_attempts(tmp_path, {
-        "scored1": "improved",
-    })
+    manager, _ = _build_manager_with_attempts(
+        tmp_path,
+        {
+            "scored1": "improved",
+        },
+    )
     seen = manager._filter_scored(manager._get_seen_attempts())
     current = manager._get_seen_attempts()
     new = current - seen

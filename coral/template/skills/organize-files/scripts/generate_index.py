@@ -30,7 +30,7 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
         end = text.find("---", 3)
         if end != -1:
             front = text[3:end].strip()
-            body = text[end + 3:].strip()
+            body = text[end + 3 :].strip()
             meta: dict[str, str] = {}
             for line in front.splitlines():
                 if ":" in line:
@@ -77,13 +77,15 @@ def _collect_notes(notes_dir: Path) -> list[dict[str, str]]:
         else:
             category = "other"
 
-        notes.append({
-            "path": str(rel),
-            "title": title,
-            "creator": meta.get("creator", ""),
-            "created": meta.get("created", ""),
-            "category": category,
-        })
+        notes.append(
+            {
+                "path": str(rel),
+                "title": title,
+                "creator": meta.get("creator", ""),
+                "created": meta.get("created", ""),
+                "category": category,
+            }
+        )
     return notes
 
 
@@ -150,9 +152,7 @@ def write_index(notes_dir: Path, dry_run: bool = False) -> str:
     index_path = notes_dir / "index.md"
 
     # Atomic write: write to temp file in same directory, then replace
-    fd, tmp_path = tempfile.mkstemp(
-        dir=str(notes_dir), prefix="_index_", suffix=".tmp"
-    )
+    fd, tmp_path = tempfile.mkstemp(dir=str(notes_dir), prefix="_index_", suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(content)
@@ -170,10 +170,15 @@ def write_index(notes_dir: Path, dry_run: bool = False) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate index.md for notes directory")
-    parser.add_argument("notes_dir", nargs="?", default=".coral/public/notes",
-                        help="Path to notes directory (default: .coral/public/notes)")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Print index to stdout without writing")
+    parser.add_argument(
+        "notes_dir",
+        nargs="?",
+        default=".coral/public/notes",
+        help="Path to notes directory (default: .coral/public/notes)",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print index to stdout without writing"
+    )
     args = parser.parse_args()
 
     notes_dir = Path(args.notes_dir).resolve()

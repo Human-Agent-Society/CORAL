@@ -223,9 +223,7 @@ def test_agent_state_document_roundtrip() -> None:
 def test_write_and_read_agent_state_roundtrip(tmp_path: Path) -> None:
     coral_dir = tmp_path / "coral"
     doc = AgentStateDocument()
-    doc.agents["agent-1"] = AgentRuntimeState(
-        state="paused", paused_until=99.0, pause_count=3
-    )
+    doc.agents["agent-1"] = AgentRuntimeState(state="paused", paused_until=99.0, pause_count=3)
     path = write_agent_state(coral_dir, doc)
     assert path.exists()
     assert path == state_file_path(coral_dir)

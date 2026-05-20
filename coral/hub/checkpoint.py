@@ -26,25 +26,35 @@ def init_checkpoint_repo(coral_dir: str) -> None:
     try:
         subprocess.run(
             ["git", "init"],
-            cwd=str(public), capture_output=True, check=True,
+            cwd=str(public),
+            capture_output=True,
+            check=True,
         )
         subprocess.run(
             ["git", "config", "user.name", "coral"],
-            cwd=str(public), capture_output=True, check=True,
+            cwd=str(public),
+            capture_output=True,
+            check=True,
         )
         subprocess.run(
             ["git", "config", "user.email", "coral@local"],
-            cwd=str(public), capture_output=True, check=True,
+            cwd=str(public),
+            capture_output=True,
+            check=True,
         )
         gitignore = public / ".gitignore"
         gitignore.write_text("coral.lock\n")
         subprocess.run(
             ["git", "add", "-A"],
-            cwd=str(public), capture_output=True, check=True,
+            cwd=str(public),
+            capture_output=True,
+            check=True,
         )
         subprocess.run(
             ["git", "commit", "--allow-empty", "-m", "init: shared state tracking"],
-            cwd=str(public), capture_output=True, check=True,
+            cwd=str(public),
+            capture_output=True,
+            check=True,
         )
         logger.info("Initialized checkpoint repo in %s", public)
     except Exception:
@@ -70,13 +80,16 @@ def checkpoint(coral_dir: str, agent_id: str, message: str) -> str | None:
 
             subprocess.run(
                 ["git", "add", "-A"],
-                cwd=str(public), capture_output=True, check=True,
+                cwd=str(public),
+                capture_output=True,
+                check=True,
             )
 
             # Check if there are staged changes
             result = subprocess.run(
                 ["git", "diff", "--cached", "--quiet"],
-                cwd=str(public), capture_output=True,
+                cwd=str(public),
+                capture_output=True,
             )
             if result.returncode == 0:
                 return None  # nothing to commit
@@ -84,12 +97,17 @@ def checkpoint(coral_dir: str, agent_id: str, message: str) -> str | None:
             commit_msg = f"checkpoint: {agent_id} - {message}"
             subprocess.run(
                 ["git", "commit", "-m", commit_msg],
-                cwd=str(public), capture_output=True, check=True,
+                cwd=str(public),
+                capture_output=True,
+                check=True,
             )
 
             result = subprocess.run(
                 ["git", "rev-parse", "HEAD"],
-                cwd=str(public), capture_output=True, text=True, check=True,
+                cwd=str(public),
+                capture_output=True,
+                text=True,
+                check=True,
             )
             return result.stdout.strip()
     except Exception:
@@ -106,7 +124,10 @@ def checkpoint_history(coral_dir: str, count: int = 20) -> list[dict[str, str]]:
     try:
         result = subprocess.run(
             ["git", "log", "--format=%H|%ai|%s", f"-n{count}"],
-            cwd=str(public), capture_output=True, text=True, check=True,
+            cwd=str(public),
+            capture_output=True,
+            text=True,
+            check=True,
         )
         entries = []
         for line in result.stdout.strip().splitlines():
@@ -114,11 +135,13 @@ def checkpoint_history(coral_dir: str, count: int = 20) -> list[dict[str, str]]:
                 continue
             parts = line.split("|", 2)
             if len(parts) == 3:
-                entries.append({
-                    "hash": parts[0],
-                    "date": parts[1],
-                    "message": parts[2],
-                })
+                entries.append(
+                    {
+                        "hash": parts[0],
+                        "date": parts[1],
+                        "message": parts[2],
+                    }
+                )
         return entries
     except Exception:
         logger.warning("Failed to read checkpoint history", exc_info=True)
@@ -134,7 +157,10 @@ def checkpoint_diff(coral_dir: str, commit_hash: str) -> str:
     try:
         result = subprocess.run(
             ["git", "show", "--stat", "--patch", commit_hash],
-            cwd=str(public), capture_output=True, text=True, check=True,
+            cwd=str(public),
+            capture_output=True,
+            text=True,
+            check=True,
         )
         return result.stdout
     except subprocess.CalledProcessError as e:

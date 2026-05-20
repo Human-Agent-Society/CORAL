@@ -122,21 +122,26 @@ class CodexRuntime:
         if resume_session_id:
             # codex exec resume <session_id> "follow-up prompt"
             cmd = [
-                "codex", "exec",
-                "resume", resume_session_id,
+                "codex",
+                "exec",
+                "resume",
+                resume_session_id,
                 prompt,
                 "--dangerously-bypass-approvals-and-sandbox",
-                "--model", model,
+                "--model",
+                model,
                 *option_args,
                 "--json",
             ]
         else:
             # codex exec "prompt"
             cmd = [
-                "codex", "exec",
+                "codex",
+                "exec",
                 prompt,
                 "--dangerously-bypass-approvals-and-sandbox",
-                "--model", model,
+                "--model",
+                model,
                 *option_args,
                 "--json",
             ]

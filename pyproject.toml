@@ -73,6 +73,21 @@ packages = ["coral"]
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+extend-exclude = [
+    # Per-task seed code lives under examples/*/seed/ and is meant to mirror
+    # whatever upstream repo the agents will edit. We don't own that code and
+    # shouldn't enforce CORAL's style on it.
+    "examples",
+    # Agent-authored solution dumps used for blog/showcase purposes — not
+    # framework code.
+    "demos",
+    # Local-only directories. `.claude/worktrees/` is created at runtime by
+    # `coral start` and is never tracked; `docs/` and `blog/` are JS/MDX, not
+    # Python.
+    ".claude/worktrees",
+    "docs",
+    "blog",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]

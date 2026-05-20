@@ -40,13 +40,15 @@ def list_skills(coral_dir: str | Path) -> list[dict[str, Any]]:
         text = skill_md.read_text()
         meta, body = _parse_frontmatter(text)
 
-        results.append({
-            "name": meta.get("name", skill_dir.name),
-            "description": meta.get("description", ""),
-            "creator": meta.get("creator", "unknown"),
-            "created": str(meta["created"]) if meta.get("created") else "",
-            "path": str(skill_dir),
-        })
+        results.append(
+            {
+                "name": meta.get("name", skill_dir.name),
+                "description": meta.get("description", ""),
+                "creator": meta.get("creator", "unknown"),
+                "created": str(meta["created"]) if meta.get("created") else "",
+                "path": str(skill_dir),
+            }
+        )
     return results
 
 
