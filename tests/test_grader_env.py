@@ -121,44 +121,94 @@ def test_setup_grader_env_rebuild_recreates_venv(tmp_path: Path) -> None:
     assert not marker.exists()
 
 
-@pytest.mark.parametrize(
-    "version, expected_ref",
-    [
-        # Tagged release → vX.Y.Z
-        ("0.5.2", "v0.5.2"),
-        ("1.0.0", "v1.0.0"),
-        ("1.0.0rc1", "v1.0.0rc1"),
-        # Dev install → sha from hatch-vcs local-version segment
-        ("0.5.2.dev24+g55a9ad024.d20260520", "55a9ad024"),
-        ("0.5.2.dev24+g55a9ad024", "55a9ad024"),
-        ("0.5.2.dev24+g55a9ad024.dirty", "55a9ad024"),
-        (
-            "0.6.0.dev1+gabcdef0123456789abcdef0123456789abcdef01",
-            "abcdef0123456789abcdef0123456789abcdef01",
-        ),
-    ],
-)
-def test_coral_git_ref_derivation(
-    version: str, expected_ref: str, monkeypatch: pytest.MonkeyPatch
+def test_coral_install_command_editable() -> None:
+    """direct_url.json with `dir_info.editable` -> `uv pip install -e <path>`."""
+    from coral.workspace.grader_env import _coral_install_command
+
+    origin = {
+        "url": "file:///Users/dev/CORAL",
+        "dir_info": {"editable": True},
+    }
+    assert _coral_install_command(origin) == "uv pip install -q -e /Users/dev/CORAL"
+
+
+def test_coral_install_command_git_vcs() -> None:
+    """direct_url.json with `vcs_info` -> `uv pip install git+<url>@<commit>`."""
+    from coral.workspace.grader_env import _coral_install_command
+
+    origin = {
+        "url": "https://github.com/Human-Agent-Society/CORAL.git",
+        "vcs_info": {"vcs": "git", "commit_id": "55a9ad024abc", "requested_revision": "main"},
+    }
+    expected = "uv pip install -q git+https://github.com/Human-Agent-Society/CORAL.git@55a9ad024abc"
+    assert _coral_install_command(origin) == expected
+
+
+def test_coral_install_command_fork_url_is_preserved() -> None:
+    """If user installed from a fork, the grader venv gets coral from that fork too."""
+    from coral.workspace.grader_env import _coral_install_command
+
+    origin = {
+        "url": "https://github.com/my-org/coral-fork.git",
+        "vcs_info": {"vcs": "git", "commit_id": "deadbeef"},
+    }
+    cmd = _coral_install_command(origin)
+    assert "my-org/coral-fork.git" in cmd
+    assert "@deadbeef" in cmd
+
+
+def test_coral_install_command_rejects_archive_install() -> None:
+    """Archive (tarball) installs aren't supported — clear error."""
+    from coral.workspace.grader_env import _coral_install_command
+
+    origin = {
+        "url": "file:///tmp/coral.tar.gz",
+        "archive_info": {"hash": "sha256=abc"},
+    }
+    with pytest.raises(RuntimeError, match="Unsupported coral install origin"):
+        _coral_install_command(origin)
+
+
+def test_coral_install_command_rejects_non_git_vcs() -> None:
+    from coral.workspace.grader_env import _coral_install_command
+
+    origin = {
+        "url": "hg+https://example.com/coral",
+        "vcs_info": {"vcs": "hg", "commit_id": "abc"},
+    }
+    with pytest.raises(RuntimeError, match="Only git VCS"):
+        _coral_install_command(origin)
+
+
+def test_coral_install_origin_raises_when_direct_url_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`_coral_git_ref()` pins to the running coral version via the sha or tag."""
-    import coral
-    from coral.workspace.grader_env import _coral_git_ref
+    """If the installer didn't write PEP 610 metadata, we error clearly."""
+    import sysconfig
 
-    monkeypatch.setattr(coral, "__version__", version)
-    assert _coral_git_ref() == expected_ref
+    from coral.workspace import grader_env
+
+    # Build a fake purelib that has a dist-info but no direct_url.json.
+    fake_purelib = tmp_path / "site-packages"
+    fake_purelib.mkdir()
+    (fake_purelib / "coral-9.9.9.dist-info").mkdir()
+
+    monkeypatch.setattr(sysconfig, "get_paths", lambda: {"purelib": str(fake_purelib)})
+
+    with pytest.raises(RuntimeError, match="direct_url.json"):
+        grader_env._coral_install_origin()
 
 
-def test_setup_grader_env_works_without_editable_source_root(
+def test_setup_grader_env_replicates_a_simulated_git_install(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Regression test for #114.
 
-    When CORAL is installed via `uv tool install`, `Path(coral.__file__).parent.parent`
-    is a `site-packages/` dir (no `pyproject.toml`), so editable-installing it fails.
-    `_coral_source_root()` returns None in that case and the venv falls back to
-    installing CORAL from git at the running commit. We point the install at a
-    local `file://` URL (the dev checkout) so the test stays offline.
+    Simulates a `uv tool install git+...` install (non-editable, VCS origin)
+    by monkeypatching `_coral_install_origin` to return a VCS-shaped dict
+    pointing at the local dev repo. The grader venv should then `uv pip
+    install` from that source — exercising the real code path that breaks
+    today's README install.
     """
     from coral.workspace import grader_env
 
@@ -170,9 +220,11 @@ def test_setup_grader_env_works_without_editable_source_root(
         check=True,
     ).stdout.strip()
 
-    monkeypatch.setattr(grader_env, "_coral_source_root", lambda: None)
-    monkeypatch.setattr(grader_env, "CORAL_GIT_URL", f"file://{repo_root}")
-    monkeypatch.setattr(grader_env, "_coral_git_ref", lambda: head_sha)
+    fake_origin = {
+        "url": f"file://{repo_root}",
+        "vcs_info": {"vcs": "git", "commit_id": head_sha},
+    }
+    monkeypatch.setattr(grader_env, "_coral_install_origin", lambda: fake_origin)
 
     coral_dir = tmp_path / ".coral"
     coral_dir.mkdir()
