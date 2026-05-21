@@ -12,6 +12,9 @@
 #   2. Runs `uv tool install --force git+https://github.com/Human-Agent-Society/CORAL.git`
 #      — places `coral` in ~/.local/bin (an isolated venv, on PATH)
 #   3. Ensures ~/.local/bin is on PATH in future shells
+#
+# For local development, clone the repo and run `uv sync` instead — that
+# gives you an editable install which `coral` automatically prefers.
 set -eu
 
 REPO="https://github.com/Human-Agent-Society/CORAL.git"
