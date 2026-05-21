@@ -102,7 +102,12 @@ class AgentManager:
         self._restart_counts: dict[str, int] = {}
         self._agent_eval_counts: dict[str, int] = {}
         self._agent_best_scores: dict[str, float] = {}
-        self._agent_evals_since_improvement: dict[str, int] = {}
+        # Per-agent score history (real attempts only, in submit order).
+        # ``None`` entries represent grader-error attempts and apply plateau
+        # pressure without changing any anchor. The plateau streak each
+        # heartbeat action sees is computed from this history with the
+        # action's own ``epsilon`` (see coral.agent.heartbeat).
+        self._agent_score_history: dict[str, list[float | None]] = {}
         # Reliability state. `_started_at` records when each agent's current
         # subprocess began running (epoch seconds), used as the uptime input
         # for the runtime exit classifier. `_crash_history` is the sliding
@@ -871,6 +876,7 @@ class AgentManager:
                     prompt=prompt,
                     is_global=False,
                     trigger=trigger,
+                    epsilon=float(ad.get("epsilon") or 0.0),
                 )
             )
         for ad in global_actions:
@@ -888,6 +894,7 @@ class AgentManager:
                     prompt=prompt,
                     is_global=True,
                     trigger=trigger,
+                    epsilon=float(ad.get("epsilon") or 0.0),
                 )
             )
         return HeartbeatRunner(heartbeat_actions)
@@ -1246,31 +1253,24 @@ class AgentManager:
                     score = attempt_data.get("score")
                     minimize = self.config.grader.direction == "minimize"
                     if budget_class == BUDGET_CLASS_REAL:
+                        # Update strict-> personal best (always, regardless of epsilon)
                         if score is not None:
                             prev_best = self._agent_best_scores.get(committing_agent_id)
-                            improved = (
+                            strictly_improved = (
                                 prev_best is None
                                 or (minimize and score < prev_best)
                                 or (not minimize and score > prev_best)
                             )
-                            if improved:
+                            if strictly_improved:
                                 self._agent_best_scores[committing_agent_id] = score
-                                self._agent_evals_since_improvement[committing_agent_id] = 0
-                            else:
-                                self._agent_evals_since_improvement[committing_agent_id] = (
-                                    self._agent_evals_since_improvement.get(committing_agent_id, 0)
-                                    + 1
-                                )
-                        else:
-                            # Score=None on a "real" attempt = the agent's own code
-                            # broke the grader (e.g. import error). Counts as
-                            # non-improving.
-                            self._agent_evals_since_improvement[committing_agent_id] = (
-                                self._agent_evals_since_improvement.get(committing_agent_id, 0) + 1
-                            )
+                        # Append to score history (None for broken evals — they
+                        # apply plateau pressure without resetting any anchor).
+                        self._agent_score_history.setdefault(
+                            committing_agent_id, []
+                        ).append(score)
 
-                    evals_since_improvement = self._agent_evals_since_improvement.get(
-                        committing_agent_id, 0
+                    score_history = self._agent_score_history.get(
+                        committing_agent_id, []
                     )
 
                     # Check heartbeat actions
@@ -1278,7 +1278,8 @@ class AgentManager:
                     actions = runner.check(
                         local_eval_count=agent_eval_count,
                         global_eval_count=global_eval_count,
-                        evals_since_improvement=evals_since_improvement,
+                        score_history=score_history,
+                        minimize=minimize,
                     )
                     if not actions:
                         continue

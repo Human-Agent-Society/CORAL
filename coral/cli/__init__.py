@@ -484,6 +484,17 @@ Run 'coral <command> --help' for details on any command."""
         default=None,
         help="Use global eval counter (shared across all agents)",
     )
+    hb_set.add_argument(
+        "--epsilon",
+        type=float,
+        default=None,
+        help=(
+            "Minimum score delta over the prior plateau-anchor that counts as "
+            "improvement (only meaningful for --trigger plateau). Default 0 = "
+            "any nudge resets the streak. Set to your task's noise floor "
+            "(e.g. 0.001) so tiny inch-ups don't keep blocking pivot."
+        ),
+    )
     _add_run_args(hb_set)
 
     hb_remove = hb_sub.add_parser("remove", help="Remove a heartbeat action")

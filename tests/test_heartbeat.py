@@ -1,10 +1,19 @@
-"""Tests for heartbeat system: interval and plateau triggers."""
+"""Tests for heartbeat system: interval and plateau triggers, with per-action epsilon."""
 
-from coral.agent.heartbeat import HeartbeatAction, HeartbeatRunner
+from coral.agent.heartbeat import HeartbeatAction, HeartbeatRunner, streak_for_epsilon
 
 
 def _make_runner(*actions: HeartbeatAction) -> HeartbeatRunner:
     return HeartbeatRunner(list(actions))
+
+
+def _stall_history(n: int, *, anchor: float = 0.5) -> list[float]:
+    """Build a score history that yields streak == n with epsilon == 0.
+
+    The first eval sets the anchor; the next n evals are non-improvements
+    (here, exact ties — clean for epsilon=0 plateau tests).
+    """
+    return [anchor] * (n + 1)
 
 
 # --- Interval trigger tests ---
@@ -25,9 +34,7 @@ def test_interval_global_uses_global_count():
     action = HeartbeatAction(name="consolidate", every=5, prompt="", is_global=True)
     runner = _make_runner(action)
 
-    # local=1 but global=5 -> should fire (global action)
     assert runner.check(local_eval_count=1, global_eval_count=5) == [action]
-    # local=5 but global=3 -> should NOT fire
     assert runner.check(local_eval_count=5, global_eval_count=3) == []
 
 
@@ -37,41 +44,125 @@ def test_interval_zero_count_never_fires():
     assert runner.check(local_eval_count=0, global_eval_count=0) == []
 
 
-# --- Plateau trigger tests ---
+# --- streak_for_epsilon tests (the helper that drives plateau detection) ---
+
+
+def test_streak_for_epsilon_zero_strict_inequality():
+    """epsilon=0 reproduces legacy strict-> behavior."""
+    # Empty history -> 0
+    assert streak_for_epsilon([], minimize=False, epsilon=0.0) == 0
+    # Single score -> anchor, 0 stall
+    assert streak_for_epsilon([0.5], minimize=False, epsilon=0.0) == 0
+    # Strictly increasing -> 0 stall (every eval an improvement)
+    assert streak_for_epsilon([0.1, 0.2, 0.3], minimize=False, epsilon=0.0) == 0
+    # Flat tail -> stall counts (ties don't beat anchor)
+    assert streak_for_epsilon([0.5, 0.5, 0.5], minimize=False, epsilon=0.0) == 2
+    # Decreasing tail -> stall counts
+    assert streak_for_epsilon([0.5, 0.4, 0.3], minimize=False, epsilon=0.0) == 2
+
+
+def test_streak_for_epsilon_with_threshold():
+    """epsilon>0 ignores tiny inch-ups: each step is +0.0003 over the original anchor.
+
+    With anchor=0.500 and epsilon=0.001, threshold to reset is score > 0.501.
+    None of 0.5003 / 0.5006 / 0.5009 cross it, so streak grows.
+    """
+    history = [0.500, 0.5003, 0.5006, 0.5009]
+    assert streak_for_epsilon(history, minimize=False, epsilon=0.001) == 3
+    # One real jump (above epsilon) resets streak
+    history2 = [0.500, 0.5003, 0.5006, 0.502, 0.5022]
+    # 0.502 > 0.500+0.001 -> reset; 0.5022 < 0.502+0.001 -> stall=1
+    assert streak_for_epsilon(history2, minimize=False, epsilon=0.001) == 1
+
+
+def test_streak_for_epsilon_minimize_direction():
+    """For minimize tasks, smaller is better."""
+    history = [0.50, 0.499, 0.498, 0.497]  # tiny improvements
+    assert streak_for_epsilon(history, minimize=True, epsilon=0.01) == 3
+    # Bigger drop crosses epsilon -> reset
+    history2 = [0.50, 0.499, 0.40, 0.399]
+    assert streak_for_epsilon(history2, minimize=True, epsilon=0.01) == 1
+
+
+def test_streak_for_epsilon_none_score_counts_as_stall():
+    """A None score (broken eval) applies plateau pressure but does not move the anchor."""
+    history = [0.5, None, None, 0.51]
+    # 0.51 > 0.5 + 0.001 -> reset; 2 None nudge streak to 2 then 3, then 0.51 resets to 0
+    assert streak_for_epsilon(history, minimize=False, epsilon=0.001) == 0
+    history2 = [0.5, None, None]
+    assert streak_for_epsilon(history2, minimize=False, epsilon=0.001) == 2
+
+
+def test_streak_for_epsilon_anchor_only_moves_on_improvement():
+    """Anchor stays put when an eval doesn't beat it by epsilon, even if score equals anchor."""
+    history = [0.50, 0.50, 0.501, 0.5005, 0.50, 0.503]
+    # anchor=0.5 throughout; 0.501,0.5005,0.50 all <0.5+0.01; 0.503<0.5+0.01 too -> all stall
+    assert streak_for_epsilon(history, minimize=False, epsilon=0.01) == 5
+    # With epsilon=0.001: 0.501 beats 0.5+0.001 -> reset (anchor=0.501),
+    # 0.5005 < 0.501+0.001 -> stall=1, 0.50 < -> stall=2, 0.503 > 0.501+0.001 -> reset to 0.
+    assert streak_for_epsilon(history, minimize=False, epsilon=0.001) == 0
+
+
+# --- Plateau trigger tests (HeartbeatRunner) ---
 
 
 def test_plateau_fires_when_stuck():
     action = HeartbeatAction(name="pivot", every=5, prompt="pivot!", trigger="plateau")
     runner = _make_runner(action)
 
-    # Not stuck long enough
-    assert runner.check(local_eval_count=5, global_eval_count=5, evals_since_improvement=3) == []
-    assert runner.check(local_eval_count=5, global_eval_count=5, evals_since_improvement=4) == []
-
-    # Exactly at threshold
-    assert runner.check(local_eval_count=5, global_eval_count=5, evals_since_improvement=5) == [
-        action
-    ]
+    # 3 stalled evals -> not enough
+    assert runner.check(
+        local_eval_count=5,
+        global_eval_count=5,
+        score_history=_stall_history(3),
+    ) == []
+    assert runner.check(
+        local_eval_count=5,
+        global_eval_count=5,
+        score_history=_stall_history(4),
+    ) == []
+    # Exactly at threshold (5 stalls) -> fires
+    assert runner.check(
+        local_eval_count=5,
+        global_eval_count=5,
+        score_history=_stall_history(5),
+    ) == [action]
 
 
 def test_plateau_cooldown_prevents_spam():
     action = HeartbeatAction(name="pivot", every=5, prompt="pivot!", trigger="plateau")
     runner = _make_runner(action)
 
-    # First fire at 5
-    assert runner.check(local_eval_count=5, global_eval_count=5, evals_since_improvement=5) == [
-        action
-    ]
+    # First fire at streak=5
+    assert runner.check(
+        local_eval_count=5,
+        global_eval_count=5,
+        score_history=_stall_history(5),
+    ) == [action]
 
-    # Should NOT fire again at 6, 7, 8, 9 (cooldown)
-    assert runner.check(local_eval_count=6, global_eval_count=6, evals_since_improvement=6) == []
-    assert runner.check(local_eval_count=7, global_eval_count=7, evals_since_improvement=7) == []
-    assert runner.check(local_eval_count=9, global_eval_count=9, evals_since_improvement=9) == []
+    # Cooldown: no fire at streak 6,7,9
+    assert runner.check(
+        local_eval_count=6,
+        global_eval_count=6,
+        score_history=_stall_history(6),
+    ) == []
+    assert runner.check(
+        local_eval_count=7,
+        global_eval_count=7,
+        score_history=_stall_history(7),
+    ) == []
+    assert runner.check(
+        local_eval_count=9,
+        global_eval_count=9,
+        score_history=_stall_history(9),
+    ) == []
 
-    # Fires again at 10 (5 more stalled evals since last fire)
-    assert runner.check(local_eval_count=10, global_eval_count=10, evals_since_improvement=10) == [
-        action
-    ]
+    # Fires again at streak=10 (5 more stalls past last-fired-at=5)
+    assert runner.check(
+        local_eval_count=10,
+        global_eval_count=10,
+        score_history=_stall_history(10),
+    ) == [action]
 
 
 def test_plateau_resets_on_improvement():
@@ -79,19 +170,33 @@ def test_plateau_resets_on_improvement():
     runner = _make_runner(action)
 
     # Stall to 3 -> fires
-    assert runner.check(local_eval_count=3, global_eval_count=3, evals_since_improvement=3) == [
-        action
-    ]
+    assert runner.check(
+        local_eval_count=3,
+        global_eval_count=3,
+        score_history=_stall_history(3),
+    ) == [action]
 
-    # Agent improves (evals_since_improvement resets to 0)
-    assert runner.check(local_eval_count=4, global_eval_count=4, evals_since_improvement=0) == []
+    # Improvement: streak resets to 0
+    history_after_improvement = _stall_history(3) + [0.7]  # 0.7 beats anchor 0.5
+    assert runner.check(
+        local_eval_count=4,
+        global_eval_count=4,
+        score_history=history_after_improvement,
+    ) == []
 
-    # Stall again from scratch -> fires at 3 again
-    assert runner.check(local_eval_count=5, global_eval_count=5, evals_since_improvement=1) == []
-    assert runner.check(local_eval_count=6, global_eval_count=6, evals_since_improvement=2) == []
-    assert runner.check(local_eval_count=7, global_eval_count=7, evals_since_improvement=3) == [
-        action
-    ]
+    # Stall again -> fires at fresh streak=3
+    history_stalled_again = history_after_improvement + [0.7, 0.7]  # streak=2
+    assert runner.check(
+        local_eval_count=6,
+        global_eval_count=6,
+        score_history=history_stalled_again,
+    ) == []
+    history_stalled_again = history_after_improvement + [0.7, 0.7, 0.7]  # streak=3
+    assert runner.check(
+        local_eval_count=7,
+        global_eval_count=7,
+        score_history=history_stalled_again,
+    ) == [action]
 
 
 def test_plateau_does_not_affect_interval_actions():
@@ -100,11 +205,19 @@ def test_plateau_does_not_affect_interval_actions():
     plateau = HeartbeatAction(name="pivot", every=5, prompt="pivot", trigger="plateau")
     runner = _make_runner(interval, plateau)
 
-    result = runner.check(local_eval_count=2, global_eval_count=2, evals_since_improvement=1)
+    result = runner.check(
+        local_eval_count=2,
+        global_eval_count=2,
+        score_history=_stall_history(1),
+    )
     assert result == [interval]
 
-    result = runner.check(local_eval_count=4, global_eval_count=4, evals_since_improvement=5)
-    assert set(a.name for a in result) == {"reflect", "pivot"}
+    result = runner.check(
+        local_eval_count=4,
+        global_eval_count=4,
+        score_history=_stall_history(5),
+    )
+    assert {a.name for a in result} == {"reflect", "pivot"}
 
 
 def test_mixed_interval_and_plateau():
@@ -113,19 +226,98 @@ def test_mixed_interval_and_plateau():
     pivot = HeartbeatAction(name="pivot", every=3, prompt="pivot", trigger="plateau")
     runner = _make_runner(reflect, pivot)
 
-    # Eval 1: reflect fires (every=1), no plateau yet
-    result = runner.check(local_eval_count=1, global_eval_count=1, evals_since_improvement=0)
+    # Eval 1: reflect fires, no plateau yet
+    result = runner.check(local_eval_count=1, global_eval_count=1, score_history=[0.5])
     assert [a.name for a in result] == ["reflect"]
 
-    # Eval 3: reflect fires, pivot fires (3 stalled evals)
-    result = runner.check(local_eval_count=3, global_eval_count=3, evals_since_improvement=3)
+    # 3 stalled evals: both fire
+    result = runner.check(
+        local_eval_count=3,
+        global_eval_count=3,
+        score_history=_stall_history(3),
+    )
     assert [a.name for a in result] == ["reflect", "pivot"]
 
 
-def test_plateau_default_evals_since_improvement():
-    """When evals_since_improvement is not passed (default 0), plateau never fires."""
+def test_plateau_no_history_means_no_fire():
+    """Default empty score_history means no plateau detection."""
     action = HeartbeatAction(name="pivot", every=1, prompt="pivot!", trigger="plateau")
     runner = _make_runner(action)
-
-    # Default evals_since_improvement=0, should never fire
     assert runner.check(local_eval_count=5, global_eval_count=5) == []
+
+
+# --- Per-action epsilon tests ---
+
+
+def test_per_action_different_epsilons_fire_independently():
+    """Two plateau actions with different epsilons evaluate the same history independently.
+
+    History: each step is +0.0003 over the previous (and over the anchor).
+    - With epsilon=0: each step beats the prior anchor -> anchor moves -> streak stays 0.
+    - With epsilon=0.001: no step crosses anchor+0.001 -> streak grows to 3.
+    """
+    strict = HeartbeatAction(name="strict", every=3, prompt="", trigger="plateau", epsilon=0.0)
+    lax = HeartbeatAction(name="lax", every=3, prompt="", trigger="plateau", epsilon=0.001)
+    runner = _make_runner(strict, lax)
+
+    history = [0.500, 0.5003, 0.5006, 0.5009]
+    result = runner.check(
+        local_eval_count=4,
+        global_eval_count=4,
+        score_history=history,
+    )
+    assert [a.name for a in result] == ["lax"]
+
+
+def test_epsilon_protects_against_inch_up_pattern():
+    """The pfly anti-pattern: agent gains +0.0001 per eval, plateau never fires.
+
+    With epsilon=0.001, a slow walk from 0.6733 to 0.6753 over 8 evals
+    (each +0.0003-ish, all below epsilon) should accumulate plateau streak.
+    """
+    pivot = HeartbeatAction(
+        name="pivot", every=5, prompt="", trigger="plateau", epsilon=0.001
+    )
+    runner = _make_runner(pivot)
+    # 9 evals walking up from 0.6733 by ~0.0003 each — none individually crosses
+    # the 0.001 epsilon over the original 0.6733 anchor for the first ~3, then
+    # 0.6743 finally crosses it once.
+    history = [
+        0.6733,  # anchor
+        0.6736,  # +0.0003 below epsilon -> stall=1
+        0.6739,  # +0.0006 below epsilon -> stall=2
+        0.6742,  # +0.0009 below epsilon -> stall=3
+        0.6745,  # +0.0012 ABOVE epsilon -> reset, anchor=0.6745
+        0.6748,  # +0.0003 -> stall=1
+        0.6750,  # +0.0005 -> stall=2
+        0.6752,  # +0.0007 -> stall=3
+        0.6753,  # +0.0008 -> stall=4
+    ]
+    # streak=4 < 5 -> not yet
+    assert runner.check(
+        local_eval_count=9,
+        global_eval_count=9,
+        score_history=history,
+    ) == []
+    # One more inch-up -> streak=5 -> fires
+    history.append(0.6754)  # stall=5
+    assert runner.check(
+        local_eval_count=10,
+        global_eval_count=10,
+        score_history=history,
+    ) == [pivot]
+
+
+def test_epsilon_zero_is_default_legacy_behavior():
+    """Default epsilon=0 means strict > (legacy)."""
+    action = HeartbeatAction(name="pivot", every=3, prompt="", trigger="plateau")
+    assert action.epsilon == 0.0
+    runner = _make_runner(action)
+    # Strictly increasing -> never plateaus
+    history = [0.5, 0.500001, 0.500002, 0.500003, 0.500004]
+    result = runner.check(
+        local_eval_count=5,
+        global_eval_count=5,
+        score_history=history,
+    )
+    assert result == []
