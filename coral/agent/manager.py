@@ -1265,13 +1265,9 @@ class AgentManager:
                                 self._agent_best_scores[committing_agent_id] = score
                         # Append to score history (None for broken evals — they
                         # apply plateau pressure without resetting any anchor).
-                        self._agent_score_history.setdefault(
-                            committing_agent_id, []
-                        ).append(score)
+                        self._agent_score_history.setdefault(committing_agent_id, []).append(score)
 
-                    score_history = self._agent_score_history.get(
-                        committing_agent_id, []
-                    )
+                    score_history = self._agent_score_history.get(committing_agent_id, [])
 
                     # Check heartbeat actions
                     runner = self._get_heartbeat_runner(committing_agent_id)

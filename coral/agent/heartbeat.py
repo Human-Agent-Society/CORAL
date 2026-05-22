@@ -45,7 +45,10 @@ def streak_for_epsilon(
     The returned streak is the number of evals after the latest anchor reset.
 
     A score of ``None`` (e.g. grader-error attempt) counts toward the streak
-    without changing the anchor — broken evals still apply plateau pressure.
+    without changing the anchor — broken evals still apply plateau pressure
+    *after* the anchor is set. ``None``s before the first real score are
+    discarded: there is no baseline to plateau against, so the streak starts
+    at 0 the moment the first real score arrives.
 
     Args:
         score_history: Per-eval real-mode scores in submit order. May contain
