@@ -99,6 +99,11 @@ def _parse_note_file(path: Path) -> dict[str, Any]:
         "filename": path.name,
         "_mtime": os.path.getmtime(path),
         "_path": path,  # full path, used to compute relative path later
+        # Falsification claim fields (consumed by coral.hub.falsifications).
+        # Empty string when the note is not a falsification claim.
+        "falsifies": meta.get("falsifies", ""),
+        "claimed_at_eval": meta.get("claimed_at_eval", ""),
+        "ttl_evals": meta.get("ttl_evals", ""),
     }
 
 

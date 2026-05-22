@@ -211,12 +211,38 @@ class AgentConfig:
 
 
 @dataclass
+class FalsificationConfig:
+    """Tunables for the team falsification ledger (quorum + TTL).
+
+    A topic is "team consensus" only after ``quorum`` distinct agents have
+    independently claimed it falsified (via a note's ``falsifies:`` frontmatter
+    field) within the last ``ttl_evals`` global evals. A lone claim is
+    "disputed" until a second agent confirms it; any claim expires past TTL
+    to "stale".
+    """
+
+    # Minimum number of distinct agents whose active claims are required for
+    # team consensus. 1 = legacy behavior (any single claim wins). 2 = a lone
+    # claim is "disputed" until a second agent confirms.
+    quorum: int = 2
+    # How many global evals a claim stays active before expiring to "stale"
+    # (and stopping counting toward quorum). Force-decays claims so the team
+    # periodically re-tests dead ends instead of carrying one agent's snap
+    # judgement forever.
+    ttl_evals: int = 30
+
+
+@dataclass
 class SharingConfig:
     """What shared state is enabled."""
 
     attempts: bool = True
     notes: bool = True
     skills: bool = True
+    # Knobs for the falsification ledger surfaced via `coral falsify` /
+    # `coral falsified` / `coral disputed`. Independent of the bools above —
+    # the ledger is always on; this just tunes its consensus thresholds.
+    falsification: FalsificationConfig = field(default_factory=FalsificationConfig)
 
 
 @dataclass

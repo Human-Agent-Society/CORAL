@@ -497,6 +497,7 @@ class AgentManager:
             agent_id,
             single_agent=single_agent,
             shared_dir=shared_dir_name,
+            coral_dir=self.paths.coral_dir,
         )
         (worktree_path / instruction_file).write_text(coral_md)
 

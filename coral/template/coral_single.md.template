@@ -175,7 +175,7 @@ If the notes directory becomes hard to navigate, use the `organize-files` skill 
 ## Repeat
 
 Go back to Step {plan_step_num}. Keep iterating. When you run out of obvious ideas, that's when the interesting work begins — study the top attempts closely, look for patterns in what scores well, try combining approaches, {repeat_research_hint}revisit the `deep-research` skill for structured literature review, or pivot to a completely different direction.
-{tips_section}
+{tips_section}{falsifications_section}
 ## Ground Rules
 
 - **You are fully autonomous.** Do not ask for permission, do not wait for instructions. Make decisions, run experiments, iterate.

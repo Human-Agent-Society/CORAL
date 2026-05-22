@@ -149,3 +149,91 @@ def test_generate_coral_md_score_direction_from_config():
         )
         md = generate_coral_md(config, "agent-1")
         assert expected in md, f"Missing '{expected}' for direction '{direction}'"
+
+
+def test_generate_coral_md_omits_falsification_section_when_no_coral_dir():
+    """No coral_dir -> section is omitted (test/fresh-render path).
+
+    The section only appears when a coral_dir is provided. When agents are
+    actually running the section is always rendered (even if empty) so they
+    discover the CLI commands; but generate_coral_md without a coral_dir
+    (e.g. early validate-time renders) suppresses it entirely.
+    """
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+        grader=GraderConfig(),
+    )
+    md = generate_coral_md(config, "agent-1")
+    assert "Team falsification ledger" not in md
+
+
+def test_generate_coral_md_renders_empty_ledger_intro_when_no_claims():
+    """When a coral_dir exists but has no claims, render an intro so agents
+    still discover `coral falsify`."""
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d) / ".coral"
+        (coral_dir / "public" / "notes").mkdir(parents=True)
+        config = CoralConfig(
+            task=TaskConfig(name="t", description="d"),
+            grader=GraderConfig(),
+        )
+        md = generate_coral_md(config, "agent-1", coral_dir=coral_dir)
+        assert "Team falsification ledger" in md
+        assert "coral falsify" in md
+        assert "No falsification claims yet" in md
+
+
+def test_generate_coral_md_renders_consensus_and_disputed():
+    """When claims exist, the section appears with proper status tagging."""
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d) / ".coral"
+        notes_dir = coral_dir / "public" / "notes"
+        notes_dir.mkdir(parents=True)
+        # Consensus: 2 voices on cnn-distill
+        (notes_dir / "agent-1-cnn.md").write_text(
+            "---\n"
+            "creator: agent-1\n"
+            "created: 2026-05-16\n"
+            "falsifies: cnn-distill\n"
+            "claimed_at_eval: 5\n"
+            "---\n# x"
+        )
+        (notes_dir / "agent-2-cnn.md").write_text(
+            "---\n"
+            "creator: agent-2\n"
+            "created: 2026-05-16\n"
+            "falsifies: cnn-distill\n"
+            "claimed_at_eval: 6\n"
+            "---\n# x"
+        )
+        # Disputed: 1 voice on xfmr-distill
+        (notes_dir / "agent-1-xfmr.md").write_text(
+            "---\n"
+            "creator: agent-1\n"
+            "created: 2026-05-16\n"
+            "falsifies: xfmr-distill\n"
+            "claimed_at_eval: 5\n"
+            "---\n# x"
+        )
+        # current eval below all TTL boundaries
+        (coral_dir / "public" / "eval_count").write_text("10")
+
+        config = CoralConfig(
+            task=TaskConfig(name="t", description="d"),
+            grader=GraderConfig(),
+        )
+        md = generate_coral_md(config, "agent-1", coral_dir=coral_dir)
+        assert "Team falsification ledger" in md
+        # consensus row
+        assert "cnn-distill" in md
+        assert "agent-1, agent-2" in md  # active voices joined
+        # disputed row
+        assert "xfmr-distill" in md
+        assert "disputed" in md
+

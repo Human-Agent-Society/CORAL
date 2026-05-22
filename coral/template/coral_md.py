@@ -15,6 +15,7 @@ def generate_coral_md(
     agent_id: str,
     single_agent: bool = False,
     shared_dir: str = ".claude",
+    coral_dir: Path | None = None,
 ) -> str:
     """Produce the CORAL.md file that agents read at startup.
 
@@ -23,6 +24,9 @@ def generate_coral_md(
         agent_id: This agent's ID
         single_agent: If True, use simplified single-agent template (no sharing references)
         shared_dir: Name of the shared state directory (e.g. ".claude", ".codex", ".opencode")
+        coral_dir: Path to ``.coral/`` for rendering the team falsification
+            section. When None the section is empty (used by tests and by
+            very-early renders before the directory exists).
     """
     template_path = _SINGLE_TEMPLATE_PATH if single_agent else _TEMPLATE_PATH
     template = template_path.read_text()
@@ -92,6 +96,7 @@ def generate_coral_md(
         shared_dir=shared_dir,
         workflow_summary=workflow_summary,
         research_section=research_section,
+        falsifications_section=_render_falsifications_section(config, coral_dir),
         plan_step_num=step_offset,
         edit_step_num=step_offset + 1,
         eval_step_num=step_offset + 2,
@@ -107,3 +112,83 @@ def _get_score_direction(config: CoralConfig) -> str:
     if config.grader.direction == "minimize":
         return "lower is better"
     return "higher is better"
+
+
+def _render_falsifications_section(config: CoralConfig, coral_dir: Path | None) -> str:
+    """Render the "Team falsification ledger" CORAL.md section.
+
+    Returns the empty string when there's nothing to show — so existing
+    runs / tests / single-agent setups don't grow a noisy blank header.
+    """
+    if coral_dir is None or not Path(coral_dir).exists():
+        return ""
+
+    # Lazy import: avoid circular dep at module load (template imported by
+    # other startup paths).
+    from coral.hub.attempts import read_eval_count
+    from coral.hub.falsifications import list_topics
+
+    sharing = config.sharing
+    # sharing.falsification.{quorum,ttl_evals} (FalsificationConfig sub-config)
+    falsification = getattr(sharing, "falsification", None)
+    quorum = max(1, int(getattr(falsification, "quorum", 2) or 2))
+    default_ttl = max(1, int(getattr(falsification, "ttl_evals", 30) or 30))
+    current_eval = read_eval_count(coral_dir)
+
+    try:
+        statuses = list_topics(
+            coral_dir,
+            current_eval=current_eval,
+            quorum=quorum,
+            default_ttl=default_ttl,
+        )
+    except Exception:
+        # Defensive: a broken note shouldn't prevent agent startup.
+        return ""
+
+    consensus = [s for s in statuses if s.level == "consensus"]
+    disputed = [s for s in statuses if s.level in ("disputed", "stale")]
+
+    # Always render the section header so agents discover the CLI commands
+    # (`coral falsify` / `coral falsified` / `coral disputed`) — even when
+    # the ledger is empty. Otherwise agents who never see a populated
+    # ledger never learn the mechanism exists.
+
+    lines: list[str] = ["", "## Team falsification ledger"]
+    lines.append(
+        f"\nA topic counts as **team consensus** only after {quorum} distinct "
+        f"agents have independently claimed it dead within the last "
+        f"{default_ttl} evals. A lone claim is **disputed** until a second "
+        "agent confirms it, and any claim expires past TTL to **stale**.\n"
+        "Vote (only after a real failed eval): "
+        "`coral falsify <slug> -m \"evidence\"`. "
+        "Inspect: `coral falsified` / `coral disputed`. "
+        "If the team has marked something disputed/stale, treat it as a "
+        "*hypothesis worth re-testing*, not a confirmed dead-end."
+    )
+
+    if consensus:
+        lines.append("\n### Consensus (don't waste evals here without new evidence)")
+        for s in consensus:
+            voices = ", ".join(s.voices)
+            lines.append(f"- **{s.topic}** — confirmed by: {voices}")
+
+    if disputed:
+        lines.append("\n### Disputed / stale (single voice or expired — worth re-testing)")
+        for s in disputed:
+            if s.level == "stale":
+                tag = "stale (all claims expired)"
+            else:
+                remaining = max(0, s.expires_at_eval - current_eval)
+                tag = f"disputed (1/{quorum}, expires in {remaining} evals)"
+            voices = ", ".join(s.all_voices) or "—"
+            lines.append(f"- **{s.topic}** — {tag}; claimed by: {voices}")
+
+    if not consensus and not disputed:
+        lines.append(
+            "\n*No falsification claims yet. Be the first to vote when you "
+            "have evidence a topic is dead.*"
+        )
+
+    lines.append("")  # trailing newline for clean section spacing
+    return "\n".join(lines)

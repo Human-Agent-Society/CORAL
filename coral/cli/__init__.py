@@ -316,6 +316,58 @@ Run 'coral <command> --help' for details on any command."""
     p_skills.add_argument("--read", "-r", help="Show details of a skill (name or prefix)")
     _add_run_args(p_skills)
 
+    p_falsify = sub.add_parser(
+        "falsify",
+        help="Record that you've found a topic/approach to be dead",
+        description=(
+            "Add this agent's vote that <slug> doesn't work. The team's "
+            "consensus on dead-ends is the set of topics with >=quorum "
+            "distinct votes within the TTL window."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  coral falsify xfmr-distill -m 'ADD at w=0.04 -> -0.00018'\n"
+            "  coral falsify ssm-distill -m 'val 0.66, ensemble drag'"
+        ),
+        formatter_class=_CommandHelpFormatter,
+    )
+    p_falsify.add_argument("slug", help="Topic slug (kebab-case, e.g. 'xfmr-distill')")
+    p_falsify.add_argument("-m", "--message", required=True, help="Evidence / reasoning")
+    p_falsify.add_argument(
+        "--ttl", type=int, help="Override TTL (in evals) for this claim"
+    )
+    p_falsify.add_argument(
+        "--force", action="store_true", help="Overwrite existing claim by this agent"
+    )
+    p_falsify.add_argument(
+        "--as",
+        dest="as_agent",
+        help="Override agent id (only used when no .coral_agent_id breadcrumb is present)",
+    )
+    _add_run_args(p_falsify)
+
+    p_falsified = sub.add_parser(
+        "falsified",
+        help="List topics with team consensus on being dead",
+        description=(
+            "Show topics that >=quorum distinct agents have independently "
+            "claimed falsified (and at least one claim is still within TTL)."
+        ),
+        formatter_class=_CommandHelpFormatter,
+    )
+    _add_run_args(p_falsified)
+
+    p_disputed = sub.add_parser(
+        "disputed",
+        help="List single-voice or expired claims (candidates for re-test)",
+        description=(
+            "Topics claimed dead by only one agent OR whose claim has expired "
+            "past TTL. A skeptic agent should consider re-testing these."
+        ),
+        formatter_class=_CommandHelpFormatter,
+    )
+    _add_run_args(p_disputed)
+
     p_runs = sub.add_parser(
         "runs",
         help="List all runs across tasks",
@@ -504,6 +556,7 @@ Run 'coral <command> --help' for details on any command."""
     # Lazy imports for fast startup
     from coral.cli.author import cmd_init, cmd_validate
     from coral.cli.eval import cmd_checkout, cmd_diff, cmd_eval, cmd_revert, cmd_wait
+    from coral.cli.falsify import cmd_disputed, cmd_falsified, cmd_falsify
     from coral.cli.heartbeat import cmd_heartbeat
     from coral.cli.query import cmd_log, cmd_notes, cmd_runs, cmd_show, cmd_skills
     from coral.cli.start import cmd_resume, cmd_start, cmd_status, cmd_stop
@@ -524,6 +577,9 @@ Run 'coral <command> --help' for details on any command."""
         "show": cmd_show,
         "notes": cmd_notes,
         "skills": cmd_skills,
+        "falsify": cmd_falsify,
+        "falsified": cmd_falsified,
+        "disputed": cmd_disputed,
         "runs": cmd_runs,
         "init": cmd_init,
         "validate": cmd_validate,
