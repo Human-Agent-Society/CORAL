@@ -142,19 +142,18 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
                 if prompt is not None:
                     action["prompt"] = prompt
                 if epsilon is not None:
-                    action["epsilon"] = epsilon
+                    action.setdefault("options", {})["epsilon"] = epsilon
                 found = True
                 break
         if not found:
-            actions.append(
-                {
-                    "name": name,
-                    "every": every,
-                    "prompt": prompt if prompt is not None else DEFAULT_PROMPTS.get(name, ""),
-                    "trigger": trigger,
-                    "epsilon": epsilon if epsilon is not None else 0.0,
-                }
-            )
+            new_action: dict = {
+                "name": name,
+                "every": every,
+                "prompt": prompt if prompt is not None else DEFAULT_PROMPTS.get(name, ""),
+                "trigger": trigger,
+                "options": {"epsilon": epsilon} if epsilon is not None else {},
+            }
+            actions.append(new_action)
         write_global_heartbeat(coral_dir, actions)
         label = (
             f"after {every} non-improving eval(s) [plateau]"
@@ -174,19 +173,18 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
                 if prompt is not None:
                     action["prompt"] = prompt
                 if epsilon is not None:
-                    action["epsilon"] = epsilon
+                    action.setdefault("options", {})["epsilon"] = epsilon
                 found = True
                 break
         if not found:
-            actions.append(
-                {
-                    "name": name,
-                    "every": every,
-                    "prompt": prompt if prompt is not None else DEFAULT_PROMPTS.get(name, ""),
-                    "trigger": trigger,
-                    "epsilon": epsilon if epsilon is not None else 0.0,
-                }
-            )
+            new_action = {
+                "name": name,
+                "every": every,
+                "prompt": prompt if prompt is not None else DEFAULT_PROMPTS.get(name, ""),
+                "trigger": trigger,
+                "options": {"epsilon": epsilon} if epsilon is not None else {},
+            }
+            actions.append(new_action)
         write_agent_heartbeat(coral_dir, agent_id, actions)
         label = (
             f"after {every} non-improving eval(s) [plateau]"

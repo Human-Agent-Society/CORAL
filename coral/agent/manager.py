@@ -876,7 +876,7 @@ class AgentManager:
                     prompt=prompt,
                     is_global=False,
                     trigger=trigger,
-                    epsilon=float(ad.get("epsilon") or 0.0),
+                    options=dict(ad.get("options") or {}),
                 )
             )
         for ad in global_actions:
@@ -894,7 +894,7 @@ class AgentManager:
                     prompt=prompt,
                     is_global=True,
                     trigger=trigger,
-                    epsilon=float(ad.get("epsilon") or 0.0),
+                    options=dict(ad.get("options") or {}),
                 )
             )
         return HeartbeatRunner(heartbeat_actions)

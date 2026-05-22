@@ -76,19 +76,23 @@ class GraderConfig:
 
 @dataclass
 class HeartbeatActionConfig:
-    """Configuration for a single heartbeat action."""
+    """Configuration for a single heartbeat action.
+
+    Trigger-specific knobs (e.g. ``epsilon`` for plateau) go under
+    ``options``. The schema is validated at runtime against the trigger; see
+    :class:`coral.agent.heartbeat.PlateauOptions`.
+    """
 
     name: str = MISSING  # e.g. "reflect", "consolidate", "pivot"
     every: int = MISSING  # trigger every N evals (interval) or stall threshold (plateau)
     is_global: bool = False  # True = use global eval count, False = per-agent
     trigger: str = "interval"  # "interval" or "plateau"
     prompt: str = ""  # custom prompt; if empty, falls back to built-in DEFAULT_PROMPTS
-    # Minimum score delta over the prior plateau-anchor that counts as
-    # "improvement" for this action's streak. 0.0 = legacy strict-> behavior
-    # (any nudge resets streak). Set to your task's noise floor (e.g. 0.001
-    # for pfly's 4-class accuracy) so tiny inch-ups don't keep resetting the
-    # plateau counter. Only meaningful when trigger="plateau".
-    epsilon: float = 0.0
+    # Trigger-specific options. For ``trigger="plateau"`` the recognized key
+    # is ``epsilon`` (minimum delta over the prior plateau-anchor that counts
+    # as improvement; default 0.0 = legacy strict-> behavior). Unknown keys
+    # raise at load time.
+    options: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

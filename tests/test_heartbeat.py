@@ -1,6 +1,15 @@
-"""Tests for heartbeat system: interval and plateau triggers, with per-action epsilon."""
+"""Tests for heartbeat system: interval and plateau triggers, with per-action options."""
 
-from coral.agent.heartbeat import HeartbeatAction, HeartbeatRunner, streak_for_epsilon
+import pytest
+
+from coral.agent.heartbeat import (
+    HeartbeatAction,
+    HeartbeatRunner,
+    IntervalOptions,
+    PlateauOptions,
+    parse_options,
+    streak_for_epsilon,
+)
 
 
 def _make_runner(*actions: HeartbeatAction) -> HeartbeatRunner:
@@ -288,8 +297,12 @@ def test_per_action_different_epsilons_fire_independently():
     - With epsilon=0: each step beats the prior anchor -> anchor moves -> streak stays 0.
     - With epsilon=0.001: no step crosses anchor+0.001 -> streak grows to 3.
     """
-    strict = HeartbeatAction(name="strict", every=3, prompt="", trigger="plateau", epsilon=0.0)
-    lax = HeartbeatAction(name="lax", every=3, prompt="", trigger="plateau", epsilon=0.001)
+    strict = HeartbeatAction(
+        name="strict", every=3, prompt="", trigger="plateau", options={"epsilon": 0.0}
+    )
+    lax = HeartbeatAction(
+        name="lax", every=3, prompt="", trigger="plateau", options={"epsilon": 0.001}
+    )
     runner = _make_runner(strict, lax)
 
     history = [0.500, 0.5003, 0.5006, 0.5009]
@@ -307,7 +320,9 @@ def test_epsilon_protects_against_inch_up_pattern():
     With epsilon=0.001, a slow walk from 0.6733 to 0.6753 over 8 evals
     (each +0.0003-ish, all below epsilon) should accumulate plateau streak.
     """
-    pivot = HeartbeatAction(name="pivot", every=5, prompt="", trigger="plateau", epsilon=0.001)
+    pivot = HeartbeatAction(
+        name="pivot", every=5, prompt="", trigger="plateau", options={"epsilon": 0.001}
+    )
     runner = _make_runner(pivot)
     # 9 evals walking up from 0.6733 by ~0.0003 each — none individually crosses
     # the 0.001 epsilon over the original 0.6733 anchor for the first ~3, then
@@ -342,9 +357,10 @@ def test_epsilon_protects_against_inch_up_pattern():
 
 
 def test_epsilon_zero_is_default_legacy_behavior():
-    """Default epsilon=0 means strict > (legacy)."""
+    """Default empty options means epsilon=0, i.e. strict > (legacy)."""
     action = HeartbeatAction(name="pivot", every=3, prompt="", trigger="plateau")
-    assert action.epsilon == 0.0
+    assert action.options == {}
+    assert parse_options("plateau", action.options).epsilon == 0.0
     runner = _make_runner(action)
     # Strictly increasing -> never plateaus
     history = [0.5, 0.500001, 0.500002, 0.500003, 0.500004]
@@ -354,3 +370,31 @@ def test_epsilon_zero_is_default_legacy_behavior():
         score_history=history,
     )
     assert result == []
+
+
+# --- parse_options validation tests ---
+
+
+def test_parse_options_rejects_unknown_trigger():
+    with pytest.raises(ValueError, match="Unknown heartbeat trigger"):
+        parse_options("not_a_real_trigger", {})
+
+
+def test_parse_options_rejects_unknown_keys():
+    """The bug this guards against: `epslion: 0.001` silently ignored."""
+    with pytest.raises(ValueError, match="Unknown options for trigger='plateau'.*epslion"):
+        parse_options("plateau", {"epslion": 0.001})
+
+
+def test_parse_options_interval_accepts_empty_only():
+    """Interval has no options today; passing one is a typo/mistake."""
+    assert isinstance(parse_options("interval", {}), IntervalOptions)
+    assert isinstance(parse_options("interval", None), IntervalOptions)
+    with pytest.raises(ValueError, match="Unknown options for trigger='interval'"):
+        parse_options("interval", {"epsilon": 0.1})
+
+
+def test_parse_options_plateau_defaults_and_overrides():
+    assert parse_options("plateau", None) == PlateauOptions(epsilon=0.0)
+    assert parse_options("plateau", {}) == PlateauOptions(epsilon=0.0)
+    assert parse_options("plateau", {"epsilon": 0.01}) == PlateauOptions(epsilon=0.01)

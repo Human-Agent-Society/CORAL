@@ -4,24 +4,79 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Sequence
+from typing import Any
+
+# --- Per-trigger option schemas ---
+#
+# Each trigger type owns a small dataclass describing the options it accepts.
+# The core ``HeartbeatAction`` carries an opaque ``options: dict[str, Any]``
+# and dispatches through :func:`parse_options` so YAML typos like ``epslion``
+# fail loudly at load time instead of silently being ignored.
+
+
+@dataclasses.dataclass
+class IntervalOptions:
+    """No options for interval triggers (yet)."""
+
+
+@dataclasses.dataclass
+class PlateauOptions:
+    """Options for ``trigger="plateau"``.
+
+    ``epsilon`` controls what counts as "improvement" for the plateau streak.
+    The streak resets only when a new score beats the prior plateau-anchor by
+    at least ``epsilon`` (in the grader's ``direction``). Default 0.0
+    preserves the legacy strict-> behavior. Set to your task's noise floor so
+    tiny inch-ups don't keep resetting the streak.
+    """
+
+    epsilon: float = 0.0
+
+
+_TRIGGER_OPTIONS: dict[str, type] = {
+    "interval": IntervalOptions,
+    "plateau": PlateauOptions,
+}
+
+
+def parse_options(trigger: str, options: dict[str, Any] | None) -> Any:
+    """Parse and validate trigger-specific options against the trigger's schema.
+
+    Raises ``ValueError`` for unknown triggers or unknown option keys, so YAML
+    typos die at load instead of silently disabling a knob (the kind of bug
+    that motivated ``epsilon`` in the first place).
+    """
+    schema = _TRIGGER_OPTIONS.get(trigger)
+    if schema is None:
+        raise ValueError(
+            f"Unknown heartbeat trigger: {trigger!r}. Known: {sorted(_TRIGGER_OPTIONS)}"
+        )
+    options = options or {}
+    valid_keys = {f.name for f in dataclasses.fields(schema)}
+    unknown = set(options) - valid_keys
+    if unknown:
+        raise ValueError(
+            f"Unknown options for trigger={trigger!r}: {sorted(unknown)}. "
+            f"Valid keys: {sorted(valid_keys) or '(none)'}"
+        )
+    return schema(**options)
 
 
 @dataclasses.dataclass
 class HeartbeatAction:
     """A registered heartbeat action with its own interval and prompt.
 
-    Actions can trigger on a fixed interval (``trigger="interval"``) or when the
+    Actions trigger on a fixed interval (``trigger="interval"``) or when the
     agent's score has not improved for a number of consecutive evals
-    (``trigger="plateau"``).  Plateau actions use ``every`` as the number of
-    non-improving evals required before firing, and include a cooldown so they
-    don't re-fire until the agent improves or another ``every`` evals pass.
+    (``trigger="plateau"``). Plateau actions use ``every`` as the stall
+    threshold and include a cooldown so they don't re-fire until the agent
+    improves or another ``every`` evals pass.
 
-    ``epsilon`` controls what counts as "improvement" for the plateau streak.
-    The streak resets only when a new score beats the prior plateau-anchor by
-    at least ``epsilon`` (in the grader's ``direction``). Default 0.0
-    preserves the legacy strict-> behavior. Set to your task's noise floor so
-    tiny inch-ups don't keep resetting the streak. Only meaningful when
-    ``trigger="plateau"``.
+    Trigger-specific knobs live in ``options`` and are validated against the
+    schema for ``trigger`` (see :func:`parse_options`). The core action is
+    deliberately agnostic to each trigger's schema so adding a new trigger
+    only requires defining its ``Options`` dataclass and registering it in
+    ``_TRIGGER_OPTIONS``.
     """
 
     name: str  # e.g. "reflect", "consolidate", "pivot"
@@ -29,7 +84,7 @@ class HeartbeatAction:
     prompt: str  # rendered prompt string
     is_global: bool = False  # True = use global eval count, False = per-agent
     trigger: str = "interval"  # "interval" or "plateau"
-    epsilon: float = 0.0  # see docstring; only used when trigger="plateau"
+    options: dict[str, Any] = dataclasses.field(default_factory=dict)
 
 
 def streak_for_epsilon(
@@ -114,10 +169,11 @@ class HeartbeatRunner:
         triggered = []
         for action in self.actions:
             if action.trigger == "plateau":
+                opts: PlateauOptions = parse_options("plateau", action.options)
                 streak = streak_for_epsilon(
                     score_history,
                     minimize=minimize,
-                    epsilon=action.epsilon,
+                    epsilon=opts.epsilon,
                 )
                 if self._check_plateau(action, streak):
                     triggered.append(action)
