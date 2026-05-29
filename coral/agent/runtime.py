@@ -118,14 +118,15 @@ class AgentHandle:
             except Exception:
                 pass
 
-    def interrupt(self) -> str | None:
+    def interrupt(self) -> None:
         """Interrupt a running agent via SIGINT (like Ctrl+C).
 
         Claude Code handles SIGINT gracefully — it saves the session so it can
-        be resumed later. Returns the session_id extracted from the log, or None.
+        be resumed later. Callers extract the session_id themselves via the
+        runtime (each CLI emits a different log format).
         """
         if not self.process or not self.alive:
-            return _extract_session_id(self.log_path)
+            return
 
         pid = self.process.pid
         logger.info(f"Interrupting agent {self.agent_id} (PID {pid}) with SIGINT")
@@ -160,8 +161,6 @@ class AgentHandle:
                 self.err_file.close()  # type: ignore[attr-defined]
             except Exception:
                 pass
-
-        return _extract_session_id(self.log_path)
 
     def __del__(self) -> None:
         """Safety net: ensure process and file handles are cleaned up on GC."""
@@ -211,39 +210,3 @@ def write_coral_log_entry(
         entry["task_description"] = task_description
     log_file.write(json.dumps(entry) + "\n")
     log_file.flush()
-
-
-def _extract_session_id(log_path: Path) -> str | None:
-    """Extract session_id from a stream-json log.
-
-    Checks (in order): result lines, then any line with a session_id
-    (system init, assistant messages, etc.) — scanning from the end.
-    """
-    try:
-        lines = log_path.read_text().strip().splitlines()
-        # First pass: look for a "result" line (most authoritative)
-        for line in reversed(lines):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                data = json.loads(line)
-                if data.get("type") == "result" and data.get("session_id"):
-                    return data["session_id"]
-            except json.JSONDecodeError:
-                continue
-        # Second pass: fall back to any line with session_id
-        for line in reversed(lines):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                data = json.loads(line)
-                sid = data.get("session_id")
-                if sid:
-                    return sid
-            except json.JSONDecodeError:
-                continue
-    except Exception as e:
-        logger.debug(f"Failed to extract session_id from {log_path}: {e}")
-    return None

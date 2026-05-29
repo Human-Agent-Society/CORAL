@@ -568,8 +568,11 @@ class AgentManager:
         handle = self.handles[idx]
         agent_id = handle.agent_id
 
-        # SIGINT the agent — Claude Code saves session gracefully
-        session_id = handle.interrupt()
+        # SIGINT the agent — it saves the session so we can resume it.
+        # Each CLI emits a different log format, so extract the session_id
+        # via the owning runtime after interrupt() returns.
+        handle.interrupt()
+        session_id = self._runtime_for(agent_id).extract_session_id(handle.log_path)
         self._restart_counts[agent_id] = self._restart_counts.get(agent_id, 0) + 1
 
         if session_id:
