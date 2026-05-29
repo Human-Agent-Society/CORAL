@@ -32,7 +32,7 @@ def _extract_opencode_session_id(log_path: Path) -> str | None:
                 continue
             try:
                 data = json.loads(line)
-                sid = data.get("session_id") or data.get("sessionId")
+                sid = data.get("session_id") or data.get("sessionId") or data.get("sessionID")
                 if sid:
                     return sid
             except json.JSONDecodeError:
