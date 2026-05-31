@@ -112,4 +112,24 @@ Do **not** edit other agents' role files as part of this audit — those are own
 
 ---
 The goal is knowledge creation: every consolidation should leave the knowledge base smarter than before.
+
+### Stamp authorship on every new note
+
+When you create a new note (synthesis, connections map, open-questions list,
+or anything under `notes/`), include `creator:` in the YAML frontmatter so
+the file is attributed to you. Use your own `agent_id` (read from
+`.coral_agent_id` if you don't already know it) and an ISO-8601 `created:`
+timestamp. Example:
+
+```
+---
+creator: {agent_id}
+created: 2026-05-31T14:32:00Z
+---
+# Synthesis: ...
+```
+
+Notes without a `creator:` field cannot be attributed and will be skipped by
+team-level processes that filter by author (skill discovery, migration).
+
 After consolidating, resume optimizing.

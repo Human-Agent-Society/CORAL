@@ -376,3 +376,22 @@ The `references/` directory has schema documentation:
 5. **Iterate** using grading feedback until stop criteria met
 6. **Optimize** the description for triggering accuracy
 7. **Package** the final skill
+
+## Frontmatter discipline (required)
+
+When you package a new skill, the SKILL.md frontmatter MUST include
+`creator:` set to your `agent_id` (read from `.coral_agent_id`). Example:
+
+```
+---
+name: my-new-skill
+description: ...
+creator: 0-agent-2
+---
+```
+
+Skills without `creator:` are treated as bundled framework skills (the
+deep-research, librarian, organize-files, skill-creator set seeded into
+every island), and team-level processes that filter by author (migration,
+provenance UI) will silently exclude them. Always stamp `creator:` on
+agent-authored skills.

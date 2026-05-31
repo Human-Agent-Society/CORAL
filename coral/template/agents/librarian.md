@@ -87,3 +87,10 @@ Append a summary to `notes/_organization-log.md` describing what you reorganized
 - Prefer updating existing skills over creating new ones
 - When merging notes, preserve specific numbers and scores
 - Return a concise summary: files moved, merged, skills created, index updated
+
+## Frontmatter discipline
+
+Every note you create or rewrite must include `creator:` and `created:` in
+the YAML frontmatter. Use the agent_id read from `.coral_agent_id`. Notes
+without a `creator:` cannot be attributed and will be filtered out of
+team-level views.
