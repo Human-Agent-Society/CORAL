@@ -224,3 +224,59 @@ def test_setup_opencode_settings_multi_island_external_dir_scoped(tmp_path):
     keys = "\n".join(ext.keys())
     assert "islands/2" in keys, f"expected island-2 path in opencode external_directory; got {ext}"
     assert "public" not in keys, f"public pattern leaked into multi-island opencode config; got {ext}"
+
+
+def test_partition_and_setup_threads_island_id_into_worktrees(tmp_path):
+    """After project setup, every agent worktree has the right .coral_island breadcrumb."""
+    repo = tmp_path / "myrepo"
+    (repo / "src").mkdir(parents=True)
+    (repo / "src" / "README.md").write_text("hi")
+    (repo / "src").joinpath("__init__.py").touch()
+
+    data = _base_config_dict(repo)
+    data["islands"] = {"count": 2}
+    data["agents"] = {"count": 4}
+    cfg = CoralConfig.from_dict(data)
+    paths = create_project(cfg, config_dir=repo)
+
+    # Manually exercise the partition + per-agent worktree setup that the
+    # manager would do at start_all time, without actually spawning subprocesses.
+    from coral.agent.assignments import partition_into_islands, resolve_agent_specs
+    from coral.workspace.worktree import (
+        create_agent_worktree,
+        setup_shared_state,
+        write_agent_id,
+    )
+
+    specs = partition_into_islands(resolve_agent_specs(cfg), cfg.islands.count)
+    assert len(specs) == 4
+
+    # Initialise the source repo as a real git repo so worktree creation works.
+    # ``create_project`` already runs ``git init``/``commit`` on ``paths.repo_dir``,
+    # so the commands here are idempotent (``--allow-empty`` covers the
+    # "already initialised, working tree clean" case).
+    import subprocess
+    subprocess.run(["git", "init"], cwd=str(paths.repo_dir), check=True, capture_output=True)
+    subprocess.run(["git", "add", "-A"], cwd=str(paths.repo_dir), check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "--allow-empty", "-m", "init"],
+        cwd=str(paths.repo_dir),
+        check=True,
+        capture_output=True,
+    )
+
+    for spec in specs:
+        wt = create_agent_worktree(paths.repo_dir, spec.agent_id, paths.agents_dir)
+        write_agent_id(wt, spec.agent_id)
+        setup_shared_state(wt, paths.coral_dir, ".claude", island_id=spec.island_id)
+        # Every worktree must have the breadcrumb pointing at the agent's island
+        bc = wt / ".coral_island"
+        assert bc.exists(), f"missing .coral_island in {wt}"
+        assert bc.read_text().strip() == spec.island_id
+
+        # Symlink must resolve into the right island
+        notes_link = wt / ".claude" / "notes"
+        assert notes_link.is_symlink()
+        target = notes_link.resolve()
+        expected_island_root = paths.coral_dir / "islands" / spec.island_id
+        assert target.parent == expected_island_root.resolve()

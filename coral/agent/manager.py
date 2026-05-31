@@ -102,6 +102,9 @@ class AgentManager:
         self._restart_counts: dict[str, int] = {}
         self._agent_eval_counts: dict[str, int] = {}
         self._agent_best_scores: dict[str, float] = {}
+        # Per-agent island lookup. Empty in single-island mode (no entries written).
+        # Populated as agents come up via _setup_and_start_agent.
+        self._agent_island: dict[str, str] = {}
         # Per-agent score history (real attempts only, in submit order).
         # ``None`` entries represent grader-error attempts and apply plateau
         # pressure without changing any anchor. The plateau streak each
@@ -379,6 +382,7 @@ class AgentManager:
     def _setup_and_start_agent(
         self,
         agent_id: str,
+        island_id: str | None = None,
         resume_session_id: str | None = None,
         prompt: str | None = None,
         prompt_source: str | None = None,
@@ -389,6 +393,11 @@ class AgentManager:
 
         runtime = self._runtime_for(agent_id)
         spec = self.specs_by_id.get(agent_id)
+
+        # Track which island this agent belongs to. Single-island mode (None)
+        # leaves _agent_island untouched; downstream lookups simply miss.
+        if island_id is not None:
+            self._agent_island[agent_id] = island_id
 
         # Create worktree (idempotent)
         logger.info(f"Setting up {agent_id}...")
@@ -410,7 +419,12 @@ class AgentManager:
 
         # Set up shared state directory (notes, skills, attempts symlinks)
         shared_dir_name = runtime.shared_dir_name
-        setup_shared_state(worktree_path, self.paths.coral_dir, shared_dir_name)
+        setup_shared_state(
+            worktree_path,
+            self.paths.coral_dir,
+            shared_dir_name,
+            island_id=island_id,
+        )
 
         # Register agent with gateway if active (before settings so we have the key)
         if self._gateway and agent_id not in self._gateway_keys:
@@ -439,6 +453,7 @@ class AgentManager:
                 research=self.config.agents.research,
                 gateway_url=gateway_url,
                 gateway_api_key=gateway_api_key,
+                island_id=island_id,
             )
         elif shared_dir_name == ".opencode":
             setup_opencode_settings(
@@ -447,6 +462,7 @@ class AgentManager:
                 research=self.config.agents.research,
                 gateway_url=gateway_url,
                 gateway_api_key=gateway_api_key,
+                island_id=island_id,
             )
         elif shared_dir_name == ".codex":
             setup_codex_settings(
@@ -455,6 +471,7 @@ class AgentManager:
                 research=self.config.agents.research,
                 gateway_url=gateway_url,
                 gateway_api_key=gateway_api_key,
+                island_id=island_id,
             )
         elif shared_dir_name == ".cursor":
             setup_cursor_settings(
@@ -463,6 +480,7 @@ class AgentManager:
                 research=self.config.agents.research,
                 gateway_url=gateway_url,
                 gateway_api_key=gateway_api_key,
+                island_id=island_id,
             )
 
         # Apply per-agent file mounts last so the user's files win over
@@ -502,6 +520,7 @@ class AgentManager:
             agent_id,
             single_agent=single_agent,
             shared_dir=shared_dir_name,
+            island_id=island_id,
         )
         (worktree_path / instruction_file).write_text(coral_md)
 
