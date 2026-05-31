@@ -14,6 +14,8 @@ import os
 import tempfile
 from pathlib import Path
 
+from coral.hub._island import island_root
+
 logger = logging.getLogger(__name__)
 
 # Load prompt templates from markdown files
@@ -62,8 +64,12 @@ PROTECTED_ACTIONS: set[str] = PROTECTED_LOCAL | PROTECTED_GLOBAL
 _GLOBAL_ID = "_global"
 
 
-def _heartbeat_path(coral_dir: Path, agent_id: str) -> Path:
-    return coral_dir / "public" / "heartbeat" / f"{agent_id}.json"
+def _heartbeat_path(
+    coral_dir: Path,
+    agent_id: str,
+    island_id: str | int | None = None,
+) -> Path:
+    return island_root(coral_dir, island_id) / "heartbeat" / f"{agent_id}.json"
 
 
 def _read_actions(path: Path) -> list[dict]:
@@ -99,12 +105,21 @@ def _write_actions(path: Path, actions: list[dict]) -> None:
 # --- Local (per-agent) ---
 
 
-def read_agent_heartbeat(coral_dir: Path, agent_id: str) -> list[dict]:
+def read_agent_heartbeat(
+    coral_dir: Path,
+    agent_id: str,
+    island_id: str | int | None = None,
+) -> list[dict]:
     """Read local heartbeat actions for an agent."""
-    return _read_actions(_heartbeat_path(coral_dir, agent_id))
+    return _read_actions(_heartbeat_path(coral_dir, agent_id, island_id))
 
 
-def write_agent_heartbeat(coral_dir: Path, agent_id: str, actions: list[dict]) -> None:
+def write_agent_heartbeat(
+    coral_dir: Path,
+    agent_id: str,
+    actions: list[dict],
+    island_id: str | int | None = None,
+) -> None:
     """Write local heartbeat actions for an agent.
 
     Protected local actions (reflect) are re-added if missing.
@@ -119,18 +134,25 @@ def write_agent_heartbeat(coral_dir: Path, agent_id: str, actions: list[dict]) -
                     "prompt": DEFAULT_PROMPTS.get(name, ""),
                 }
             )
-    _write_actions(_heartbeat_path(coral_dir, agent_id), actions)
+    _write_actions(_heartbeat_path(coral_dir, agent_id, island_id), actions)
 
 
 # --- Global (shared across all agents) ---
 
 
-def read_global_heartbeat(coral_dir: Path) -> list[dict]:
+def read_global_heartbeat(
+    coral_dir: Path,
+    island_id: str | int | None = None,
+) -> list[dict]:
     """Read global heartbeat actions."""
-    return _read_actions(_heartbeat_path(coral_dir, _GLOBAL_ID))
+    return _read_actions(_heartbeat_path(coral_dir, _GLOBAL_ID, island_id))
 
 
-def write_global_heartbeat(coral_dir: Path, actions: list[dict]) -> None:
+def write_global_heartbeat(
+    coral_dir: Path,
+    actions: list[dict],
+    island_id: str | int | None = None,
+) -> None:
     """Write global heartbeat actions.
 
     Protected global actions (consolidate) are re-added if missing.
@@ -145,7 +167,7 @@ def write_global_heartbeat(coral_dir: Path, actions: list[dict]) -> None:
                     "prompt": DEFAULT_PROMPTS.get(name, ""),
                 }
             )
-    _write_actions(_heartbeat_path(coral_dir, _GLOBAL_ID), actions)
+    _write_actions(_heartbeat_path(coral_dir, _GLOBAL_ID, island_id), actions)
 
 
 # --- Defaults from config ---

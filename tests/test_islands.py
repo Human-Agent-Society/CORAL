@@ -253,3 +253,51 @@ def test_skills_by_single_island_uses_public():
         _write_skill(skills_dir, "mine", creator="agent-7")
         matched = skills_by(coral_dir, island_id=None, agent_id="agent-7")
         assert [p.name for p in matched] == ["mine"]
+
+
+from coral.hub.heartbeat import (
+    read_agent_heartbeat,
+    read_global_heartbeat,
+    write_agent_heartbeat,
+    write_global_heartbeat,
+)
+
+
+def test_heartbeat_multi_island_isolation():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        for i in range(2):
+            (coral_dir / "islands" / str(i) / "heartbeat").mkdir(parents=True)
+        write_agent_heartbeat(
+            coral_dir,
+            "agent-1",
+            [{"name": "reflect", "every": 1, "prompt": "island-0 reflect"}],
+            island_id="0",
+        )
+        write_agent_heartbeat(
+            coral_dir,
+            "agent-1",
+            [{"name": "reflect", "every": 2, "prompt": "island-1 reflect"}],
+            island_id="1",
+        )
+        a0 = read_agent_heartbeat(coral_dir, "agent-1", island_id="0")
+        a1 = read_agent_heartbeat(coral_dir, "agent-1", island_id="1")
+        assert next(a for a in a0 if a["name"] == "reflect")["every"] == 1
+        assert next(a for a in a1 if a["name"] == "reflect")["every"] == 2
+
+
+def test_global_heartbeat_multi_island_isolation():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        for i in range(2):
+            (coral_dir / "islands" / str(i) / "heartbeat").mkdir(parents=True)
+        write_global_heartbeat(
+            coral_dir, [{"name": "consolidate", "every": 10}], island_id="0"
+        )
+        write_global_heartbeat(
+            coral_dir, [{"name": "consolidate", "every": 20}], island_id="1"
+        )
+        g0 = read_global_heartbeat(coral_dir, island_id="0")
+        g1 = read_global_heartbeat(coral_dir, island_id="1")
+        assert next(a for a in g0 if a["name"] == "consolidate")["every"] == 10
+        assert next(a for a in g1 if a["name"] == "consolidate")["every"] == 20
