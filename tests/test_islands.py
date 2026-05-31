@@ -6,6 +6,26 @@ from pathlib import Path
 import pytest
 
 from coral.hub._island import island_root
+from coral.hub.attempts import (
+    increment_eval_count,
+    read_attempts,
+    read_eval_count,
+    write_attempt,
+)
+from coral.hub.checkpoint import (
+    checkpoint,
+    checkpoint_history,
+    init_checkpoint_repo,
+)
+from coral.hub.heartbeat import (
+    read_agent_heartbeat,
+    read_global_heartbeat,
+    write_agent_heartbeat,
+    write_global_heartbeat,
+)
+from coral.hub.notes import list_notes, notes_by
+from coral.hub.skills import list_skills, skills_by
+from coral.types import Attempt
 
 
 def test_island_root_single_island_no_islands_dir():
@@ -54,16 +74,6 @@ def test_island_root_accepts_integer_zero():
         coral_dir = Path(d)
         (coral_dir / "islands").mkdir()
         assert island_root(coral_dir, 0) == coral_dir / "islands" / "0"
-
-
-from coral.hub.attempts import (
-    get_leaderboard,
-    increment_eval_count,
-    read_attempts,
-    read_eval_count,
-    write_attempt,
-)
-from coral.types import Attempt
 
 
 def _make_attempt(commit: str, agent: str = "agent-1", score: float = 0.5) -> Attempt:
@@ -130,9 +140,6 @@ def test_eval_count_multi_island_global_and_per_island():
         assert read_eval_count(coral_dir, island_id="1") == 1
         # Global counter (island_id=None) was also bumped each time
         assert read_eval_count(coral_dir, island_id=None) == 3
-
-
-from coral.hub.notes import list_notes, notes_by
 
 
 def test_list_notes_multi_island_isolation():
@@ -204,9 +211,6 @@ def test_notes_by_skips_malformed_files():
         assert [p.name for p in matched] == ["good.md"]
 
 
-from coral.hub.skills import list_skills, skills_by
-
-
 def _write_skill(dir_: Path, name: str, creator: str | None) -> None:
     """Helper: create a skill dir with SKILL.md, optionally stamped with `creator:`."""
     sk_dir = dir_ / name
@@ -255,14 +259,6 @@ def test_skills_by_single_island_uses_public():
         assert [p.name for p in matched] == ["mine"]
 
 
-from coral.hub.heartbeat import (
-    read_agent_heartbeat,
-    read_global_heartbeat,
-    write_agent_heartbeat,
-    write_global_heartbeat,
-)
-
-
 def test_heartbeat_multi_island_isolation():
     with tempfile.TemporaryDirectory() as d:
         coral_dir = Path(d)
@@ -301,15 +297,6 @@ def test_global_heartbeat_multi_island_isolation():
         g1 = read_global_heartbeat(coral_dir, island_id="1")
         assert next(a for a in g0 if a["name"] == "consolidate")["every"] == 10
         assert next(a for a in g1 if a["name"] == "consolidate")["every"] == 20
-
-
-import subprocess
-
-from coral.hub.checkpoint import (
-    checkpoint,
-    checkpoint_history,
-    init_checkpoint_repo,
-)
 
 
 def test_checkpoint_multi_island_separate_repos():
