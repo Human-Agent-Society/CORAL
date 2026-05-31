@@ -6,6 +6,7 @@ import pytest
 
 from coral.agent.assignments import (
     AgentSpec,
+    partition_into_islands,
     resolve_agent_specs,
     specs_use_multiple_runtimes,
 )
@@ -157,3 +158,78 @@ def test_spec_immutable_fields():
     )
     with pytest.raises(Exception):
         spec.agent_id = "agent-2"  # type: ignore[misc]
+
+
+def _bare_spec(agent_id: str) -> AgentSpec:
+    return AgentSpec(
+        agent_id=agent_id,
+        runtime="claude_code",
+        model="sonnet",
+        runtime_options={},
+        assignment_index=None,
+    )
+
+
+def test_partition_single_island_returns_specs_unchanged():
+    """count=1 = single-island = no ID rewrite, no island_id, identity."""
+    specs = [_bare_spec("agent-1"), _bare_spec("agent-2")]
+    out = partition_into_islands(specs, count=1)
+    assert [s.agent_id for s in out] == ["agent-1", "agent-2"]
+    assert all(s.island_id is None for s in out)
+
+
+def test_partition_round_robin_distributes_specs():
+    """count=3 with 6 agents: each island gets 2 agents."""
+    specs = [_bare_spec(f"agent-{i + 1}") for i in range(6)]
+    out = partition_into_islands(specs, count=3)
+    by_island: dict[str, list[str]] = {}
+    for s in out:
+        by_island.setdefault(s.island_id, []).append(s.agent_id)
+    assert sorted(by_island) == ["0", "1", "2"]
+    # Round-robin: agent-1→0, agent-2→1, agent-3→2, agent-4→0, ...
+    assert by_island["0"] == ["0-agent-1", "0-agent-2"]
+    assert by_island["1"] == ["1-agent-1", "1-agent-2"]
+    assert by_island["2"] == ["2-agent-1", "2-agent-2"]
+
+
+def test_partition_rewrites_agent_ids_with_birth_island_prefix():
+    """Multi-island IDs are <birth_island>-agent-<per-island-seq>."""
+    specs = [_bare_spec(f"agent-{i + 1}") for i in range(4)]
+    out = partition_into_islands(specs, count=2)
+    # 0-agent-1, 1-agent-1, 0-agent-2, 1-agent-2
+    assert [s.agent_id for s in out] == [
+        "0-agent-1",
+        "1-agent-1",
+        "0-agent-2",
+        "1-agent-2",
+    ]
+
+
+def test_partition_preserves_runtime_and_model():
+    """Partition must not perturb the underlying runtime/model/options of each spec."""
+    specs = [
+        AgentSpec(
+            agent_id="agent-1",
+            runtime="claude_code",
+            model="sonnet",
+            runtime_options={"foo": "bar"},
+        ),
+        AgentSpec(
+            agent_id="agent-2",
+            runtime="codex",
+            model="gpt-5.4",
+            runtime_options={},
+        ),
+    ]
+    out = partition_into_islands(specs, count=2)
+    by_id = {s.agent_id: s for s in out}
+    assert by_id["0-agent-1"].runtime == "claude_code"
+    assert by_id["0-agent-1"].runtime_options == {"foo": "bar"}
+    assert by_id["1-agent-1"].runtime == "codex"
+    assert by_id["1-agent-1"].model == "gpt-5.4"
+
+
+def test_partition_raises_on_count_zero():
+    import pytest
+    with pytest.raises(ValueError, match="count must be >= 1"):
+        partition_into_islands([_bare_spec("agent-1")], count=0)

@@ -33,6 +33,10 @@ class AgentSpec:
     # Index into ``agents.assignments`` this agent came from, or None when the
     # run is in uniform mode (no assignments list).
     assignment_index: int | None = None
+    # Birth island ID after partitioning (e.g. "0", "1"). None in single-island
+    # mode. Stable across migration — the prefix on ``agent_id`` always reflects
+    # birth island, while this field can be repointed in Phase 3 if needed.
+    island_id: str | None = None
 
 
 def resolve_agent_specs(config: CoralConfig) -> list[AgentSpec]:
@@ -95,3 +99,47 @@ def resolve_agent_specs(config: CoralConfig) -> list[AgentSpec]:
 def specs_use_multiple_runtimes(specs: list[AgentSpec]) -> bool:
     """Return True iff the resolved specs cover more than one distinct runtime."""
     return len({s.runtime for s in specs}) > 1
+
+
+def partition_into_islands(
+    specs: list[AgentSpec],
+    count: int,
+) -> list[AgentSpec]:
+    """Distribute resolved agent specs across `count` islands round-robin.
+
+    Returns a new list of AgentSpecs with ``island_id`` populated and
+    ``agent_id`` rewritten to ``<birth_island>-agent-<per-island-seq>``
+    when count > 1. When count == 1, returns the input unchanged (no
+    ID rewriting, ``island_id`` stays None) — preserves today's single-island
+    behavior exactly.
+
+    Round-robin: spec i lands on island ``i % count``. The per-island sequence
+    is the order each island sees specs (so the first spec landing on island 2
+    is ``2-agent-1`` regardless of its global index).
+
+    Raises:
+        ValueError: if count < 1.
+    """
+    if count < 1:
+        raise ValueError(f"count must be >= 1, got {count}")
+    if count == 1:
+        return list(specs)
+
+    per_island_seq: dict[str, int] = {}
+    out: list[AgentSpec] = []
+    for global_idx, spec in enumerate(specs):
+        island_id = str(global_idx % count)
+        per_island_seq[island_id] = per_island_seq.get(island_id, 0) + 1
+        seq = per_island_seq[island_id]
+        new_id = f"{island_id}-agent-{seq}"
+        out.append(
+            AgentSpec(
+                agent_id=new_id,
+                runtime=spec.runtime,
+                model=spec.model,
+                runtime_options=dict(spec.runtime_options),
+                assignment_index=spec.assignment_index,
+                island_id=island_id,
+            )
+        )
+    return out
