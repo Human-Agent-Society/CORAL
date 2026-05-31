@@ -18,6 +18,7 @@ Design invariants:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import multiprocessing
 import shutil
@@ -36,7 +37,6 @@ from coral.grader.loader import load_grader
 from coral.hub.attempts import (
     get_agent_attempts,
     increment_eval_count,
-    read_attempts,
     write_attempt,
 )
 from coral.types import (
@@ -253,12 +253,13 @@ def _compute_status(
     commit_hash: str,
     coral_dir: Path,
     minimize: bool,
+    island_id: str | None = None,
 ) -> str:
     """Compare `score` to this agent's previous best to classify the attempt."""
     if score is None:
         return "crashed"
 
-    prev_attempts = get_agent_attempts(str(coral_dir), agent_id)
+    prev_attempts = get_agent_attempts(str(coral_dir), agent_id, island_id=island_id)
     prev_scores = [
         a.score for a in prev_attempts if a.score is not None and a.commit_hash != commit_hash
     ]
@@ -293,6 +294,7 @@ def _grade_one(
     config: CoralConfig,
 ) -> Attempt:
     """Grade a single pending attempt and return the finalized Attempt record."""
+    island_id = (attempt.metadata or {}).get("island_id")
     # Task.metadata is the canonical channel for surfacing per-attempt context
     # to the user's grader (read via TaskGrader.tune / .budget_class). Both
     # the in-process and SubprocessGrader paths serialize it, so this works
@@ -337,6 +339,7 @@ def _grade_one(
                 attempt.commit_hash,
                 coral_dir,
                 minimize,
+                island_id=island_id,
             )
         finally:
             _remove_worktree(repo_dir, checkout_path)
@@ -371,9 +374,9 @@ def _grade_one(
         parent_shared_state_hash=attempt.parent_shared_state_hash,
         metadata=metadata,
     )
-    write_attempt(str(coral_dir), finalized)
+    write_attempt(str(coral_dir), finalized, island_id=island_id)
     with _eval_count_lock:
-        count = increment_eval_count(coral_dir)
+        count = increment_eval_count(coral_dir, island_id=island_id)
     logger.info(
         "Graded #%d %s -> score=%s status=%s",
         count,
@@ -390,10 +393,26 @@ def _grade_one(
 
 
 def _find_pending(coral_dir: Path) -> list[Attempt]:
-    """Return pending attempts in submission order (oldest first)."""
-    attempts = read_attempts(coral_dir)
-    pending = [a for a in attempts if a.status == "pending" and a.score is None]
-    pending.sort(key=lambda a: a.timestamp)
+    """Return pending attempts (across all islands in multi-island mode), oldest first."""
+    if (coral_dir / "islands").exists():
+        islands = sorted((coral_dir / "islands").iterdir())
+        attempt_dirs = [d / "attempts" for d in islands if d.is_dir()]
+    else:
+        attempt_dirs = [coral_dir / "public" / "attempts"]
+
+    pending: list[Attempt] = []
+    for d in attempt_dirs:
+        if not d.is_dir():
+            continue
+        for p in sorted(d.glob("*.json")):
+            try:
+                data = json.loads(p.read_text())
+                a = Attempt.from_dict(data)
+            except Exception:
+                continue
+            if a.status == "pending" and a.score is None:
+                pending.append(a)
+    pending.sort(key=lambda x: x.timestamp)
     return pending
 
 
@@ -416,6 +435,7 @@ def _safe_grade_one(
     except Exception:
         logger.exception("Unhandled error grading %s; marking crashed", attempt.commit_hash[:12])
         try:
+            island_id = (attempt.metadata or {}).get("island_id")
             crashed = Attempt(
                 commit_hash=attempt.commit_hash,
                 agent_id=attempt.agent_id,
@@ -428,9 +448,9 @@ def _safe_grade_one(
                 shared_state_hash=attempt.shared_state_hash,
                 parent_shared_state_hash=attempt.parent_shared_state_hash,
             )
-            write_attempt(str(coral_dir), crashed)
+            write_attempt(str(coral_dir), crashed, island_id=island_id)
             with _eval_count_lock:
-                increment_eval_count(coral_dir)
+                increment_eval_count(coral_dir, island_id=island_id)
             return crashed
         except Exception:
             logger.exception("Failed to record crash for %s", attempt.commit_hash[:12])

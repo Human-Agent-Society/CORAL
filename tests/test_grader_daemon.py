@@ -715,3 +715,63 @@ def test_invalid_max_workers_rejected():
                 "grader": {"parallel": {"max_workers": 0}},
             }
         )
+
+
+def test_find_pending_multi_island_scans_every_island(tmp_path):
+    """_find_pending picks up attempts from every islands/<id>/attempts/ dir."""
+    from coral.grader.daemon import _find_pending
+    from coral.hub.attempts import write_attempt
+    from coral.types import Attempt
+
+    coral_dir = tmp_path / ".coral"
+    for i in range(3):
+        (coral_dir / "islands" / str(i) / "attempts").mkdir(parents=True)
+
+    a0 = Attempt(
+        commit_hash="aaa000",
+        agent_id="0-agent-1",
+        title="x",
+        score=None,
+        status="pending",
+        parent_hash=None,
+        timestamp="2026-05-31T10:00:00Z",
+        metadata={"island_id": "0"},
+    )
+    a1 = Attempt(
+        commit_hash="bbb111",
+        agent_id="1-agent-1",
+        title="y",
+        score=None,
+        status="pending",
+        parent_hash=None,
+        timestamp="2026-05-31T10:01:00Z",
+        metadata={"island_id": "1"},
+    )
+    write_attempt(coral_dir, a0, island_id="0")
+    write_attempt(coral_dir, a1, island_id="1")
+    pending = _find_pending(coral_dir)
+    hashes = {a.commit_hash for a in pending}
+    assert hashes == {"aaa000", "bbb111"}
+
+
+def test_find_pending_single_island_unchanged(tmp_path):
+    """Single-island: _find_pending scans only public/attempts/."""
+    from coral.grader.daemon import _find_pending
+    from coral.hub.attempts import write_attempt
+    from coral.types import Attempt
+
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public" / "attempts").mkdir(parents=True)
+
+    a = Attempt(
+        commit_hash="ccc",
+        agent_id="agent-1",
+        title="x",
+        score=None,
+        status="pending",
+        parent_hash=None,
+        timestamp="2026-05-31T10:00:00Z",
+    )
+    write_attempt(coral_dir, a)
+    pending = _find_pending(coral_dir)
+    assert {p.commit_hash for p in pending} == {"ccc"}
