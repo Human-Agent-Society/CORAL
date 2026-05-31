@@ -47,6 +47,83 @@ _SEED_AGENTS_DIR = Path(__file__).parent.parent / "template" / "agents"
 _ROLE_TEMPLATE_PATH = Path(__file__).parent.parent / "template" / "role_template.md"
 
 
+_PER_ISLAND_SUBDIRS = (
+    "attempts",
+    "logs",
+    "skills",
+    "agents",
+    "notes",
+    "heartbeat",
+    "eval_logs",
+    "roles",
+)
+
+
+def _island_id_from_root(coral_dir: Path, island_root: Path) -> str | None:
+    """Return the island_id implied by island_root, or None for single-island."""
+    try:
+        rel = island_root.resolve().relative_to((coral_dir / "islands").resolve())
+        # rel is like Path("0"); take first segment
+        rel_str = str(rel)
+        return rel_str.split("/", 1)[0] if rel_str and rel_str != "." else None
+    except ValueError:
+        return None
+
+
+def _build_island_subtree(
+    coral_dir: Path,
+    island_root: Path,
+    effective_config_dir: Path,
+    user_skill_paths: list[str],
+) -> None:
+    """Create the per-island state directory tree and seed bundled assets.
+
+    Used once for ``public/`` in single-island mode, and once per
+    ``islands/<id>/`` in multi-island mode. Seeds bundled skills + bundled
+    subagent templates + initializes the checkpoint git repo for this island.
+    """
+    for sub in _PER_ISLAND_SUBDIRS:
+        (island_root / sub).mkdir(parents=True, exist_ok=True)
+
+    # Seed bundled skills from coral/template/skills/
+    if _SEED_SKILLS_DIR.is_dir():
+        for skill_dir in _SEED_SKILLS_DIR.iterdir():
+            if skill_dir.is_dir():
+                dst = island_root / "skills" / skill_dir.name
+                if not dst.exists():
+                    shutil.copytree(skill_dir, dst)
+                    logger.info(f"Seeded skill: {skill_dir.name}")
+
+    # Seed user-provided skills from agents.skills config
+    for skill_path in user_skill_paths:
+        src = Path(skill_path)
+        if not src.is_absolute():
+            src = (effective_config_dir / src).resolve()
+        if src.is_dir():
+            dst = island_root / "skills" / src.name
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(src, dst)
+            logger.info(f"Seeded user skill: {src.name}")
+        else:
+            logger.warning(f"Skill directory not found: {src}")
+
+    # Seed bundled subagent templates from coral/template/agents/
+    if _SEED_AGENTS_DIR.is_dir():
+        for agent_file in _SEED_AGENTS_DIR.iterdir():
+            if agent_file.is_file():
+                dst = island_root / "agents" / agent_file.name
+                if not dst.exists():
+                    shutil.copy2(agent_file, dst)
+                    logger.info(f"Seeded agent template: {agent_file.name}")
+
+    # Per-island checkpoint git repo (one .git per island, scoped locks)
+    init_checkpoint_repo(
+        str(coral_dir),
+        island_id=_island_id_from_root(coral_dir, island_root),
+    )
+
+
 def seed_agent_role(
     coral_dir: Path,
     agent_id: str,
@@ -147,58 +224,35 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
 
     logger.debug(f"results_dir={results_dir}, task_dir={task_dir}, run_dir={run_dir}")
 
-    # Create shared state directories
-    (coral_dir / "public").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "public" / "attempts").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "public" / "logs").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "public" / "skills").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "public" / "agents").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "public" / "notes").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "public" / "heartbeat").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "public" / "eval_logs").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "public" / "roles").mkdir(parents=True, exist_ok=True)
-    (coral_dir / "private").mkdir(parents=True, exist_ok=True)
-    agents_dir.mkdir(parents=True, exist_ok=True)
-
-    # Initialize checkpoint repo for shared state versioning
-    init_checkpoint_repo(str(coral_dir))
-
     # Resolve task directory for relative path resolution
     effective_config_dir = config.task_dir or config_dir or Path.cwd()
 
-    # Seed bundled skills from coral/template/skills/
-    seed_skills_dir = _SEED_SKILLS_DIR
-    if seed_skills_dir.is_dir():
-        for skill_dir in seed_skills_dir.iterdir():
-            if skill_dir.is_dir():
-                dst = coral_dir / "public" / "skills" / skill_dir.name
-                if not dst.exists():
-                    shutil.copytree(skill_dir, dst)
-                    logger.info(f"Seeded skill: {skill_dir.name}")
+    # Create shared state directories.
+    # Single-island (count == 1): keep today's exact layout under public/.
+    # Multi-island (count > 1):   build islands/<id>/ subtree per island, leave
+    #                              public/ minimal (only global meta).
+    (coral_dir / "public").mkdir(parents=True, exist_ok=True)
+    (coral_dir / "private").mkdir(parents=True, exist_ok=True)
+    agents_dir.mkdir(parents=True, exist_ok=True)
 
-    # Seed user-provided skills from agents.skills config
-    for skill_path in config.agents.skills:
-        src = Path(skill_path)
-        if not src.is_absolute():
-            src = (effective_config_dir / src).resolve()
-        if src.is_dir():
-            dst = coral_dir / "public" / "skills" / src.name
-            if dst.exists():
-                shutil.rmtree(dst)
-            shutil.copytree(src, dst)
-            logger.info(f"Seeded user skill: {src.name}")
-        else:
-            logger.warning(f"Skill directory not found: {src}")
-
-    # Seed bundled agent templates from coral/template/agents/
-    seed_agents_dir = _SEED_AGENTS_DIR
-    if seed_agents_dir.is_dir():
-        for agent_file in seed_agents_dir.iterdir():
-            if agent_file.is_file():
-                dst = coral_dir / "public" / "agents" / agent_file.name
-                if not dst.exists():
-                    shutil.copy2(agent_file, dst)
-                    logger.info(f"Seeded agent template: {agent_file.name}")
+    if config.islands.count == 1:
+        _build_island_subtree(
+            coral_dir,
+            coral_dir / "public",
+            effective_config_dir,
+            list(config.agents.skills),
+        )
+    else:
+        (coral_dir / "islands").mkdir(parents=True, exist_ok=True)
+        for i in range(config.islands.count):
+            island_root = coral_dir / "islands" / str(i)
+            island_root.mkdir(parents=True, exist_ok=True)
+            _build_island_subtree(
+                coral_dir,
+                island_root,
+                effective_config_dir,
+                list(config.agents.skills),
+            )
 
     # Save config
     config.to_yaml(coral_dir / "config.yaml")
