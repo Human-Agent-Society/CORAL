@@ -323,8 +323,8 @@ Run 'coral <command> --help' for details on any command."""
     p_note_new.add_argument("slug", help="Slug for the note filename (becomes <slug>.md)")
     p_note_new.add_argument(
         "--body",
-        default="",
-        help="Note body (use stdin if omitted)",
+        default=None,
+        help="Note body (use stdin if omitted; pass an empty string for an empty body)",
     )
 
     p_skills = sub.add_parser(

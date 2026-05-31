@@ -213,11 +213,11 @@ def cmd_note_new(args: argparse.Namespace) -> int:
     coral_dir = get_coral_dir(cwd)
     if coral_dir is None:
         print("error: not in a coral worktree (no .coral_dir breadcrumb found)", file=sys.stderr)
-        return 1
+        sys.exit(1)
     aid_file = cwd / ".coral_agent_id"
     if not aid_file.exists():
         print("error: no .coral_agent_id found in current directory", file=sys.stderr)
-        return 1
+        sys.exit(1)
     agent_id = aid_file.read_text().strip()
     island_file = cwd / ".coral_island"
     island_id = island_file.read_text().strip() if island_file.exists() else None
@@ -226,16 +226,16 @@ def cmd_note_new(args: argparse.Namespace) -> int:
     slug = re.sub(r"[^a-zA-Z0-9_\-]+", "-", args.slug).strip("-")
     if not slug:
         print(f"error: slug {args.slug!r} is empty after sanitization", file=sys.stderr)
-        return 1
+        sys.exit(1)
 
-    body = args.body if args.body else sys.stdin.read()
+    body = args.body if args.body is not None else sys.stdin.read()
 
     notes_dir = island_root(coral_dir, island_id) / "notes"
     notes_dir.mkdir(parents=True, exist_ok=True)
     note_path = notes_dir / f"{slug}.md"
     if note_path.exists():
         print(f"error: {note_path} already exists", file=sys.stderr)
-        return 1
+        sys.exit(1)
 
     created = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     content = (
@@ -247,7 +247,7 @@ def cmd_note_new(args: argparse.Namespace) -> int:
     )
     note_path.write_text(content)
     print(str(note_path))
-    return 0
+    sys.exit(0)
 
 
 def cmd_skills(args: argparse.Namespace) -> None:
