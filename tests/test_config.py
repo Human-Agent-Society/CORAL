@@ -348,3 +348,70 @@ def test_skills_config_defaults_empty():
     data = {"task": {"name": "t", "description": "d"}}
     config = CoralConfig.from_dict(data)
     assert config.agents.skills == []
+
+
+def test_islands_defaults_single_island():
+    cfg = CoralConfig.from_dict({
+        "task": {"name": "t", "description": "d"},
+    })
+    assert cfg.islands.count == 1
+    assert cfg.islands.migration.enabled is True
+    assert cfg.islands.migration.every == 50
+    assert cfg.islands.migration.rank_window == 20
+    assert cfg.islands.migration.min_evals == 3
+    assert cfg.islands.migration.dest_weighting == "score"
+    assert cfg.islands.migration.max_per_cycle == 1
+    assert cfg.islands.migration.notify_island is True
+
+
+def test_islands_count_override():
+    cfg = CoralConfig.from_dict({
+        "task": {"name": "t", "description": "d"},
+        "islands": {"count": 4},
+    })
+    assert cfg.islands.count == 4
+
+
+def test_islands_migration_override():
+    cfg = CoralConfig.from_dict({
+        "task": {"name": "t", "description": "d"},
+        "islands": {"count": 2, "migration": {"every": 25, "dest_weighting": "uniform"}},
+    })
+    assert cfg.islands.migration.every == 25
+    assert cfg.islands.migration.dest_weighting == "uniform"
+
+
+def test_islands_count_validation():
+    import pytest
+    with pytest.raises(ValueError, match="islands.count must be >= 1"):
+        CoralConfig.from_dict({
+            "task": {"name": "t", "description": "d"},
+            "islands": {"count": 0},
+        })
+
+
+def test_migration_every_validation():
+    import pytest
+    with pytest.raises(ValueError, match="islands.migration.every must be >= 1"):
+        CoralConfig.from_dict({
+            "task": {"name": "t", "description": "d"},
+            "islands": {"migration": {"every": 0}},
+        })
+
+
+def test_migration_rank_window_validation():
+    import pytest
+    with pytest.raises(ValueError, match="islands.migration.rank_window"):
+        CoralConfig.from_dict({
+            "task": {"name": "t", "description": "d"},
+            "islands": {"migration": {"every": 10, "rank_window": 20}},
+        })
+
+
+def test_migration_dest_weighting_validation():
+    import pytest
+    with pytest.raises(ValueError, match="dest_weighting"):
+        CoralConfig.from_dict({
+            "task": {"name": "t", "description": "d"},
+            "islands": {"migration": {"dest_weighting": "nonsense"}},
+        })

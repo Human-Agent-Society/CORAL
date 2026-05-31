@@ -252,12 +252,75 @@ class RunConfig:
 
 
 @dataclass
+class MigrationConfig:
+    """Agent migration between islands.
+
+    Ignored in single-island mode (``islands.count == 1``).
+    """
+
+    enabled: bool = True
+    every: int = 50  # global evals between migration cycles
+    rank_window: int = 20  # "best agent" judged by max-over-last-N evals
+    min_evals: int = 3  # candidate must have >= N attempts to be eligible
+    dest_weighting: str = "score"  # score | uniform | round_robin
+    max_per_cycle: int = 1
+    notify_island: bool = True
+
+    def __post_init__(self) -> None:
+        if self.every < 1:
+            raise ValueError(f"islands.migration.every must be >= 1, got {self.every}")
+        if self.rank_window < 1:
+            raise ValueError(
+                f"islands.migration.rank_window must be >= 1, got {self.rank_window}"
+            )
+        if self.rank_window > self.every:
+            raise ValueError(
+                f"islands.migration.rank_window ({self.rank_window}) must be "
+                f"<= islands.migration.every ({self.every})"
+            )
+        if self.min_evals < 1:
+            raise ValueError(
+                f"islands.migration.min_evals must be >= 1, got {self.min_evals}"
+            )
+        if self.dest_weighting not in {"score", "uniform", "round_robin"}:
+            raise ValueError(
+                "islands.migration.dest_weighting must be one of "
+                f"{{score, uniform, round_robin}}, got {self.dest_weighting!r}"
+            )
+        if self.max_per_cycle < 1:
+            raise ValueError(
+                f"islands.migration.max_per_cycle must be >= 1, got {self.max_per_cycle}"
+            )
+
+
+@dataclass
+class IslandsConfig:
+    """Multi-island shared-state partitioning.
+
+    ``count = 1`` (the default) preserves today's single-island layout exactly
+    — no ``.coral/islands/`` directory is created and no migration code paths
+    are exercised.
+    """
+
+    count: int = 1
+    migration: MigrationConfig = field(default_factory=MigrationConfig)
+
+    def __post_init__(self) -> None:
+        if self.count < 1:
+            raise ValueError(f"islands.count must be >= 1, got {self.count}")
+        # OmegaConf round-trip can leave migration as a dict
+        if isinstance(self.migration, dict):
+            self.migration = MigrationConfig(**self.migration)
+
+
+@dataclass
 class CoralConfig:
     """Top-level project configuration."""
 
     task: TaskConfig = field(default_factory=TaskConfig)
     grader: GraderConfig = field(default_factory=GraderConfig)
     agents: AgentConfig = field(default_factory=AgentConfig)
+    islands: IslandsConfig = field(default_factory=IslandsConfig)
     sharing: SharingConfig = field(default_factory=SharingConfig)
     workspace: WorkspaceConfig = field(default_factory=WorkspaceConfig)
     run: RunConfig = field(default_factory=RunConfig)
