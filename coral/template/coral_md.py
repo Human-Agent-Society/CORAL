@@ -15,6 +15,7 @@ def generate_coral_md(
     agent_id: str,
     single_agent: bool = False,
     shared_dir: str = ".claude",
+    island_id: str | int | None = None,
 ) -> str:
     """Produce the CORAL.md file that agents read at startup.
 
@@ -23,6 +24,7 @@ def generate_coral_md(
         agent_id: This agent's ID
         single_agent: If True, use simplified single-agent template (no sharing references)
         shared_dir: Name of the shared state directory (e.g. ".claude", ".codex", ".opencode")
+        island_id: Agent's island in multi-island mode (formats a provenance hint)
     """
     template_path = _SINGLE_TEMPLATE_PATH if single_agent else _TEMPLATE_PATH
     template = template_path.read_text()
@@ -83,7 +85,7 @@ def generate_coral_md(
         research_back_reference = ""
         repeat_research_hint = "research new techniques, "
 
-    return template.format(
+    rendered = template.format(
         task_name=config.task.name,
         task_description=config.task.description,
         tips_section=tips_section,
@@ -100,6 +102,19 @@ def generate_coral_md(
         research_back_reference=research_back_reference,
         repeat_research_hint=repeat_research_hint,
     )
+
+    # Multi-island provenance hint: append once at the end so the existing
+    # template stays untouched. Only when there's actually more than one island.
+    if island_id is not None and config.islands.count > 1:
+        rendered += (
+            "\n\n## Multi-island provenance\n\n"
+            f"You are working on island `{island_id}` in a multi-island run "
+            f"({config.islands.count} islands total). Other islands exist with "
+            "their own attempts, notes, and skills, but you cannot see their "
+            "state directly. Each island evolves independently.\n"
+        )
+
+    return rendered
 
 
 def _get_score_direction(config: CoralConfig) -> str:

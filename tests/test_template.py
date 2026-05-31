@@ -149,3 +149,28 @@ def test_generate_coral_md_score_direction_from_config():
         )
         md = generate_coral_md(config, "agent-1")
         assert expected in md, f"Missing '{expected}' for direction '{direction}'"
+
+
+def test_generate_coral_md_single_island_has_no_island_mention():
+    """Without island_id, no provenance hint about islands is in the output."""
+    from coral.config import CoralConfig
+    from coral.template.coral_md import generate_coral_md
+
+    cfg = CoralConfig.from_dict({"task": {"name": "t", "description": "d"}})
+    md = generate_coral_md(cfg, agent_id="agent-1")
+    assert "island" not in md.lower()
+
+
+def test_generate_coral_md_multi_island_mentions_island(tmp_path):
+    """With island_id and islands.count > 1, the prompt mentions the agent's island."""
+    from coral.config import CoralConfig
+    from coral.template.coral_md import generate_coral_md
+
+    cfg = CoralConfig.from_dict({
+        "task": {"name": "t", "description": "d"},
+        "islands": {"count": 4},
+    })
+    md = generate_coral_md(cfg, agent_id="2-agent-1", island_id="2")
+    md_lower = md.lower()
+    assert "island" in md_lower
+    assert "island `2`" in md or "island 2" in md, "expected mention of island 2"
