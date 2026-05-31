@@ -6,6 +6,7 @@ from pathlib import Path
 
 from coral.config import CoralConfig
 from coral.workspace.project import create_project
+from coral.workspace.worktree import setup_shared_state
 
 
 def _base_config_dict(repo: Path) -> dict:
@@ -106,3 +107,59 @@ def test_create_project_multi_island_per_island_checkpoint_repo(tmp_path):
         assert (paths.coral_dir / "islands" / str(i) / ".git").is_dir(), (
             f"island {i} has no checkpoint .git"
         )
+
+
+def test_setup_shared_state_single_island_keeps_public_target(tmp_path):
+    """No island_id → symlinks resolve to coral_dir/public/* (today's behavior)."""
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public" / "notes").mkdir(parents=True)
+    (coral_dir / "public" / "attempts").mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    setup_shared_state(worktree, coral_dir, ".claude", island_id=None)
+
+    notes_link = worktree / ".claude" / "notes"
+    assert notes_link.is_symlink()
+    assert notes_link.resolve() == (coral_dir / "public" / "notes").resolve()
+
+
+def test_setup_shared_state_multi_island_targets_island_root(tmp_path):
+    """island_id="1" → symlinks resolve to coral_dir/islands/1/*."""
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "islands" / "1" / "notes").mkdir(parents=True)
+    (coral_dir / "islands" / "1" / "attempts").mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    setup_shared_state(worktree, coral_dir, ".claude", island_id="1")
+
+    notes_link = worktree / ".claude" / "notes"
+    assert notes_link.is_symlink()
+    assert notes_link.resolve() == (coral_dir / "islands" / "1" / "notes").resolve()
+
+
+def test_setup_shared_state_writes_coral_island_breadcrumb(tmp_path):
+    """Multi-island setup writes the island id to .coral_island in the worktree."""
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "islands" / "2" / "notes").mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    setup_shared_state(worktree, coral_dir, ".claude", island_id="2")
+
+    bc = worktree / ".coral_island"
+    assert bc.exists()
+    assert bc.read_text().strip() == "2"
+
+
+def test_setup_shared_state_single_island_does_not_write_breadcrumb(tmp_path):
+    """Single-island setup must NOT leave a .coral_island file."""
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public" / "notes").mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    setup_shared_state(worktree, coral_dir, ".claude", island_id=None)
+
+    assert not (worktree / ".coral_island").exists()
