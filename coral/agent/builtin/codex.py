@@ -84,7 +84,7 @@ class CodexRuntime:
         coral_md_path: Path,
         model: str = "gpt-5.4",
         runtime_options: dict[str, Any] | None = None,
-        max_turns: int = 200,
+        max_turns: int = 0,
         log_dir: Path | None = None,
         verbose: bool = False,
         resume_session_id: str | None = None,

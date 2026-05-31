@@ -102,7 +102,7 @@ class ClaudeCodeRuntime:
         coral_md_path: Path,
         model: str = "opus",
         runtime_options: dict[str, Any] | None = None,
-        max_turns: int = 200,
+        max_turns: int = 0,
         log_dir: Path | None = None,
         verbose: bool = False,
         resume_session_id: str | None = None,
@@ -138,12 +138,19 @@ class ClaudeCodeRuntime:
             prompt,
             "--model",
             model,
-            "--max-turns",
-            str(max_turns),
-            "--output-format",
-            "stream-json",
-            "--verbose",
         ]
+        # 0 = no cap — let the underlying `claude` CLI run until it exits
+        # naturally. The manager still restarts on any exit, preserving context
+        # via --resume below.
+        if max_turns > 0:
+            cmd.extend(["--max-turns", str(max_turns)])
+        cmd.extend(
+            [
+                "--output-format",
+                "stream-json",
+                "--verbose",
+            ]
+        )
 
         # Extra paths added to the Claude Code session sandbox via --add-dir.
         # Lets callers (e.g. judge graders) grant tool access to a sibling
