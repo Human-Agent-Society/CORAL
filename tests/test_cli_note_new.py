@@ -115,3 +115,25 @@ def test_note_new_with_empty_body_does_not_block_on_stdin(tmp_path):
     assert result.returncode == 0, result.stderr
     note = (coral_dir / "public" / "notes" / "empty-body.md").read_text()
     assert "creator: agent-1" in note
+
+
+def test_note_new_works_from_worktree_subdirectory(tmp_path):
+    """coral note new should walk up to find the worktree from a subdirectory."""
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public" / "notes").mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    sub = worktree / "src" / "deep"
+    sub.mkdir(parents=True)
+    (worktree / ".coral_dir").write_text(str(coral_dir.resolve()))
+    (worktree / ".coral_agent_id").write_text("agent-9")
+
+    result = subprocess.run(
+        ["coral", "note", "new", "from-deep", "--body", "found via walk-up"],
+        cwd=str(sub),
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    note = (coral_dir / "public" / "notes" / "from-deep.md").read_text()
+    assert "creator: agent-9" in note
+    assert "found via walk-up" in note

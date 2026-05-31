@@ -199,27 +199,62 @@ def cmd_notes(args: argparse.Namespace) -> None:
         print(format_notes_list(entries))
 
 
-def cmd_note_new(args: argparse.Namespace) -> int:
-    """Create a new note pre-stamped with `creator:` and `created:` frontmatter."""
+def _find_worktree_root(start: Path) -> Path | None:
+    """Walk up from `start` looking for a .coral_dir breadcrumb.
+
+    Returns the first parent directory containing a `.coral_dir` file, or
+    `None` if no such breadcrumb is found before the filesystem root.
+
+    Used by `coral note new` so that agents can invoke the command from any
+    subdirectory of their worktree (not just the worktree root).
+    """
+    cur = start.resolve()
+    while True:
+        if (cur / ".coral_dir").exists():
+            return cur
+        if cur == cur.parent:  # reached fs root
+            return None
+        cur = cur.parent
+
+
+def cmd_note_new(args: argparse.Namespace) -> None:
+    """Dispatch the `coral note <subcommand>` group.
+
+    Currently only `coral note new` is registered, but this guard ensures any
+    future subcommand (e.g. `coral note list`) is dispatched explicitly rather
+    than silently falling through to note-creation.
+    """
+    if args.note_cmd != "new":
+        # argparse should reject unknown subcommands before we get here;
+        # this is a defensive check for future subcommands.
+        print(f"error: unknown 'note' subcommand {args.note_cmd!r}", file=sys.stderr)
+        sys.exit(2)
+
     import re
     from datetime import UTC, datetime
-    from pathlib import Path
 
     from coral.hub._island import island_root
     from coral.workspace.worktree import get_coral_dir
 
-    # Resolve coral_dir, agent_id, and island_id from the agent's worktree.
-    cwd = Path.cwd()
-    coral_dir = get_coral_dir(cwd)
+    # Resolve worktree root by walking up from cwd. This lets agents run
+    # `coral note new` from a subdirectory of the worktree, not just the root.
+    worktree = _find_worktree_root(Path.cwd())
+    if worktree is None:
+        print(
+            "error: not in a coral worktree (no .coral_dir breadcrumb in any parent)",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    coral_dir = get_coral_dir(worktree)
     if coral_dir is None:
         print("error: not in a coral worktree (no .coral_dir breadcrumb found)", file=sys.stderr)
         sys.exit(1)
-    aid_file = cwd / ".coral_agent_id"
+    aid_file = worktree / ".coral_agent_id"
     if not aid_file.exists():
         print("error: no .coral_agent_id found in current directory", file=sys.stderr)
         sys.exit(1)
     agent_id = aid_file.read_text().strip()
-    island_file = cwd / ".coral_island"
+    island_file = worktree / ".coral_island"
     island_id = island_file.read_text().strip() if island_file.exists() else None
 
     # Sanitize slug: a-z0-9-_
