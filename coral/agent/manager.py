@@ -182,10 +182,23 @@ class AgentManager:
         #     and writes the score back. Must be running before agents start.
         self._start_grader_daemon()
 
-        # 2. Seed global heartbeat config if not already present
-        if not read_global_heartbeat(self.paths.coral_dir):
-            write_global_heartbeat(self.paths.coral_dir, default_global_actions(self.config))
-            logger.info("Seeded global heartbeat config")
+        # 2. Seed global heartbeat config if not already present.
+        # In multi-island mode, every island gets its own _global.json so
+        # cadence reads the per-island eval_count for "global" actions like
+        # consolidate.
+        if self.config.islands.count > 1:
+            for island_id in {s.island_id for s in self.specs if s.island_id is not None}:
+                if not read_global_heartbeat(self.paths.coral_dir, island_id=island_id):
+                    write_global_heartbeat(
+                        self.paths.coral_dir,
+                        default_global_actions(self.config),
+                        island_id=island_id,
+                    )
+                    logger.info(f"Seeded global heartbeat config for island {island_id}")
+        else:
+            if not read_global_heartbeat(self.paths.coral_dir):
+                write_global_heartbeat(self.paths.coral_dir, default_global_actions(self.config))
+                logger.info("Seeded global heartbeat config")
 
         # 3. Warm-start research phase (optional)
         agent_ids = [s.agent_id for s in self.specs]
@@ -504,9 +517,10 @@ class AgentManager:
             apply_runtime_mounts(worktree_path, mounts, self._mounts_base_dir())
 
         # Seed local heartbeat config from task YAML if not already present
-        if not read_agent_heartbeat(self.paths.coral_dir, agent_id):
+        if not read_agent_heartbeat(self.paths.coral_dir, agent_id, island_id=island_id):
             write_agent_heartbeat(
-                self.paths.coral_dir, agent_id, default_local_actions(self.config)
+                self.paths.coral_dir, agent_id, default_local_actions(self.config),
+                island_id=island_id,
             )
             logger.info(f"  Seeded heartbeat config for {agent_id}")
 
@@ -815,12 +829,34 @@ class AgentManager:
         return bool(proc and proc.is_alive())
 
     def _get_seen_attempts(self) -> set[str]:
-        """Get the set of attempt filenames currently in .coral/public/attempts/."""
+        """Get the set of attempt filenames currently in any island's attempts dir."""
         assert self.paths is not None
-        attempts_dir = self.paths.coral_dir / "public" / "attempts"
+        coral_dir = self.paths.coral_dir
+        islands_dir = coral_dir / "islands"
+        if islands_dir.exists():
+            seen: set[str] = set()
+            for island in islands_dir.iterdir():
+                attempts = island / "attempts"
+                if attempts.exists():
+                    seen.update(f.name for f in attempts.glob("*.json"))
+            return seen
+        attempts_dir = coral_dir / "public" / "attempts"
         if not attempts_dir.exists():
             return set()
         return {f.name for f in attempts_dir.glob("*.json")}
+
+    def _resolve_attempt_path(self, fname: str) -> Path | None:
+        """Look up an attempt JSON file across all islands or public/."""
+        assert self.paths is not None
+        coral_dir = self.paths.coral_dir
+        islands_dir = coral_dir / "islands"
+        if islands_dir.exists():
+            for island in islands_dir.iterdir():
+                p = island / "attempts" / fname
+                if p.exists():
+                    return p
+        p = coral_dir / "public" / "attempts" / fname
+        return p if p.exists() else None
 
     def _filter_scored(self, new_files: set[str]) -> set[str]:
         """Return only those filenames whose attempt status is not 'pending'.
@@ -830,11 +866,11 @@ class AgentManager:
         grader daemon finalizes them. Malformed files are also skipped and
         will be retried next tick.
         """
-        assert self.paths is not None
-        attempts_dir = self.paths.coral_dir / "public" / "attempts"
         scored: set[str] = set()
         for fname in new_files:
-            path = attempts_dir / fname
+            path = self._resolve_attempt_path(fname)
+            if path is None:
+                continue
             try:
                 data = json.loads(path.read_text())
             except (json.JSONDecodeError, OSError):
@@ -854,14 +890,12 @@ class AgentManager:
         considered. This prevents cross-agent score leakage when building a
         resume prompt for a dying agent in multi-agent runs.
         """
-        assert self.paths is not None
-        attempts_dir = self.paths.coral_dir / "public" / "attempts"
         newest_path: Path | None = None
         newest_data: dict[str, Any] | None = None
         newest_mtime = 0.0
         for fname in new_files:
-            path = attempts_dir / fname
-            if not path.exists():
+            path = self._resolve_attempt_path(fname)
+            if path is None:
                 continue
             mtime = path.stat().st_mtime
             if mtime <= newest_mtime:
@@ -893,9 +927,13 @@ class AgentManager:
         return None
 
     def _get_eval_count(self) -> int:
-        """Read the current eval count from .coral/eval_count."""
+        """Read the current global eval count."""
         assert self.paths is not None
-        counter_file = self.paths.coral_dir / "public" / "eval_count"
+        coral_dir = self.paths.coral_dir
+        if (coral_dir / "islands").exists():
+            counter_file = coral_dir / "eval_count"
+        else:
+            counter_file = coral_dir / "public" / "eval_count"
         if counter_file.exists():
             try:
                 return int(counter_file.read_text().strip())
@@ -909,9 +947,10 @@ class AgentManager:
 
         assert self.paths is not None
         shared_dir = self._runtime_for(agent_id).shared_dir_name
+        island_id = self._agent_island.get(agent_id)
 
-        local_actions = read_agent_heartbeat(self.paths.coral_dir, agent_id)
-        global_actions = read_global_heartbeat(self.paths.coral_dir)
+        local_actions = read_agent_heartbeat(self.paths.coral_dir, agent_id, island_id=island_id)
+        global_actions = read_global_heartbeat(self.paths.coral_dir, island_id=island_id)
 
         heartbeat_actions = []
         for ad in local_actions:

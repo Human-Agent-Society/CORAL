@@ -101,3 +101,56 @@ def test_already_scored_at_startup_does_not_re_fire(tmp_path: Path) -> None:
     current = manager._get_seen_attempts()
     new = current - seen
     assert new == set()
+
+
+def test_get_seen_attempts_multi_island(tmp_path):
+    """In multi-island, _get_seen_attempts must scan every island's attempts dir."""
+    from coral.agent.manager import AgentManager
+    from coral.config import CoralConfig
+    from coral.hub.attempts import write_attempt
+    from coral.types import Attempt
+    from coral.workspace.project import ProjectPaths
+
+    coral_dir = tmp_path / ".coral"
+    for i in range(2):
+        (coral_dir / "islands" / str(i) / "attempts").mkdir(parents=True)
+    a0 = Attempt(
+        commit_hash="aaa",
+        agent_id="0-agent-1",
+        title="x",
+        score=None,
+        status="pending",
+        parent_hash=None,
+        timestamp="2026-05-31T10:00:00Z",
+        metadata={"island_id": "0"},
+    )
+    a1 = Attempt(
+        commit_hash="bbb",
+        agent_id="1-agent-1",
+        title="y",
+        score=None,
+        status="pending",
+        parent_hash=None,
+        timestamp="2026-05-31T10:01:00Z",
+        metadata={"island_id": "1"},
+    )
+    write_attempt(coral_dir, a0, island_id="0")
+    write_attempt(coral_dir, a1, island_id="1")
+
+    cfg = CoralConfig.from_dict({
+        "task": {"name": "t", "description": "d"},
+        "islands": {"count": 2},
+        "agents": {"count": 2},
+    })
+    mgr = AgentManager(cfg)
+    mgr.paths = ProjectPaths(
+        results_dir=tmp_path,
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=tmp_path / "agents",
+        repo_dir=tmp_path / "repo",
+    )
+
+    seen = mgr._get_seen_attempts()
+    assert {"aaa.json", "bbb.json"} <= seen
