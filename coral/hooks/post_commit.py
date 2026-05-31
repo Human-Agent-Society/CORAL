@@ -105,6 +105,7 @@ def _poll_until_graded(
     coral_dir: Path,
     commit_hash: str,
     timeout: float,
+    island_id: str | None = None,
 ) -> Attempt:
     """Poll the attempt file until status != 'pending' or timeout elapses.
 
@@ -112,7 +113,7 @@ def _poll_until_graded(
     """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        attempt = read_attempt(coral_dir, commit_hash)
+        attempt = read_attempt(coral_dir, commit_hash, island_id=island_id)
         if attempt is not None and attempt.status != "pending":
             return attempt
         time.sleep(_POLL_INTERVAL_SEC)
@@ -157,15 +158,24 @@ def submit_eval(
         raise FileNotFoundError(f"No config.yaml found at {config_path}")
     config = CoralConfig.from_yaml(config_path)
 
+    # Determine the agent's island (if any) from the .coral_island breadcrumb.
+    island_id: str | None = None
+    bc = workdir_path / ".coral_island"
+    if bc.exists():
+        try:
+            island_id = bc.read_text().strip() or None
+        except OSError:
+            island_id = None
+
     # Producer-side queue cap: refuse to commit when this agent already has
     # `max_pending_per_agent` ungraded submissions in flight. The grader is
     # serial; without this cap, a slow grader plus a fast agent piles up
     # arbitrarily many pending JSONs (issue #80). 0 = unlimited (legacy).
     pending_limit = config.grader.max_pending_per_agent
     if pending_limit > 0:
-        pending_count = count_agent_pending(coral_dir, agent_id)
+        pending_count = count_agent_pending(coral_dir, agent_id, island_id=island_id)
         if pending_count >= pending_limit:
-            oldest = agent_in_grader_queue(coral_dir, agent_id)
+            oldest = agent_in_grader_queue(coral_dir, agent_id, island_id=island_id)
             wait_hint = (
                 f"Run `coral wait {oldest.commit_hash[:12]}` to block on it "
                 f"before submitting again."
@@ -182,12 +192,15 @@ def submit_eval(
     parent_hash = _get_parent_hash(commit_hash, str(workdir_path))
 
     # Checkpoint shared state at submission time (captures agent's current notes/skills).
-    shared_state_hash = checkpoint(str(coral_dir), agent_id, message)
+    shared_state_hash = checkpoint(str(coral_dir), agent_id, message, island_id=island_id)
 
     # Look up parent attempt's shared state hash for provenance chain.
     parent_shared_state_hash = None
     if parent_hash:
-        parent_attempt_file = coral_dir / "public" / "attempts" / f"{parent_hash}.json"
+        from coral.hub._island import island_root
+        parent_attempt_file = (
+            island_root(coral_dir, island_id) / "attempts" / f"{parent_hash}.json"
+        )
         if parent_attempt_file.exists():
             try:
                 parent_data = json.loads(parent_attempt_file.read_text())
@@ -200,6 +213,8 @@ def submit_eval(
     metadata: dict = {}
     if tune:
         metadata["budget_class"] = BUDGET_CLASS_TUNE
+    if island_id is not None:
+        metadata["island_id"] = island_id
     attempt = Attempt(
         commit_hash=commit_hash,
         agent_id=agent_id,
@@ -213,7 +228,7 @@ def submit_eval(
         parent_shared_state_hash=parent_shared_state_hash,
         metadata=metadata,
     )
-    write_attempt(str(coral_dir), attempt)
+    write_attempt(str(coral_dir), attempt, island_id=island_id)
 
     if not wait:
         return attempt
@@ -225,11 +240,11 @@ def submit_eval(
         # 2x the grader budget + 60s slack, with a floor of 300s for fast graders.
         poll_timeout = max(grader_timeout * 2 + 60, 300) if grader_timeout else 3600
 
-    final = _poll_until_graded(coral_dir, commit_hash, poll_timeout)
+    final = _poll_until_graded(coral_dir, commit_hash, poll_timeout, island_id=island_id)
 
     # Attach eval_count for display by cmd_eval (best-effort; daemon bumps this).
     try:
-        final._eval_count = read_eval_count(coral_dir)  # type: ignore[attr-defined]
+        final._eval_count = read_eval_count(coral_dir, island_id=island_id)  # type: ignore[attr-defined]
     except Exception:
         pass
 
