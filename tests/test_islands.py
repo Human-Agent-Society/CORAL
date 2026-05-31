@@ -54,3 +54,79 @@ def test_island_root_accepts_integer_zero():
         coral_dir = Path(d)
         (coral_dir / "islands").mkdir()
         assert island_root(coral_dir, 0) == coral_dir / "islands" / "0"
+
+
+from coral.hub.attempts import (
+    get_leaderboard,
+    increment_eval_count,
+    read_attempts,
+    read_eval_count,
+    write_attempt,
+)
+from coral.types import Attempt
+
+
+def _make_attempt(commit: str, agent: str = "agent-1", score: float = 0.5) -> Attempt:
+    return Attempt(
+        commit_hash=commit,
+        agent_id=agent,
+        title="t",
+        score=score,
+        status="improved",
+        parent_hash=None,
+        timestamp="2026-05-31T10:00:00Z",
+    )
+
+
+def _make_multi_island(coral_dir: Path, n: int = 2) -> None:
+    """Create a multi-island layout with N empty islands."""
+    for i in range(n):
+        (coral_dir / "islands" / str(i) / "attempts").mkdir(parents=True)
+
+
+def test_write_attempt_multi_island_writes_to_island_dir():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        _make_multi_island(coral_dir, n=2)
+        write_attempt(coral_dir, _make_attempt("aaa"), island_id="0")
+        write_attempt(coral_dir, _make_attempt("bbb"), island_id="1")
+        assert (coral_dir / "islands" / "0" / "attempts" / "aaa.json").exists()
+        assert (coral_dir / "islands" / "1" / "attempts" / "bbb.json").exists()
+        # Cross-island isolation: island 0 does not see island 1's attempt
+        assert not (coral_dir / "islands" / "0" / "attempts" / "bbb.json").exists()
+
+
+def test_read_attempts_multi_island_isolation():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        _make_multi_island(coral_dir, n=2)
+        write_attempt(coral_dir, _make_attempt("aaa", score=0.8), island_id="0")
+        write_attempt(coral_dir, _make_attempt("bbb", score=0.6), island_id="1")
+        island0 = read_attempts(coral_dir, island_id="0")
+        island1 = read_attempts(coral_dir, island_id="1")
+        assert {a.commit_hash for a in island0} == {"aaa"}
+        assert {a.commit_hash for a in island1} == {"bbb"}
+
+
+def test_read_attempts_single_island_default_island_id():
+    """Pre-existing behavior: no island_id passed, reads from public/."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        write_attempt(coral_dir, _make_attempt("ccc"))
+        # Single-island layout: islands/ does not exist on disk
+        assert (coral_dir / "public" / "attempts" / "ccc.json").exists()
+        assert {a.commit_hash for a in read_attempts(coral_dir)} == {"ccc"}
+
+
+def test_eval_count_multi_island_global_and_per_island():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        _make_multi_island(coral_dir, n=2)
+        increment_eval_count(coral_dir, island_id="0")
+        increment_eval_count(coral_dir, island_id="0")
+        increment_eval_count(coral_dir, island_id="1")
+        # Per-island counters reflect their own evals
+        assert read_eval_count(coral_dir, island_id="0") == 2
+        assert read_eval_count(coral_dir, island_id="1") == 1
+        # Global counter (island_id=None) was also bumped each time
+        assert read_eval_count(coral_dir, island_id=None) == 3
