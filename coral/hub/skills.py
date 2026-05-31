@@ -8,9 +8,11 @@ from typing import Any
 
 import yaml
 
+from coral.hub._island import island_root
 
-def _skills_dir(coral_dir: str | Path) -> Path:
-    d = Path(coral_dir) / "public" / "skills"
+
+def _skills_dir(coral_dir: str | Path, island_id: str | int | None = None) -> Path:
+    d = island_root(coral_dir, island_id) / "skills"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -26,9 +28,12 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     return {}, text
 
 
-def list_skills(coral_dir: str | Path) -> list[dict[str, Any]]:
+def list_skills(
+    coral_dir: str | Path,
+    island_id: str | int | None = None,
+) -> list[dict[str, Any]]:
     """List all skills with name + description from SKILL.md frontmatter."""
-    d = _skills_dir(coral_dir)
+    d = _skills_dir(coral_dir, island_id)
     results = []
     for skill_dir in sorted(d.iterdir()):
         if not skill_dir.is_dir():
@@ -102,3 +107,33 @@ def get_skill_tree(skill_dir: str | Path) -> str:
 
     _tree(skill_dir)
     return "\n".join(lines)
+
+
+def skills_by(
+    coral_dir: str | Path,
+    island_id: str | int | None,
+    agent_id: str,
+) -> list[Path]:
+    """Return absolute paths of skill directories whose SKILL.md frontmatter
+    `creator` matches agent_id.
+
+    Skills without a `creator:` field are treated as bundled-framework skills
+    (deep-research, librarian, skill-creator, organize-files) and excluded —
+    they are seeded per-island already and should not migrate.
+    """
+    skills_dir = _skills_dir(coral_dir, island_id)
+    matched: list[Path] = []
+    for sk_dir in sorted(skills_dir.iterdir()):
+        if not sk_dir.is_dir():
+            continue
+        skill_md = sk_dir / "SKILL.md"
+        if not skill_md.exists():
+            continue
+        try:
+            text = skill_md.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        meta, _ = _parse_frontmatter(text)
+        if meta.get("creator") == agent_id:
+            matched.append(sk_dir)
+    return matched

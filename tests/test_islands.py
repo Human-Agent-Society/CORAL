@@ -202,3 +202,54 @@ def test_notes_by_skips_malformed_files():
         (notes / "bad.md").write_bytes(b"\xff\xfe\xfd\x00not utf-8\xff\xff")
         matched = notes_by(coral_dir, island_id="0", agent_id="agent-1")
         assert [p.name for p in matched] == ["good.md"]
+
+
+from coral.hub.skills import list_skills, skills_by
+
+
+def _write_skill(dir_: Path, name: str, creator: str | None) -> None:
+    """Helper: create a skill dir with SKILL.md, optionally stamped with `creator:`."""
+    sk_dir = dir_ / name
+    sk_dir.mkdir(parents=True)
+    if creator is None:
+        sk_dir.joinpath("SKILL.md").write_text(
+            f"---\nname: {name}\ndescription: test skill\n---\nbody\n"
+        )
+    else:
+        sk_dir.joinpath("SKILL.md").write_text(
+            f"---\nname: {name}\ndescription: test skill\ncreator: {creator}\n---\nbody\n"
+        )
+
+
+def test_list_skills_multi_island_isolation():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        for i in range(2):
+            (coral_dir / "islands" / str(i) / "skills").mkdir(parents=True)
+        _write_skill(coral_dir / "islands" / "0" / "skills", "alpha", creator="agent-1")
+        _write_skill(coral_dir / "islands" / "1" / "skills", "beta", creator="agent-2")
+        names0 = {s["name"] for s in list_skills(coral_dir, island_id="0")}
+        names1 = {s["name"] for s in list_skills(coral_dir, island_id="1")}
+        assert names0 == {"alpha"}
+        assert names1 == {"beta"}
+
+
+def test_skills_by_excludes_bundled_unstamped_skills():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        skills_dir = coral_dir / "islands" / "0" / "skills"
+        skills_dir.mkdir(parents=True)
+        _write_skill(skills_dir, "agent-built", creator="agent-1")
+        _write_skill(skills_dir, "bundled", creator=None)
+        matched = skills_by(coral_dir, island_id="0", agent_id="agent-1")
+        assert [p.name for p in matched] == ["agent-built"]
+
+
+def test_skills_by_single_island_uses_public():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        skills_dir = coral_dir / "public" / "skills"
+        skills_dir.mkdir(parents=True)
+        _write_skill(skills_dir, "mine", creator="agent-7")
+        matched = skills_by(coral_dir, island_id=None, agent_id="agent-7")
+        assert [p.name for p in matched] == ["mine"]
