@@ -178,3 +178,27 @@ def test_notes_by_single_island_uses_public():
         (notes / "n.md").write_text("---\ncreator: agent-1\n---\nbody\n")
         matched = notes_by(coral_dir, island_id=None, agent_id="agent-1")
         assert [p.name for p in matched] == ["n.md"]
+
+
+def test_notes_by_matches_in_subdirectory():
+    """notes_by walks subdirectories via rglob."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        sub = coral_dir / "islands" / "0" / "notes" / "research"
+        sub.mkdir(parents=True)
+        (sub / "deep.md").write_text("---\ncreator: agent-3\n---\nbody\n")
+        matched = notes_by(coral_dir, island_id="0", agent_id="agent-3")
+        assert [p.name for p in matched] == ["deep.md"]
+
+
+def test_notes_by_skips_malformed_files():
+    """notes_by tolerates unreadable / binary .md files."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        notes = coral_dir / "islands" / "0" / "notes"
+        notes.mkdir(parents=True)
+        (notes / "good.md").write_text("---\ncreator: agent-1\n---\nbody\n")
+        # Invalid UTF-8 sequence; .md extension matches rglob but read_text will raise
+        (notes / "bad.md").write_bytes(b"\xff\xfe\xfd\x00not utf-8\xff\xff")
+        matched = notes_by(coral_dir, island_id="0", agent_id="agent-1")
+        assert [p.name for p in matched] == ["good.md"]

@@ -30,6 +30,16 @@ def _notes_dir(coral_dir: str | Path, island_id: str | int | None = None) -> Pat
     return p
 
 
+def _is_user_note(p: Path) -> bool:
+    """Whether a markdown file under notes/ should be treated as a user-authored note.
+
+    Excludes the legacy single-file ``notes.md`` and any file whose name starts
+    with ``_`` (convention for system-managed files like `_synthesis/`,
+    `_connections.md`, `_open-questions.md`).
+    """
+    return p.name != "notes.md" and not p.name.startswith("_")
+
+
 def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
     """Parse YAML frontmatter from markdown. Returns (metadata, body)."""
     if text.startswith("---"):
@@ -109,9 +119,7 @@ def _collect_from_dir(directory: Path) -> list[dict[str, Any]]:
     if not directory.is_dir():
         return []
 
-    md_files = sorted(
-        f for f in directory.rglob("*.md") if f.name != "notes.md" and not f.name.startswith("_")
-    )
+    md_files = sorted(f for f in directory.rglob("*.md") if _is_user_note(f))
 
     if md_files:
         entries = [_parse_note_file(f) for f in md_files]
@@ -265,9 +273,13 @@ def notes_by(
     notes_dir = _notes_dir(coral_dir, island_id)
     matched: list[Path] = []
     for md_file in sorted(notes_dir.rglob("*.md")):
-        if md_file.name == "notes.md" or md_file.name.startswith("_"):
+        if not _is_user_note(md_file):
             continue
-        meta, _ = _parse_frontmatter(md_file.read_text())
+        try:
+            text = md_file.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        meta, _ = _parse_frontmatter(text)
         if meta.get("creator") == agent_id:
             matched.append(md_file)
     return matched
