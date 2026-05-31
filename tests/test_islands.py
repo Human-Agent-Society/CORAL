@@ -130,3 +130,51 @@ def test_eval_count_multi_island_global_and_per_island():
         assert read_eval_count(coral_dir, island_id="1") == 1
         # Global counter (island_id=None) was also bumped each time
         assert read_eval_count(coral_dir, island_id=None) == 3
+
+
+from coral.hub.notes import list_notes, notes_by
+
+
+def test_list_notes_multi_island_isolation():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        for i in range(2):
+            (coral_dir / "islands" / str(i) / "notes").mkdir(parents=True)
+        (coral_dir / "islands" / "0" / "notes" / "a.md").write_text(
+            "---\ncreator: agent-1\ncreated: 2026-05-31\n---\n# A\nbody A\n"
+        )
+        (coral_dir / "islands" / "1" / "notes" / "b.md").write_text(
+            "---\ncreator: agent-2\ncreated: 2026-05-31\n---\n# B\nbody B\n"
+        )
+        names0 = {e["filename"] for e in list_notes(coral_dir, island_id="0")}
+        names1 = {e["filename"] for e in list_notes(coral_dir, island_id="1")}
+        assert names0 == {"a.md"}
+        assert names1 == {"b.md"}
+
+
+def test_notes_by_returns_creator_matched_paths():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        (coral_dir / "islands" / "0" / "notes").mkdir(parents=True)
+        notes = coral_dir / "islands" / "0" / "notes"
+        (notes / "by-agent-1.md").write_text("---\ncreator: agent-1\n---\nbody\n")
+        (notes / "by-agent-2.md").write_text("---\ncreator: agent-2\n---\nbody\n")
+        (notes / "anonymous.md").write_text("# no frontmatter\nbody\n")
+        matched = notes_by(coral_dir, island_id="0", agent_id="agent-1")
+        assert [p.name for p in matched] == ["by-agent-1.md"]
+        # The anonymous note (no creator) is excluded
+        all_matched = (
+            notes_by(coral_dir, island_id="0", agent_id="agent-1")
+            + notes_by(coral_dir, island_id="0", agent_id="agent-2")
+        )
+        assert "anonymous.md" not in {p.name for p in all_matched}
+
+
+def test_notes_by_single_island_uses_public():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        notes = coral_dir / "public" / "notes"
+        notes.mkdir(parents=True)
+        (notes / "n.md").write_text("---\ncreator: agent-1\n---\nbody\n")
+        matched = notes_by(coral_dir, island_id=None, agent_id="agent-1")
+        assert [p.name for p in matched] == ["n.md"]
