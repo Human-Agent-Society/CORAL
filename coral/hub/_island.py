@@ -11,6 +11,7 @@ Multi-island runs (``.coral/islands/`` exists) return
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 
@@ -30,5 +31,16 @@ def island_root(coral_dir: str | Path, island_id: str | int | None) -> Path:
                 "island_id is required in multi-island runs "
                 f"({islands_dir} exists on disk)"
             )
-        return islands_dir / str(island_id)
+        id_str = str(island_id)
+        if (
+            not id_str
+            or "/" in id_str
+            or os.sep in id_str
+            or id_str == ".."
+        ):
+            raise ValueError(
+                f"island_id {island_id!r} is invalid: must be a non-empty "
+                "string containing no path separators or '..'"
+            )
+        return islands_dir / id_str
     return coral_dir / "public"

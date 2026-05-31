@@ -36,3 +36,21 @@ def test_island_root_multi_island_requires_id():
         (coral_dir / "islands").mkdir()
         with pytest.raises(ValueError, match="island_id is required"):
             island_root(coral_dir, None)
+
+
+def test_island_root_rejects_invalid_ids():
+    """Reject empty, separator-bearing, and traversal-bearing island_ids."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        (coral_dir / "islands").mkdir()
+        for bad in ("", "..", "../escape", "0/notes", "a/b"):
+            with pytest.raises(ValueError, match="invalid"):
+                island_root(coral_dir, bad)
+
+
+def test_island_root_accepts_integer_zero():
+    """Integer 0 (often a valid first-island id) must round-trip cleanly."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        (coral_dir / "islands").mkdir()
+        assert island_root(coral_dir, 0) == coral_dir / "islands" / "0"
