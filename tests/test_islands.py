@@ -301,3 +301,46 @@ def test_global_heartbeat_multi_island_isolation():
         g1 = read_global_heartbeat(coral_dir, island_id="1")
         assert next(a for a in g0 if a["name"] == "consolidate")["every"] == 10
         assert next(a for a in g1 if a["name"] == "consolidate")["every"] == 20
+
+
+import subprocess
+
+from coral.hub.checkpoint import (
+    checkpoint,
+    checkpoint_history,
+    init_checkpoint_repo,
+)
+
+
+def test_checkpoint_multi_island_separate_repos():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        for i in range(2):
+            (coral_dir / "islands" / str(i) / "notes").mkdir(parents=True)
+        init_checkpoint_repo(str(coral_dir), island_id="0")
+        init_checkpoint_repo(str(coral_dir), island_id="1")
+
+        # Distinct .git dirs per island
+        assert (coral_dir / "islands" / "0" / ".git").is_dir()
+        assert (coral_dir / "islands" / "1" / ".git").is_dir()
+
+        # Write a note on island 0, checkpoint it
+        (coral_dir / "islands" / "0" / "notes" / "a.md").write_text("hello island 0")
+        h0 = checkpoint(str(coral_dir), "agent-1", "note on island 0", island_id="0")
+        assert h0 is not None
+
+        # Island 1 does not see island 0's commit
+        h1_history = checkpoint_history(str(coral_dir), island_id="1")
+        assert all("island 0" not in entry["message"] for entry in h1_history)
+
+
+def test_checkpoint_single_island_default_unchanged():
+    """Regression: existing single-island callers (no island_id) still use public/.git."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        (coral_dir / "public" / "notes").mkdir(parents=True)
+        init_checkpoint_repo(str(coral_dir))
+        assert (coral_dir / "public" / ".git").is_dir()
+        (coral_dir / "public" / "notes" / "a.md").write_text("hello")
+        h = checkpoint(str(coral_dir), "agent-1", "first note")
+        assert h is not None
