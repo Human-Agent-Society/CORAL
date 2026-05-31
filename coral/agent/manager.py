@@ -37,7 +37,7 @@ from coral.agent.state import (
 )
 from coral.agent.warmstart import WarmStartRunner
 from coral.config import CoralConfig
-from coral.hub.attempts import agent_in_grader_queue, read_attempts
+from coral.hub.attempts import agent_in_grader_queue, read_attempts, read_eval_count
 from coral.hub.heartbeat import (
     DEFAULT_PROMPTS,
     DEFAULT_TRIGGER,
@@ -552,6 +552,11 @@ class AgentManager:
         (worktree_path / instruction_file).write_text(coral_md)
 
         # Start agent
+        if island_id is not None:
+            log_dir = self.paths.coral_dir / "islands" / str(island_id) / "logs"
+        else:
+            log_dir = self.paths.coral_dir / "public" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
         handle = runtime.start(
             worktree_path=worktree_path,
             coral_md_path=worktree_path / instruction_file,
@@ -559,7 +564,7 @@ class AgentManager:
             runtime_options=runtime_options,
             max_turns=max_turns if max_turns is not None else self.config.agents.max_turns,
             verbose=self.verbose,
-            log_dir=self.paths.coral_dir / "public" / "logs",
+            log_dir=log_dir,
             resume_session_id=resume_session_id,
             prompt=prompt,
             prompt_source=prompt_source,
@@ -1336,7 +1341,16 @@ class AgentManager:
                         self._agent_eval_counts.get(committing_agent_id, 0) + 1
                     )
                     agent_eval_count = self._agent_eval_counts[committing_agent_id]
-                    global_eval_count = self._get_eval_count()
+                    # Per-agent eval count drives local heartbeat triggers; in
+                    # multi-island mode the "global" cadence reads the agent's
+                    # OWN island counter (each island has its own _global.json).
+                    island_id = self._agent_island.get(committing_agent_id)
+                    if island_id is not None:
+                        global_eval_count = read_eval_count(
+                            self.paths.coral_dir, island_id=island_id
+                        )
+                    else:
+                        global_eval_count = self._get_eval_count()
 
                     # Only "real" attempts advance plateau pressure. Tune-mode
                     # and grader_error attempts are recorded but don't trigger
@@ -1497,9 +1511,17 @@ class AgentManager:
             # `agents.timeout == 0` disables the watchdog entirely.
             stall_threshold = self.config.agents.timeout
             if stall_threshold > 0:
-                # Cache pending attempts and the grader liveness once per tick
-                # so per-agent exemption checks do not rescan the attempts dir.
-                attempts_cache = read_attempts(self.paths.coral_dir)
+                # Cache pending attempts (per-island in multi-island, public in single)
+                # and the grader liveness once per tick so per-agent exemption checks
+                # do not rescan the attempts dir.
+                coral_dir = self.paths.coral_dir
+                if (coral_dir / "islands").exists():
+                    island_ids = {s.island_id for s in self.specs if s.island_id is not None}
+                    attempts_cache: list = []
+                    for iid in island_ids:
+                        attempts_cache.extend(read_attempts(coral_dir, island_id=iid))
+                else:
+                    attempts_cache = read_attempts(coral_dir)
                 grader_alive = self._grader_alive()
 
                 for i, handle in enumerate(self.handles):
@@ -1518,8 +1540,12 @@ class AgentManager:
                         # pending attempt has not aged past the cap (so a
                         # forgotten pending file cannot mask a true hang).
                         if grader_alive:
+                            island_id = self._agent_island.get(handle.agent_id)
                             pending = agent_in_grader_queue(
-                                self.paths.coral_dir, handle.agent_id, attempts_cache
+                                self.paths.coral_dir,
+                                handle.agent_id,
+                                attempts_cache,
+                                island_id=island_id,
                             )
                             if pending is not None:
                                 pending_age = self._attempt_age_seconds(pending.timestamp)

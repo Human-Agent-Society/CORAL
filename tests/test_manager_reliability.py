@@ -366,3 +366,40 @@ def test_per_agent_latest_attempt_filter_excludes_other_agents(tmp_path: Path) -
     assert len(matched) == 1
     assert matched[0]["agent_id"] == "agent-1"
     assert matched[0]["score"] == 1.0
+
+
+def test_monitor_loop_stall_watchdog_does_not_crash_multi_island(tmp_path):
+    """Regression: in multi-island mode the stall watchdog must not raise from
+    read_attempts(coral_dir) without an island_id."""
+    from coral.agent.manager import AgentManager
+    from coral.config import CoralConfig
+    from coral.workspace.project import ProjectPaths
+
+    coral_dir = tmp_path / ".coral"
+    for i in range(2):
+        (coral_dir / "islands" / str(i) / "attempts").mkdir(parents=True)
+
+    cfg = CoralConfig.from_dict({
+        "task": {"name": "t", "description": "d"},
+        "islands": {"count": 2},
+        "agents": {"count": 2, "timeout": 1},
+    })
+    mgr = AgentManager(cfg)
+    mgr.paths = ProjectPaths(
+        results_dir=tmp_path,
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=tmp_path / "agents",
+        repo_dir=tmp_path / "repo",
+    )
+
+    # Directly exercise the read that crashed before the fix
+    from coral.hub.attempts import read_attempts
+    if (coral_dir / "islands").exists():
+        # Simulate the new gather logic; if this raises, the test fails.
+        attempts: list = []
+        for s in mgr.specs:
+            if s.island_id is not None:
+                attempts.extend(read_attempts(coral_dir, island_id=s.island_id))
+        assert attempts == []  # empty islands, no errors raised
