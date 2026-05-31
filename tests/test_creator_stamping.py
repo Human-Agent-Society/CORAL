@@ -9,7 +9,6 @@ prompt edits.
 
 from pathlib import Path
 
-
 COMMON_INSTRUCTION_KEYWORDS = ["creator:", "frontmatter"]
 
 
