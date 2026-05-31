@@ -294,6 +294,7 @@ def setup_claude_settings(
     research: bool = True,
     gateway_url: str | None = None,
     gateway_api_key: str | None = None,
+    island_id: str | int | None = None,
 ) -> None:
     """Write Claude Code settings.json with permissions and gateway env.
 
@@ -301,22 +302,32 @@ def setup_claude_settings(
     --dangerously-skip-permissions).  When a gateway is configured, sets
     ANTHROPIC_BASE_URL and ANTHROPIC_API_KEY in the settings ``env`` so
     they override the user's global ``~/.claude/settings.json``.
+
+    In multi-island runs (``island_id`` set), Read scopes only to the
+    agent's own island root (``.coral/islands/<id>/``) — sibling islands
+    are off-limits. In single-island mode (``island_id is None``), scopes
+    to ``.coral/public/``.
     """
+    from coral.hub._island import island_root
+
     claude_dir = worktree_path / ".claude"
     claude_dir.mkdir(exist_ok=True)
 
     private_dir = str(coral_dir.resolve() / "private")
-    agents_dir = str(coral_dir.resolve().parent / "agents")
+    state_root_resolved = island_root(coral_dir, island_id).resolve()
+    agents_dir = str(state_root_resolved / "agents")
     worktree_str = str(worktree_path.resolve())
     private_pattern = f"{private_dir}/**"
     agents_pattern = f"{agents_dir}/**"
     worktree_pattern = f"{worktree_str}/**"
+    state_root_pattern = f"{state_root_resolved}/**"
 
     # Allow rules grant agent autonomy without --dangerously-skip-permissions
     # Bash/Edit/Write are scoped to the agent's own worktree via allow + deny rules
     allow_rules: list[str] = [
         "Bash",
         f"Read(/{worktree_pattern})",
+        f"Read(/{state_root_pattern})",
         f"Read(/{agents_pattern})",
         f"Edit(/{worktree_pattern})",
         f"Write(/{worktree_pattern})",
@@ -379,26 +390,33 @@ def setup_opencode_settings(
     research: bool = True,
     gateway_url: str | None = None,
     gateway_api_key: str | None = None,
+    island_id: str | int | None = None,
 ) -> None:
     """Write OpenCode opencode.json with scoped permissions.
 
-    Allows access to the agent's worktree and shared public state,
+    Allows access to the agent's worktree and shared island state,
     but denies access to .coral/private/ (grader data, answer keys).
     When a gateway is configured, patches the provider's baseURL so
     agent traffic routes through the LiteLLM proxy.
+
+    In multi-island runs the ``external_directory`` allow scopes to the
+    agent's island root only; in single-island mode it scopes to
+    ``.coral/public/``.
     """
+    from coral.hub._island import island_root
+
     opencode_dir = worktree_path / ".opencode"
     opencode_dir.mkdir(exist_ok=True)
 
     private_pattern = str(coral_dir.resolve() / "private") + "/**"
-    public_pattern = str(coral_dir.resolve() / "public") + "/**"
+    state_root_pattern = str(island_root(coral_dir, island_id).resolve()) + "/**"
 
     settings: dict = {
         "$schema": "https://opencode.ai/config.json",
         "permission": {
             "*": "allow",
             "external_directory": {
-                public_pattern: "allow",
+                state_root_pattern: "allow",
             },
             "read": {
                 private_pattern: "deny",
@@ -446,6 +464,7 @@ def setup_codex_settings(
     research: bool = True,
     gateway_url: str | None = None,
     gateway_api_key: str | None = None,
+    island_id: str | int | None = None,  # noqa: ARG001
 ) -> None:
     """Write Codex CLI config.toml with sandbox, approval, and web search settings.
 
@@ -493,6 +512,7 @@ def setup_cursor_settings(
     # The kwargs are accepted so the manager dispatch can stay uniform.
     gateway_url: str | None = None,  # noqa: ARG001
     gateway_api_key: str | None = None,  # noqa: ARG001
+    island_id: str | int | None = None,  # noqa: ARG001
 ) -> None:
     """Write `.cursor/rules/coral.mdc` with always-apply CORAL guardrails.
 

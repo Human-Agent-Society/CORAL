@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import json as _json
 from pathlib import Path
 
 from coral.config import CoralConfig
 from coral.workspace.project import create_project
-from coral.workspace.worktree import setup_shared_state
+from coral.workspace.worktree import (
+    setup_claude_settings,
+    setup_opencode_settings,
+    setup_shared_state,
+)
 
 
 def _base_config_dict(repo: Path) -> dict:
@@ -163,3 +168,59 @@ def test_setup_shared_state_single_island_does_not_write_breadcrumb(tmp_path):
     setup_shared_state(worktree, coral_dir, ".claude", island_id=None)
 
     assert not (worktree / ".coral_island").exists()
+
+
+def test_setup_claude_settings_multi_island_scopes_allows_to_island_root(tmp_path):
+    """In multi-island, Read allows reference islands/<id>/ not public/."""
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "islands" / "1").mkdir(parents=True)
+    (coral_dir / "private").mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    agents_dir = tmp_path / "agents"
+    agents_dir.mkdir(parents=True)
+
+    setup_claude_settings(worktree, coral_dir, island_id="1")
+
+    settings = _json.loads((worktree / ".claude" / "settings.local.json").read_text())
+    allow = settings["permissions"]["allow"]
+    sibling_island_pattern = str(coral_dir.resolve() / "islands" / "0")
+    own_island_pattern = str(coral_dir.resolve() / "islands" / "1")
+    joined = "\n".join(allow)
+    assert sibling_island_pattern not in joined, "should not allow sibling-island reads"
+    assert own_island_pattern in joined or "/islands/1" in joined, (
+        f"expected island-1 path in allow rules; got {allow}"
+    )
+
+
+def test_setup_claude_settings_single_island_unchanged(tmp_path):
+    """When island_id is None, behavior matches today (no change to Read rules)."""
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public").mkdir(parents=True)
+    (coral_dir / "private").mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    agents_dir = tmp_path / "agents"
+    agents_dir.mkdir(parents=True)
+
+    setup_claude_settings(worktree, coral_dir, island_id=None)
+
+    settings = _json.loads((worktree / ".claude" / "settings.local.json").read_text())
+    assert "permissions" in settings
+
+
+def test_setup_opencode_settings_multi_island_external_dir_scoped(tmp_path):
+    """OpenCode external_directory permission scopes to the island, not public."""
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "islands" / "2").mkdir(parents=True)
+    (coral_dir / "private").mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    setup_opencode_settings(worktree, coral_dir, island_id="2")
+
+    settings = _json.loads((worktree / ".opencode" / "opencode.json").read_text())
+    ext = settings["permission"]["external_directory"]
+    keys = "\n".join(ext.keys())
+    assert "islands/2" in keys, f"expected island-2 path in opencode external_directory; got {ext}"
+    assert "public" not in keys, f"public pattern leaked into multi-island opencode config; got {ext}"

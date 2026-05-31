@@ -399,7 +399,11 @@ def test_setup_claude_settings_permissions():
         private_dir = str(coral_dir.resolve() / "private")
 
         worktree_str = str(worktree.resolve())
-        agents_dir = str(coral_dir.resolve().parent / "agents")
+        # Read access is scoped to the agent's island root (public/ in
+        # single-island mode), which transitively covers the bundled
+        # subagent definitions under public/agents/.
+        state_root_str = str(coral_dir.resolve() / "public")
+        agents_dir = str(coral_dir.resolve() / "public" / "agents")
 
         # No sandbox
         assert "sandbox" not in settings
@@ -409,6 +413,7 @@ def test_setup_claude_settings_permissions():
         # Bash is unscoped; Read/Edit/Write scoped to own worktree
         assert "Bash" in allow
         assert any("Read" in r and worktree_str in r for r in allow)
+        assert any("Read" in r and state_root_str in r for r in allow)
         assert any("Read" in r and agents_dir in r for r in allow)
         assert any("Edit" in r and worktree_str in r for r in allow)
         assert any("Write" in r and worktree_str in r for r in allow)
