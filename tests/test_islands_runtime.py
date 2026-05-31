@@ -280,3 +280,40 @@ def test_partition_and_setup_threads_island_id_into_worktrees(tmp_path):
         target = notes_link.resolve()
         expected_island_root = paths.coral_dir / "islands" / spec.island_id
         assert target.parent == expected_island_root.resolve()
+
+
+def test_agent_manager_partitions_specs_in_start_all_setup(tmp_path):
+    """The manager resolves specs via partition_into_islands when islands.count > 1."""
+    repo = tmp_path / "myrepo"
+    (repo / "src").mkdir(parents=True)
+    data = _base_config_dict(repo)
+    data["islands"] = {"count": 3}
+    data["agents"] = {"count": 6}
+    cfg = CoralConfig.from_dict(data)
+
+    from coral.agent.manager import AgentManager
+    mgr = AgentManager(cfg)
+
+    ids = sorted(s.agent_id for s in mgr.specs)
+    # 6 agents on 3 islands round-robin → 2 each
+    assert ids == [
+        "0-agent-1", "0-agent-2",
+        "1-agent-1", "1-agent-2",
+        "2-agent-1", "2-agent-2",
+    ]
+    assert all(s.island_id in {"0", "1", "2"} for s in mgr.specs)
+
+
+def test_agent_manager_single_island_specs_unchanged(tmp_path):
+    """Single-island AgentManager keeps the flat agent-N ids."""
+    repo = tmp_path / "myrepo"
+    (repo / "src").mkdir(parents=True)
+    data = _base_config_dict(repo)
+    data["agents"] = {"count": 2}
+    cfg = CoralConfig.from_dict(data)
+
+    from coral.agent.manager import AgentManager
+    mgr = AgentManager(cfg)
+
+    assert [s.agent_id for s in mgr.specs] == ["agent-1", "agent-2"]
+    assert all(s.island_id is None for s in mgr.specs)

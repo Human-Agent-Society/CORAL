@@ -15,7 +15,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from coral.agent.assignments import AgentSpec, resolve_agent_specs
+from coral.agent.assignments import (
+    AgentSpec,
+    partition_into_islands,
+    resolve_agent_specs,
+)
 from coral.agent.exit_classifier import (
     classify_by_uptime,
 )
@@ -77,11 +81,12 @@ class AgentManager:
     ) -> None:
         self.config = config
         self.config_dir = config_dir
-        # Resolve concrete per-agent specs once. In uniform mode this is just
-        # ``agents.count`` copies of the top-level defaults; in mix-and-match
-        # mode each ``agents.assignments`` entry contributes ``count`` specs
-        # with its own runtime/model/runtime_options.
-        self.specs: list[AgentSpec] = resolve_agent_specs(config)
+        # Resolve concrete per-agent specs, then (when multi-island) partition them
+        # across islands round-robin. Single-island (count=1) returns specs unchanged.
+        base_specs = resolve_agent_specs(config)
+        self.specs: list[AgentSpec] = partition_into_islands(
+            base_specs, count=config.islands.count
+        )
         self.specs_by_id: dict[str, AgentSpec] = {s.agent_id: s for s in self.specs}
         # One runtime instance per agent_id. In uniform mode all entries point
         # to the same class; in mix-and-match mode each agent uses its own.
@@ -102,9 +107,11 @@ class AgentManager:
         self._restart_counts: dict[str, int] = {}
         self._agent_eval_counts: dict[str, int] = {}
         self._agent_best_scores: dict[str, float] = {}
-        # Per-agent island lookup. Empty in single-island mode (no entries written).
-        # Populated as agents come up via _setup_and_start_agent.
-        self._agent_island: dict[str, str] = {}
+        # Per-agent island lookup. Pre-populated from partitioned specs; empty
+        # in single-island mode (specs all have island_id=None).
+        self._agent_island: dict[str, str] = {
+            s.agent_id: s.island_id for s in self.specs if s.island_id is not None
+        }
         # Per-agent score history (real attempts only, in submit order).
         # ``None`` entries represent grader-error attempts and apply plateau
         # pressure without changing any anchor. The plateau streak each
@@ -191,12 +198,15 @@ class AgentManager:
         # 4. For each agent: create worktree, generate CLAUDE.md, spawn runtime
         handles = []
         for i, agent_id in enumerate(agent_ids):
+            spec = self.specs_by_id.get(agent_id)
+            island_id = spec.island_id if spec else None
             if i > 0 and self.config.agents.stagger_seconds > 0:
                 logger.info(f"Staggering {agent_id} by {self.config.agents.stagger_seconds}s")
                 time.sleep(self.config.agents.stagger_seconds)
             shared_dir = self._runtime_for(agent_id).shared_dir_name
             handle = self._setup_and_start_agent(
                 agent_id,
+                island_id=island_id,
                 resume_session_id=research_sessions.get(agent_id),
                 prompt=warmstart.main_prompt(shared_dir) if warmstart.enabled else None,
                 prompt_source="warmstart:main" if warmstart.enabled else None,
@@ -352,11 +362,14 @@ class AgentManager:
 
         research_handles = []
         for i, agent_id in enumerate(agent_ids):
+            spec = self.specs_by_id.get(agent_id)
+            island_id = spec.island_id if spec else None
             if i > 0 and self.config.agents.stagger_seconds > 0:
                 time.sleep(self.config.agents.stagger_seconds)
             shared_dir = self._runtime_for(agent_id).shared_dir_name
             handle = self._setup_and_start_agent(
                 agent_id,
+                island_id=island_id,
                 prompt=warmstart.research_prompt(shared_dir),
                 prompt_source="warmstart:research",
             )
@@ -570,8 +583,12 @@ class AgentManager:
         else:
             logger.info(f"Starting {agent_id} fresh (no session to resume)")
 
+        spec = self.specs_by_id.get(agent_id)
+        island_id = spec.island_id if spec else self._agent_island.get(agent_id)
+
         return self._setup_and_start_agent(
             agent_id,
+            island_id=island_id,
             resume_session_id=session_id,
             prompt=prompt,
             prompt_source=prompt_source or "restart",
@@ -596,8 +613,12 @@ class AgentManager:
         else:
             logger.warning(f"No session_id for {agent_id}, starting fresh")
 
+        spec = self.specs_by_id.get(agent_id)
+        island_id = spec.island_id if spec else self._agent_island.get(agent_id)
+
         return self._setup_and_start_agent(
             agent_id,
+            island_id=island_id,
             resume_session_id=session_id,
             prompt=prompt,
             prompt_source=prompt_source,
@@ -655,6 +676,18 @@ class AgentManager:
             agent_id = agent_dir.name
             session_id = validated_sessions.get(agent_id)
 
+            # Recover island_id from .coral_island breadcrumb if present
+            island_bc = agent_dir / ".coral_island"
+            island_id: str | None = None
+            if island_bc.exists():
+                try:
+                    island_id = island_bc.read_text().strip() or None
+                except OSError:
+                    island_id = None
+            # Track it so subsequent restarts can use it
+            if island_id is not None:
+                self._agent_island[agent_id] = island_id
+
             # Fallback: extract from latest log file
             if not session_id:
                 session_id = self._find_latest_session_from_logs(agent_id)
@@ -675,6 +708,7 @@ class AgentManager:
 
             handle = self._setup_and_start_agent(
                 agent_id,
+                island_id=island_id,
                 resume_session_id=session_id,
                 prompt=prompt,
             )
