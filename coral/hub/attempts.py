@@ -195,8 +195,39 @@ def get_agent_attempts(
     agent_id: str,
     island_id: str | int | None = None,
 ) -> list[Attempt]:
-    """Get all attempts from a specific agent."""
+    """Get all attempts from a specific agent.
+
+    When ``island_id`` is None in multi-island mode, scans every island.
+    If the agent id is partition-prefixed (``0-agent-1``) the island is
+    derived from the prefix and only that island is read.
+    """
+    coral_dir = Path(coral_dir)
+    if island_id is None and (coral_dir / "islands").exists():
+        from coral.hub._island import island_id_from_agent_id
+
+        routed_island = island_id_from_agent_id(agent_id)
+        if routed_island is not None:
+            return [
+                a
+                for a in read_attempts(coral_dir, island_id=routed_island)
+                if a.agent_id == agent_id
+            ]
+        attempts: list[Attempt] = []
+        for view_root in _all_view_attempt_roots(coral_dir):
+            attempts.extend(
+                a
+                for a in read_attempts(coral_dir, island_id=view_root.name)
+                if a.agent_id == agent_id
+            )
+        return attempts
     return [a for a in read_attempts(coral_dir, island_id=island_id) if a.agent_id == agent_id]
+
+
+def _all_view_attempt_roots(coral_dir: Path) -> list[Path]:
+    """Per-island attempt dirs in multi-island mode (sorted)."""
+    from coral.hub._island import all_view_roots
+
+    return [r for r in all_view_roots(coral_dir) if r.name.isdigit()]
 
 
 def agent_in_grader_queue(
@@ -251,8 +282,16 @@ def get_recent(
     n: int = 10,
     island_id: str | int | None = None,
 ) -> list[Attempt]:
-    """Get N most recent attempts (by timestamp)."""
-    attempts = read_attempts(coral_dir, island_id=island_id)
+    """Get N most recent attempts (by timestamp).
+
+    With ``island_id=None`` in multi-island mode, scans every island so the
+    result reflects the whole team's recent activity.
+    """
+    coral_dir = Path(coral_dir)
+    if island_id is not None or not (coral_dir / "islands").exists():
+        attempts = read_attempts(coral_dir, island_id=island_id)
+    else:
+        attempts = _read_all_island_attempts(coral_dir)
     attempts.sort(key=lambda a: a.timestamp, reverse=True)
     return attempts[:n]
 
@@ -280,10 +319,18 @@ def search_attempts(
     query: str,
     island_id: str | int | None = None,
 ) -> list[Attempt]:
-    """Full-text search over attempt titles, feedback, and status."""
+    """Full-text search over attempt titles, feedback, and status.
+
+    With ``island_id=None`` in multi-island mode, searches every island.
+    """
+    coral_dir = Path(coral_dir)
+    if island_id is not None or not (coral_dir / "islands").exists():
+        sources = read_attempts(coral_dir, island_id=island_id)
+    else:
+        sources = _read_all_island_attempts(coral_dir)
     query_lower = query.lower()
     results = []
-    for attempt in read_attempts(coral_dir, island_id=island_id):
+    for attempt in sources:
         text = f"{attempt.title} {attempt.feedback} {attempt.status}".lower()
         if query_lower in text:
             results.append(attempt)

@@ -76,9 +76,7 @@ def cmd_log(args: argparse.Namespace) -> None:
         # callback narrow it. get_leaderboard's default hides tune, but log
         # wants everything up front.
         attempts = filter_attempts(
-            get_leaderboard(
-                str(coral_dir), top_n=raw_n, direction=direction, include_tune=True
-            )
+            get_leaderboard(str(coral_dir), top_n=raw_n, direction=direction, include_tune=True)
         )[:count]
         if attempts:
             print(f"Leaderboard (top {len(attempts)}):")
@@ -94,21 +92,32 @@ def cmd_show(args: argparse.Namespace) -> None:
       coral show abc123             Show attempt by hash prefix
       coral show <full-hash>        Show attempt by full hash
     """
-    coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
-    attempt_file = coral_dir / "public" / "attempts" / f"{args.hash}.json"
+    from coral.hub._island import all_view_roots
 
-    if not attempt_file.exists():
-        matches = list((coral_dir / "public" / "attempts").glob(f"{args.hash}*.json"))
-        if len(matches) == 1:
-            attempt_file = matches[0]
-        elif len(matches) > 1:
-            print(f"Ambiguous hash prefix '{args.hash}'. Matches:")
-            for m in matches:
-                print(f"  {m.stem}")
-            return
+    coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
+    # In multi-island mode the attempt lives in islands/<id>/attempts/, not
+    # public/attempts/ — search every view root so the hash can be found
+    # regardless of which island committed it.
+    candidates: list[Path] = []
+    for view_root in all_view_roots(coral_dir):
+        attempts_dir = view_root / "attempts"
+        if not attempts_dir.is_dir():
+            continue
+        direct = attempts_dir / f"{args.hash}.json"
+        if direct.exists():
+            candidates.append(direct)
         else:
-            print(f"Attempt {args.hash} not found.")
-            return
+            candidates.extend(attempts_dir.glob(f"{args.hash}*.json"))
+
+    if not candidates:
+        print(f"Attempt {args.hash} not found.")
+        return
+    if len(candidates) > 1:
+        print(f"Ambiguous hash prefix '{args.hash}'. Matches:")
+        for m in candidates:
+            print(f"  {m.relative_to(coral_dir)}")
+        return
+    attempt_file = candidates[0]
 
     data = json.loads(attempt_file.read_text())
     print(f"Commit:  {data['commit_hash']}")
@@ -292,27 +301,46 @@ def cmd_skills(args: argparse.Namespace) -> None:
       coral skills                  List all skills
       coral skills --read optim     Show skill by name (or prefix)
     """
+    from coral.hub._island import all_view_roots
     from coral.hub.skills import format_skills_list, list_skills, read_skill
 
     coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
 
     if args.read:
-        skills_dir = coral_dir / "public" / "skills"
-        skill_dir = skills_dir / args.read
-        if not skill_dir.is_dir():
-            matches = [
-                d for d in skills_dir.iterdir() if d.is_dir() and d.name.startswith(args.read)
-            ]
-            if len(matches) == 1:
-                skill_dir = matches[0]
-            elif len(matches) > 1:
-                print(f"Ambiguous name '{args.read}'. Matches:")
-                for m in matches:
-                    print(f"  {m.name}")
-                return
+        # In multi-island mode, skills may live in any islands/<id>/skills/ —
+        # not just public/skills/. Collect candidates from every view root so
+        # the user can read a skill by name regardless of which island owns it.
+        skill_dirs: list[Path] = []
+        for view_root in all_view_roots(coral_dir):
+            skills_dir = view_root / "skills"
+            if not skills_dir.is_dir():
+                continue
+            direct = skills_dir / args.read
+            if direct.is_dir():
+                skill_dirs.append(direct)
             else:
-                print(f"Skill '{args.read}' not found.")
-                return
+                skill_dirs.extend(
+                    d for d in skills_dir.iterdir() if d.is_dir() and d.name.startswith(args.read)
+                )
+
+        if not skill_dirs:
+            print(f"Skill '{args.read}' not found.")
+            return
+        # Dedup by absolute path (same skill on multiple islands) and tag
+        # the island for the user.
+        seen_paths: set[Path] = set()
+        unique: list[Path] = []
+        for d in skill_dirs:
+            if d in seen_paths:
+                continue
+            seen_paths.add(d)
+            unique.append(d)
+        if len(unique) > 1:
+            print(f"Ambiguous name '{args.read}'. Matches:")
+            for m in unique:
+                print(f"  {m}")
+            return
+        skill_dir = unique[0]
         info = read_skill(skill_dir)
         print(info["content"])
         if info["files"]:

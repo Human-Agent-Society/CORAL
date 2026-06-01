@@ -161,7 +161,24 @@ def list_notes(
 
     Reads individual .md files. Falls back to legacy notes.md format.
     Also checks the legacy 'insights/' directory for backward compatibility.
+
+    With ``island_id=None`` in multi-island mode, aggregates notes from
+    every island so ``coral notes`` shows the whole team's research.
     """
+    coral_dir = Path(coral_dir)
+    if island_id is not None or not (coral_dir / "islands").exists():
+        return _list_notes_single(coral_dir, island_id)
+
+    entries: list[dict[str, Any]] = []
+    for view_root in _note_view_roots(coral_dir):
+        sub = _list_notes_single(coral_dir, island_id=view_root.name)
+        for entry in sub:
+            entry["island_id"] = view_root.name
+        entries.extend(sub)
+    return entries
+
+
+def _list_notes_single(coral_dir: Path, island_id: str | int | None) -> list[dict[str, Any]]:
     notes_dir = _notes_dir(coral_dir, island_id)
     entries = _collect_from_dir(notes_dir)
 
@@ -193,6 +210,13 @@ def list_notes(
             entry["category"] = "other"
 
     return entries
+
+
+def _note_view_roots(coral_dir: Path) -> list[Path]:
+    """Per-island note roots in multi-island mode."""
+    from coral.hub._island import all_view_roots
+
+    return [r for r in all_view_roots(coral_dir) if r.name.isdigit()]
 
 
 def search_notes(

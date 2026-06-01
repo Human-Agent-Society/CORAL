@@ -12,6 +12,7 @@ Multi-island runs (``.coral/islands/`` exists) return
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from pathlib import Path
 
 
@@ -38,3 +39,40 @@ def island_root(coral_dir: str | Path, island_id: str | int | None) -> Path:
             )
         return islands_dir / id_str
     return coral_dir / "public"
+
+
+def island_id_from_agent_id(agent_id: str) -> str | None:
+    """Extract the island id from a partition-prefixed agent id.
+
+    Partitioning writes agent ids as ``<island_id>-agent-<n>`` (e.g.
+    ``0-agent-1``); a bare ``agent-N`` (no prefix) means single-island and
+    returns None. This lets agent-scoped hub functions route a query like
+    ``read_agent_heartbeat("0-agent-1")`` to the right island without
+    forcing the caller to pass island_id explicitly.
+    """
+    if "-" not in agent_id:
+        return None
+    head = agent_id.split("-", 1)[0]
+    # Heuristic: an island id is a short non-negative int; anything else is
+    # an ordinary agent name and we leave it for the caller to interpret.
+    return head if head.isdigit() else None
+
+
+def all_view_roots(coral_dir: str | Path) -> list[Path]:
+    """Roots a "view the whole run" command should iterate.
+
+    Returns ``[coral_dir/public]`` in single-island mode, and a sorted list
+    of ``coral_dir/islands/<id>`` paths in multi-island mode. Use this from
+    CLI commands and hub helpers that aggregate across islands when the
+    caller hasn't pinned a specific one.
+    """
+    coral_dir = Path(coral_dir)
+    islands_dir = coral_dir / "islands"
+    if islands_dir.exists():
+        return sorted(d for d in islands_dir.iterdir() if d.is_dir())
+    return [coral_dir / "public"]
+
+
+def iter_view_roots(coral_dir: str | Path) -> Iterator[Path]:
+    """Same as ``all_view_roots`` but as a generator (avoid the list copy)."""
+    yield from all_view_roots(coral_dir)

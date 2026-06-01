@@ -129,7 +129,34 @@ def checkpoint_history(
     count: int = 20,
     island_id: str | int | None = None,
 ) -> list[dict[str, str]]:
-    """Return recent checkpoint entries as list of {hash, date, message} dicts."""
+    """Return recent checkpoint entries as list of {hash, date, message} dicts.
+
+    With ``island_id=None`` in multi-island mode, merges history from every
+    island so ``coral notes --history`` shows the whole team's checkpoints.
+    Each entry is tagged with ``island_id`` for traceability.
+    """
+    coral_dir_path = Path(coral_dir)
+    if island_id is not None or not (coral_dir_path / "islands").exists():
+        return _checkpoint_history_single(coral_dir, count, island_id)
+
+    from coral.hub._island import all_view_roots
+
+    merged: list[dict[str, str]] = []
+    for view_root in all_view_roots(coral_dir):
+        sub = _checkpoint_history_single(coral_dir, count, island_id=view_root.name)
+        for entry in sub:
+            entry["island_id"] = view_root.name
+        merged.extend(sub)
+    # Sort newest-first by parsed date, then take the top `count`.
+    merged.sort(key=lambda e: e.get("date", ""), reverse=True)
+    return merged[:count]
+
+
+def _checkpoint_history_single(
+    coral_dir: str,
+    count: int,
+    island_id: str | int | None,
+) -> list[dict[str, str]]:
     root = _checkpoint_dir(coral_dir, island_id)
     if not (root / ".git").exists():
         return []

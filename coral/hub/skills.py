@@ -32,9 +32,37 @@ def list_skills(
     coral_dir: str | Path,
     island_id: str | int | None = None,
 ) -> list[dict[str, Any]]:
-    """List all skills with name + description from SKILL.md frontmatter."""
+    """List all skills with name + description from SKILL.md frontmatter.
+
+    With ``island_id=None`` in multi-island mode, aggregates skills from
+    every island so ``coral skills`` shows the whole team's toolset.
+    """
+    coral_dir = Path(coral_dir)
+    if island_id is not None or not (coral_dir / "islands").exists():
+        return _list_skills_single(coral_dir, island_id)
+
+    from coral.hub._island import all_view_roots
+
+    results: list[dict[str, Any]] = []
+    seen_names: set[str] = set()
+    for view_root in all_view_roots(coral_dir):
+        for entry in _list_skills_single(coral_dir, island_id=view_root.name):
+            if entry["name"] in seen_names:
+                # Same skill name on multiple islands — keep the first by
+                # sorted-island order, tag the path so the user can see
+                # which island owns the copy they were shown.
+                continue
+            seen_names.add(entry["name"])
+            entry["island_id"] = view_root.name
+            results.append(entry)
+    return results
+
+
+def _list_skills_single(coral_dir: Path, island_id: str | int | None) -> list[dict[str, Any]]:
     d = _skills_dir(coral_dir, island_id)
     results = []
+    if not d.is_dir():
+        return results
     for skill_dir in sorted(d.iterdir()):
         if not skill_dir.is_dir():
             continue
