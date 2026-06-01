@@ -745,7 +745,6 @@ def cmd_status(args: argparse.Namespace) -> None:
         format_leaderboard,
         format_status_summary,
         get_leaderboard,
-        per_agent_class_counts,
     )
     from coral.types import BUDGET_CLASS_GRADER_ERROR, BUDGET_CLASS_REAL, BUDGET_CLASS_TUNE
 
@@ -792,67 +791,83 @@ def cmd_status(args: argparse.Namespace) -> None:
         else:
             print("Manager: not running")
 
-    logs_dir = coral_dir / "public" / "logs"
-    if logs_dir.exists():
-        log_files = sorted(logs_dir.glob("*.log"))
-        if log_files:
-            agent_logs: dict[str, list[Path]] = {}
-            for lf in log_files:
-                parts = lf.stem.rsplit(".", 1)
-                agent_name = parts[0] if len(parts) == 2 else lf.stem
-                agent_logs.setdefault(agent_name, []).append(lf)
+    # Aggregate agent liveness across every view root. In multi-island
+    # mode logs live in islands/<id>/logs/ — public/logs is empty — so a
+    # single-dir glob would skip the whole section.
+    from coral.hub._island import all_view_roots
 
-            # Best-effort read of the manager-persisted reliability state.
-            # Missing or corrupt agent_state.json falls back to log inference.
-            agent_state_doc = read_agent_state(coral_dir)
-            agent_states = agent_state_doc.agents
-            class_counts = per_agent_class_counts(coral_dir)
+    log_files: list[Path] = []
+    for view_root in all_view_roots(coral_dir):
+        view_logs = view_root / "logs"
+        if view_logs.is_dir():
+            log_files.extend(view_logs.glob("*.log"))
+    if log_files:
+        agent_logs: dict[str, list[Path]] = {}
+        for lf in log_files:
+            parts = lf.stem.rsplit(".", 1)
+            agent_name = parts[0] if len(parts) == 2 else lf.stem
+            agent_logs.setdefault(agent_name, []).append(lf)
 
-            print(f"\nAgents: {len(agent_logs)}")
-            for agent_name, logs in sorted(agent_logs.items()):
-                latest_log = max(logs, key=lambda p: p.stat().st_mtime)
-                log_size = latest_log.stat().st_size
-                mtime = datetime.fromtimestamp(latest_log.stat().st_mtime)
-                age = datetime.now() - mtime
+        # Best-effort read of the manager-persisted reliability state.
+        # Missing or corrupt agent_state.json falls back to log inference.
+        agent_state_doc = read_agent_state(coral_dir)
+        agent_states = agent_state_doc.agents
+        # per_agent_class_counts doesn't aggregate across islands yet — fan
+        # out manually so the grader-error rate below reflects the whole run.
+        from coral.hub.attempts import _read_all_island_attempts
 
-                runtime_state = agent_states.get(agent_name)
-                paused_until = runtime_state.paused_until if runtime_state else None
-                if paused_until is not None and paused_until > time.time() and manager_alive:
-                    cooldown = int(paused_until - time.time())
-                    status_str = f"PAUSED ({cooldown}s cooldown remaining)"
-                elif age.total_seconds() < 30 and manager_alive:
-                    status_str = "ACTIVE"
-                elif manager_alive:
-                    status_str = f"idle ({int(age.total_seconds())}s since last output)"
-                else:
-                    status_str = "stopped"
+        class_counts: dict[str, dict[str, int]] = {}
+        for a in _read_all_island_attempts(coral_dir):
+            if a.status == "pending":
+                continue
+            bucket = class_counts.setdefault(a.agent_id, {})
+            bucket[a.budget_class] = bucket.get(a.budget_class, 0) + 1
 
-                extras = []
-                if runtime_state and runtime_state.pause_count > 0:
-                    extras.append(f"pauses: {runtime_state.pause_count}")
-                if runtime_state and runtime_state.last_fault_at:
-                    extras.append(f"last fault: {runtime_state.last_fault_at}")
-                extras_str = "  |  " + "  |  ".join(extras) if extras else ""
+        print(f"\nAgents: {len(agent_logs)}")
+        for agent_name, logs in sorted(agent_logs.items()):
+            latest_log = max(logs, key=lambda p: p.stat().st_mtime)
+            log_size = latest_log.stat().st_size
+            mtime = datetime.fromtimestamp(latest_log.stat().st_mtime)
+            age = datetime.now() - mtime
 
-                print(
-                    f"  {agent_name}: {status_str}  |  "
-                    f"sessions: {len(logs)}  |  "
-                    f"latest log: {log_size:,} bytes  |  "
-                    f"last activity: {mtime.strftime('%H:%M:%S')}{extras_str}"
-                )
-                buckets = class_counts.get(agent_name, {})
-                if buckets:
-                    real = buckets.get(BUDGET_CLASS_REAL, 0)
-                    grader_error = buckets.get(BUDGET_CLASS_GRADER_ERROR, 0)
-                    tune = buckets.get(BUDGET_CLASS_TUNE, 0)
-                    total = real + grader_error + tune
-                    if total:
-                        rate_str = f"{grader_error}/{total} ({100 * grader_error / total:.0f}%)"
-                        print(
-                            f"    attempts: real={real}  "
-                            f"grader_error={grader_error}  tune={tune}  "
-                            f"|  grader-error rate: {rate_str}"
-                        )
+            runtime_state = agent_states.get(agent_name)
+            paused_until = runtime_state.paused_until if runtime_state else None
+            if paused_until is not None and paused_until > time.time() and manager_alive:
+                cooldown = int(paused_until - time.time())
+                status_str = f"PAUSED ({cooldown}s cooldown remaining)"
+            elif age.total_seconds() < 30 and manager_alive:
+                status_str = "ACTIVE"
+            elif manager_alive:
+                status_str = f"idle ({int(age.total_seconds())}s since last output)"
+            else:
+                status_str = "stopped"
+
+            extras = []
+            if runtime_state and runtime_state.pause_count > 0:
+                extras.append(f"pauses: {runtime_state.pause_count}")
+            if runtime_state and runtime_state.last_fault_at:
+                extras.append(f"last fault: {runtime_state.last_fault_at}")
+            extras_str = "  |  " + "  |  ".join(extras) if extras else ""
+
+            print(
+                f"  {agent_name}: {status_str}  |  "
+                f"sessions: {len(logs)}  |  "
+                f"latest log: {log_size:,} bytes  |  "
+                f"last activity: {mtime.strftime('%H:%M:%S')}{extras_str}"
+            )
+            buckets = class_counts.get(agent_name, {})
+            if buckets:
+                real = buckets.get(BUDGET_CLASS_REAL, 0)
+                grader_error = buckets.get(BUDGET_CLASS_GRADER_ERROR, 0)
+                tune = buckets.get(BUDGET_CLASS_TUNE, 0)
+                total = real + grader_error + tune
+                if total:
+                    rate_str = f"{grader_error}/{total} ({100 * grader_error / total:.0f}%)"
+                    print(
+                        f"    attempts: real={real}  "
+                        f"grader_error={grader_error}  tune={tune}  "
+                        f"|  grader-error rate: {rate_str}"
+                    )
 
     direction = read_direction(coral_dir)
     print()
