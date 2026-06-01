@@ -582,6 +582,56 @@ def test_setup_shared_state_migrates_real_roles_dir():
         assert (coral_dir / "public" / "roles" / "agent-1.md").read_text() == "local content"
 
 
+def test_repoint_shared_state_swaps_island_targets():
+    """repoint_shared_state moves an agent's symlinks from src island to dst."""
+    from coral.workspace.worktree import repoint_shared_state
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        coral_dir = Path(d) / ".coral"
+        # Multi-island layout
+        (coral_dir / "islands" / "0" / "notes").mkdir(parents=True)
+        (coral_dir / "islands" / "1" / "notes").mkdir(parents=True)
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+
+        # First wire to island 0, then repoint to island 1.
+        setup_shared_state(worktree, coral_dir, ".claude", island_id="0")
+        notes_link = worktree / ".claude" / "notes"
+        assert notes_link.resolve() == (coral_dir / "islands" / "0" / "notes").resolve()
+
+        repoint_shared_state(worktree, coral_dir, ".claude", new_island_id="1")
+        # Symlink now points at island 1
+        assert notes_link.is_symlink()
+        assert notes_link.resolve() == (coral_dir / "islands" / "1" / "notes").resolve()
+        # Breadcrumb updated
+        assert (worktree / ".coral_island").read_text() == "1"
+
+
+def test_repoint_shared_state_creates_missing_dirs_on_destination():
+    """An empty destination island still gets a working set of symlinks."""
+    from coral.workspace.worktree import repoint_shared_state
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        coral_dir = Path(d) / ".coral"
+        (coral_dir / "islands" / "0" / "notes").mkdir(parents=True)
+        # Island 1 exists but is empty (no notes/, attempts/, etc. yet).
+        (coral_dir / "islands" / "1").mkdir()
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+
+        setup_shared_state(worktree, coral_dir, ".claude", island_id="0")
+        repoint_shared_state(worktree, coral_dir, ".claude", new_island_id="1")
+
+        # The helper backfilled the missing subdirs on island 1.
+        assert (coral_dir / "islands" / "1" / "notes").is_dir()
+        assert (coral_dir / "islands" / "1" / "attempts").is_dir()
+        # And the symlinks resolve cleanly (do not dangle).
+        for item in ("notes", "attempts", "skills", "heartbeat"):
+            link = worktree / ".claude" / item
+            assert link.is_symlink()
+            assert link.resolve().is_dir()
+
+
 def test_create_project_seeds_user_skills():
     """agents.skills directories are copied into .coral/public/skills/."""
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:

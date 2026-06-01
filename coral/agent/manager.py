@@ -7,6 +7,8 @@ import json
 import logging
 import multiprocessing
 import os
+import random
+import shutil
 import signal
 import threading
 import time
@@ -27,6 +29,7 @@ from coral.agent.exit_classifier import (
     claude_code_log_has_session_error as _log_has_session_error,
 )
 from coral.agent.heartbeat import HeartbeatRunner
+from coral.agent.migration import MigrationCandidate, MigrationRunner
 from coral.agent.registry import get_runtime
 from coral.agent.runtime import AgentHandle, AgentRuntime
 from coral.agent.state import (
@@ -37,7 +40,13 @@ from coral.agent.state import (
 )
 from coral.agent.warmstart import WarmStartRunner
 from coral.config import CoralConfig
-from coral.hub.attempts import agent_in_grader_queue, read_attempts, read_eval_count
+from coral.hub._island import island_root
+from coral.hub.attempts import (
+    agent_in_grader_queue,
+    get_leaderboard,
+    read_attempts,
+    read_eval_count,
+)
 from coral.hub.heartbeat import (
     DEFAULT_PROMPTS,
     DEFAULT_TRIGGER,
@@ -55,6 +64,7 @@ from coral.workspace import (
     apply_runtime_mounts,
     create_agent_worktree,
     create_project,
+    repoint_shared_state,
     seed_agent_role,
     setup_claude_settings,
     setup_codex_settings,
@@ -136,6 +146,14 @@ class AgentManager:
         self._gateway_keys: dict[str, str] = {}  # agent_id -> proxy key
         self._grader_proc: multiprocessing.Process | None = None
         self._grader_stop_event: Any | None = None  # multiprocessing.Event
+        # Island migration. Only meaningful with >=2 islands and migration
+        # enabled in the config; otherwise should_run() short-circuits to
+        # False and run_cycle() returns [].
+        self._migration_runner: MigrationRunner = MigrationRunner(
+            config.islands,
+            minimize=(config.grader.direction == "minimize"),
+            rng=random.Random(),
+        )
 
     def _runtime_for(self, agent_id: str) -> AgentRuntime:
         """Return the runtime instance for an agent_id, creating one on demand.
@@ -606,7 +624,10 @@ class AgentManager:
             logger.info(f"Starting {agent_id} fresh (no session to resume)")
 
         spec = self.specs_by_id.get(agent_id)
-        island_id = spec.island_id if spec else self._agent_island.get(agent_id)
+        # Prefer the live `_agent_island` map over `spec.island_id`: after a
+        # resume the spec is rebuilt from config (birth island) but the
+        # breadcrumb-restored map reflects post-migration state.
+        island_id = self._agent_island.get(agent_id) or (spec.island_id if spec else None)
 
         return self._setup_and_start_agent(
             agent_id,
@@ -639,7 +660,10 @@ class AgentManager:
             logger.warning(f"No session_id for {agent_id}, starting fresh")
 
         spec = self.specs_by_id.get(agent_id)
-        island_id = spec.island_id if spec else self._agent_island.get(agent_id)
+        # Prefer the live `_agent_island` map over `spec.island_id`: after a
+        # resume the spec is rebuilt from config (birth island) but the
+        # breadcrumb-restored map reflects post-migration state.
+        island_id = self._agent_island.get(agent_id) or (spec.island_id if spec else None)
 
         return self._setup_and_start_agent(
             agent_id,
@@ -1282,6 +1306,214 @@ class AgentManager:
         )
         return "\n".join(lines)
 
+    # ------------------------------------------------------------------
+    # Migration
+    # ------------------------------------------------------------------
+    def _maybe_run_migration_cycle(self) -> None:
+        """Run one migration cycle iff the runner says we crossed a boundary.
+
+        Cheap to call every tick: the runner short-circuits when migration
+        is disabled or the run is single-island. When a cycle does fire,
+        each planned migration is applied via :meth:`_apply_migration`;
+        partial failures are logged and skipped so one bad candidate
+        doesn't sink the rest of the cycle.
+        """
+        runner = self._migration_runner
+        if not runner.enabled or self.paths is None:
+            return
+        current_evals = self._get_eval_count()
+        if not runner.should_run(current_global_evals=current_evals):
+            return
+
+        best_scores = self._gather_island_best_scores()
+        migrations = runner.run_cycle(
+            coral_dir=self.paths.coral_dir,
+            island_best_scores=best_scores,
+        )
+        # Mark the cycle as done even if no candidates matched — otherwise
+        # every subsequent tick would re-enter run_cycle on the same boundary.
+        runner.mark_cycle_complete(current_global_evals=current_evals)
+
+        if not migrations:
+            logger.info(f"Migration cycle @ eval#{current_evals}: no eligible candidates")
+            return
+
+        for candidate in migrations:
+            try:
+                self._apply_migration(candidate)
+            except Exception as e:
+                logger.exception(
+                    f"Migration {candidate.agent_id} {candidate.src_island}→"
+                    f"{candidate.dst_island} failed: {e}"
+                )
+
+    def _gather_island_best_scores(self) -> dict[str, float]:
+        """Per-island top score (direction-aware), used by score-weighted dest.
+
+        Iterates the on-disk island dirs (not specs) so the snapshot stays
+        correct after a resume reshuffles agents across islands via the
+        ``.coral_island`` breadcrumb.
+        """
+        assert self.paths is not None
+        results: dict[str, float] = {}
+        direction = self.config.grader.direction
+        islands_dir = self.paths.coral_dir / "islands"
+        if not islands_dir.exists():
+            return {}
+        for island_dir in sorted(islands_dir.iterdir()):
+            if not island_dir.is_dir():
+                continue
+            top = get_leaderboard(
+                self.paths.coral_dir,
+                top_n=1,
+                direction=direction,
+                island_id=island_dir.name,
+            )
+            if top and top[0].score is not None:
+                results[island_dir.name] = top[0].score
+        return results
+
+    def _apply_migration(self, candidate: MigrationCandidate) -> None:
+        """Move ``candidate.agent_id`` from src island to dst, then restart it.
+
+        Sequence (each step intentionally idempotent on retry):
+
+        1. Skip if the agent is paused or has pending grader work — both
+           cases mean restarting now would lose state. Migration will
+           re-attempt the agent in a future cycle.
+        2. Locate the live handle, SIGINT it so the runtime can save its
+           session and any in-flight file writes complete.
+        3. Move per-agent files (``roles/<agent>.md``, ``heartbeat/<agent>.json``)
+           from src island to dst — these encode identity / cadence and
+           must follow the agent. Notes, skills, and attempts stay on the
+           source island per the existing "history is immutable" policy.
+        4. Repoint the worktree's shared-state symlinks at the dst island.
+        5. Re-write the runtime's permission settings with the new
+           island_id (so Read scopes follow the move).
+        6. Swap the in-memory ``AgentSpec`` + ``_agent_island`` entry so
+           later restarts honor the new home.
+        7. Drop an arrival note on dst (when ``notify_island=True``) so
+           teammates see the newcomer in ``coral notes --recent``.
+        8. Hand back to ``_setup_and_start_agent`` with the new island and
+           an "arrival" prompt summarising the move.
+        """
+        assert self.paths is not None
+
+        agent_id = candidate.agent_id
+        # (1) Locate handle, bail on missing / paused / pending agents.
+        idx: int | None = None
+        for i, handle in enumerate(self.handles):
+            if handle.agent_id == agent_id:
+                idx = i
+                break
+        if idx is None:
+            logger.warning(f"Migration target {agent_id} has no live handle; skipping")
+            return
+        if self._is_paused(agent_id):
+            logger.info(f"Migration target {agent_id} is paused; deferring")
+            return
+
+        src = candidate.src_island
+        dst = candidate.dst_island
+        coral_dir = self.paths.coral_dir
+        runtime = self._runtime_for(agent_id)
+        shared_dir_name = runtime.shared_dir_name
+        worktree_path = self.handles[idx].worktree_path
+
+        # Skip if the agent has anything in the grader queue — running the
+        # restart now would orphan the pending submission against an old
+        # island view. The candidate will be reconsidered next cycle.
+        pending = agent_in_grader_queue(
+            coral_dir,
+            agent_id,
+            attempts=read_attempts(coral_dir, island_id=src),
+            island_id=src,
+        )
+        if pending is not None:
+            logger.info(
+                f"Migration target {agent_id} has pending attempt "
+                f"{pending.commit_hash[:12]}; deferring"
+            )
+            return
+
+        # (2) Interrupt so file moves and symlink swaps happen with a quiet agent.
+        self.handles[idx].interrupt()
+        # Extract the session id BEFORE moves — same pattern the rest of
+        # the manager uses so the new process resumes the same session.
+        session_id = runtime.extract_session_id(self.handles[idx].log_path)
+
+        # (3) Move per-agent identity / cadence files src → dst.
+        _move_agent_files(coral_dir, agent_id, src=src, dst=dst)
+
+        # (4) Repoint worktree symlinks at dst.
+        repoint_shared_state(worktree_path, coral_dir, shared_dir_name, new_island_id=dst)
+
+        # (5) Re-write runtime permission settings against dst's island root.
+        gateway_url = self._gateway.url if self._gateway else None
+        gateway_api_key = self._gateway_keys.get(agent_id)
+        _refresh_runtime_settings(
+            worktree_path,
+            coral_dir=coral_dir,
+            shared_dir_name=shared_dir_name,
+            research=self.config.agents.research,
+            gateway_url=gateway_url,
+            gateway_api_key=gateway_api_key,
+            island_id=dst,
+        )
+
+        # (6) Swap spec + tracking dict so future restarts pick dst.
+        self._swap_spec_island(agent_id, new_island_id=dst)
+        self._agent_island[agent_id] = dst
+
+        # (7) Drop an arrival note on dst (best-effort).
+        if self.migration_config.notify_island:
+            try:
+                _write_arrival_note(coral_dir, candidate)
+            except OSError as e:
+                logger.warning(f"Failed to write arrival note for {agent_id}: {e}")
+
+        # Restart counter bump — this *is* a managed restart, surface it
+        # alongside the normal restart counters in `coral status`.
+        self._restart_counts[agent_id] = self._restart_counts.get(agent_id, 0) + 1
+        prompt = _build_migration_prompt(candidate, shared_dir=shared_dir_name)
+
+        logger.info(f"Migrated {agent_id}: island {src} → {dst} (score={candidate.score:.6f})")
+        if self.verbose:
+            print(
+                f"[coral] Migration: {agent_id} moved island {src} → {dst} "
+                f"(score={candidate.score:.6f})"
+            )
+
+        self.handles[idx] = self._setup_and_start_agent(
+            agent_id,
+            island_id=dst,
+            resume_session_id=session_id,
+            prompt=prompt,
+            prompt_source="migration",
+        )
+        self._write_agent_pids()
+
+    @property
+    def migration_config(self):
+        return self.config.islands.migration
+
+    def _swap_spec_island(self, agent_id: str, *, new_island_id: str) -> None:
+        """Replace the frozen AgentSpec for this agent with one pointing at new_island_id."""
+        for i, s in enumerate(self.specs):
+            if s.agent_id != agent_id:
+                continue
+            updated = AgentSpec(
+                agent_id=s.agent_id,
+                runtime=s.runtime,
+                model=s.model,
+                runtime_options=dict(s.runtime_options),
+                assignment_index=s.assignment_index,
+                island_id=new_island_id,
+            )
+            self.specs[i] = updated
+            self.specs_by_id[agent_id] = updated
+            return
+
     def monitor_loop(self, check_interval: int = 5) -> None:
         """Monitor agents, deliver eval feedback via --resume, auto-restart.
 
@@ -1444,6 +1676,10 @@ class AgentManager:
                         prompt_source=f"heartbeat:{names}",
                     )
                     self._write_agent_pids()
+
+            # Migration phase. Cheap when disabled (single-island mode or
+            # config off): should_run() short-circuits without scanning disk.
+            self._maybe_run_migration_cycle()
 
             # Check for dead agents (max-turns exit, crash, etc.)
             for i, handle in enumerate(self.handles):
@@ -1738,3 +1974,163 @@ def _validate_sessions(
                 f"(different machine?), will start fresh"
             )
     return validated
+
+
+# ----------------------------------------------------------------------------
+# Migration helpers (module-level so they can be unit-tested independently)
+# ----------------------------------------------------------------------------
+
+
+def _move_agent_files(
+    coral_dir: Path,
+    agent_id: str,
+    *,
+    src: str,
+    dst: str,
+) -> None:
+    """Move per-agent identity files from one island to another.
+
+    Currently moves ``roles/<agent>.md`` and ``heartbeat/<agent>.json`` —
+    everything that encodes an agent's evolved state and must stay with
+    them. Notes / skills / attempts deliberately stay on the source
+    island (the framework treats run history as immutable).
+
+    Idempotent: missing source files are silently skipped, so the helper
+    is safe to call twice on the same agent. Existing files at the
+    destination are overwritten — a second migration to the same dst
+    should win, not error.
+    """
+    src_root = island_root(coral_dir, src)
+    dst_root = island_root(coral_dir, dst)
+    for subdir, ext in (("roles", "md"), ("heartbeat", "json")):
+        src_path = src_root / subdir / f"{agent_id}.{ext}"
+        if not src_path.exists():
+            continue
+        dst_dir = dst_root / subdir
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        dst_path = dst_dir / f"{agent_id}.{ext}"
+        # Cross-island within the same filesystem → rename is atomic.
+        # Fall back to copy + unlink if rename complains (e.g. across
+        # mount points in some test setups).
+        try:
+            os.replace(src_path, dst_path)
+        except OSError:
+            shutil.copy2(src_path, dst_path)
+            try:
+                src_path.unlink()
+            except OSError:
+                pass
+
+
+def _refresh_runtime_settings(
+    worktree_path: Path,
+    *,
+    coral_dir: Path,
+    shared_dir_name: str,
+    research: bool,
+    gateway_url: str | None,
+    gateway_api_key: str | None,
+    island_id: str,
+) -> None:
+    """Re-write the runtime's permission file against a new island root.
+
+    The Read scope baked into ``.claude/settings.local.json`` (and the
+    runtime equivalents) points at the agent's island root; after a
+    migration that scope must follow the worktree to the destination
+    island, otherwise the agent loses read access to its own newly-wired
+    notes / attempts.
+    """
+    if shared_dir_name == ".claude":
+        setup_claude_settings(
+            worktree_path,
+            coral_dir=coral_dir,
+            research=research,
+            gateway_url=gateway_url,
+            gateway_api_key=gateway_api_key,
+            island_id=island_id,
+        )
+    elif shared_dir_name == ".opencode":
+        setup_opencode_settings(
+            worktree_path,
+            coral_dir=coral_dir,
+            research=research,
+            gateway_url=gateway_url,
+            gateway_api_key=gateway_api_key,
+            island_id=island_id,
+        )
+    elif shared_dir_name == ".codex":
+        setup_codex_settings(
+            worktree_path,
+            coral_dir=coral_dir,
+            research=research,
+            gateway_url=gateway_url,
+            gateway_api_key=gateway_api_key,
+            island_id=island_id,
+        )
+    elif shared_dir_name == ".cursor":
+        setup_cursor_settings(
+            worktree_path,
+            coral_dir=coral_dir,
+            research=research,
+            gateway_url=gateway_url,
+            gateway_api_key=gateway_api_key,
+            island_id=island_id,
+        )
+
+
+def _write_arrival_note(coral_dir: Path, candidate: MigrationCandidate) -> None:
+    """Drop a markdown note on the destination island announcing the arrival.
+
+    The note carries ``creator: coral`` (not the migrating agent) so it
+    surfaces in ``coral notes --recent`` without polluting the
+    ``notes_by`` author lookups, which the framework uses to attribute
+    work back to specific agents.
+    """
+    notes_dir = island_root(coral_dir, candidate.dst_island) / "notes"
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    now = datetime.now(UTC)
+    fname_ts = now.strftime("%Y%m%dT%H%M%S")
+    body = (
+        f"---\n"
+        f"creator: coral\n"
+        f"created: {now.date().isoformat()}\n"
+        f"title: Migration arrival — {candidate.agent_id}\n"
+        f"---\n\n"
+        f"# Migration arrival: {candidate.agent_id}\n\n"
+        f"`{candidate.agent_id}` migrated to this island from "
+        f"island `{candidate.src_island}` with a recent best score of "
+        f"`{candidate.score:.6f}` over the last several real evals.\n\n"
+        f"They bring their evolved role and heartbeat cadence with "
+        f"them; their prior attempts, notes, and skills stay on island "
+        f"`{candidate.src_island}` (run history is immutable).\n"
+    )
+    fname = f"migration_{fname_ts}_{candidate.agent_id}.md"
+    (notes_dir / fname).write_text(body)
+
+
+def _build_migration_prompt(candidate: MigrationCandidate, *, shared_dir: str) -> str:
+    """Resume prompt the migrated agent reads on its first wake-up."""
+    return (
+        f"## You have migrated to a new island\n\n"
+        f"You were doing well on island `{candidate.src_island}` "
+        f"(recent best `{candidate.score:.6f}`). The team selected you "
+        f"to seed island `{candidate.dst_island}`. Your worktree is now "
+        f"wired to that island's shared state.\n\n"
+        f"What changed:\n"
+        f"- `{shared_dir}/notes`, `{shared_dir}/skills`, "
+        f"`{shared_dir}/attempts`, `{shared_dir}/heartbeat`, and "
+        f"`{shared_dir}/roles` now resolve to island "
+        f"`{candidate.dst_island}`.\n"
+        f"- Your evolved role and heartbeat cadence followed you here.\n"
+        f"- Your prior attempts, notes, and skills stayed on island "
+        f"`{candidate.src_island}` — they are part of that island's "
+        f"history and you cannot edit them now.\n\n"
+        f"What to do first:\n"
+        f"1. `coral log -n 10` to see this island's current leaderboard.\n"
+        f"2. `coral notes --recent` to read what your new teammates "
+        f"have been working on.\n"
+        f"3. `coral skills` to discover what tooling already exists "
+        f"here so you don't reinvent it.\n\n"
+        f"Then bring your strongest ideas from your previous run and "
+        f"adapt them to this island's frontier."
+    )

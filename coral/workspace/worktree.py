@@ -219,6 +219,88 @@ def setup_shared_state(
         (worktree_path / ".coral_island").write_text(str(island_id))
 
 
+# Items inside the shared dir that are agent-facing symlinks into the
+# island state root. Kept in module scope so :func:`setup_shared_state`
+# and :func:`repoint_shared_state` stay in sync.
+_SHARED_STATE_ITEMS: tuple[str, ...] = (
+    "notes",
+    "skills",
+    "agents",
+    "attempts",
+    "logs",
+    "heartbeat",
+    "roles",
+    "eval_logs",
+)
+
+
+def repoint_shared_state(
+    worktree_path: Path,
+    coral_dir: Path,
+    shared_dir_name: str,
+    new_island_id: str | int,
+) -> None:
+    """Repoint an agent's shared-state symlinks at a different island.
+
+    Used by migration: the agent's worktree was originally wired to
+    ``coral_dir/islands/<src>/*``; after migration the same shared dir
+    (`.claude/`, `.codex/`, ...) needs to surface the destination
+    island's notes / attempts / etc. instead. We unlink each item
+    symlink unconditionally and recreate it against the new island root,
+    then rewrite the ``.coral_island`` breadcrumb so the next
+    ``coral eval`` from this worktree submits to the right place.
+
+    ``setup_shared_state`` on its own won't do this: it short-circuits
+    when ``dst.exists()`` is True, and a symlink to the still-existing
+    old island satisfies ``exists()``.
+
+    Raises:
+        ValueError: if ``new_island_id`` is None or fails island_root
+            validation (path separators, etc.).
+    """
+    from coral.hub._island import island_root
+
+    if new_island_id is None:
+        raise ValueError("repoint_shared_state requires a non-None new_island_id")
+
+    state_root = island_root(coral_dir, new_island_id)
+    shared_dir = worktree_path / shared_dir_name
+    shared_dir.mkdir(exist_ok=True)
+
+    for item in _SHARED_STATE_ITEMS:
+        src = state_root / item
+        dst = shared_dir / item
+        # Ensure the new island has the directory the symlink will point at
+        # (creating it lazily here keeps repoint idempotent even when the
+        # destination island hasn't seen any agent activity yet).
+        src.mkdir(parents=True, exist_ok=True)
+
+        if dst.is_symlink():
+            dst.unlink()
+        elif dst.exists() and dst.is_dir():
+            # Local dir at this path (shouldn't happen in normal runs, but
+            # the original setup_shared_state self-heals this case so we
+            # match): move any contents into the new state root, then drop
+            # the local dir so we can replace it with a symlink.
+            for entry in dst.iterdir():
+                target = src / entry.name
+                if not target.exists():
+                    shutil.move(str(entry), str(target))
+            try:
+                dst.rmdir()
+            except OSError:
+                logger.warning(f"repoint_shared_state: could not remove non-empty local dir {dst}")
+                continue
+
+        try:
+            rel = os.path.relpath(src.resolve(), shared_dir.resolve())
+            dst.symlink_to(rel)
+        except (ValueError, OSError):
+            dst.symlink_to(src.resolve())
+
+    (worktree_path / ".coral_island").write_text(str(new_island_id))
+
+
 def apply_runtime_mounts(
     worktree_path: Path,
     mounts: dict[str, str],

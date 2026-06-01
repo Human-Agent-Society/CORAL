@@ -1,0 +1,376 @@
+"""Island-migration: select a best agent on each source island and move it.
+
+This module owns the *policy* (who is best, where do they go) and a thin
+runner (``MigrationRunner``) that exposes the per-cycle cadence the manager
+ticks against. The mechanics of actually swapping an agent onto a new
+island — file moves, symlink repointing, restart prompt — live in the
+manager (:mod:`coral.agent.manager`) because they touch the live agent
+handle. The split keeps the policy code pure and trivially testable.
+
+Migration semantics in one paragraph:
+
+A migration cycle fires every ``MigrationConfig.every`` global evals. For
+each source island we look at the last ``rank_window`` *real* attempts per
+agent, take the max (or min, if the grader minimizes), keep agents with at
+least ``min_evals`` real attempts, and pick the top-1 per island. The
+combined list is truncated to ``max_per_cycle`` candidates per cycle. Each
+candidate is then assigned a destination island under
+``MigrationConfig.dest_weighting``: ``uniform`` (random non-source island),
+``round_robin`` (deterministic shift by cycle index), or ``score`` (weight
+each non-source island by its current best — higher attracts more migrants
+under maximize, lower under minimize). The runner *never* picks the
+source island as a destination.
+
+What moves with an agent (mechanics in the manager): ``roles/<agent>.md``
+and ``heartbeat/<agent>.json`` follow them. Attempts, notes, and skills
+authored on the source island stay put — they're history. The agent's
+worktree symlinks and ``.coral_island`` breadcrumb are repointed at the
+destination, and an optional arrival note is dropped on the destination's
+``notes/`` when ``notify_island=True`` so other agents see the newcomer
+through ``coral notes``.
+"""
+
+from __future__ import annotations
+
+import logging
+import random
+from collections.abc import Iterable
+from dataclasses import dataclass
+from pathlib import Path
+
+from coral.config import IslandsConfig
+from coral.hub.attempts import read_attempts
+from coral.types import BUDGET_CLASS_REAL, Attempt
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class MigrationCandidate:
+    """One agent's planned migration: src → dst, with the score that earned it.
+
+    Frozen so the runner can return a set-friendly value that callers may
+    dedup. ``score`` is the aggregated value used for selection (max over
+    the last ``rank_window`` real attempts on the source island), retained
+    on the candidate so the manager can log it and drop it into the
+    arrival note.
+    """
+
+    agent_id: str
+    src_island: str
+    dst_island: str
+    score: float
+
+
+def score_for_agent(
+    attempts: Iterable[Attempt],
+    *,
+    rank_window: int,
+    minimize: bool,
+) -> float | None:
+    """Aggregate an agent's score over its last ``rank_window`` *real* attempts.
+
+    Attempts are sorted by timestamp ascending; only the trailing
+    ``rank_window`` real-mode entries with a non-None score are considered.
+    Returns ``min`` for ``minimize=True``, otherwise ``max``. Returns
+    ``None`` if the agent has zero real scored attempts in the window.
+
+    The caller is expected to pre-filter ``attempts`` to a single agent —
+    no agent_id check happens here, so the function works equally well as
+    a "best score in a window" primitive in tests.
+    """
+    eligible = [a for a in attempts if a.budget_class == BUDGET_CLASS_REAL and a.score is not None]
+    if not eligible:
+        return None
+    eligible.sort(key=lambda a: a.timestamp)
+    window = eligible[-rank_window:]
+    scores = [a.score for a in window if a.score is not None]
+    if not scores:
+        return None
+    return min(scores) if minimize else max(scores)
+
+
+def select_candidates(
+    coral_dir: str | Path,
+    *,
+    island_ids: list[str],
+    rank_window: int,
+    min_evals: int,
+    minimize: bool,
+) -> list[MigrationCandidate]:
+    """For each source island, return its best eligible agent (at most one).
+
+    Eligibility:
+      * The agent has ``>= min_evals`` *real* attempts on the source
+        island (tune / grader_error attempts don't count toward the
+        threshold). This both protects newcomers from being yanked out
+        too early and ensures the score aggregation has signal.
+      * The agent has at least one real attempt with a non-None score in
+        the trailing ``rank_window`` — otherwise we'd have no score to
+        rank by.
+
+    Returns a candidate per island (or none for islands with no eligible
+    agent), each with ``dst_island = ""`` for the assignment step to fill in.
+    """
+    candidates: list[MigrationCandidate] = []
+    for src in island_ids:
+        attempts = read_attempts(coral_dir, island_id=src)
+        per_agent: dict[str, list[Attempt]] = {}
+        for a in attempts:
+            per_agent.setdefault(a.agent_id, []).append(a)
+
+        best_agent: str | None = None
+        best_score: float | None = None
+        for agent_id, agent_attempts in per_agent.items():
+            real = [a for a in agent_attempts if a.budget_class == BUDGET_CLASS_REAL]
+            if len(real) < min_evals:
+                continue
+            score = score_for_agent(agent_attempts, rank_window=rank_window, minimize=minimize)
+            if score is None:
+                continue
+            if best_score is None or ((score < best_score) if minimize else (score > best_score)):
+                best_agent = agent_id
+                best_score = score
+
+        if best_agent is not None and best_score is not None:
+            candidates.append(
+                MigrationCandidate(
+                    agent_id=best_agent,
+                    src_island=src,
+                    dst_island="",
+                    score=best_score,
+                )
+            )
+    return candidates
+
+
+def assign_destinations(
+    candidates: list[MigrationCandidate],
+    *,
+    island_ids: list[str],
+    weighting: str,
+    cycle_idx: int,
+    island_best_scores: dict[str, float],
+    rng: random.Random,
+    minimize: bool,
+) -> list[MigrationCandidate]:
+    """Stamp each candidate with a destination island, honoring the policy.
+
+    Guarantees ``dst_island != src_island`` for every returned candidate.
+    Returns an empty list if there is no legal destination (i.e. only one
+    island exists), so single-island accidents degrade gracefully.
+
+    Policies:
+        ``uniform`` — uniform random over non-source islands.
+        ``round_robin`` — deterministic shift: each candidate lands on
+            ``island_ids[(src_index + cycle_idx + offset) % count]`` where
+            ``offset`` is bumped until the result differs from src. Per-cycle
+            ``cycle_idx`` is used so subsequent cycles vary even with
+            identical candidates.
+        ``score`` — weight each non-source island by its current best
+            score. Under ``minimize=False``, higher score → higher weight
+            (rich-get-richer); under ``minimize=True``, lower score →
+            higher weight. Falls back to uniform when no island_best_scores
+            are recorded yet (typical early in a run).
+    """
+    if len(island_ids) <= 1:
+        return []
+
+    assigned: list[MigrationCandidate] = []
+    for candidate in candidates:
+        non_src = [i for i in island_ids if i != candidate.src_island]
+        if not non_src:
+            continue  # defensive — shouldn't happen given the count check above
+
+        if weighting == "round_robin":
+            try:
+                src_idx = island_ids.index(candidate.src_island)
+            except ValueError:
+                src_idx = 0
+            offset = 1
+            n = len(island_ids)
+            while True:
+                dst_idx = (src_idx + cycle_idx + offset) % n
+                dst = island_ids[dst_idx]
+                if dst != candidate.src_island:
+                    break
+                offset += 1
+        elif weighting == "uniform":
+            dst = rng.choice(non_src)
+        elif weighting == "score":
+            weights = _score_weights(non_src, island_best_scores, minimize=minimize)
+            if weights is None:
+                # No score signal yet — uniform is the only honest fallback.
+                dst = rng.choice(non_src)
+            else:
+                dst = rng.choices(non_src, weights=weights, k=1)[0]
+        else:
+            # Unknown weighting is normally rejected by MigrationConfig
+            # validation; raise here too so a misconfigured runner is loud.
+            raise ValueError(f"unknown dest_weighting: {weighting!r}")
+
+        assigned.append(
+            MigrationCandidate(
+                agent_id=candidate.agent_id,
+                src_island=candidate.src_island,
+                dst_island=dst,
+                score=candidate.score,
+            )
+        )
+    return assigned
+
+
+def _score_weights(
+    islands: list[str],
+    best_scores: dict[str, float],
+    *,
+    minimize: bool,
+) -> list[float] | None:
+    """Convert per-island best scores into ``random.choices`` weights.
+
+    Returns ``None`` if no listed island has a recorded score (no signal —
+    caller should fall back to uniform). Otherwise produces a weight per
+    island; islands without a recorded score get the minimum positive
+    weight in the batch so they remain reachable. Under ``minimize=True``
+    weights are inverted (lower score → higher weight) by reflecting
+    around ``max + min - score``.
+    """
+    raw: list[tuple[str, float | None]] = [(i, best_scores.get(i)) for i in islands]
+    known = [s for _, s in raw if s is not None]
+    if not known:
+        return None
+
+    if minimize:
+        # Reflect around the max so lower scores end up with higher weights.
+        # Add a tiny floor so the highest score (smallest weight here) is
+        # still reachable instead of dropping to 0.
+        max_s = max(known)
+        transformed = [(i, (max_s - s + 1e-9) if s is not None else None) for i, s in raw]
+    else:
+        # Shift so the smallest score still has a strictly positive weight.
+        min_s = min(known)
+        offset = -min_s + 1e-9 if min_s <= 0 else 0.0
+        transformed = [(i, (s + offset) if s is not None else None) for i, s in raw]
+
+    # Islands with no recorded score get the minimum positive weight in the
+    # batch so they remain reachable but not preferred over scored islands.
+    positive = [w for _, w in transformed if w is not None and w > 0]
+    fallback = min(positive) if positive else 1e-9
+    return [w if w is not None else fallback for _, w in transformed]
+
+
+class MigrationRunner:
+    """Per-run migration coordinator.
+
+    Holds the cross-cycle state (``last_cycle_evals``, cycle counter, RNG)
+    so the policy functions above can stay pure. The manager constructs
+    one of these in ``start_all``/``resume_all`` and calls ``should_run``
+    on each scored-attempt tick; when it fires, the manager calls
+    ``run_cycle`` to get the planned migrations, applies each via its own
+    file/process mechanics, then calls ``mark_cycle_complete``.
+    """
+
+    def __init__(
+        self,
+        islands_config: IslandsConfig,
+        *,
+        minimize: bool,
+        rng: random.Random | None = None,
+    ) -> None:
+        self.islands_config = islands_config
+        self.migration_config = islands_config.migration
+        self.minimize = minimize
+        self.rng = rng if rng is not None else random.Random()
+        # Negative so the first crossing of `every` always fires regardless
+        # of where the global counter happens to start (e.g. after a resume).
+        self.last_cycle_evals: int = -1
+        self.cycle_idx: int = 0
+
+    @property
+    def enabled(self) -> bool:
+        """A migration runner is meaningful only with >=2 islands and migration on."""
+        return self.islands_config.count > 1 and self.migration_config.enabled
+
+    def should_run(self, *, current_global_evals: int) -> bool:
+        """True iff we've crossed an ``every`` boundary since the last cycle."""
+        if not self.enabled:
+            return False
+        if current_global_evals <= 0:
+            return False
+        if self.last_cycle_evals < 0:
+            return current_global_evals >= self.migration_config.every
+        return current_global_evals - self.last_cycle_evals >= self.migration_config.every
+
+    def mark_cycle_complete(self, *, current_global_evals: int) -> None:
+        """Record that we just ran a cycle; bumps the cycle counter for round_robin."""
+        self.last_cycle_evals = current_global_evals
+        self.cycle_idx += 1
+
+    def run_cycle(
+        self,
+        *,
+        coral_dir: str | Path,
+        island_best_scores: dict[str, float],
+    ) -> list[MigrationCandidate]:
+        """Plan one migration cycle. Caller applies the returned candidates.
+
+        ``island_best_scores`` is a snapshot of each island's current best
+        score (typically the per-island leaderboard top), used by the
+        ``score`` destination policy. Pass an empty dict in single-cycle
+        unit tests to exercise the uniform fallback.
+
+        Returns up to ``max_per_cycle`` candidates, each with a non-empty
+        ``dst_island``. Returns an empty list when:
+            * No island has an eligible agent (everyone is below
+              ``min_evals``, or no real scored attempts exist).
+            * ``count == 1`` (no destinations).
+            * The runner is disabled.
+        """
+        if not self.enabled:
+            return []
+
+        coral_dir = Path(coral_dir)
+        island_ids = _discover_island_ids(coral_dir, expected_count=self.islands_config.count)
+        if len(island_ids) <= 1:
+            return []
+
+        raw = select_candidates(
+            coral_dir,
+            island_ids=island_ids,
+            rank_window=self.migration_config.rank_window,
+            min_evals=self.migration_config.min_evals,
+            minimize=self.minimize,
+        )
+        if not raw:
+            return []
+
+        # When there are more candidates than ``max_per_cycle`` slots, prefer
+        # the ones with the strongest source score (in the grader's direction).
+        raw.sort(key=lambda c: c.score, reverse=not self.minimize)
+        capped = raw[: self.migration_config.max_per_cycle]
+
+        return assign_destinations(
+            capped,
+            island_ids=island_ids,
+            weighting=self.migration_config.dest_weighting,
+            cycle_idx=self.cycle_idx,
+            island_best_scores=island_best_scores,
+            rng=self.rng,
+            minimize=self.minimize,
+        )
+
+
+def _discover_island_ids(coral_dir: Path, *, expected_count: int) -> list[str]:
+    """Return on-disk island ids, sorted. Falls back to range(expected_count) if none on disk.
+
+    Multi-island layouts always have ``coral_dir/islands/<id>/`` on disk by
+    the time the manager constructs the runner; the fallback is a safety
+    net for first-cycle calls happening before any island dirs exist
+    (mostly in tests).
+    """
+    islands_dir = coral_dir / "islands"
+    if islands_dir.exists():
+        ids = sorted(d.name for d in islands_dir.iterdir() if d.is_dir())
+        if ids:
+            return ids
+    return [str(i) for i in range(expected_count)]
