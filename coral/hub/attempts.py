@@ -140,14 +140,42 @@ def read_attempts(coral_dir: str | Path, island_id: str | int | None = None) -> 
     return attempts
 
 
+def _read_all_island_attempts(coral_dir: str | Path) -> list[Attempt]:
+    """Read attempts across all islands. Used by views that span the whole run.
+
+    In single-island mode (no `islands/` on disk) reads from `public/attempts/`.
+    In multi-island mode reads from every `islands/<id>/attempts/` and
+    concatenates. Centralised so every "show me the whole team" view (status
+    summary, leaderboard, agent breakdown) doesn't need its own copy of the
+    detection logic.
+    """
+    coral_dir = Path(coral_dir)
+    if (coral_dir / "islands").exists():
+        attempts: list[Attempt] = []
+        for island_root in sorted((coral_dir / "islands").iterdir()):
+            if not island_root.is_dir():
+                continue
+            attempts.extend(read_attempts(coral_dir, island_id=island_root.name))
+        return attempts
+    return read_attempts(coral_dir, island_id=None)
+
+
 def get_leaderboard(
     coral_dir: str | Path,
     top_n: int = 20,
     direction: str = "maximize",
     island_id: str | int | None = None,
 ) -> list[Attempt]:
-    """Get top N attempts sorted by score. Direction controls sort order."""
-    attempts = read_attempts(coral_dir, island_id=island_id)
+    """Get top N attempts sorted by score. Direction controls sort order.
+
+    With ``island_id=None`` in a multi-island run, reads across all islands
+    so the leaderboard reflects the whole team.
+    """
+    coral_dir = Path(coral_dir)
+    if island_id is not None or not (coral_dir / "islands").exists():
+        attempts = read_attempts(coral_dir, island_id=island_id)
+    else:
+        attempts = _read_all_island_attempts(coral_dir)
     scored = [a for a in attempts if a.score is not None]
     descending = direction != "minimize"
     scored.sort(key=lambda a: a.score or 0.0, reverse=descending)
@@ -302,14 +330,8 @@ def format_status_summary(
     coral_dir = Path(coral_dir)
     if island_id is not None:
         attempts = read_attempts(coral_dir, island_id=island_id)
-    elif (coral_dir / "islands").exists():
-        attempts = []
-        for island_root in sorted((coral_dir / "islands").iterdir()):
-            if not island_root.is_dir():
-                continue
-            attempts.extend(read_attempts(coral_dir, island_id=island_root.name))
     else:
-        attempts = read_attempts(coral_dir, island_id=None)
+        attempts = _read_all_island_attempts(coral_dir)
 
     if not attempts:
         return "No attempts yet."
