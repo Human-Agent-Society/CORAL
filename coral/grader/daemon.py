@@ -193,57 +193,55 @@ def _is_git_repo(path: Path) -> bool:
     return path.is_dir() and (path / ".git").exists()
 
 
-_worktree_locks: dict[str, threading.Lock] = {}
-_worktree_locks_guard = threading.Lock()
+_WORKTREE_ADD_RETRIES = 3
+_WORKTREE_ADD_RETRY_BACKOFF = 0.05  # seconds; the worktree TOCTOU window is <100ms
+# Match the exact race-condition message git emits when two ``git worktree add``
+# invocations collide on the same repo. Strings come from git's own
+# builtin/worktree.c; matching verbatim keeps the retry scoped to the race
+# rather than masking real failures.
+_WORKTREE_RACE_MARKERS = (
+    "failed to read .git/worktrees/",
+    "cannot lock ref",  # extra coverage for the same TOCTOU on refs
+)
 
 
-def _get_worktree_lock(repo_dir: Path) -> threading.Lock:
-    """Per-repo lock for ``git worktree add/remove`` to avoid races under parallel grading.
-
-    Git's own worktree machinery has TOCTOU windows between worktree creation
-    and the commondir read; two threads adding worktrees from the same repo
-    can race and one will fail with "failed to read .git/worktrees/<id>/commondir".
-    The lock only spans the worktree add/remove, not the actual grading, so
-    ``grader.parallel.max_workers > 1`` still achieves real overlap.
-    """
-    key = str(repo_dir.resolve())
-    with _worktree_locks_guard:
-        lock = _worktree_locks.get(key)
-        if lock is None:
-            lock = threading.Lock()
-            _worktree_locks[key] = lock
-        return lock
+def _is_worktree_race(stderr: str) -> bool:
+    return any(marker in stderr for marker in _WORKTREE_RACE_MARKERS)
 
 
 def _add_isolated_worktree(repo_dir: Path, commit_hash: str, dest: Path) -> None:
     """Create a detached worktree at `dest` pointing at `commit_hash`.
 
     Force-removes any prior checkout at the same path (crash-recovery).
+    Retries on git's known ``worktree add`` TOCTOU race ("failed to read
+    .git/worktrees/<id>/commondir") — two parallel invocations from the
+    same repo can race even when the calls are independent. Retries with a
+    small backoff; preserves ``grader.parallel.max_workers > 1`` overlap.
     """
-    with _get_worktree_lock(repo_dir):
-        if dest.exists():
-            _remove_worktree_unlocked(repo_dir, dest)
+    if dest.exists():
+        _remove_worktree(repo_dir, dest)
 
+    last_err = ""
+    for attempt in range(_WORKTREE_ADD_RETRIES):
         result = subprocess.run(
             ["git", "worktree", "add", "--detach", str(dest), commit_hash],
             capture_output=True,
             text=True,
             cwd=str(repo_dir),
         )
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"git worktree add --detach {commit_hash[:12]} failed: {result.stderr.strip()}"
-            )
+        if result.returncode == 0:
+            return
+        last_err = result.stderr.strip()
+        if not _is_worktree_race(last_err) or attempt == _WORKTREE_ADD_RETRIES - 1:
+            break
+        time.sleep(_WORKTREE_ADD_RETRY_BACKOFF)
+    raise RuntimeError(
+        f"git worktree add --detach {commit_hash[:12]} failed: {last_err}"
+    )
 
 
 def _remove_worktree(repo_dir: Path, dest: Path) -> None:
     """Remove a worktree. Best-effort; logs on failure but does not raise."""
-    with _get_worktree_lock(repo_dir):
-        _remove_worktree_unlocked(repo_dir, dest)
-
-
-def _remove_worktree_unlocked(repo_dir: Path, dest: Path) -> None:
-    """Unlocked body of _remove_worktree; caller must hold the worktree lock."""
     # git worktree remove is the preferred path; fall back to rmtree + prune.
     result = subprocess.run(
         ["git", "worktree", "remove", "--force", str(dest)],

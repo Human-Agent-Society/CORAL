@@ -56,7 +56,7 @@ def _git_init(d: str) -> None:
 
 
 def test_create_project_structure():
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         # Init a git repo so workspace can create worktrees
         _git_init(d)
 
@@ -105,7 +105,7 @@ def test_create_project_unique_runs():
 
 
 def test_write_agent_id():
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d)
         write_agent_id(worktree, "agent-42")
         content = (worktree / ".coral_agent_id").read_text()
@@ -113,7 +113,7 @@ def test_write_agent_id():
 
 
 def test_setup_gitignore():
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d)
         setup_gitignore(worktree)
 
@@ -126,7 +126,7 @@ def test_setup_gitignore():
 
 
 def test_setup_gitignore_preserves_existing():
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d)
         gitignore = worktree / ".gitignore"
         gitignore.write_text("*.pyc\n__pycache__/\n")
@@ -140,7 +140,7 @@ def test_setup_gitignore_preserves_existing():
 
 
 def test_setup_gitignore_idempotent():
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d)
         setup_gitignore(worktree)
         setup_gitignore(worktree)
@@ -161,7 +161,7 @@ def test_setup_codex_settings_writes_top_level_web_search(
     expected: str,
 ):
     """Codex expects web_search as a top-level mode, not under [tools]."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d) / "worktree"
         coral_dir = Path(d) / ".coral"
         worktree.mkdir()
@@ -177,7 +177,7 @@ def test_setup_codex_settings_writes_top_level_web_search(
 
 def test_create_project_runs_setup_commands():
     """Setup commands execute in the worktree directory."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d) / "worktree"
         worktree.mkdir()
 
@@ -190,7 +190,7 @@ def test_create_project_runs_setup_commands():
 
 def test_create_project_setup_command_failure():
     """A failing setup command raises RuntimeError."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d) / "worktree"
         worktree.mkdir()
 
@@ -200,7 +200,7 @@ def test_create_project_setup_command_failure():
 
 def test_create_project_setup_runs_sequentially():
     """Setup commands run in order so later commands can depend on earlier ones."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d) / "worktree"
         worktree.mkdir()
 
@@ -223,7 +223,7 @@ def test_setup_worktree_env_skips_when_venv_exists():
     Avoids re-running uv sync on every interrupt-and-resume cycle, which
     can otherwise dominate restart latency.
     """
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d) / "worktree"
         worktree.mkdir()
         # Pre-create a fake populated venv
@@ -241,7 +241,7 @@ def test_setup_worktree_env_skips_when_venv_exists():
 
 def test_setup_worktree_env_runs_when_venv_missing():
     """When .venv doesn't exist yet, setup runs as normal (first launch path)."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d) / "worktree"
         worktree.mkdir()
 
@@ -265,7 +265,7 @@ def _mount_workspace(d: Path) -> tuple[Path, Path]:
 
 def test_apply_runtime_mounts_no_mounts_is_noop():
     """Empty/missing mounts must not error or touch the worktree."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree, base = _mount_workspace(Path(d))
         before = sorted(worktree.iterdir())
         apply_runtime_mounts(worktree, {}, base)
@@ -275,7 +275,7 @@ def test_apply_runtime_mounts_no_mounts_is_noop():
 
 def test_apply_runtime_mounts_copies_file_with_relative_source():
     """Relative source resolves against base_dir; dest is worktree-relative."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree, base = _mount_workspace(Path(d))
         (base / "settings.json").write_text('{"foo": 1}')
 
@@ -292,7 +292,7 @@ def test_apply_runtime_mounts_copies_file_with_relative_source():
 
 def test_apply_runtime_mounts_absolute_source():
     """Absolute source is used as-is (base_dir ignored)."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree, base = _mount_workspace(Path(d))
         elsewhere = Path(d) / "elsewhere"
         elsewhere.mkdir()
@@ -306,7 +306,7 @@ def test_apply_runtime_mounts_absolute_source():
 
 def test_apply_runtime_mounts_expands_tilde(monkeypatch):
     """``~`` in source expands to $HOME."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree, base = _mount_workspace(Path(d))
         fake_home = Path(d) / "fake_home"
         fake_home.mkdir()
@@ -324,7 +324,7 @@ def test_apply_runtime_mounts_expands_tilde(monkeypatch):
 
 def test_apply_runtime_mounts_copies_directory():
     """Directory sources copy recursively."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree, base = _mount_workspace(Path(d))
         srcdir = base / "mcp"
         srcdir.mkdir()
@@ -340,7 +340,7 @@ def test_apply_runtime_mounts_copies_directory():
 
 def test_apply_runtime_mounts_overwrites_existing_file():
     """Existing dest is overwritten — second invocation refreshes."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree, base = _mount_workspace(Path(d))
         src = base / "settings.json"
         src.write_text("v1")
@@ -354,7 +354,7 @@ def test_apply_runtime_mounts_overwrites_existing_file():
 
 def test_apply_runtime_mounts_overwrites_corals_settings_local_json():
     """User can replace CORAL's settings.local.json (mounts run last, user wins)."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree, base = _mount_workspace(Path(d))
         # Simulate CORAL having already written settings.local.json
         (worktree / ".claude").mkdir()
@@ -372,7 +372,7 @@ def test_apply_runtime_mounts_overwrites_corals_settings_local_json():
 
 
 def test_apply_runtime_mounts_missing_source_raises():
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree, base = _mount_workspace(Path(d))
         with pytest.raises(FileNotFoundError, match="mount source"):
             apply_runtime_mounts(worktree, {"nope.json": ".claude/x.json"}, base)
@@ -380,7 +380,7 @@ def test_apply_runtime_mounts_missing_source_raises():
 
 def test_apply_runtime_mounts_absolute_dest_rejected():
     """Dest must be worktree-relative — absolute paths are rejected."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree, base = _mount_workspace(Path(d))
         (base / "src").write_text("x")
         with pytest.raises(ValueError, match="must be worktree-relative"):
@@ -389,7 +389,7 @@ def test_apply_runtime_mounts_absolute_dest_rejected():
 
 def test_apply_runtime_mounts_dest_escape_rejected():
     """Dest cannot escape the worktree via ``..``."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree, base = _mount_workspace(Path(d))
         (base / "src").write_text("x")
         with pytest.raises(ValueError, match="escapes worktree"):
@@ -398,7 +398,7 @@ def test_apply_runtime_mounts_dest_escape_rejected():
 
 def test_apply_runtime_mounts_creates_parent_dirs():
     """Nested dest paths get their parent directories created."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree, base = _mount_workspace(Path(d))
         (base / "src.json").write_text("nested")
 
@@ -413,7 +413,7 @@ def test_apply_runtime_mounts_creates_parent_dirs():
 
 def test_apply_runtime_mounts_multiple_files():
     """All entries in the mounts dict get copied."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree, base = _mount_workspace(Path(d))
         (base / "a.json").write_text("A")
         (base / "b.json").write_text("B")
@@ -445,7 +445,7 @@ def _role_workspace(d: Path) -> tuple[Path, Path]:
 
 def test_seed_agent_role_copies_file():
     """A user-provided .md is copied to public/roles/<agent_id>.md."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         coral_dir, base = _role_workspace(Path(d))
         (base / "integrator.md").write_text("# Integrator role\n")
 
@@ -457,7 +457,7 @@ def test_seed_agent_role_copies_file():
 
 def test_seed_agent_role_idempotent_preserves_existing():
     """Existing role file is never overwritten — agent evolution is preserved."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         coral_dir, base = _role_workspace(Path(d))
         (base / "seed.md").write_text("# seed")
 
@@ -475,7 +475,7 @@ def test_seed_agent_role_idempotent_preserves_existing():
 
 def test_seed_agent_role_absolute_source():
     """Absolute source paths are used as-is."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         coral_dir, base = _role_workspace(Path(d))
         elsewhere = Path(d) / "elsewhere"
         elsewhere.mkdir()
@@ -489,7 +489,7 @@ def test_seed_agent_role_absolute_source():
 
 def test_seed_agent_role_expands_tilde(monkeypatch):
     """``~`` in source expands to $HOME, matching apply_runtime_mounts."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         coral_dir, base = _role_workspace(Path(d))
         fake_home = Path(d) / "fake_home"
         fake_home.mkdir()
@@ -503,7 +503,7 @@ def test_seed_agent_role_expands_tilde(monkeypatch):
 
 def test_seed_agent_role_missing_source_raises():
     """A missing source surfaces as FileNotFoundError so misconfig fails loudly."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         coral_dir, base = _role_workspace(Path(d))
         with pytest.raises(FileNotFoundError, match="role_file"):
             seed_agent_role(coral_dir, "agent-1", "nope.md", base)
@@ -511,7 +511,7 @@ def test_seed_agent_role_missing_source_raises():
 
 def test_seed_agent_role_per_agent_distinct_content():
     """Multiple agents can each be seeded from a different file."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         coral_dir, base = _role_workspace(Path(d))
         (base / "a.md").write_text("A's role")
         (base / "b.md").write_text("B's role")
@@ -526,7 +526,7 @@ def test_seed_agent_role_per_agent_distinct_content():
 
 def test_seed_agent_role_default_template_when_no_source():
     """source=None falls back to the bundled gen-0 role template."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         coral_dir, _ = _role_workspace(Path(d))
 
         dst = seed_agent_role(coral_dir, "agent-1")
@@ -540,7 +540,7 @@ def test_seed_agent_role_default_template_when_no_source():
 
 def test_seed_agent_role_relative_source_without_base_dir_raises():
     """A relative source with no base_dir surfaces as ValueError, not silent cwd resolution."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         coral_dir, _ = _role_workspace(Path(d))
         with pytest.raises(ValueError, match="base_dir is required"):
             seed_agent_role(coral_dir, "agent-1", "relative.md")
@@ -551,7 +551,7 @@ def test_seed_agent_role_relative_source_without_base_dir_raises():
 
 def test_setup_shared_state_symlinks_roles():
     """roles/ is symlinked into the worktree's shared dir."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         coral_dir = Path(d) / ".coral"
         (coral_dir / "public" / "roles").mkdir(parents=True)
         worktree = Path(d) / "worktree"
@@ -566,7 +566,7 @@ def test_setup_shared_state_symlinks_roles():
 
 def test_setup_shared_state_migrates_real_roles_dir():
     """A previous run's real roles/ dir is migrated into shared, then symlinked."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         coral_dir = Path(d) / ".coral"
         (coral_dir / "public" / "roles").mkdir(parents=True)
         worktree = Path(d) / "worktree"
@@ -584,7 +584,7 @@ def test_setup_shared_state_migrates_real_roles_dir():
 
 def test_create_project_seeds_user_skills():
     """agents.skills directories are copied into .coral/public/skills/."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         _git_init(d)
         root = Path(d)
 
@@ -608,7 +608,7 @@ def test_create_project_seeds_user_skills():
 
 def test_create_project_user_skills_override_builtin():
     """User skills with the same name as a built-in skill take precedence."""
-    with tempfile.TemporaryDirectory() as d:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         _git_init(d)
         root = Path(d)
 
