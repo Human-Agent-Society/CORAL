@@ -430,9 +430,9 @@ def pick_run(status_filter: str | None = None, allow_cancel: bool = False) -> Pa
     rw = max(len("RUN"), max(len(r["run"]) for r in runs)) + 2
     sw = max(len("STATUS"), 10) + 2
 
-    header = (
-        f"{'#':>3}  {'TASK':<{tw}}{'RUN':<{rw}}{'STATUS':<{sw}}{'AGENTS':>7}{'EVALS':>7}{'BEST':>9}"
-    )
+    # BEST width 12 leaves a 2-char gap after EVALS so multi-digit scores
+    # (e.g. 4838.0000) don't visually fuse with the EVALS column.
+    header = f"{'#':>3}  {'TASK':<{tw}}{'RUN':<{rw}}{'STATUS':<{sw}}{'AGENTS':>7}{'EVALS':>7}{'BEST':>12}"
     print(header)
     print("-" * len(header))
 
@@ -444,7 +444,7 @@ def pick_run(status_filter: str | None = None, allow_cancel: bool = False) -> Pa
         best_str = f"{r['best']:.4f}" if r["best"] is not None else "-"
         print(
             f"{i:>3}  {r['task']:<{tw}}{r['run']:<{rw}}{status_str:<{sw}}"
-            f"{r['agents']:>7}{r['attempts']:>7}{best_str:>9}"
+            f"{r['agents']:>7}{r['attempts']:>7}{best_str:>12}"
         )
 
     print()

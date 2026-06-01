@@ -30,10 +30,15 @@ async def get_config(request: Request) -> JSONResponse:
 
 
 async def get_attempts(request: Request) -> JSONResponse:
-    """GET /api/attempts — return all attempts sorted by timestamp."""
-    from coral.hub.attempts import read_attempts
+    """GET /api/attempts — return all attempts sorted by timestamp.
 
-    attempts = read_attempts(str(_coral_dir(request)))
+    Aggregates across islands so the dashboard reflects the whole team, not
+    just the attempts in ``coral_dir/public/attempts`` (which is empty in
+    multi-island mode).
+    """
+    from coral.hub.attempts import _read_all_island_attempts
+
+    attempts = _read_all_island_attempts(_coral_dir(request))
     attempts.sort(key=lambda a: a.timestamp)
     return JSONResponse([a.to_dict() for a in attempts])
 
@@ -50,21 +55,30 @@ async def get_leaderboard(request: Request) -> JSONResponse:
 
 
 async def get_attempt_detail(request: Request) -> JSONResponse:
-    """GET /api/attempts/{hash} — return a single attempt."""
+    """GET /api/attempts/{hash} — return a single attempt.
+
+    Searches every island's attempts dir (and the legacy ``public/attempts``)
+    so a hash from any island resolves. Mirrors the cross-island lookup that
+    ``coral show`` already does in the CLI.
+    """
+    from coral.hub._island import all_view_roots
+
     commit_hash = request.path_params["hash"]
     coral_dir = _coral_dir(request)
-    attempt_file = coral_dir / "public" / "attempts" / f"{commit_hash}.json"
 
-    if not attempt_file.exists():
-        # Try prefix match
-        matches = list((coral_dir / "public" / "attempts").glob(f"{commit_hash}*.json"))
-        if len(matches) == 1:
-            attempt_file = matches[0]
-        else:
-            return JSONResponse({"error": "attempt not found"}, status_code=404)
+    # Direct hit anywhere first.
+    for view_root in all_view_roots(coral_dir):
+        candidate = view_root / "attempts" / f"{commit_hash}.json"
+        if candidate.exists():
+            return JSONResponse(json.loads(candidate.read_text()))
 
-    data = json.loads(attempt_file.read_text())
-    return JSONResponse(data)
+    # Prefix match — ambiguous across islands → 404 rather than guessing.
+    matches: list[Path] = []
+    for view_root in all_view_roots(coral_dir):
+        matches.extend((view_root / "attempts").glob(f"{commit_hash}*.json"))
+    if len(matches) == 1:
+        return JSONResponse(json.loads(matches[0].read_text()))
+    return JSONResponse({"error": "attempt not found"}, status_code=404)
 
 
 async def get_agent_attempts(request: Request) -> JSONResponse:
@@ -246,9 +260,16 @@ def _enumerate_runs(results_dir: Path, current_coral_dir: Path) -> dict:
             if status == "stopped" and is_docker_run_alive(coral_dir):
                 status = "running"
 
-            # Count attempts
-            attempts_dir = coral_dir / "public" / "attempts"
-            attempt_count = len(list(attempts_dir.glob("*.json"))) if attempts_dir.exists() else 0
+            # Count attempts across every view root. In multi-island mode the
+            # attempts live in islands/<id>/attempts/ — public/attempts is
+            # empty — so a single-dir glob would undercount every run.
+            from coral.hub._island import all_view_roots
+
+            attempt_count = 0
+            for view_root in all_view_roots(coral_dir):
+                attempts_dir = view_root / "attempts"
+                if attempts_dir.is_dir():
+                    attempt_count += sum(1 for _ in attempts_dir.glob("*.json"))
 
             # Check if latest (latest symlink now points to run_dir, not .coral)
             is_latest = latest_target is not None and latest_target == run_dir.resolve()
@@ -329,7 +350,6 @@ async def switch_run(request: Request) -> JSONResponse:
 
 async def get_status(request: Request) -> JSONResponse:
     """GET /api/status — return overall run status."""
-    from coral.hub.attempts import read_attempts
     from coral.web.logs import list_log_files
 
     coral_dir = _coral_dir(request)
@@ -358,8 +378,11 @@ async def get_status(request: Request) -> JSONResponse:
         except ValueError:
             pass
 
-    # Attempts summary
-    attempts = read_attempts(str(coral_dir))
+    # Attempts summary — aggregate across islands so the status pane shows
+    # the whole team, not just public/attempts (empty in multi-island mode).
+    from coral.hub.attempts import _read_all_island_attempts
+
+    attempts = _read_all_island_attempts(coral_dir)
     scored = [a for a in attempts if a.score is not None]
     minimize = _direction(request) == "minimize"
     best_fn = min if minimize else max

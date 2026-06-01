@@ -454,14 +454,31 @@ def _collect_runs(results_dir: Path) -> list[dict]:
                 except Exception:
                     pass
 
-            attempts_dir = coral_dir / "public" / "attempts"
+            # Aggregate attempts across every view root. In multi-island mode
+            # the JSONs live in islands/<id>/attempts/ — public/attempts is
+            # empty — so a single-dir glob would undercount every run.
+            # BEST mirrors format_status_summary: hide tune attempts (they're
+            # sweeps, not submissions) so the headline number matches what
+            # `coral log` and the body summary show by default.
+            from coral.hub._island import all_view_roots
+            from coral.types import BUDGET_CLASS_REAL, Attempt
+
             attempt_count = 0
             best_score = None
-            if attempts_dir.exists():
+            for view_root in all_view_roots(coral_dir):
+                attempts_dir = view_root / "attempts"
+                if not attempts_dir.is_dir():
+                    continue
                 for af in attempts_dir.glob("*.json"):
                     try:
                         adata = json.loads(af.read_text())
                         attempt_count += 1
+                        # `budget_class` is a derived field on Attempt
+                        # (from metadata), not a top-level JSON key — go
+                        # through Attempt.from_dict so the classification
+                        # logic stays in one place.
+                        if Attempt.from_dict(adata).budget_class != BUDGET_CLASS_REAL:
+                            continue
                         s = adata.get("score")
                         if s is not None:
                             if best_score is None:
@@ -470,7 +487,7 @@ def _collect_runs(results_dir: Path) -> list[dict]:
                                 best_score = s
                             elif direction == "minimize" and s < best_score:
                                 best_score = s
-                    except (json.JSONDecodeError, OSError):
+                    except (json.JSONDecodeError, KeyError, OSError):
                         attempt_count += 1
 
             is_latest = latest_resolved is not None and (latest_resolved == run_dir.resolve())
