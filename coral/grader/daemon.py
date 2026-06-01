@@ -235,9 +235,7 @@ def _add_isolated_worktree(repo_dir: Path, commit_hash: str, dest: Path) -> None
         if not _is_worktree_race(last_err) or attempt == _WORKTREE_ADD_RETRIES - 1:
             break
         time.sleep(_WORKTREE_ADD_RETRY_BACKOFF)
-    raise RuntimeError(
-        f"git worktree add --detach {commit_hash[:12]} failed: {last_err}"
-    )
+    raise RuntimeError(f"git worktree add --detach {commit_hash[:12]} failed: {last_err}")
 
 
 def _remove_worktree(repo_dir: Path, dest: Path) -> None:
