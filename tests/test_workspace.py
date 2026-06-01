@@ -83,7 +83,9 @@ def test_create_project_structure():
 
 def test_create_project_unique_runs():
     """Each create_project call gets a unique run directory."""
-    with tempfile.TemporaryDirectory() as d:
+    # ignore_cleanup_errors: git's .git/objects can have background writes
+    # racing with rmtree at exit. The test logic is complete by then.
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         _git_init(d)
 
         config = _make_config(d)

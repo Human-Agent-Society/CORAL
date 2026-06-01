@@ -193,28 +193,57 @@ def _is_git_repo(path: Path) -> bool:
     return path.is_dir() and (path / ".git").exists()
 
 
+_worktree_locks: dict[str, threading.Lock] = {}
+_worktree_locks_guard = threading.Lock()
+
+
+def _get_worktree_lock(repo_dir: Path) -> threading.Lock:
+    """Per-repo lock for ``git worktree add/remove`` to avoid races under parallel grading.
+
+    Git's own worktree machinery has TOCTOU windows between worktree creation
+    and the commondir read; two threads adding worktrees from the same repo
+    can race and one will fail with "failed to read .git/worktrees/<id>/commondir".
+    The lock only spans the worktree add/remove, not the actual grading, so
+    ``grader.parallel.max_workers > 1`` still achieves real overlap.
+    """
+    key = str(repo_dir.resolve())
+    with _worktree_locks_guard:
+        lock = _worktree_locks.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _worktree_locks[key] = lock
+        return lock
+
+
 def _add_isolated_worktree(repo_dir: Path, commit_hash: str, dest: Path) -> None:
     """Create a detached worktree at `dest` pointing at `commit_hash`.
 
     Force-removes any prior checkout at the same path (crash-recovery).
     """
-    if dest.exists():
-        _remove_worktree(repo_dir, dest)
+    with _get_worktree_lock(repo_dir):
+        if dest.exists():
+            _remove_worktree_unlocked(repo_dir, dest)
 
-    result = subprocess.run(
-        ["git", "worktree", "add", "--detach", str(dest), commit_hash],
-        capture_output=True,
-        text=True,
-        cwd=str(repo_dir),
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"git worktree add --detach {commit_hash[:12]} failed: {result.stderr.strip()}"
+        result = subprocess.run(
+            ["git", "worktree", "add", "--detach", str(dest), commit_hash],
+            capture_output=True,
+            text=True,
+            cwd=str(repo_dir),
         )
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"git worktree add --detach {commit_hash[:12]} failed: {result.stderr.strip()}"
+            )
 
 
 def _remove_worktree(repo_dir: Path, dest: Path) -> None:
     """Remove a worktree. Best-effort; logs on failure but does not raise."""
+    with _get_worktree_lock(repo_dir):
+        _remove_worktree_unlocked(repo_dir, dest)
+
+
+def _remove_worktree_unlocked(repo_dir: Path, dest: Path) -> None:
+    """Unlocked body of _remove_worktree; caller must hold the worktree lock."""
     # git worktree remove is the preferred path; fall back to rmtree + prune.
     result = subprocess.run(
         ["git", "worktree", "remove", "--force", str(dest)],
