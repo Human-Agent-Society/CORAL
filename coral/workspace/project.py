@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 from coral.config import CoralConfig
+from coral.hub._island import island_root
 from coral.hub.checkpoint import init_checkpoint_repo
 from coral.workspace.repo import (
     clone_or_init_repo,
@@ -129,12 +130,20 @@ def seed_agent_role(
     agent_id: str,
     source: str | None = None,
     base_dir: Path | None = None,
+    *,
+    island_id: str | int | None = None,
 ) -> Path:
-    """Write the per-agent role description at .coral/public/roles/<agent_id>.md.
+    """Write the per-agent role description at the per-island roles dir.
 
     The role describes *what the agent does* on the team — its posture, lane,
     objectives, and accumulated self-knowledge. It is mutable and evolves over
     the run.
+
+    Resolves to ``coral_dir/public/roles/<agent_id>.md`` in single-island
+    runs, or ``coral_dir/islands/<island_id>/roles/<agent_id>.md`` in
+    multi-island runs. The latter matches the symlink installed by
+    ``worktree.setup_shared_state``, so the agent's worktree
+    ``.claude/roles/<agent_id>.md`` resolves to the file we write here.
 
     Idempotent: does nothing if the file already exists, so an agent's evolved
     role description is never clobbered by a re-setup or resume.
@@ -152,7 +161,7 @@ def seed_agent_role(
         ValueError: if ``source`` is given but ``base_dir`` is None and ``source``
             is a relative path.
     """
-    roles_dir = coral_dir / "public" / "roles"
+    roles_dir = island_root(coral_dir, island_id) / "roles"
     roles_dir.mkdir(parents=True, exist_ok=True)
     dst = roles_dir / f"{agent_id}.md"
     if dst.exists():

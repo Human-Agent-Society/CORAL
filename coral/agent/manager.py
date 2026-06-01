@@ -84,9 +84,7 @@ class AgentManager:
         # Resolve concrete per-agent specs, then (when multi-island) partition them
         # across islands round-robin. Single-island (count=1) returns specs unchanged.
         base_specs = resolve_agent_specs(config)
-        self.specs: list[AgentSpec] = partition_into_islands(
-            base_specs, count=config.islands.count
-        )
+        self.specs: list[AgentSpec] = partition_into_islands(base_specs, count=config.islands.count)
         self.specs_by_id: dict[str, AgentSpec] = {s.agent_id: s for s in self.specs}
         # One runtime instance per agent_id. In uniform mode all entries point
         # to the same class; in mix-and-match mode each agent uses its own.
@@ -519,7 +517,9 @@ class AgentManager:
         # Seed local heartbeat config from task YAML if not already present
         if not read_agent_heartbeat(self.paths.coral_dir, agent_id, island_id=island_id):
             write_agent_heartbeat(
-                self.paths.coral_dir, agent_id, default_local_actions(self.config),
+                self.paths.coral_dir,
+                agent_id,
+                default_local_actions(self.config),
                 island_id=island_id,
             )
             logger.info(f"  Seeded heartbeat config for {agent_id}")
@@ -530,13 +530,16 @@ class AgentManager:
         # Seed the agent's role description (idempotent — preserves the
         # evolved role on resume). When ``runtime_options.role_file``
         # is set, the user-provided .md is copied as the gen-0 seed; otherwise
-        # the bundled blank template is rendered.
+        # the bundled blank template is rendered. In multi-island runs the
+        # file lands under islands/<id>/roles/ so the worktree symlink
+        # installed by setup_shared_state resolves to a real file.
         role_file = (runtime_options or {}).get("role_file")
         seed_agent_role(
             self.paths.coral_dir,
             agent_id,
             source=role_file,
             base_dir=self._mounts_base_dir() if role_file else None,
+            island_id=island_id,
         )
 
         # Generate instruction file (CLAUDE.md, AGENTS.md, etc.)
