@@ -291,8 +291,26 @@ def format_status_summary(
     direction: str = "maximize",
     island_id: str | int | None = None,
 ) -> str:
-    """Format a summary of the current run state."""
-    attempts = read_attempts(coral_dir, island_id=island_id)
+    """Format a summary of the current run state.
+
+    In single-island mode, reads from ``coral_dir/public/attempts/`` (the
+    legacy layout). In multi-island mode with a specific ``island_id``,
+    reads from that island's attempts. In multi-island mode without an
+    ``island_id``, aggregates across every island so ``coral status`` shows
+    the whole team in one view.
+    """
+    coral_dir = Path(coral_dir)
+    if island_id is not None:
+        attempts = read_attempts(coral_dir, island_id=island_id)
+    elif (coral_dir / "islands").exists():
+        attempts = []
+        for island_root in sorted((coral_dir / "islands").iterdir()):
+            if not island_root.is_dir():
+                continue
+            attempts.extend(read_attempts(coral_dir, island_id=island_root.name))
+    else:
+        attempts = read_attempts(coral_dir, island_id=None)
+
     if not attempts:
         return "No attempts yet."
 
