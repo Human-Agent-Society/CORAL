@@ -150,7 +150,10 @@ class AgentConfig:
     # combo. ``agents.count`` is ignored (total = sum of assignment counts).
     # Empty fields on an assignment inherit the agents.* defaults below.
     assignments: list[AgentAssignmentConfig] = field(default_factory=list)
-    max_turns: int = 200
+    # Max agent turns per session before the runtime exits and the manager
+    # restarts the agent (preserving context via --resume). 0 = no cap, let
+    # the underlying CLI run until it exits naturally.
+    max_turns: int = 0
     # Stall watchdog: restart an agent that produces no output for this many
     # seconds. 0 disables the watchdog. Default 1200s (20 min) catches deadlocks
     # faster than the prior 3600s while still being well above legitimate quiet

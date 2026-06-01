@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import subprocess
 import sys
@@ -14,10 +15,46 @@ from coral.agent.exit_classifier import (
     claude_code_log_has_session_error,
 )
 from coral.agent.process import open_agent_stderr_for_log_dir
-from coral.agent.runtime import AgentHandle, _extract_session_id, write_coral_log_entry
+from coral.agent.runtime import AgentHandle, write_coral_log_entry
 from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_claude_code_session_id(log_path: Path) -> str | None:
+    """Extract session_id from a Claude Code stream-json log.
+
+    Checks (in order): result lines, then any line with a session_id
+    (system init, assistant messages, etc.) — scanning from the end.
+    """
+    try:
+        lines = log_path.read_text().strip().splitlines()
+        # First pass: look for a "result" line (most authoritative)
+        for line in reversed(lines):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+                if data.get("type") == "result" and data.get("session_id"):
+                    return data["session_id"]
+            except json.JSONDecodeError:
+                continue
+        # Second pass: fall back to any line with session_id
+        for line in reversed(lines):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+                sid = data.get("session_id")
+                if sid:
+                    return sid
+            except json.JSONDecodeError:
+                continue
+    except Exception as e:
+        logger.debug(f"Failed to extract session_id from {log_path}: {e}")
+    return None
 
 
 class ClaudeCodeRuntime:
@@ -32,7 +69,7 @@ class ClaudeCodeRuntime:
         return ".claude"
 
     def extract_session_id(self, log_path: Path) -> str | None:
-        return _extract_session_id(log_path)
+        return _extract_claude_code_session_id(log_path)
 
     def classify_exit(
         self,
@@ -65,7 +102,7 @@ class ClaudeCodeRuntime:
         coral_md_path: Path,
         model: str = "opus",
         runtime_options: dict[str, Any] | None = None,
-        max_turns: int = 200,
+        max_turns: int = 0,
         log_dir: Path | None = None,
         verbose: bool = False,
         resume_session_id: str | None = None,
@@ -101,12 +138,19 @@ class ClaudeCodeRuntime:
             prompt,
             "--model",
             model,
-            "--max-turns",
-            str(max_turns),
-            "--output-format",
-            "stream-json",
-            "--verbose",
         ]
+        # 0 = no cap — let the underlying `claude` CLI run until it exits
+        # naturally. The manager still restarts on any exit, preserving context
+        # via --resume below.
+        if max_turns > 0:
+            cmd.extend(["--max-turns", str(max_turns)])
+        cmd.extend(
+            [
+                "--output-format",
+                "stream-json",
+                "--verbose",
+            ]
+        )
 
         # Extra paths added to the Claude Code session sandbox via --add-dir.
         # Lets callers (e.g. judge graders) grant tool access to a sibling

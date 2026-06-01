@@ -71,7 +71,7 @@ agents:
   count: 1                           # Number of concurrent agents (default: 1)
   runtime: claude_code               # "claude_code", "opencode", or "codex" (default: claude_code)
   model: sonnet                      # Model name or path (default: sonnet)
-  max_turns: 200                     # Max agent turns before stopping (default: 200)
+  max_turns: 0                       # Max agent turns per session (default: 0 = no cap)
   timeout: 3600                      # Agent-level timeout in seconds (default: 3600)
   research: true                     # Enable web search / literature review (default: true)
   stagger_seconds: 0                 # Delay between spawning each agent (default: 0)

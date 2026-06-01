@@ -32,7 +32,7 @@ def _extract_opencode_session_id(log_path: Path) -> str | None:
                 continue
             try:
                 data = json.loads(line)
-                sid = data.get("session_id") or data.get("sessionId")
+                sid = data.get("session_id") or data.get("sessionId") or data.get("sessionID")
                 if sid:
                     return sid
             except json.JSONDecodeError:
@@ -81,7 +81,7 @@ class OpenCodeRuntime:
         coral_md_path: Path,
         model: str = "gpt-5",
         runtime_options: dict[str, Any] | None = None,
-        max_turns: int = 200,
+        max_turns: int = 0,
         log_dir: Path | None = None,
         verbose: bool = False,
         resume_session_id: str | None = None,
