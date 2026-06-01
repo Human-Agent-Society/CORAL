@@ -71,8 +71,14 @@ def cmd_log(args: argparse.Namespace) -> None:
         else:
             print("No attempts yet.")
     else:
+        # `coral log` does its own tune/error filtering via --all / --class, so
+        # always pull the full set from get_leaderboard and let the filter
+        # callback narrow it. get_leaderboard's default hides tune, but log
+        # wants everything up front.
         attempts = filter_attempts(
-            get_leaderboard(str(coral_dir), top_n=raw_n, direction=direction)
+            get_leaderboard(
+                str(coral_dir), top_n=raw_n, direction=direction, include_tune=True
+            )
         )[:count]
         if attempts:
             print(f"Leaderboard (top {len(attempts)}):")

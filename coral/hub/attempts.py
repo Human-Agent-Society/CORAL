@@ -165,11 +165,15 @@ def get_leaderboard(
     top_n: int = 20,
     direction: str = "maximize",
     island_id: str | int | None = None,
+    *,
+    include_tune: bool = False,
 ) -> list[Attempt]:
     """Get top N attempts sorted by score. Direction controls sort order.
 
     With ``island_id=None`` in a multi-island run, reads across all islands
-    so the leaderboard reflects the whole team.
+    so the leaderboard reflects the whole team. Tune attempts are hidden
+    by default — they are sweeps, not submissions; pass ``include_tune=True``
+    (or use ``coral log --all``) to see them.
     """
     coral_dir = Path(coral_dir)
     if island_id is not None or not (coral_dir / "islands").exists():
@@ -177,6 +181,10 @@ def get_leaderboard(
     else:
         attempts = _read_all_island_attempts(coral_dir)
     scored = [a for a in attempts if a.score is not None]
+    if not include_tune:
+        from coral.types import BUDGET_CLASS_REAL  # local import: avoid cycle at module load
+
+        scored = [a for a in scored if a.budget_class == BUDGET_CLASS_REAL]
     descending = direction != "minimize"
     scored.sort(key=lambda a: a.score or 0.0, reverse=descending)
     return scored[:top_n]
@@ -318,6 +326,8 @@ def format_status_summary(
     coral_dir: str | Path,
     direction: str = "maximize",
     island_id: str | int | None = None,
+    *,
+    include_tune: bool = False,
 ) -> str:
     """Format a summary of the current run state.
 
@@ -325,13 +335,20 @@ def format_status_summary(
     legacy layout). In multi-island mode with a specific ``island_id``,
     reads from that island's attempts. In multi-island mode without an
     ``island_id``, aggregates across every island so ``coral status`` shows
-    the whole team in one view.
+    the whole team in one view. Tune attempts are hidden from the
+    headline numbers by default (Best/Worst and per-agent best) — pass
+    ``include_tune=True`` to count them.
     """
     coral_dir = Path(coral_dir)
     if island_id is not None:
         attempts = read_attempts(coral_dir, island_id=island_id)
     else:
         attempts = _read_all_island_attempts(coral_dir)
+
+    if not include_tune:
+        from coral.types import BUDGET_CLASS_REAL
+
+        attempts = [a for a in attempts if a.budget_class == BUDGET_CLASS_REAL]
 
     if not attempts:
         return "No attempts yet."
