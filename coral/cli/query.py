@@ -273,13 +273,7 @@ def cmd_note_new(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     created = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    content = (
-        "---\n"
-        f"creator: {agent_id}\n"
-        f"created: {created}\n"
-        "---\n"
-        f"{body.rstrip()}\n"
-    )
+    content = f"---\ncreator: {agent_id}\ncreated: {created}\n---\n{body.rstrip()}\n"
     note_path.write_text(content)
     print(str(note_path))
     sys.exit(0)

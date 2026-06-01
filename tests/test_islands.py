@@ -170,9 +170,8 @@ def test_notes_by_returns_creator_matched_paths():
         matched = notes_by(coral_dir, island_id="0", agent_id="agent-1")
         assert [p.name for p in matched] == ["by-agent-1.md"]
         # The anonymous note (no creator) is excluded
-        all_matched = (
-            notes_by(coral_dir, island_id="0", agent_id="agent-1")
-            + notes_by(coral_dir, island_id="0", agent_id="agent-2")
+        all_matched = notes_by(coral_dir, island_id="0", agent_id="agent-1") + notes_by(
+            coral_dir, island_id="0", agent_id="agent-2"
         )
         assert "anonymous.md" not in {p.name for p in all_matched}
 
@@ -287,12 +286,8 @@ def test_global_heartbeat_multi_island_isolation():
         coral_dir = Path(d)
         for i in range(2):
             (coral_dir / "islands" / str(i) / "heartbeat").mkdir(parents=True)
-        write_global_heartbeat(
-            coral_dir, [{"name": "consolidate", "every": 10}], island_id="0"
-        )
-        write_global_heartbeat(
-            coral_dir, [{"name": "consolidate", "every": 20}], island_id="1"
-        )
+        write_global_heartbeat(coral_dir, [{"name": "consolidate", "every": 10}], island_id="0")
+        write_global_heartbeat(coral_dir, [{"name": "consolidate", "every": 20}], island_id="1")
         g0 = read_global_heartbeat(coral_dir, island_id="0")
         g1 = read_global_heartbeat(coral_dir, island_id="1")
         assert next(a for a in g0 if a["name"] == "consolidate")["every"] == 10

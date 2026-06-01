@@ -198,9 +198,8 @@ def submit_eval(
     parent_shared_state_hash = None
     if parent_hash:
         from coral.hub._island import island_root
-        parent_attempt_file = (
-            island_root(coral_dir, island_id) / "attempts" / f"{parent_hash}.json"
-        )
+
+        parent_attempt_file = island_root(coral_dir, island_id) / "attempts" / f"{parent_hash}.json"
         if parent_attempt_file.exists():
             try:
                 parent_data = json.loads(parent_attempt_file.read_text())

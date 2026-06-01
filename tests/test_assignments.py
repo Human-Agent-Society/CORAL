@@ -231,5 +231,6 @@ def test_partition_preserves_runtime_and_model():
 
 def test_partition_raises_on_count_zero():
     import pytest
+
     with pytest.raises(ValueError, match="count must be >= 1"):
         partition_into_islands([_bare_spec("agent-1")], count=0)

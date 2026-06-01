@@ -28,16 +28,10 @@ def island_root(coral_dir: str | Path, island_id: str | int | None) -> Path:
     if islands_dir.exists():
         if island_id is None:
             raise ValueError(
-                "island_id is required in multi-island runs "
-                f"({islands_dir} exists on disk)"
+                f"island_id is required in multi-island runs ({islands_dir} exists on disk)"
             )
         id_str = str(island_id)
-        if (
-            not id_str
-            or "/" in id_str
-            or os.sep in id_str
-            or id_str == ".."
-        ):
+        if not id_str or "/" in id_str or os.sep in id_str or id_str == "..":
             raise ValueError(
                 f"island_id {island_id!r} is invalid: must be a non-empty "
                 "string containing no path separators or '..'"

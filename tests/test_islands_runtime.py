@@ -57,7 +57,16 @@ def test_create_project_multi_island_creates_per_island_subtrees(tmp_path):
     assert islands_root.is_dir()
     for i in range(3):
         island = islands_root / str(i)
-        for sub in ("attempts", "notes", "skills", "agents", "roles", "heartbeat", "eval_logs", "logs"):
+        for sub in (
+            "attempts",
+            "notes",
+            "skills",
+            "agents",
+            "roles",
+            "heartbeat",
+            "eval_logs",
+            "logs",
+        ):
             assert (island / sub).is_dir(), f"missing {island / sub}"
 
 
@@ -223,7 +232,9 @@ def test_setup_opencode_settings_multi_island_external_dir_scoped(tmp_path):
     ext = settings["permission"]["external_directory"]
     keys = "\n".join(ext.keys())
     assert "islands/2" in keys, f"expected island-2 path in opencode external_directory; got {ext}"
-    assert "public" not in keys, f"public pattern leaked into multi-island opencode config; got {ext}"
+    assert "public" not in keys, (
+        f"public pattern leaked into multi-island opencode config; got {ext}"
+    )
 
 
 def test_partition_and_setup_threads_island_id_into_worktrees(tmp_path):
@@ -256,10 +267,21 @@ def test_partition_and_setup_threads_island_id_into_worktrees(tmp_path):
     # so the commands here are idempotent (``--allow-empty`` covers the
     # "already initialised, working tree clean" case).
     import subprocess
+
     subprocess.run(["git", "init"], cwd=str(paths.repo_dir), check=True, capture_output=True)
     subprocess.run(["git", "add", "-A"], cwd=str(paths.repo_dir), check=True, capture_output=True)
     subprocess.run(
-        ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "--allow-empty", "-m", "init"],
+        [
+            "git",
+            "-c",
+            "user.email=t@t",
+            "-c",
+            "user.name=t",
+            "commit",
+            "--allow-empty",
+            "-m",
+            "init",
+        ],
         cwd=str(paths.repo_dir),
         check=True,
         capture_output=True,
@@ -292,14 +314,18 @@ def test_agent_manager_partitions_specs_in_start_all_setup(tmp_path):
     cfg = CoralConfig.from_dict(data)
 
     from coral.agent.manager import AgentManager
+
     mgr = AgentManager(cfg)
 
     ids = sorted(s.agent_id for s in mgr.specs)
     # 6 agents on 3 islands round-robin → 2 each
     assert ids == [
-        "0-agent-1", "0-agent-2",
-        "1-agent-1", "1-agent-2",
-        "2-agent-1", "2-agent-2",
+        "0-agent-1",
+        "0-agent-2",
+        "1-agent-1",
+        "1-agent-2",
+        "2-agent-1",
+        "2-agent-2",
     ]
     assert all(s.island_id in {"0", "1", "2"} for s in mgr.specs)
 
@@ -313,6 +339,7 @@ def test_agent_manager_single_island_specs_unchanged(tmp_path):
     cfg = CoralConfig.from_dict(data)
 
     from coral.agent.manager import AgentManager
+
     mgr = AgentManager(cfg)
 
     assert [s.agent_id for s in mgr.specs] == ["agent-1", "agent-2"]

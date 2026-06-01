@@ -379,11 +379,13 @@ def test_monitor_loop_stall_watchdog_does_not_crash_multi_island(tmp_path):
     for i in range(2):
         (coral_dir / "islands" / str(i) / "attempts").mkdir(parents=True)
 
-    cfg = CoralConfig.from_dict({
-        "task": {"name": "t", "description": "d"},
-        "islands": {"count": 2},
-        "agents": {"count": 2, "timeout": 1},
-    })
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "islands": {"count": 2},
+            "agents": {"count": 2, "timeout": 1},
+        }
+    )
     mgr = AgentManager(cfg)
     mgr.paths = ProjectPaths(
         results_dir=tmp_path,
@@ -396,6 +398,7 @@ def test_monitor_loop_stall_watchdog_does_not_crash_multi_island(tmp_path):
 
     # Directly exercise the read that crashed before the fix
     from coral.hub.attempts import read_attempts
+
     if (coral_dir / "islands").exists():
         # Simulate the new gather logic; if this raises, the test fails.
         attempts: list = []

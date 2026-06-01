@@ -463,17 +463,43 @@ def test_submit_eval_multi_island_writes_to_island_attempts(tmp_path, monkeypatc
     # Build a minimal multi-island layout: coral_dir + a worktree
     coral_dir = tmp_path / ".coral"
     (coral_dir / "islands" / "1" / "attempts").mkdir(parents=True)
-    cfg = CoralConfig.from_dict({
-        "task": {"name": "t", "description": "d"},
-        "islands": {"count": 2},
-        "workspace": {"results_dir": str(tmp_path / "results"), "repo_path": str(tmp_path / "src")},
-    })
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "islands": {"count": 2},
+            "workspace": {
+                "results_dir": str(tmp_path / "results"),
+                "repo_path": str(tmp_path / "src"),
+            },
+        }
+    )
     cfg.to_yaml(coral_dir / "config.yaml")
 
     worktree = tmp_path / "worktree"
     worktree.mkdir()
-    subprocess.run(["git", "init", "-b", "main"], cwd=str(worktree), check=True, capture_output=True)
-    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "--allow-empty", "-m", "init"], cwd=str(worktree), check=True, capture_output=True)
+    subprocess.run(
+        ["git", "init", "-b", "main"], cwd=str(worktree), check=True, capture_output=True
+    )
+    # Set repo-local identity so the commit performed inside submit_eval also
+    # has a user/email (CI runners don't carry a global identity).
+    subprocess.run(
+        ["git", "config", "user.email", "t@t"],
+        cwd=str(worktree),
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "t"],
+        cwd=str(worktree),
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "commit", "--allow-empty", "-m", "init"],
+        cwd=str(worktree),
+        check=True,
+        capture_output=True,
+    )
     (worktree / "file.txt").write_text("change")
     (worktree / ".coral_dir").write_text(str(coral_dir.resolve()))
     (worktree / ".coral_agent_id").write_text("1-agent-1")
@@ -504,16 +530,42 @@ def test_submit_eval_single_island_unchanged(tmp_path):
 
     coral_dir = tmp_path / ".coral"
     (coral_dir / "public" / "attempts").mkdir(parents=True)
-    cfg = CoralConfig.from_dict({
-        "task": {"name": "t", "description": "d"},
-        "workspace": {"results_dir": str(tmp_path / "results"), "repo_path": str(tmp_path / "src")},
-    })
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "workspace": {
+                "results_dir": str(tmp_path / "results"),
+                "repo_path": str(tmp_path / "src"),
+            },
+        }
+    )
     cfg.to_yaml(coral_dir / "config.yaml")
 
     worktree = tmp_path / "worktree"
     worktree.mkdir()
-    subprocess.run(["git", "init", "-b", "main"], cwd=str(worktree), check=True, capture_output=True)
-    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "--allow-empty", "-m", "init"], cwd=str(worktree), check=True, capture_output=True)
+    subprocess.run(
+        ["git", "init", "-b", "main"], cwd=str(worktree), check=True, capture_output=True
+    )
+    # Set repo-local identity so the commit performed inside submit_eval also
+    # has a user/email (CI runners don't carry a global identity).
+    subprocess.run(
+        ["git", "config", "user.email", "t@t"],
+        cwd=str(worktree),
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "t"],
+        cwd=str(worktree),
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "commit", "--allow-empty", "-m", "init"],
+        cwd=str(worktree),
+        check=True,
+        capture_output=True,
+    )
     (worktree / "file.txt").write_text("change")
     (worktree / ".coral_dir").write_text(str(coral_dir.resolve()))
     (worktree / ".coral_agent_id").write_text("agent-1")

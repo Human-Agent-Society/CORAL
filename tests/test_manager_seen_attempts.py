@@ -137,11 +137,13 @@ def test_get_seen_attempts_multi_island(tmp_path):
     write_attempt(coral_dir, a0, island_id="0")
     write_attempt(coral_dir, a1, island_id="1")
 
-    cfg = CoralConfig.from_dict({
-        "task": {"name": "t", "description": "d"},
-        "islands": {"count": 2},
-        "agents": {"count": 2},
-    })
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "islands": {"count": 2},
+            "agents": {"count": 2},
+        }
+    )
     mgr = AgentManager(cfg)
     mgr.paths = ProjectPaths(
         results_dir=tmp_path,

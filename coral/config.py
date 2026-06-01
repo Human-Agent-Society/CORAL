@@ -273,18 +273,14 @@ class MigrationConfig:
         if self.every < 1:
             raise ValueError(f"islands.migration.every must be >= 1, got {self.every}")
         if self.rank_window < 1:
-            raise ValueError(
-                f"islands.migration.rank_window must be >= 1, got {self.rank_window}"
-            )
+            raise ValueError(f"islands.migration.rank_window must be >= 1, got {self.rank_window}")
         if self.rank_window > self.every:
             raise ValueError(
                 f"islands.migration.rank_window ({self.rank_window}) must be "
                 f"<= islands.migration.every ({self.every})"
             )
         if self.min_evals < 1:
-            raise ValueError(
-                f"islands.migration.min_evals must be >= 1, got {self.min_evals}"
-            )
+            raise ValueError(f"islands.migration.min_evals must be >= 1, got {self.min_evals}")
         if self.dest_weighting not in {"score", "uniform", "round_robin"}:
             raise ValueError(
                 "islands.migration.dest_weighting must be one of "

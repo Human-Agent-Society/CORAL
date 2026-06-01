@@ -76,9 +76,7 @@ def _global_eval_count_path(coral_dir: str | Path) -> Path:
     return coral_dir / "public" / "eval_count"
 
 
-def increment_eval_count(
-    coral_dir: str | Path, island_id: str | int | None = None
-) -> int:
+def increment_eval_count(coral_dir: str | Path, island_id: str | int | None = None) -> int:
     """Increment the eval counter(s) and return the new per-scope value.
 
     When ``island_id`` is provided, increments BOTH the per-island counter
@@ -109,9 +107,7 @@ def increment_eval_count(
     return _bump(island_root(coral_dir, island_id) / "eval_count")
 
 
-def read_eval_count(
-    coral_dir: str | Path, island_id: str | int | None = None
-) -> int:
+def read_eval_count(coral_dir: str | Path, island_id: str | int | None = None) -> int:
     """Read the eval counter (0 if missing).
 
     With ``island_id=None``, returns the global counter (today's path in
@@ -131,9 +127,7 @@ def read_eval_count(
         return 0
 
 
-def read_attempts(
-    coral_dir: str | Path, island_id: str | int | None = None
-) -> list[Attempt]:
+def read_attempts(coral_dir: str | Path, island_id: str | int | None = None) -> list[Attempt]:
     """Read all attempt records."""
     d = _attempts_dir(coral_dir, island_id)
     attempts = []
