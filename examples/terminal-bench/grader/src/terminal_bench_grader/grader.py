@@ -190,15 +190,22 @@ class Grader(TaskGrader):
     def _parse_job_result(
         self, job_result: dict, job_dir: Path, elapsed: float, tier_name: str = "",
     ) -> tuple[float, str]:
-        """Parse harbor job result.json and return (pass_rate, feedback)."""
-        n_trials = job_result.get("n_trials", 0)
-        n_errors = job_result.get("n_errors", 0)
+        """Parse harbor job result.json and return (pass_rate, feedback).
 
-        if n_trials == 0:
+        Harbor v0.13 result.json schema:
+          - top: n_total_trials, n_errors (may be None when no errors)
+          - stats: n_completed_trials, n_errored_trials, n_pending_trials, ...
+          - stats.evals[<key>]: n_trials (per-eval count), n_errors, pass_at_k, reward_stats
+        """
+        stats = job_result.get("stats", job_result)
+        n_completed = stats.get("n_completed_trials", 0)
+        n_errors = stats.get("n_errored_trials", 0) or 0
+
+        if n_completed == 0:
             return (0.0, "No trials completed")
 
         # Aggregate pass rate from evals
-        evals = job_result.get("evals", {})
+        evals = stats.get("evals", {})
         total_passed = 0
         total_trials = 0
         reward_details = []
@@ -239,7 +246,7 @@ class Grader(TaskGrader):
         # Build feedback
         lines = [
             f"## Terminal-bench Results ({tier_name}): {overall_rate:.1%} pass rate",
-            f"Completed {n_trials} trials in {elapsed:.0f}s "
+            f"Completed {n_completed} trials in {elapsed:.0f}s "
             f"({n_errors} errors)",
             "",
         ]
