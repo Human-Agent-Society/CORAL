@@ -74,9 +74,7 @@ def _make_swebench_result(n_completed: int = 5, n_passed: int = 2) -> dict:
                     "reward_stats": {
                         "reward": {
                             "1.0": [f"trial-{i}" for i in range(n_passed)],
-                            "0.0": [
-                                f"trial-{i}" for i in range(n_passed, n_completed)
-                            ],
+                            "0.0": [f"trial-{i}" for i in range(n_passed, n_completed)],
                         }
                     },
                     "exception_stats": {},
@@ -115,9 +113,7 @@ def _make_terminal_bench_result(n_completed: int = 4, n_passed: int = 2) -> dict
                     "reward_stats": {
                         "reward": {
                             "1.0": [f"trial-{i}" for i in range(n_passed)],
-                            "0.0": [
-                                f"trial-{i}" for i in range(n_passed, n_completed)
-                            ],
+                            "0.0": [f"trial-{i}" for i in range(n_passed, n_completed)],
                         }
                     },
                     "exception_stats": {},
@@ -135,8 +131,8 @@ def test_swebench_parse_job_result_uses_completed_trials():
     because the old code did `stats.get("n_trials", 0)` which is None in
     harbor v0.13, triggering the "No trials completed" early return.
     """
-    Grader = _swebench_grader()
-    grader = Grader.__new__(Grader)  # bypass __init__ — _parse_job_result is pure
+    grader_cls = _swebench_grader()
+    grader = grader_cls.__new__(grader_cls)  # bypass __init__ — _parse_job_result is pure
     grader.config = GraderConfig(args={})
 
     with tempfile.TemporaryDirectory() as job_dir:
@@ -156,8 +152,8 @@ def test_swebench_parse_job_result_uses_completed_trials():
 
 def test_swebench_parse_job_result_zero_completed_returns_zero():
     """If n_completed_trials really is 0 (eval was a total failure), score 0.0."""
-    Grader = _swebench_grader()
-    grader = Grader.__new__(Grader)
+    grader_cls = _swebench_grader()
+    grader = grader_cls.__new__(grader_cls)
     grader.config = GraderConfig(args={})
 
     with tempfile.TemporaryDirectory() as job_dir:
@@ -180,7 +176,9 @@ def test_swebench_parse_with_real_harbor_result():
     Skipped if results/ is missing (e.g. CI without local eval logs).
     """
     repo_root = Path(__file__).resolve().parent.parent
-    target = repo_root / "results" / "swebench-verified" / "latest" / ".coral" / "public" / "eval_logs"
+    target = (
+        repo_root / "results" / "swebench-verified" / "latest" / ".coral" / "public" / "eval_logs"
+    )
     real = None
     for p in target.glob("*/harbor_logs/eval_*/result.json"):
         if p.parent.parent.parent.name.startswith("172a1463"):
@@ -190,8 +188,8 @@ def test_swebench_parse_with_real_harbor_result():
         pytest.skip("results for attempt 172a1463 not present")
     job_dir = real.parent
 
-    Grader = _swebench_grader()
-    grader = Grader.__new__(Grader)
+    grader_cls = _swebench_grader()
+    grader = grader_cls.__new__(grader_cls)
     grader.config = GraderConfig(args={})
 
     job_result = json.loads(real.read_text())
@@ -199,16 +197,14 @@ def test_swebench_parse_with_real_harbor_result():
         job_result, job_dir, elapsed=1983.0, tier_name="Tier 1"
     )
     # The saved attempt had 5 trials, 2 passing (per reward_stats) → 0.4.
-    assert pass_rate == pytest.approx(0.4), (
-        f"expected 0.4 from real harbor output, got {pass_rate}"
-    )
+    assert pass_rate == pytest.approx(0.4), f"expected 0.4 from real harbor output, got {pass_rate}"
     assert "No trials completed" not in feedback
 
 
 def test_terminal_bench_parse_job_result_uses_completed_trials():
     """Same regression as swebench, for terminal-bench grader."""
-    Grader = _terminal_bench_grader()
-    grader = Grader.__new__(Grader)
+    grader_cls = _terminal_bench_grader()
+    grader = grader_cls.__new__(grader_cls)
     grader.config = GraderConfig(args={})
 
     with tempfile.TemporaryDirectory() as job_dir:
@@ -217,16 +213,14 @@ def test_terminal_bench_parse_job_result_uses_completed_trials():
             result, Path(job_dir), elapsed=1200.0, tier_name="Tier 1"
         )
 
-    assert pass_rate == pytest.approx(0.5), (
-        f"expected 2/4 = 50% pass rate, got {pass_rate:.1%}"
-    )
+    assert pass_rate == pytest.approx(0.5), f"expected 2/4 = 50% pass rate, got {pass_rate:.1%}"
     assert "Completed 4 trials" in feedback
     assert "No trials completed" not in feedback
 
 
 def test_terminal_bench_parse_job_result_zero_completed_returns_zero():
-    Grader = _terminal_bench_grader()
-    grader = Grader.__new__(Grader)
+    grader_cls = _terminal_bench_grader()
+    grader = grader_cls.__new__(grader_cls)
     grader.config = GraderConfig(args={})
 
     with tempfile.TemporaryDirectory() as job_dir:
@@ -237,7 +231,6 @@ def test_terminal_bench_parse_job_result_zero_completed_returns_zero():
 
     assert pass_rate == 0.0
     assert "No trials completed" in feedback
-
 
 
 def test_function_grader_sync():
