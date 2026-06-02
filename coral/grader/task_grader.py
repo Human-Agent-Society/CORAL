@@ -38,14 +38,15 @@ class TaskGrader(ABC):
     """Base class for task graders.
 
     Subclasses implement evaluate() and return a float or ScoreBundle.
-    The framework sets codebase_path, private_dir, config, args, and tasks
-    before calling.
+    The framework sets codebase_path, private_dir, config, args, tasks,
+    and island_id before calling.
     """
 
     codebase_path: str
     private_dir: str
     config: GraderConfig
     tasks: list[Task]
+    island_id: str | int | None
 
     def __init__(self, config: GraderConfig) -> None:
         self.config = config
@@ -274,9 +275,15 @@ class TaskGrader(ABC):
         attempts, prepends ``describe_tune()`` to the bundle's feedback so the
         agent learns the per-grader tune contract from the eval result itself
         — no startup RPC, no CORAL.md plumbing.
+
+        ``island_id`` is threaded through ``**kwargs`` so legacy grader
+        signatures still work; we pop it explicitly so it's visible on
+        ``self.island_id`` for graders that need to scope hub reads
+        (e.g. ``read_attempts(coral_dir, island_id=self.island_id)``).
         """
         self.codebase_path = codebase_path
         self.tasks = tasks
+        self.island_id = kwargs.pop("island_id", None)
 
         loop = asyncio.get_running_loop()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:

@@ -81,6 +81,7 @@ def _grader_worker(
     codebase_path: str,
     tasks: list,
     result_queue: Any,
+    island_id: str | int | None = None,
 ) -> None:
     """Run grader.grade() in a child process. Puts result or exception into queue.
 
@@ -90,7 +91,10 @@ def _grader_worker(
     try:
         config = CoralConfig.from_yaml(config_path)
         grader = load_grader(config, coral_dir=coral_dir)
-        result = asyncio.run(grader.grade(codebase_path, tasks))
+        grade_kwargs: dict[str, Any] = {}
+        if island_id is not None:
+            grade_kwargs["island_id"] = island_id
+        result = asyncio.run(grader.grade(codebase_path, tasks, **grade_kwargs))
         result_queue.put(("ok", result))
     except Exception as e:
         result_queue.put(("error", e, traceback.format_exc()))
@@ -102,6 +106,7 @@ def _run_grader_with_timeout(
     codebase_path: str,
     tasks: list,
     timeout: int,
+    island_id: str | int | None = None,
 ) -> Any:
     """Run grader in a separate process with a hard timeout.
 
@@ -121,21 +126,30 @@ def _run_grader_with_timeout(
     SubprocessGrader already shells out to its own venv and applies the
     same timeout via subprocess.run, so doubling up would just add a
     no-op layer.
+
+    ``island_id`` is forwarded so the grader can scope hub reads
+    (e.g. ``read_attempts(coral_dir, island_id=...)``) to the attempt's
+    own island in multi-island runs. ``None`` in single-island mode and
+    when the attempt was submitted without an island context — the inner
+    grader's ``self.island_id`` defaults to None in that case.
     """
     config = CoralConfig.from_yaml(config_path)
+    grade_kwargs: dict[str, Any] = {}
+    if island_id is not None:
+        grade_kwargs["island_id"] = island_id
     if config.grader.entrypoint:
         grader = load_grader(config, coral_dir=coral_dir)
-        return asyncio.run(grader.grade(codebase_path, tasks))
+        return asyncio.run(grader.grade(codebase_path, tasks, **grade_kwargs))
 
     if timeout <= 0:
         grader = load_grader(config, coral_dir=coral_dir)
-        return asyncio.run(grader.grade(codebase_path, tasks))
+        return asyncio.run(grader.grade(codebase_path, tasks, **grade_kwargs))
 
     hard_kill_deadline = timeout + _TIMEOUT_GRACE_SECONDS
     result_queue: multiprocessing.Queue = multiprocessing.Queue()
     proc = multiprocessing.Process(
         target=_grader_worker,
-        args=(config_path, coral_dir, codebase_path, tasks, result_queue),
+        args=(config_path, coral_dir, codebase_path, tasks, result_queue, island_id),
     )
     try:
         proc.start()
@@ -354,6 +368,7 @@ def _grade_one(
                 str(checkout_path),
                 [task],
                 timeout,
+                island_id=island_id,
             )
             score = bundle.aggregated
             feedback = _build_feedback(bundle)

@@ -33,10 +33,14 @@ class Grader(TaskGrader):
 
         Reads `metadata.raw_score` rather than `score`, since `score` is
         weighted by tier and cannot be compared against the raw thresholds.
+
+        Scoped to ``self.island_id`` so multi-island runs read only their
+        own island's history (otherwise ``read_attempts`` raises in
+        multi-island mode and tier promotion never gets off the ground).
         """
         coral_dir = Path(self.private_dir).parent
         best = None
-        for a in read_attempts(coral_dir):
+        for a in read_attempts(coral_dir, island_id=self.island_id):
             raw = a.metadata.get("raw_score")
             if raw is not None and (best is None or raw > best):
                 best = raw
