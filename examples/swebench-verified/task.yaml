@@ -9,23 +9,16 @@ task:
     Your solve.py exports a SolverAgent (a Harbor agent based on Terminus2) that
     receives a SWE-bench instance and must fix the bug in the repository.
 
-    The grader evaluates your solver via `harbor run` using tiered eval:
-      - Tier 1:  5 instances  (weight 1×)   — raw pass ≥30% → promote
-      - Tier 2: 30 instances  (weight 10×)  — raw pass ≥70% → promote
-      - Tier 3: all instances (weight 100×)
+    The grader evaluates your solver via `harbor run`. Each `coral eval` runs
+    a fixed slice of `real_size` instances (default 30) and the leaderboard
+    score is the raw pass rate on that slice — comparable across attempts
+    since every real run uses the same number of instances.
 
-    Each `coral eval` runs ONE tier, chosen by your best previous *raw* pass
-    rate. The score recorded on the leaderboard is `tier_weight × pass_rate`,
-    so:
-      - Max possible at Tier 1: 1.0  (1 × 100%)
-      - Max possible at Tier 2: 10.0 (10 × 100%)
-      - Max possible at Tier 3: 100.0 (100 × 100%)
-
-    This means any Tier 3 attempt with pass rate >0.10 outranks any Tier 2
-    attempt, and any Tier 2 attempt with pass rate >0.10 outranks any Tier 1
-    attempt — confidence dominates magnitude. Don't compare scores across
-    tiers as if they were the same metric. The raw pass rate is preserved
-    in attempt metadata (`raw_score`).
+    `coral eval --tune` is a cheap smoke test — it runs a smaller slice
+    (`tune_size`, default 5) regardless of best previous score, and is
+    excluded from the leaderboard by default. Use it to validate that a
+    change applies / runs end-to-end without spending a full `real_size`
+    budget; don't use it as a gate.
 
     Each instance is tested by applying your changes, then running the hidden
     fail-to-pass tests. Your raw score is the fraction of instances solved.
@@ -42,6 +35,7 @@ task:
     - Before fixing a method, the solver should search for parent/sibling class implementations of the same method to reuse established error-handling patterns (e.g. try/except vs narrow None check)
     - The solver should verify semantic correctness of fixes, not just that errors/crashes disappear — a fix that silences an exception but produces wrong results will still fail the hidden tests
     - Prefer robust, general fixes over minimal point fixes — a try/except catching multiple exception types beats an `if x is None` guard that misses other bad inputs
+    - Use `coral eval --tune` to smoke-test a change cheaply (default 5 instances) before committing to a real eval that costs the full `real_size` budget
     - After each eval, check the harbor logs path printed in the eval feedback (under your runtime's shared dir, e.g. `.claude/eval_logs/<commit_hash>/harbor_logs/`) for detailed agent trajectories, terminal recordings, and verifier output to understand why specific instances failed
 
 grader:
@@ -53,10 +47,8 @@ grader:
   args:
     dataset: "swebench-verified@1.0"
     n_concurrent: 4
-    tier1_size: 5
-    tier1_threshold: 0.3
-    tier2_size: 30
-    tier2_threshold: 0.7
+    tune_size: 5
+    real_size: 30
 
 agents:
   count: 1

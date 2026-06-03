@@ -3,15 +3,14 @@
 Runs `harbor run -d terminal-bench@2.0` with the agent's solve.py as a custom
 harbor agent, then parses the job result JSON for the pass rate.
 
-Uses tiered evaluation — each `coral eval` runs ONE tier based on the best
-raw pass rate seen so far:
-  - best < tier1_threshold (0.3) → Tier 1 (5 instances), weight 1
-  - best < tier2_threshold (0.7) → Tier 2 (30 instances), weight 10
-  - best ≥ tier2_threshold       → Tier 3 (all instances), weight 100
+Each `coral eval` runs a fixed slice of tasks. The size is selected by mode:
+  - tune (`coral eval --tune`): `tune_size` tasks (default 5) — cheap
+    smoke test, hidden from the leaderboard by default.
+  - real (default): `real_size` tasks (default 30) — full eval, shown
+    on the leaderboard. The score is the raw pass rate on that slice.
 
-The score returned is `tier_weight * pass_rate`, so higher-tier results
-naturally dominate the leaderboard regardless of pass rate. The raw pass
-rate is preserved in metadata for tier promotion decisions.
+There is no tier promotion: every real eval uses the same `real_size`, so
+scores are directly comparable across attempts.
 """
 
 from __future__ import annotations
@@ -23,36 +22,28 @@ import time
 from pathlib import Path
 
 from coral.grader import TaskGrader
-from coral.hub.attempts import read_attempts
 from coral.types import ScoreBundle
 
 
 class Grader(TaskGrader):
-    def _get_best_raw_score(self) -> float | None:
-        """Best raw pass rate from previous attempts (drives tier promotion).
+    def describe_tune(self) -> str:
+        """What `--tune` does on this grader.
 
-        Reads `metadata.raw_score` rather than `score`, since `score` is
-        weighted by tier and cannot be compared against the raw thresholds.
-
-        Scoped to ``self.island_id`` so multi-island runs read only their
-        own island's history (otherwise ``read_attempts`` raises in
-        multi-island mode and tier promotion never gets off the ground).
+        Tune mode runs a fixed `tune_size` slice (default 5 tasks)
+        regardless of best previous score, and is excluded from the
+        leaderboard — use it to smoke-test a change cheaply.
         """
-        coral_dir = Path(self.private_dir).parent
-        best = None
-        for a in read_attempts(coral_dir, island_id=self.island_id):
-            raw = a.metadata.get("raw_score")
-            if raw is not None and (best is None or raw > best):
-                best = raw
-        return best
+        tune_size = int(self.args.get("tune_size", 5))
+        return (
+            f"runs a fixed {tune_size}-task slice; hidden from the "
+            "leaderboard (use as a cheap smoke test, not a gate)"
+        )
 
     def evaluate(self) -> ScoreBundle:
         dataset = self.args.get("dataset", "terminal-bench@2.0")
         n_concurrent = int(self.args.get("n_concurrent", 4))
-        tier1_size = int(self.args.get("tier1_size", 5))
-        tier1_threshold = float(self.args.get("tier1_threshold", 0.3))
-        tier2_size = int(self.args.get("tier2_size", 30))
-        tier2_threshold = float(self.args.get("tier2_threshold", 0.7))
+        tune_size = int(self.args.get("tune_size", 5))
+        real_size = int(self.args.get("real_size", 30))
         agent_timeout_multiplier = float(self.args.get("agent_timeout_multiplier", 1.0))
         verifier_timeout_multiplier = float(self.args.get("verifier_timeout_multiplier", 1.0))
 
@@ -81,21 +72,19 @@ class Grader(TaskGrader):
                 feedback="Install harbor (`uvx harbor --version` to verify) or ensure `uvx` is available.",
             )
 
-        # Determine which tier to run based on best previous raw score
-        best_score = self._get_best_raw_score()
-        if best_score is None or best_score < tier1_threshold:
-            n_tasks, tier_name, tier_weight = tier1_size, "Tier 1", 1
-        elif best_score < tier2_threshold:
-            n_tasks, tier_name, tier_weight = tier2_size, "Tier 2", 10
+        # Pick the slice size for this mode. Tune always runs the small
+        # `tune_size` slice; real always runs the `real_size` slice.
+        if self.tune:
+            n_tasks, mode = tune_size, "tune"
         else:
-            n_tasks, tier_name, tier_weight = 0, "Tier 3 (full)", 100
+            n_tasks, mode = real_size, "real"
 
         # Persist harbor logs in the per-attempt eval_logs dir so they survive
         # the grader-checkout cleanup (coral/grader/daemon.py:_remove_worktree).
         # Symlinked into each agent worktree at `<shared_dir>/eval_logs/<hash>/harbor_logs/`.
         job_dir = self.eval_logs_dir / "harbor_logs"
         job_dir.mkdir(parents=True, exist_ok=True)
-        job_name = f"eval_{tier_name.lower().replace(' ', '_')}_{int(time.time())}"
+        job_name = f"eval_{mode}_{int(time.time())}"
 
         start = time.time()
         harbor_result = self._run_harbor(
@@ -107,7 +96,7 @@ class Grader(TaskGrader):
             n_concurrent=n_concurrent,
             agent_timeout_multiplier=agent_timeout_multiplier,
             verifier_timeout_multiplier=verifier_timeout_multiplier,
-            tier_name=tier_name,
+            mode=mode,
         )
 
         if isinstance(harbor_result, ScoreBundle):
@@ -115,13 +104,10 @@ class Grader(TaskGrader):
 
         pass_rate, feedback = harbor_result
         elapsed = time.time() - start
-        weighted_score = tier_weight * pass_rate
-        explanation = (
-            f"{tier_name}: {pass_rate:.1%} pass rate in {elapsed:.0f}s (score={weighted_score:.2f})"
-        )
+        explanation = f"{mode}: {pass_rate:.1%} pass rate on {n_tasks} tasks in {elapsed:.0f}s"
         return self.score(
-            weighted_score, explanation, feedback=feedback,
-            metadata={"tier_weight": tier_weight, "raw_score": pass_rate},
+            pass_rate, explanation, feedback=feedback,
+            metadata={"raw_score": pass_rate, "n_tasks": n_tasks, "mode": mode},
         )
 
     def _run_harbor(
@@ -134,7 +120,7 @@ class Grader(TaskGrader):
         n_concurrent: int,
         agent_timeout_multiplier: float,
         verifier_timeout_multiplier: float,
-        tier_name: str = "",
+        mode: str = "",
     ) -> tuple[float, str] | ScoreBundle:
         """Run harbor and return (pass_rate, feedback) or a ScoreBundle on error."""
         import os
@@ -189,10 +175,10 @@ class Grader(TaskGrader):
         except json.JSONDecodeError as e:
             return self.fail(f"Failed to parse result.json: {e}")
 
-        return self._parse_job_result(job_result, job_dir / job_name, elapsed, tier_name)
+        return self._parse_job_result(job_result, job_dir / job_name, elapsed, mode)
 
     def _parse_job_result(
-        self, job_result: dict, job_dir: Path, elapsed: float, tier_name: str = "",
+        self, job_result: dict, job_dir: Path, elapsed: float, mode: str = "",
     ) -> tuple[float, str]:
         """Parse harbor job result.json and return (pass_rate, feedback).
 
@@ -249,7 +235,7 @@ class Grader(TaskGrader):
 
         # Build feedback
         lines = [
-            f"## Terminal-bench Results ({tier_name}): {overall_rate:.1%} pass rate",
+            f"## Terminal-bench Results ({mode}): {overall_rate:.1%} pass rate",
             f"Completed {n_completed} trials in {elapsed:.0f}s "
             f"({n_errors} errors)",
             "",

@@ -139,7 +139,7 @@ def test_swebench_parse_job_result_uses_completed_trials():
         job_dir_p = Path(job_dir)
         result = _make_swebench_result(n_completed=5, n_passed=2)
         pass_rate, feedback = grader._parse_job_result(
-            result, job_dir_p, elapsed=1983.0, tier_name="Tier 1"
+            result, job_dir_p, elapsed=1983.0, mode="tune"
         )
 
     assert pass_rate == pytest.approx(0.4), (
@@ -159,7 +159,7 @@ def test_swebench_parse_job_result_zero_completed_returns_zero():
     with tempfile.TemporaryDirectory() as job_dir:
         result = _make_swebench_result(n_completed=0, n_passed=0)
         pass_rate, feedback = grader._parse_job_result(
-            result, Path(job_dir), elapsed=60.0, tier_name="Tier 1"
+            result, Path(job_dir), elapsed=60.0, mode="tune"
         )
 
     assert pass_rate == 0.0
@@ -194,7 +194,7 @@ def test_swebench_parse_with_real_harbor_result():
 
     job_result = json.loads(real.read_text())
     pass_rate, feedback = grader._parse_job_result(
-        job_result, job_dir, elapsed=1983.0, tier_name="Tier 1"
+        job_result, job_dir, elapsed=1983.0, mode="tune"
     )
     # The saved attempt had 5 trials, 2 passing (per reward_stats) → 0.4.
     assert pass_rate == pytest.approx(0.4), f"expected 0.4 from real harbor output, got {pass_rate}"
@@ -210,7 +210,7 @@ def test_terminal_bench_parse_job_result_uses_completed_trials():
     with tempfile.TemporaryDirectory() as job_dir:
         result = _make_terminal_bench_result(n_completed=4, n_passed=2)
         pass_rate, feedback = grader._parse_job_result(
-            result, Path(job_dir), elapsed=1200.0, tier_name="Tier 1"
+            result, Path(job_dir), elapsed=1200.0, mode="tune"
         )
 
     assert pass_rate == pytest.approx(0.5), f"expected 2/4 = 50% pass rate, got {pass_rate:.1%}"
@@ -226,7 +226,7 @@ def test_terminal_bench_parse_job_result_zero_completed_returns_zero():
     with tempfile.TemporaryDirectory() as job_dir:
         result = _make_terminal_bench_result(n_completed=0, n_passed=0)
         pass_rate, feedback = grader._parse_job_result(
-            result, Path(job_dir), elapsed=60.0, tier_name="Tier 1"
+            result, Path(job_dir), elapsed=60.0, mode="tune"
         )
 
     assert pass_rate == 0.0
