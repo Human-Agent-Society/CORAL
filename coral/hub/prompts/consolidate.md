@@ -2,102 +2,33 @@
 
 Pause your current work and synthesize the shared knowledge base. Your goal is to **create or update knowledge artifacts** — not just reorganize files.
 
+The `create-notes` skill (`{shared_dir}/skills/create-notes/SKILL.md`) provides the formats and self-audit checklist for all three output types below. Read it before writing. The most relevant sections are:
+
+- **Variant D.1** — synthesis note format
+- **Variant D.2** — connections map entry format
+- **Variant D.3** — open-questions entry format
+- **Frontmatter discipline** — the `creator:` field is required; team-level processes silently skip notes without it
+
+The skill covers the mechanics; this prompt covers the process.
+
 ### Required outputs
 
 By the end of this consolidation, you should have created or updated at least one of:
 
-1. **A synthesis note** in `notes/_synthesis/` — distill multiple related notes into unified findings
-2. **The connections map** at `notes/_connections.md` — document patterns that span categories
+1. **A synthesis note** in `notes/_synthesis/<topic>.md` — distill 3+ related notes into a single claim with cited evidence
+2. **The connections map** at `notes/_connections.md` — patterns that span multiple categories
 3. **The open questions list** at `notes/_open-questions.md` — gaps and unresolved contradictions
 
-### Process
+### Process (high level)
 
-**Step 1: Read and absorb**
+1. **Read and absorb.** Browse `{shared_dir}/notes/`, especially anything new since the last consolidate. Build a mental map of what's known.
+2. **Synthesize.** For any topic with 3+ notes, write or update a synthesis note. State the claim, cite the attempts, name the mechanism, give a confidence + condition. See skill Variant D.1.
+3. **Map connections.** Append to `_connections.md` only when a pattern genuinely spans categories (rare — most links live in the synthesis note's "Evidence" section). See skill Variant D.2.
+4. **Document contradictions and gaps.** Append to `_open-questions.md` when a claim has counter-evidence or a technique has no experiments yet. See skill Variant D.3.
+5. **(Optional) Organize structure.** If the notes folder is disorganized (too many flat files, duplicates, naming issues), use the `organize-files` skill (`{shared_dir}/skills/organize-files/SKILL.md`). Only reorganize within `research/` and `experiments/` — don't touch `raw/`, `_synthesis/`, or `_connections.md`.
+6. **(Optional) Extract skills.** If a synthesis reveals a well-validated, reusable technique, promote it to `{shared_dir}/skills/` via `skill-creator/SKILL.md`.
 
-Browse `{shared_dir}/notes/` and read notes you haven't seen or that have been updated. Build a mental map of what's known.
-
-**Step 2: Synthesize findings**
-
-For any topic with 3+ notes, create or update a synthesis note:
-
-```
-notes/_synthesis/
-  learning-rate-findings.md    # "Based on 12 experiments, warmup helps when batch > 64..."
-  regularization-patterns.md   # "Dropout vs weight decay: use dropout for large models..."
-  architecture-lessons.md      # "Attention > convolution for sequence tasks because..."
-```
-
-A good synthesis note:
-- States the conclusion upfront
-- Cites specific attempts/notes as evidence
-- Explains *why* something works, not just *that* it works
-- Notes confidence level and conditions where it applies
-
-*Example:*
-```markdown
-# Learning Rate Findings
-
-**Summary:** Warmup is critical for batch sizes > 64. Linear warmup for 5-10% of training works best.
-
-**Evidence:**
-- attempt abc123: No warmup with batch=128 → diverged
-- attempt def456: 5% warmup with batch=128 → stable, 0.82 score
-- attempt ghi789: 10% warmup with batch=64 → no difference vs no warmup
-
-**Why it works:** Large batches have higher gradient variance in early training...
-
-**Confidence:** High for batch > 64, uncertain for smaller batches.
-```
-
-**Step 3: Map connections**
-
-Update `notes/_connections.md` with cross-category patterns:
-
-```markdown
-# Knowledge Connections
-
-## Gradient scale sensitivity
-- Links: `optimization/learning-rate/`, `debugging/gradient-clipping.md`, `architecture/normalization/`
-- Pattern: Many issues trace back to gradient magnitude. When something breaks, check gradient norms first.
-
-## Model capacity vs regularization
-- Links: `architecture/model-size.md`, `optimization/regularization/`
-- Pattern: Larger models need less regularization. Dropout hurts small models.
-```
-
-**Step 4: Document contradictions and gaps**
-
-Update `notes/_open-questions.md`:
-
-```markdown
-# Open Questions
-
-## Unresolved contradictions
-- Dropout: helps in note A (large model), hurts in note B (small model). Need to test threshold.
-
-## Knowledge gaps
-- No experiments yet on: mixed precision training, gradient accumulation
-- Uncertain: optimal warmup for batch < 32
-
-## Next experiments to try
-- Test dropout with model sizes 1M, 10M, 100M params to find threshold
-```
-
-**Step 5: Organize structure (if needed)**
-
-If the notes folder is disorganized (too many flat files, duplicates, naming issues), use the `organize-files` skill to restructure it:
-
-```
-bash {shared_dir}/skills/organize-files/scripts/audit.sh
-```
-
-If the audit shows problems, follow the full process in `{shared_dir}/skills/organize-files/SKILL.md`. The skill provides scripts for deduplication, safe moves with frontmatter tracking, and index regeneration. Only reorganize within `research/` and `experiments/` — don't touch `raw/`, `_synthesis/`, or `_connections.md`.
-
-**Step 6: Extract skills**
-
-If a synthesis reveals a well-validated, reusable technique, promote it to `{shared_dir}/skills/`. Follow `skill-creator/SKILL.md`.
-
-**Step 7: Audit the team's roles, lanes, and postures**
+### Step 7: Audit the team's roles, lanes, and postures
 
 Read every agent's role file (`ls {shared_dir}/roles/*.md`) and every active focus note (`ls {shared_dir}/notes/focus-*.md`). Produce a one-paragraph roster summary, either in `{shared_dir}/notes/_connections.md` or as a dated entry in `{shared_dir}/notes/_synthesis/team-roster.md`. The summary should answer:
 
@@ -112,24 +43,5 @@ Do **not** edit other agents' role files as part of this audit — those are own
 
 ---
 The goal is knowledge creation: every consolidation should leave the knowledge base smarter than before.
-
-### Stamp authorship on every new note
-
-When you create a new note (synthesis, connections map, open-questions list,
-or anything under `notes/`), include `creator:` in the YAML frontmatter so
-the file is attributed to you. Use your own `agent_id` (read from
-`.coral_agent_id` if you don't already know it) and an ISO-8601 `created:`
-timestamp. Example:
-
-```
----
-creator: {agent_id}
-created: 2026-05-31T14:32:00Z
----
-# Synthesis: ...
-```
-
-Notes without a `creator:` field cannot be attributed and will be skipped by
-team-level processes that filter by author (skill discovery, migration).
 
 After consolidating, resume optimizing.

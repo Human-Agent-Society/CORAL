@@ -1,44 +1,29 @@
 ## Heartbeat: Reflection
 
-Pause and reflect on your recent work. Write a note in `{shared_dir}/notes/experiments/`.
+Pause and reflect on your recent work. You are about to write an
+**experiment note** in `{shared_dir}/notes/experiments/`.
 
-### Anchor in concrete results
-Review your recent attempts (`coral log -n 5 --recent`). What specific changes led to score improvements or regressions?
+The `create-notes` skill
+(`{shared_dir}/skills/create-notes/SKILL.md`) provides:
+- **Variant A** — the 7-section experiment note template
+- The self-audit checklist — especially: backfilled predictions, abandoned paths, sourced magic numbers, cross-links
+- The file-writing gotchas that silently strip markdown content
 
-*Example: "Attempt abc123 improved score from 0.72 to 0.78 by adding batch normalization after each conv layer."*
+Read the skill, then write the note. The skill covers the mechanics; this
+prompt is just the trigger.
 
-### Examine surprises
-What surprised you? What didn't go as expected? Surprises reveal gaps in your mental model.
+### What to reflect on (high level)
 
-*Example: "I expected dropout to help with overfitting, but validation loss actually increased. Maybe the model is underfitting, not overfitting."*
+Three questions, in order. The skill's template is the *structure*; this is
+the *content* the structure holds.
 
-### Analyze causes
-For your most significant result (good or bad): *why* did it happen? What's the underlying mechanism?
-
-*Example: "The score dropped because the new loss function has different gradient dynamics — it saturates near 0, causing vanishing gradients in early layers."*
-
-### Assess confidence
-How certain are you about your current approach? What evidence would change your mind?
-
-*Example: "70% confident that architecture changes will help more than hyperparameter tuning. Would reconsider if 3 more architecture changes show <1% improvement."*
-
-### Link to research and update it
-If this experiment was based on a research note, link to it and **update the research note** with your results. Research notes should accumulate empirical evidence over time.
-
-*Example: "Based on: [research/winograd.md](research/winograd.md) — tried the Winograd transform, scored 0.85. Updated the research note with these results."*
-
-### Save your note
-Save to `{shared_dir}/notes/experiments/`. Use descriptive filenames:
-- `experiments/eval-5-tiling-approach.md`
-- `experiments/batch-norm-comparison.md`
-- `experiments/gradient-clipping-fix.md`
-
-Update `{shared_dir}/notes/index.md` with a one-line entry in the Experiments section. If you've discovered a **reusable technique**, consider creating a skill in `{shared_dir}/skills/` (see `skill-creator/SKILL.md`).
-
-### Plan next experiment
-Based on this reflection, what's one specific thing to try next? What do you expect to happen?
-
-*Example: "Try replacing ReLU with GELU in the attention layers. Expect ~1-2% improvement based on similar findings in the transformer literature."*
+1. **Anchor in concrete results.** What specific change moved the score?
+   `coral log -n 5 --recent` will show the trajectory.
+2. **Examine surprises + analyze causes.** What did not go as expected? Why?
+3. **Assess confidence + plan next.** What would change your mind? What's
+   the highest-EV next experiment? The skill's "Next" section template
+   requires you to write next steps in descending expected payoff — be
+   honest about which lever you expect to move the score most.
 
 ### Evolve your role description (only if it has meaningfully shifted)
 
@@ -57,4 +42,4 @@ If nothing has shifted, do nothing. Most evals do not warrant a regeneration. Ro
 
 The "What I've actually done" section is required to cite real artifacts (attempt hashes, note paths, skill names). If you cannot cite anything new, your role description above is aspirational, not earned — flag it explicitly rather than pretending.
 
-After planning, continue optimizing.
+After writing the note, continue optimizing.

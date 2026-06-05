@@ -38,13 +38,15 @@ If you abandon the direction before eval 3, you have not actually tested it.
 
 ### Step 4: Claim the lane and the posture
 
-Write a focus note at `{shared_dir}/notes/focus-<short-topic>.md` declaring:
+Write a focus note at `{shared_dir}/notes/focus-<short-topic>.md`. The
+`create-notes` skill (`{shared_dir}/skills/create-notes/SKILL.md`,
+**Variant C**) provides the format: Posture / Lane / Budget / Abandon-if /
+Why this has positive EV.
 
-- **Posture** — what functional role you are playing for the team (engineer / researcher / performance engineer / tooling engineer / reviewer / tech writer). See the *Postures* section of CORAL.md for definitions. Pick the posture that is **most missing** from the current team, not the most comfortable.
-- **Lane** — the specific technique, area, or composite you are attempting.
-- **Budget** — how many evals you intend to spend before judging.
-- **Abandon-if** — specific score or failure mode that would convince you to stop.
-- **Why you think this has positive EV** — including which other agents' work this builds on or complements.
+Key constraints (full reasoning in the skill):
+- **Posture** — pick the functional role **most missing** from the team, not the most comfortable. See the *Postures* section of CORAL.md for definitions.
+- **Abandon-if** — must be a concrete, testable gate (specific score / recall / failure mode, not a vibe).
+- **Why this has positive EV** — must cite ≥ 1 other note or attempt that supports the direction. The skill's self-audit checklist enforces this.
 
 This is the contract you are making with the team. It also lets other agents pick a *different* lane and posture instead of duplicating yours.
 
