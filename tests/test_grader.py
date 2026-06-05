@@ -193,12 +193,70 @@ def test_swebench_parse_with_real_harbor_result():
     grader.config = GraderConfig(args={})
 
     job_result = json.loads(real.read_text())
-    pass_rate, feedback = grader._parse_job_result(
-        job_result, job_dir, elapsed=1983.0, mode="tune"
-    )
+    pass_rate, feedback = grader._parse_job_result(job_result, job_dir, elapsed=1983.0, mode="tune")
     # The saved attempt had 5 trials, 2 passing (per reward_stats) → 0.4.
     assert pass_rate == pytest.approx(0.4), f"expected 0.4 from real harbor output, got {pass_rate}"
     assert "No trials completed" not in feedback
+
+
+def test_swebench_patches_verifier_reward_from_test_exit_code(tmp_path: Path):
+    """SWE-bench verifier should write Harbor's reward file without parser.py.
+
+    Harbor requires /logs/verifier/reward.txt or reward.json. The upstream
+    swebench script runs hidden tests and then uses uv/parser.py to write that
+    file; if the parser install hangs, Harbor raises RewardFileNotFoundError
+    despite valid test results. The CORAL grader patches exported local dataset
+    copies so the test command's exit code directly produces reward.txt.
+    """
+    test_script = tmp_path / "test.sh"
+    test_script.write_text(
+        """#!/bin/bash
+set -e
+LOG_FILE=/logs/verifier/test-stdout.txt
+exec 3>&1 4>&2
+exec > >(tee "$LOG_FILE") 2>&1
+pytest -rA /testbed/tests || true
+exec 1>&3 2>&4
+uv run parser.py --package swebench==4.0.3
+#and we reset the tests back to the base commit
+git checkout abc123 -- tests/test_example.py
+echo "done"
+"""
+    )
+
+    grader_cls = _swebench_grader()
+    grader = grader_cls.__new__(grader_cls)
+
+    assert grader._patch_swebench_test_script(test_script)
+    patched = test_script.read_text()
+
+    assert "pytest -rA /testbed/tests || true" not in patched
+    assert "pytest -rA /testbed/tests" in patched
+    assert "test_exit_code=$?" in patched
+    assert "mkdir -p /logs/verifier" in patched
+    assert "echo 1 > /logs/verifier/reward.txt" in patched
+    assert "echo 0 > /logs/verifier/reward.txt" in patched
+    assert 'exit "${test_exit_code}"' in patched
+    assert patched.index("git checkout abc123") < patched.index("mkdir -p /logs/verifier")
+
+
+def test_swebench_patches_dockerfile_to_avoid_uv_network_install(tmp_path: Path):
+    dockerfile = tmp_path / "Dockerfile"
+    dockerfile.write_text(
+        """FROM python:3.11
+RUN curl -LsSf https://astral.sh/uv/0.7.13/install.sh | sh
+RUN echo done
+"""
+    )
+
+    grader_cls = _swebench_grader()
+    grader = grader_cls.__new__(grader_cls)
+
+    assert grader._patch_swebench_dockerfile(dockerfile)
+    patched = dockerfile.read_text()
+
+    assert "https://astral.sh/uv/0.7.13/install.sh" not in patched
+    assert "avoid build-time network" in patched
 
 
 def test_terminal_bench_parse_job_result_uses_completed_trials():
@@ -428,3 +486,82 @@ def test_loader_raises_when_no_grader_configured():
         config = CoralConfig(task=TaskConfig(name="t", description="d"))
         with pytest.raises(ValueError, match="entrypoint"):
             load_grader(config, coral_dir)
+
+
+# --- eval_logs_dir: island-aware path resolution ----------------------------
+#
+# Regression: the multi-island refactor changed the worktree symlink to point
+# at `.coral/islands/<island_id>/eval_logs/` (per-island) but left the grader
+# hardcoded to write into `.coral/public/eval_logs/`. The two paths diverged
+# and agents could not see their own eval logs. eval_logs_dir must mirror the
+# per-island layout used by attempts/skills/notes.
+
+
+def _bare_task_grader(private_dir: Path, codebase_path: Path, island_id=None) -> TaskGrader:
+    """Build a TaskGrader with just enough state to exercise eval_logs_dir.
+
+    TaskGrader is abstract (requires evaluate()), so we subclass with a noop
+    that returns an empty ScoreBundle — the property under test never calls
+    evaluate() anyway. private_dir, codebase_path, and island_id are normally
+    set by the daemon before grade() runs; we set them as plain attributes.
+    """
+
+    class _Noop(TaskGrader):
+        def evaluate(self):
+            return ScoreBundle(scores={}, aggregated=0.0, feedback="")
+
+    g = _Noop(config=GraderConfig(args={}))
+    g.private_dir = str(private_dir)
+    g.codebase_path = str(codebase_path)
+    g.island_id = island_id
+    return g
+
+
+def test_eval_logs_dir_single_island_writes_under_public():
+    """island_id=None → .coral/public/eval_logs/<checkout_dir_name>/ (legacy)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        coral = Path(tmp)
+        (coral / "private").mkdir()
+        checkout = coral / "private" / "grader_checkouts" / "abc1234"
+        checkout.mkdir(parents=True)
+        g = _bare_task_grader(coral / "private", codebase_path=checkout, island_id=None)
+
+        out = g.eval_logs_dir
+
+        assert out == coral / "public" / "eval_logs" / "abc1234"
+        assert out.is_dir()
+
+
+def test_eval_logs_dir_multi_island_writes_under_island_dir():
+    """island_id set → .coral/islands/<island_id>/eval_logs/<checkout_dir_name>/.
+
+    Mirrors the symlink that setup_shared_state creates at
+    `<worktree>/.claude/eval_logs/` (workspace/worktree.py), so the agent
+    can actually navigate to its own logs.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        coral = Path(tmp)
+        (coral / "private").mkdir()
+        checkout = coral / "private" / "grader_checkouts" / "deadbeef"
+        checkout.mkdir(parents=True)
+        g = _bare_task_grader(coral / "private", codebase_path=checkout, island_id="0")
+
+        out = g.eval_logs_dir
+
+        assert out == coral / "islands" / "0" / "eval_logs" / "deadbeef"
+        assert out.is_dir()
+
+
+def test_eval_logs_dir_island_id_as_int_coerced_to_str():
+    """Daemon may pass island_id as int; path construction must not crash."""
+    with tempfile.TemporaryDirectory() as tmp:
+        coral = Path(tmp)
+        (coral / "private").mkdir()
+        checkout = coral / "private" / "grader_checkouts" / "feedface"
+        checkout.mkdir(parents=True)
+        g = _bare_task_grader(coral / "private", codebase_path=checkout, island_id=2)
+
+        out = g.eval_logs_dir
+
+        assert out == coral / "islands" / "2" / "eval_logs" / "feedface"
+        assert out.is_dir()

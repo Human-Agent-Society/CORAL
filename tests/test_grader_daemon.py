@@ -775,3 +775,80 @@ def test_find_pending_single_island_unchanged(tmp_path):
     write_attempt(coral_dir, a)
     pending = _find_pending(coral_dir)
     assert {p.commit_hash for p in pending} == {"ccc"}
+
+
+# --- _append_eval_logs_hint: universal trace-log footer --------------------
+#
+# Regression: agent attempt e90ca6c3 timed out, feedback was just
+# "Evaluation timed out after 1200s" with no eval_logs path. The agent had
+# no way to find their trajectory/recording. The daemon now appends a footer
+# on every feedback path (success, timeout, crashed) so the agent always
+# knows where to look.
+
+
+def test_append_eval_logs_hint_includes_worktree_relative_path():
+    """Footer must contain the worktree-relative form (runtime-agnostic)."""
+    from coral.grader.daemon import _append_eval_logs_hint
+
+    out = _append_eval_logs_hint("Eval timed out.", "deadbeef1234", "claude_code")
+
+    assert "deadbeef1234" in out
+    assert "eval_logs/deadbeef1234/" in out
+
+
+def test_append_eval_logs_hint_includes_concrete_shared_dir_path():
+    """Footer must also show the concrete `.claude/` form so the agent
+    doesn't have to guess what "shared state dir" means."""
+    from coral.grader.daemon import _append_eval_logs_hint
+
+    out = _append_eval_logs_hint("", "abc1234", "claude_code")
+
+    assert ".claude/eval_logs/abc1234/" in out
+
+
+def test_append_eval_logs_hint_preserves_original_feedback():
+    """The original feedback (e.g. "Eval timed out after 1200s") must come
+    first, footer second. No silent replacement."""
+    from coral.grader.daemon import _append_eval_logs_hint
+
+    original = "Evaluation timed out after 1200s"
+    out = _append_eval_logs_hint(original, "h1", "claude_code")
+
+    assert out.startswith(original)
+    assert "### Trace logs" in out
+
+
+def test_append_eval_logs_hint_handles_empty_feedback():
+    """A blank feedback (rare but possible from a crashed grader that raised
+    an empty exception) must still get the footer."""
+    from coral.grader.daemon import _append_eval_logs_hint
+
+    out = _append_eval_logs_hint("", "h1", "claude_code")
+
+    assert "eval_logs/h1/" in out
+
+
+def test_append_eval_logs_hint_uses_correct_shared_dir_per_runtime():
+    """For other runtimes, the concrete path uses the matching shared dir
+    (.codex, .opencode, .kiro). Verified via the registry path; the fallback
+    map mirrors shared_dir_name in coral/agent/builtin/*."""
+    from coral.grader.daemon import _append_eval_logs_hint
+
+    for runtime, expected in [
+        ("claude_code", ".claude"),
+        ("codex", ".codex"),
+        ("opencode", ".opencode"),
+        ("kiro", ".kiro"),
+    ]:
+        out = _append_eval_logs_hint("", "h1", runtime)
+        assert f"{expected}/eval_logs/h1/" in out, f"{runtime} should produce {expected}/ path"
+
+
+def test_append_eval_logs_hint_unknown_runtime_falls_back_to_claude():
+    """A typo'd or custom runtime name shouldn't crash — fall back to .claude."""
+    from coral.grader.daemon import _append_eval_logs_hint
+
+    out = _append_eval_logs_hint("feedback", "h1", "totally-made-up-runtime")
+
+    assert ".claude/eval_logs/h1/" in out
+    assert "feedback" in out  # original preserved

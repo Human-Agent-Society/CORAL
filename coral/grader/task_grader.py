@@ -101,13 +101,26 @@ class TaskGrader(ABC):
         subprocess logs, terminal recordings, traces, etc. the agent should
         be able to inspect after the eval finishes.
 
-        Path: .coral/public/eval_logs/<checkout_dir_name>/
+        Path (single-island): .coral/public/eval_logs/<checkout_dir_name>/
+        Path (multi-island):  .coral/islands/<island_id>/eval_logs/<checkout_dir_name>/
         (= attempt commit hash when invoked by the grader daemon)
 
         Symlinked into each agent worktree at `<worktree>/.claude/eval_logs/`
-        by setup_shared_state.
+        by setup_shared_state, so the multi-island branch keeps eval logs
+        island-scoped (consistent with attempts/skills/notes/etc.).
         """
-        d = Path(self.private_dir).parent / "public" / "eval_logs" / Path(self.codebase_path).name
+        coral_root = Path(self.private_dir).parent
+        island_id = getattr(self, "island_id", None)
+        if island_id is not None:
+            d = (
+                coral_root
+                / "islands"
+                / str(island_id)
+                / "eval_logs"
+                / Path(self.codebase_path).name
+            )
+        else:
+            d = coral_root / "public" / "eval_logs" / Path(self.codebase_path).name
         d.mkdir(parents=True, exist_ok=True)
         return d
 

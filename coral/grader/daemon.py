@@ -326,6 +326,65 @@ def _build_feedback(bundle: Any) -> str:
     return "\n".join(parts)
 
 
+# Fallback shared-dir names per runtime. Used by _append_eval_logs_hint when
+# the runtime isn't registered in coral.agent.registry (e.g. custom entrypoint
+# runtimes). Mirrors the .shared_dir_name contract in coral/agent/runtime.py.
+_DEFAULT_SHARED_DIR_BY_RUNTIME: dict[str, str] = {
+    "claude_code": ".claude",
+    "codex": ".codex",
+    "opencode": ".opencode",
+    "cursor_agent": ".cursor",
+    "kiro": ".kiro",
+}
+
+
+def _resolve_shared_dir(runtime_name: str) -> str:
+    """Look up a runtime's shared-dir name; fall back to .claude.
+
+    The shared dir is the worktree-local directory the agent reads state
+    from — `.claude/`, `.codex/`, etc. The eval_logs symlink in
+    setup_shared_state targets that dir, so the agent accesses their
+    attempt's logs at `<shared_dir>/eval_logs/<hash>/`.
+    """
+    if not runtime_name:
+        return ".claude"
+    try:
+        from coral.agent.registry import get_runtime
+
+        return get_runtime(runtime_name).shared_dir_name
+    except (KeyError, ImportError, Exception):  # noqa: BLE001 — best-effort hint
+        return _DEFAULT_SHARED_DIR_BY_RUNTIME.get(runtime_name, ".claude")
+
+
+def _append_eval_logs_hint(
+    feedback: str,
+    commit_hash: str,
+    runtime_name: str,
+) -> str:
+    """Append a footer pointing the agent at their per-attempt trace logs.
+
+    Universal across success / timeout / crashed feedback paths. The grader's
+    own _parse_job_result also includes a Logs block with per-trial paths;
+    this footer is the safety net for the cases where the grader never
+    reached _parse_job_result (timeout mid-run, harbor never produced a
+    result.json, exception in the worker subprocess, etc.).
+
+    The path is given in BOTH worktree-relative form (always correct) and
+    concrete-with-shared-dir form (correct for this run's runtime). The
+    agent prepends their own shared-dir to read.
+    """
+    shared_dir = _resolve_shared_dir(runtime_name)
+    rel_path = f"eval_logs/{commit_hash}/"
+    footer = (
+        f"\n\n### Trace logs\n"
+        f"Per-attempt harbor logs (agent trajectories, terminal recordings, "
+        f"verifier output): `{rel_path}` — in your worktree that resolves to "
+        f"`{shared_dir}/{rel_path}` (your runtime's shared state dir; "
+        f"`.codex/`, `.opencode/`, `.kiro/` on other runtimes)."
+    )
+    return (feedback or "") + footer
+
+
 def _grade_one(
     attempt: Attempt,
     config_path: Path,
@@ -393,6 +452,12 @@ def _grade_one(
         status = "crashed"
         feedback = str(e)
         budget_class = BUDGET_CLASS_GRADER_ERROR
+
+    # Append the per-attempt eval_logs path so the agent can always find
+    # their trace logs, regardless of which feedback path produced this
+    # result (success / timeout / crashed). This is the universal safety
+    # net — see _append_eval_logs_hint for the contract.
+    feedback = _append_eval_logs_hint(feedback, attempt.commit_hash, config.agents.runtime)
 
     # Carry forward any pending metadata the grader bundle didn't overwrite,
     # then stamp the final budget_class (always wins over any pending value).
