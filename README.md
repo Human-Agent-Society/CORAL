@@ -22,6 +22,7 @@
 
 ### 🔥 News
 
+- **[2026-06-06]** CORAL v0.6.0 adds multi-island runs: partition agents into isolated islands with scoped attempts, notes, skills, heartbeat state, and migration between islands for broader exploration.
 - **[2026-04-24]** Rubric judges — two reusable LLM-judge grader packages for open-ended tasks (reports, memos, legal analysis). See the [Rubric Judges guide](https://docs.coralxyz.com/guides/rubric-judge).
 - **[2026-04-03]** Our paper, "CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery," is now out! Check it out on [Arxiv](https://arxiv.org/abs/2604.01658v1).
 - **[2026-03-18]** CORAL is released! Check out our [blog post](https://human-agent-society.github.io/CORAL/).
@@ -34,7 +35,7 @@
 curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
 ```
 
-Installs `coral` globally via `uv tool install`. Pin a version with `CORAL_VERSION=v0.5.0`. See [Installation docs](https://docs.coralxyz.com/getting-started/installation) for manual install, dev setup, and prerequisites.
+Installs `coral` globally via `uv tool install`. Pin a version with `CORAL_VERSION=v0.6.0`. See [Installation docs](https://docs.coralxyz.com/getting-started/installation) for manual install, dev setup, and prerequisites.
 
 ```bash
 coral init my-task                       # scaffold a task
