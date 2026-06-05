@@ -159,12 +159,12 @@ class AgentManager:
             minimize=(config.grader.direction == "minimize"),
             rng=random.Random(),
         )
-        # Candidates the last cycle couldn't apply (paused, or had a pending
-        # grader attempt). Retried at the top of the next cycle so a single
-        # deferred agent doesn't strand a swap direction forever — without
-        # this, a busy grader queue can keep an entire swap direction silent
-        # across many cycles. Each entry: (candidate, reason, retry_count);
-        # retry_count caps at MIGRATION_MAX_RETRIES to bound log noise.
+        # The last migration batch that could not apply because at least one
+        # candidate was temporarily blocked (paused, or had a pending grader
+        # attempt). Retried on every monitor tick before fresh candidate
+        # selection so a blocked swap resumes as soon as the grader clears,
+        # without waiting for the next full migration cadence.
+        # Each entry: (candidate, reason, retry_count).
         self._deferred_candidates: list[tuple[MigrationCandidate, str, int]] = []
 
     def _runtime_for(self, agent_id: str) -> AgentRuntime:
@@ -1361,14 +1361,11 @@ class AgentManager:
         runner = self._migration_runner
         if not runner.enabled or self.paths is None:
             return
+        if self._retry_deferred_migration_batch():
+            return
         current_evals = self._get_migration_eval_count()
         if not runner.should_run(current_global_evals=current_evals):
             return
-
-        # Drop deferred entries that have retried too many times or that
-        # no longer match the agent's current island. Done before run_cycle
-        # so the dedupe below reflects the survivors.
-        self._prune_deferred()
 
         best_scores = self._gather_island_best_scores()
         migrations = runner.run_cycle(
@@ -1380,21 +1377,6 @@ class AgentManager:
         # every subsequent tick would re-enter run_cycle on the same boundary.
         runner.mark_cycle_complete(current_global_evals=current_evals)
 
-        # Prepend deferred candidates so a previously-deferred agent gets
-        # another shot before any fresh candidate for the same src island.
-        # If the fresh cycle happened to re-pick the same agent, the fresh
-        # candidate wins (its score is from the current cycle, not stale).
-        fresh_agent_ids = {m.agent_id for m in migrations}
-        deferred_retry = [
-            c for c, _r, _n in self._deferred_candidates if c.agent_id not in fresh_agent_ids
-        ]
-        if deferred_retry:
-            logger.info(
-                f"Re-attempting {len(deferred_retry)} deferred migration(s) "
-                f"before fresh candidates: "
-                f"{[c.agent_id for c in deferred_retry]}"
-            )
-        migrations = deferred_retry + migrations
         migrations = self._select_executable_migration_batch(
             self._filter_current_migration_candidates(migrations)
         )
@@ -1405,14 +1387,7 @@ class AgentManager:
             )
             return
 
-        for candidate in migrations:
-            try:
-                self._apply_migration(candidate)
-            except Exception as e:
-                logger.exception(
-                    f"Migration {candidate.agent_id} {candidate.src_island}→"
-                    f"{candidate.dst_island} failed: {e}"
-                )
+        self._apply_migration_batch(migrations, current_evals=current_evals)
 
     def _gather_island_best_scores(self) -> dict[str, float]:
         """Per-island top score (direction-aware), used by score-weighted dest.
@@ -1492,6 +1467,160 @@ class AgentManager:
     # cycles so they get another shot at the top of the next run.
     MIGRATION_MAX_RETRIES = 5
 
+    def _retry_deferred_migration_batch(self) -> bool:
+        """Retry a previously blocked migration batch outside the normal cadence.
+
+        Fresh migration selection is cadence-bound by ``migration.every``.
+        Retrying a batch that was already selected is not: if a candidate was
+        blocked only by a pending grader attempt, the balanced swap should
+        apply as soon as that pending attempt finalizes, not wait for another
+        full migration window.
+
+        Returns True when a deferred batch existed and was handled (applied,
+        re-deferred, or dropped), so callers should not also plan a fresh batch
+        in the same tick.
+        """
+        if not self._deferred_candidates:
+            return False
+        self._prune_deferred()
+        if not self._deferred_candidates:
+            return False
+        migrations = [candidate for candidate, _reason, _n in self._deferred_candidates]
+        logger.info(f"Re-attempting deferred migration batch: {[c.agent_id for c in migrations]}")
+        self._apply_migration_batch(migrations, retry=True)
+        return True
+
+    def _apply_migration_batch(
+        self,
+        migrations: list[MigrationCandidate],
+        *,
+        current_evals: int | None = None,
+        retry: bool = False,
+    ) -> bool:
+        """Apply a planned migration batch only when every candidate is ready."""
+        if not migrations:
+            return False
+
+        blocked = [
+            (candidate, reason)
+            for candidate in migrations
+            if (reason := self._migration_block_reason(candidate)) is not None
+        ]
+        if blocked:
+            non_retriable = [
+                (candidate, reason)
+                for candidate, reason in blocked
+                if not self._migration_block_is_retriable(reason)
+            ]
+            if non_retriable:
+                for candidate, reason in non_retriable:
+                    self._handle_blocked_migration(candidate, reason)
+                self._deferred_candidates = []
+                logger.info("Dropping migration batch because it went stale")
+            else:
+                self._defer_migration_batch(migrations, blocked)
+                prefix = "Deferred migration batch retry"
+                if not retry:
+                    prefix = f"Migration cycle @ real eval#{current_evals}"
+                logger.info(
+                    f"{prefix}: deferring batch because {len(blocked)} candidate(s) are not ready"
+                )
+            return False
+
+        for candidate in migrations:
+            try:
+                self._apply_migration(candidate, assume_preflight=True)
+            except Exception as e:
+                logger.exception(
+                    f"Migration {candidate.agent_id} {candidate.src_island}→"
+                    f"{candidate.dst_island} failed: {e}"
+                )
+                return False
+        self._deferred_candidates = []
+        return True
+
+    def _migration_block_reason(self, candidate: MigrationCandidate) -> str | None:
+        """Return why ``candidate`` cannot safely migrate right now, if any."""
+        assert self.paths is not None
+
+        agent_id = candidate.agent_id
+        if not any(handle.agent_id == agent_id for handle in self.handles):
+            return "missing-handle"
+        if self._is_paused(agent_id):
+            return "paused"
+
+        current_island = self._agent_island.get(agent_id)
+        if current_island is not None and current_island != candidate.src_island:
+            return f"stale:{current_island}"
+
+        pending = agent_in_grader_queue(
+            self.paths.coral_dir,
+            agent_id,
+            attempts=read_attempts(self.paths.coral_dir, island_id=candidate.src_island),
+            island_id=candidate.src_island,
+        )
+        if pending is not None:
+            return f"pending:{pending.commit_hash[:12]}"
+        return None
+
+    @staticmethod
+    def _migration_block_is_retriable(reason: str) -> bool:
+        return reason == "paused" or reason.startswith("pending:")
+
+    @staticmethod
+    def _migration_defer_reason(reason: str) -> str:
+        if reason.startswith("pending:"):
+            return "pending"
+        if reason.startswith("stale:"):
+            return "stale"
+        return reason
+
+    def _defer_migration_batch(
+        self,
+        migrations: list[MigrationCandidate],
+        blocked: list[tuple[MigrationCandidate, str]],
+    ) -> None:
+        """Store the whole planned batch so retry preserves roster balance."""
+        blocked_reasons = {
+            candidate.agent_id: self._migration_defer_reason(reason)
+            for candidate, reason in blocked
+        }
+        prior = {candidate.agent_id: n for candidate, _reason, n in self._deferred_candidates}
+        self._deferred_candidates = [
+            (
+                candidate,
+                blocked_reasons.get(candidate.agent_id, "waiting-for-batch"),
+                max(prior.get(candidate.agent_id, 0), 1),
+            )
+            for candidate in migrations
+        ]
+
+    def _handle_blocked_migration(self, candidate: MigrationCandidate, reason: str) -> None:
+        """Apply direct-call bookkeeping for a blocked single migration."""
+        agent_id = candidate.agent_id
+        if reason == "missing-handle":
+            logger.warning(f"Migration target {agent_id} has no live handle; skipping")
+            return
+        if reason == "paused":
+            logger.info(f"Migration target {agent_id} is paused; deferring")
+            self._defer_candidate(candidate, reason="paused")
+            return
+        if reason.startswith("stale:"):
+            current = reason.split(":", 1)[1]
+            logger.info(
+                f"Migration target {agent_id} no longer lives on island "
+                f"{candidate.src_island} (current: {current}); skipping stale candidate"
+            )
+            self._drop_deferred_for(agent_id)
+            return
+        if reason.startswith("pending:"):
+            commit = reason.split(":", 1)[1]
+            logger.info(f"Migration target {agent_id} has pending attempt {commit}; deferring")
+            self._defer_candidate(candidate, reason="pending")
+            return
+        logger.info(f"Migration target {agent_id} is blocked ({reason}); deferring")
+        self._defer_candidate(candidate, reason=reason)
+
     def _filter_current_migration_candidates(
         self,
         migrations: list[MigrationCandidate],
@@ -1542,7 +1671,7 @@ class AgentManager:
         ]
 
     def _prune_deferred(self) -> None:
-        """Drop deferred candidates that exceeded max retries or went stale.
+        """Drop the deferred batch if any member exceeded retries or went stale.
 
         A deferred candidate is considered stale if the agent is no longer
         on its recorded source island — meaning some other path (a fresh
@@ -1550,22 +1679,26 @@ class AgentManager:
         would just fail again. Same for agents that have been retrying
         longer than MIGRATION_MAX_RETRIES cycles without success.
         """
-        surviving: list[tuple[MigrationCandidate, str, int]] = []
         for candidate, reason, n in self._deferred_candidates:
             if n >= self.MIGRATION_MAX_RETRIES:
                 logger.warning(
-                    f"Dropping deferred migration for {candidate.agent_id} "
-                    f"({candidate.src_island}→{candidate.dst_island}) after "
-                    f"{n} cycles; still {reason}"
+                    f"Dropping deferred migration batch because {candidate.agent_id} "
+                    f"({candidate.src_island}→{candidate.dst_island}) retried "
+                    f"{n} times; still {reason}"
                 )
-                continue
+                self._deferred_candidates = []
+                return
             if self._agent_island.get(candidate.agent_id) != candidate.src_island:
-                # Agent already moved off the recorded source — nothing to retry.
-                continue
-            surviving.append((candidate, reason, n))
-        self._deferred_candidates = surviving
+                logger.info(
+                    f"Dropping deferred migration batch because {candidate.agent_id} "
+                    f"no longer lives on island {candidate.src_island}"
+                )
+                self._deferred_candidates = []
+                return
 
-    def _apply_migration(self, candidate: MigrationCandidate) -> None:
+    def _apply_migration(
+        self, candidate: MigrationCandidate, *, assume_preflight: bool = False
+    ) -> None:
         """Move ``candidate.agent_id`` from src island to dst, then restart it.
 
         Sequence (each step intentionally idempotent on retry):
@@ -1593,6 +1726,12 @@ class AgentManager:
 
         agent_id = candidate.agent_id
         # (1) Locate handle, bail on missing / paused / pending agents.
+        if not assume_preflight:
+            reason = self._migration_block_reason(candidate)
+            if reason is not None:
+                self._handle_blocked_migration(candidate, reason)
+                return
+
         idx: int | None = None
         for i, handle in enumerate(self.handles):
             if handle.agent_id == agent_id:
@@ -1600,10 +1739,6 @@ class AgentManager:
                 break
         if idx is None:
             logger.warning(f"Migration target {agent_id} has no live handle; skipping")
-            return
-        if self._is_paused(agent_id):
-            logger.info(f"Migration target {agent_id} is paused; deferring")
-            self._defer_candidate(candidate, reason="paused")
             return
 
         src = candidate.src_island
@@ -1620,26 +1755,6 @@ class AgentManager:
         runtime = self._runtime_for(agent_id)
         shared_dir_name = runtime.shared_dir_name
         worktree_path = self.handles[idx].worktree_path
-
-        # Skip if the agent has anything in the grader queue — running the
-        # restart now would orphan the pending submission against an old
-        # island view. Defer the candidate so it gets retried at the top
-        # of the next cycle (otherwise a busy grader queue can strand
-        # an entire swap direction for many cycles — see the deferred-
-        # candidate bookkeeping in __init__).
-        pending = agent_in_grader_queue(
-            coral_dir,
-            agent_id,
-            attempts=read_attempts(coral_dir, island_id=src),
-            island_id=src,
-        )
-        if pending is not None:
-            logger.info(
-                f"Migration target {agent_id} has pending attempt "
-                f"{pending.commit_hash[:12]}; deferring"
-            )
-            self._defer_candidate(candidate, reason="pending")
-            return
 
         # Soft-fail gates passed — clear any prior deferral so a future
         # cycle doesn't try to re-apply a candidate we already handled.
