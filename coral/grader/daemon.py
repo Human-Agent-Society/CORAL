@@ -313,6 +313,117 @@ def _compute_status(
     return "regressed"
 
 
+def _attempt_island_id(attempt: Attempt) -> str | None:
+    island_id = (attempt.metadata or {}).get("island_id")
+    if island_id is None:
+        return None
+    return str(island_id)
+
+
+def _read_attempt_file(path: Path) -> Attempt | None:
+    try:
+        return Attempt.from_dict(json.loads(path.read_text()))
+    except (json.JSONDecodeError, KeyError, OSError, TypeError):
+        return None
+
+
+def _current_attempt_location(
+    coral_dir: Path,
+    commit_hash: str,
+    *,
+    fallback_island_id: str | int | None,
+) -> tuple[Attempt | None, str | None]:
+    """Find where an attempt record currently lives.
+
+    Migration can move a pending attempt while a grader worker is already
+    running on its commit. Finalization must write to the moved record's
+    current island, not the island captured when the worker was queued.
+    """
+    fallback = str(fallback_island_id) if fallback_island_id is not None else None
+    islands_dir = coral_dir / "islands"
+    if not islands_dir.exists():
+        attempt_path = coral_dir / "public" / "attempts" / f"{commit_hash}.json"
+        return _read_attempt_file(attempt_path), None
+
+    matches: list[tuple[Attempt, str, float]] = []
+    for island_dir in sorted(p for p in islands_dir.iterdir() if p.is_dir()):
+        path = island_dir / "attempts" / f"{commit_hash}.json"
+        if not path.exists():
+            continue
+        attempt = _read_attempt_file(path)
+        if attempt is None:
+            logger.warning(
+                "Skipping malformed attempt record while locating %s: %s",
+                commit_hash,
+                path,
+            )
+            continue
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        matches.append((attempt, island_dir.name, mtime))
+
+    if not matches:
+        return None, fallback
+    if len(matches) > 1:
+        logger.warning(
+            "Attempt %s exists in multiple islands; using the current-looking record",
+            commit_hash[:12],
+        )
+    current_matches = [
+        (attempt, island_id, mtime)
+        for attempt, island_id, mtime in matches
+        if _attempt_island_id(attempt) == island_id
+    ]
+    if current_matches:
+        attempt, island_id, _mtime = max(current_matches, key=lambda item: item[2])
+        return attempt, island_id
+    attempt, island_id, _mtime = max(matches, key=lambda item: item[2])
+    return attempt, island_id
+
+
+def _move_eval_logs_to_current_island(
+    coral_dir: Path,
+    commit_hash: str,
+    *,
+    from_island_id: str | int | None,
+    to_island_id: str | int | None,
+) -> None:
+    """Move eval logs written through a stale island context to the final island."""
+    if from_island_id is None or to_island_id is None:
+        return
+    src_island = str(from_island_id)
+    dst_island = str(to_island_id)
+    if src_island == dst_island:
+        return
+
+    src = coral_dir / "islands" / src_island / "eval_logs" / commit_hash
+    if not src.exists():
+        return
+    dst = coral_dir / "islands" / dst_island / "eval_logs" / commit_hash
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        if src.is_dir():
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+            shutil.rmtree(src, ignore_errors=True)
+        else:
+            if dst.exists():
+                if dst.is_dir():
+                    shutil.rmtree(dst)
+                else:
+                    dst.unlink()
+            shutil.move(str(src), str(dst))
+    except OSError as e:
+        logger.warning(
+            "Failed to move eval logs for %s from island %s to %s: %s",
+            commit_hash[:12],
+            src_island,
+            dst_island,
+            e,
+        )
+
+
 def _build_feedback(bundle: Any) -> str:
     """Combine bundle-level feedback + per-score explanations into one string."""
     parts = []
@@ -392,7 +503,7 @@ def _grade_one(
     config: CoralConfig,
 ) -> Attempt:
     """Grade a single pending attempt and return the finalized Attempt record."""
-    island_id = (attempt.metadata or {}).get("island_id")
+    grading_island_id = _attempt_island_id(attempt)
     # Task.metadata is the canonical channel for surfacing per-attempt context
     # to the user's grader (read via TaskGrader.tune / .budget_class). Both
     # the in-process and SubprocessGrader paths serialize it, so this works
@@ -417,6 +528,7 @@ def _grade_one(
     status = "crashed"
     feedback = ""
     metadata: dict = {}
+    grader_completed = False
 
     try:
         _add_isolated_worktree(repo_dir, attempt.commit_hash, checkout_path)
@@ -427,19 +539,12 @@ def _grade_one(
                 str(checkout_path),
                 [task],
                 timeout,
-                island_id=island_id,
+                island_id=grading_island_id,
             )
             score = bundle.aggregated
             feedback = _build_feedback(bundle)
             metadata = dict(getattr(bundle, "metadata", None) or {})
-            status = _compute_status(
-                score,
-                attempt.agent_id,
-                attempt.commit_hash,
-                coral_dir,
-                minimize,
-                island_id=island_id,
-            )
+            grader_completed = True
         finally:
             _remove_worktree(repo_dir, checkout_path)
     except TimeoutError:
@@ -453,6 +558,29 @@ def _grade_one(
         feedback = str(e)
         budget_class = BUDGET_CLASS_GRADER_ERROR
 
+    current_attempt, final_island_id = _current_attempt_location(
+        coral_dir,
+        attempt.commit_hash,
+        fallback_island_id=grading_island_id,
+    )
+    base_attempt = current_attempt or attempt
+    _move_eval_logs_to_current_island(
+        coral_dir,
+        attempt.commit_hash,
+        from_island_id=grading_island_id,
+        to_island_id=final_island_id,
+    )
+
+    if grader_completed:
+        status = _compute_status(
+            score,
+            base_attempt.agent_id,
+            base_attempt.commit_hash,
+            coral_dir,
+            minimize,
+            island_id=final_island_id,
+        )
+
     # Append the per-attempt eval_logs path so the agent can always find
     # their trace logs, regardless of which feedback path produced this
     # result (success / timeout / crashed). This is the universal safety
@@ -461,27 +589,29 @@ def _grade_one(
 
     # Carry forward any pending metadata the grader bundle didn't overwrite,
     # then stamp the final budget_class (always wins over any pending value).
-    for k, v in (attempt.metadata or {}).items():
+    for k, v in (base_attempt.metadata or {}).items():
         metadata.setdefault(k, v)
+    if final_island_id is not None:
+        metadata["island_id"] = final_island_id
     metadata["budget_class"] = budget_class
 
     finalized = Attempt(
-        commit_hash=attempt.commit_hash,
-        agent_id=attempt.agent_id,
-        title=attempt.title,
+        commit_hash=base_attempt.commit_hash,
+        agent_id=base_attempt.agent_id,
+        title=base_attempt.title,
         score=score,
         status=status,
-        parent_hash=attempt.parent_hash,
+        parent_hash=base_attempt.parent_hash,
         # Preserve original submission timestamp; daemon doesn't re-stamp.
-        timestamp=attempt.timestamp,
+        timestamp=base_attempt.timestamp,
         feedback=feedback,
-        shared_state_hash=attempt.shared_state_hash,
-        parent_shared_state_hash=attempt.parent_shared_state_hash,
+        shared_state_hash=base_attempt.shared_state_hash,
+        parent_shared_state_hash=base_attempt.parent_shared_state_hash,
         metadata=metadata,
     )
-    write_attempt(str(coral_dir), finalized, island_id=island_id)
+    write_attempt(str(coral_dir), finalized, island_id=final_island_id)
     with _eval_count_lock:
-        count = increment_eval_count(coral_dir, island_id=island_id)
+        count = increment_eval_count(coral_dir, island_id=final_island_id)
     logger.info(
         "Graded #%d %s -> score=%s status=%s",
         count,
@@ -540,22 +670,39 @@ def _safe_grade_one(
     except Exception:
         logger.exception("Unhandled error grading %s; marking crashed", attempt.commit_hash[:12])
         try:
-            island_id = (attempt.metadata or {}).get("island_id")
+            grading_island_id = _attempt_island_id(attempt)
+            current_attempt, final_island_id = _current_attempt_location(
+                coral_dir,
+                attempt.commit_hash,
+                fallback_island_id=grading_island_id,
+            )
+            base_attempt = current_attempt or attempt
+            _move_eval_logs_to_current_island(
+                coral_dir,
+                attempt.commit_hash,
+                from_island_id=grading_island_id,
+                to_island_id=final_island_id,
+            )
+            metadata = dict(base_attempt.metadata or {})
+            if final_island_id is not None:
+                metadata["island_id"] = final_island_id
+            metadata["budget_class"] = BUDGET_CLASS_GRADER_ERROR
             crashed = Attempt(
-                commit_hash=attempt.commit_hash,
-                agent_id=attempt.agent_id,
-                title=attempt.title,
+                commit_hash=base_attempt.commit_hash,
+                agent_id=base_attempt.agent_id,
+                title=base_attempt.title,
                 score=None,
                 status="crashed",
-                parent_hash=attempt.parent_hash,
-                timestamp=attempt.timestamp,
+                parent_hash=base_attempt.parent_hash,
+                timestamp=base_attempt.timestamp,
                 feedback="Grader daemon hit an unexpected error; see logs.",
-                shared_state_hash=attempt.shared_state_hash,
-                parent_shared_state_hash=attempt.parent_shared_state_hash,
+                shared_state_hash=base_attempt.shared_state_hash,
+                parent_shared_state_hash=base_attempt.parent_shared_state_hash,
+                metadata=metadata,
             )
-            write_attempt(str(coral_dir), crashed, island_id=island_id)
+            write_attempt(str(coral_dir), crashed, island_id=final_island_id)
             with _eval_count_lock:
-                increment_eval_count(coral_dir, island_id=island_id)
+                increment_eval_count(coral_dir, island_id=final_island_id)
             return crashed
         except Exception:
             logger.exception("Failed to record crash for %s", attempt.commit_hash[:12])

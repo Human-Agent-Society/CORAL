@@ -1352,11 +1352,9 @@ class AgentManager:
         partial failures are logged and skipped so one bad candidate
         doesn't sink the rest of the cycle.
 
-        Soft-failed candidates from prior cycles (paused, or had a
-        pending grader attempt) live in ``self._deferred_candidates`` and
-        are retried at the top of the next cycle before fresh candidates
-        are computed. Without this retry, a persistently-busy agent on
-        one side of a swap could strand that direction for many cycles.
+        Soft-failed candidates from prior cycles, such as paused agents,
+        live in ``self._deferred_candidates`` and are retried at the top
+        of the next cycle before fresh candidates are computed.
         """
         runner = self._migration_runner
         if not runner.enabled or self.paths is None:
@@ -1457,14 +1455,11 @@ class AgentManager:
 
     # --- Deferred-candidate bookkeeping ----------------------------------
     #
-    # _apply_migration has two soft-fail exits (paused, pending). The
-    # former docs said "re-attempt next cycle" but the implementation
-    # dropped the candidate, so a persistently-busy agent on one side
-    # could strand an entire swap direction (e.g. agent 0-agent-1 was
-    # the right candidate to move island 0→1 for several cycles, but
-    # each time a grader attempt was in flight and the candidate was
-    # lost). The list below carries those soft-failed candidates across
-    # cycles so they get another shot at the top of the next run.
+    # _apply_migration still has soft-fail exits (for example paused
+    # agents). The former docs said "re-attempt next cycle" but the
+    # implementation dropped the candidate. The list below carries those
+    # soft-failed candidates across cycles so they get another shot at the
+    # top of the next run.
     MIGRATION_MAX_RETRIES = 5
 
     def _retry_deferred_migration_batch(self) -> bool:
@@ -1472,8 +1467,8 @@ class AgentManager:
 
         Fresh migration selection is cadence-bound by ``migration.every``.
         Retrying a batch that was already selected is not: if a candidate was
-        blocked only by a pending grader attempt, the balanced swap should
-        apply as soon as that pending attempt finalizes, not wait for another
+        blocked by a temporary manager-side condition, the balanced swap
+        should apply as soon as that condition clears, not wait for another
         full migration window.
 
         Returns True when a deferred batch existed and was handled (applied,
@@ -1553,24 +1548,14 @@ class AgentManager:
         if current_island is not None and current_island != candidate.src_island:
             return f"stale:{current_island}"
 
-        pending = agent_in_grader_queue(
-            self.paths.coral_dir,
-            agent_id,
-            attempts=read_attempts(self.paths.coral_dir, island_id=candidate.src_island),
-            island_id=candidate.src_island,
-        )
-        if pending is not None:
-            return f"pending:{pending.commit_hash[:12]}"
         return None
 
     @staticmethod
     def _migration_block_is_retriable(reason: str) -> bool:
-        return reason == "paused" or reason.startswith("pending:")
+        return reason == "paused"
 
     @staticmethod
     def _migration_defer_reason(reason: str) -> str:
-        if reason.startswith("pending:"):
-            return "pending"
         if reason.startswith("stale:"):
             return "stale"
         return reason
@@ -1612,11 +1597,6 @@ class AgentManager:
                 f"{candidate.src_island} (current: {current}); skipping stale candidate"
             )
             self._drop_deferred_for(agent_id)
-            return
-        if reason.startswith("pending:"):
-            commit = reason.split(":", 1)[1]
-            logger.info(f"Migration target {agent_id} has pending attempt {commit}; deferring")
-            self._defer_candidate(candidate, reason="pending")
             return
         logger.info(f"Migration target {agent_id} is blocked ({reason}); deferring")
         self._defer_candidate(candidate, reason=reason)
@@ -1703,9 +1683,9 @@ class AgentManager:
 
         Sequence (each step intentionally idempotent on retry):
 
-        1. Skip if the agent is paused or has pending grader work — both
-           cases mean restarting now would lose state. Migration will
-           re-attempt the agent in a future cycle.
+        1. Skip if the agent is paused or stale. Pending grader attempts
+           are moved with the agent and finalized into the agent's current
+           island by the grader daemon.
         2. Locate the live handle, SIGINT it so the runtime can save its
            session and any in-flight file writes complete.
         3. Move per-agent files (``roles/<agent>.md``,
@@ -2346,6 +2326,7 @@ def _move_agent_files(
         dst_attempt = dst_root / "attempts" / attempt_path.name
         dst_attempt.parent.mkdir(parents=True, exist_ok=True)
         _move_path_replace(attempt_path, dst_attempt)
+        _stamp_attempt_file_island(dst_attempt, dst)
 
         commit_hash = attempt_path.stem
         src_eval_log = src_root / "eval_logs" / commit_hash
@@ -2378,6 +2359,35 @@ def _attempt_file_belongs_to_agent(path: Path, agent_id: str) -> bool:
     except json.JSONDecodeError:
         return False
     return data.get("agent_id") == agent_id
+
+
+def _stamp_attempt_file_island(path: Path, island_id: str) -> None:
+    """Update a moved attempt record so later consumers see its current island."""
+    try:
+        if path.suffix == ".jsonl":
+            records = []
+            for line in path.read_text().splitlines():
+                if not line.strip():
+                    continue
+                data = json.loads(line)
+                metadata = data.get("metadata")
+                if not isinstance(metadata, dict):
+                    metadata = {}
+                metadata["island_id"] = island_id
+                data["metadata"] = metadata
+                records.append(data)
+            path.write_text("".join(f"{json.dumps(record)}\n" for record in records))
+            return
+
+        data = json.loads(path.read_text())
+        metadata = data.get("metadata")
+        if not isinstance(metadata, dict):
+            metadata = {}
+        metadata["island_id"] = island_id
+        data["metadata"] = metadata
+        path.write_text(json.dumps(data, indent=2))
+    except (json.JSONDecodeError, OSError, TypeError) as e:
+        logger.warning("Failed to stamp migrated attempt %s with island %s: %s", path, island_id, e)
 
 
 def _move_path_replace(src_path: Path, dst_path: Path) -> None:

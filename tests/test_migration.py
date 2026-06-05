@@ -9,6 +9,7 @@ weighting policy without going through the manager; integration with
 
 from __future__ import annotations
 
+import json
 import random
 import tempfile
 from pathlib import Path
@@ -23,7 +24,7 @@ from coral.agent.migration import (
     select_candidates,
 )
 from coral.config import IslandsConfig, MigrationConfig
-from coral.hub.attempts import write_attempt
+from coral.hub.attempts import read_attempt, write_attempt
 from coral.types import Attempt
 
 
@@ -693,6 +694,13 @@ def test_move_agent_files_moves_agent_state_attempts_and_eval_logs():
         assert not (coral_dir / "islands" / "0" / "attempts" / "aaa.json").exists()
         assert (coral_dir / "islands" / "1" / "attempts" / "ccc.jsonl").exists()
         assert not (coral_dir / "islands" / "0" / "attempts" / "ccc.jsonl").exists()
+        moved_attempt = read_attempt(coral_dir, "aaa", island_id="1")
+        assert moved_attempt is not None
+        assert moved_attempt.metadata["island_id"] == "1"
+        moved_jsonl = json.loads(
+            (coral_dir / "islands" / "1" / "attempts" / "ccc.jsonl").read_text()
+        )
+        assert moved_jsonl["metadata"]["island_id"] == "1"
         assert (coral_dir / "islands" / "1" / "eval_logs" / "aaa" / "metrics.json").exists()
         assert not (coral_dir / "islands" / "0" / "eval_logs" / "aaa").exists()
         assert (coral_dir / "islands" / "1" / "eval_logs" / "ccc" / "metrics.json").exists()
@@ -999,9 +1007,8 @@ def test_apply_migration_end_to_end_moves_state_and_repoints_worktree(tmp_path):
     assert mgr._restart_counts["0-agent-1"] == 1
 
 
-def test_apply_migration_defers_when_agent_has_pending_attempt(tmp_path):
-    """If the agent has a pending attempt in the grader queue, deferral is recorded
-    for retry on the next cycle (not silently dropped)."""
+def test_apply_migration_moves_pending_attempt_with_agent(tmp_path):
+    """Pending grader attempts move with the agent instead of blocking migration."""
     from coral.agent.assignments import AgentSpec
     from coral.agent.manager import AgentManager
     from coral.agent.runtime import AgentHandle
@@ -1037,6 +1044,7 @@ def test_apply_migration_defers_when_agent_has_pending_attempt(tmp_path):
         timestamp="2026-06-01T10:00:00Z",
     )
     write_attempt(coral_dir, pending, island_id="0")
+    (coral_dir / "public").mkdir(parents=True)
 
     cfg = CoralConfig(
         agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
@@ -1072,26 +1080,22 @@ def test_apply_migration_defers_when_agent_has_pending_attempt(tmp_path):
         MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5)
     )
 
-    # Nothing happened this cycle: no spawn, no swap, no breadcrumb change.
-    assert spawn_calls == []
-    assert mgr._agent_island["0-agent-1"] == "0"
-    assert mgr.specs[0].island_id == "0"
-    assert (
-        not (worktree / ".coral_island").exists() or (worktree / ".coral_island").read_text() == "0"
-    )
-    # ...but the candidate is parked in the deferred queue, not lost.
-    assert len(mgr._deferred_candidates) == 1
-    deferred, reason, n = mgr._deferred_candidates[0]
-    assert deferred.agent_id == "0-agent-1"
-    assert deferred.src_island == "0"
-    assert deferred.dst_island == "1"
-    assert reason == "pending"
-    assert n == 1
+    assert mgr._agent_island["0-agent-1"] == "1"
+    assert mgr.specs[0].island_id == "1"
+    assert (worktree / ".coral_island").read_text() == "1"
+    assert len(spawn_calls) == 1
+    assert spawn_calls[0]["agent_id"] == "0-agent-1"
+    assert spawn_calls[0]["island_id"] == "1"
+    assert mgr._deferred_candidates == []
+    assert not (coral_dir / "islands" / "0" / "attempts" / "abc123def.json").exists()
+    moved = read_attempt(coral_dir, "abc123def", island_id="1")
+    assert moved is not None
+    assert moved.status == "pending"
+    assert moved.metadata["island_id"] == "1"
 
 
-def test_deferred_candidate_is_retried_on_next_cycle(tmp_path, monkeypatch):
-    """A candidate deferred for 'pending' is retried at the top of the next cycle
-    (before fresh candidates), and applies successfully once the queue clears."""
+def test_deferred_candidate_is_retried_on_next_cycle(tmp_path):
+    """A paused candidate is retried and applies once the manager-side block clears."""
     from coral.agent.assignments import AgentSpec
     from coral.agent.manager import AgentManager
     from coral.agent.migration import MigrationCandidate
@@ -1148,36 +1152,24 @@ def test_deferred_candidate_is_retried_on_next_cycle(tmp_path, monkeypatch):
         spawn_calls.append({"agent_id": agent_id, **kwargs}) or mgr.handles[0]
     )  # type: ignore[assignment]
 
-    # ---- Cycle 1: deferred for 'pending' ----
-    pending = Attempt(
-        commit_hash="abc123def",
-        agent_id="0-agent-1",
-        title="in flight",
-        score=None,
-        status="pending",
-        parent_hash=None,
-        timestamp="2026-06-01T10:00:00Z",
-    )
-    write_attempt(coral_dir, pending, island_id="0")
+    blocked = True
+
+    def fake_block_reason(_candidate):
+        return "paused" if blocked else None
+
+    mgr._migration_block_reason = fake_block_reason  # type: ignore[assignment]
+
+    # ---- Cycle 1: deferred while paused. ----
     mgr._apply_migration(
         MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5)
     )
     assert spawn_calls == []
-    assert len(mgr._deferred_candidates) == 1
-
-    # Grader finishes the pending attempt between cycles.
-    finished = Attempt(
-        commit_hash="abc123def",
-        agent_id="0-agent-1",
-        title="graded",
-        score=0.6,
-        status="improved",
-        parent_hash=None,
-        timestamp="2026-06-01T10:00:00Z",
-    )
-    write_attempt(coral_dir, finished, island_id="0")
+    assert [(c.agent_id, r, n) for c, r, n in mgr._deferred_candidates] == [
+        ("0-agent-1", "paused", 1)
+    ]
 
     # ---- Cycle 2: deferred candidate should now apply cleanly. ----
+    blocked = False
     mgr._apply_migration(
         MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.6)
     )
@@ -1190,13 +1182,12 @@ def test_deferred_candidate_is_retried_on_next_cycle(tmp_path, monkeypatch):
     assert mgr._deferred_candidates == []
 
 
-def test_maybe_run_migration_cycle_defers_whole_swap_until_pending_clears(tmp_path, monkeypatch):
-    """A balanced swap is atomic across temporary pending-attempt blocks.
+def test_maybe_run_migration_cycle_migrates_whole_swap_with_pending_attempt(tmp_path):
+    """A balanced swap remains atomic while pending attempts move with agents.
 
     Regression for a 2/2 run where 0-agent-1 was pending, but 1-agent-1 still
-    migrated 1→0. That produced a 3/1 roster. The planned batch should instead
-    stay deferred and retry on the next monitor tick, without waiting for the
-    next full migration cadence.
+    migrated 1→0. That produced a 3/1 roster. The planned batch should move
+    both directions together, and the pending attempt should follow 0-agent-1.
     """
     from coral.agent.assignments import AgentSpec
     from coral.agent.manager import AgentManager
@@ -1298,8 +1289,8 @@ def test_maybe_run_migration_cycle_defers_whole_swap_until_pending_clears(tmp_pa
 
     mgr._migration_runner.should_run = fake_should_run  # type: ignore[assignment]
     mgr._migration_runner.run_cycle = fake_run_cycle  # type: ignore[assignment]
-    # 0-agent-1 has a pending attempt planted. The whole swap should defer;
-    # 1-agent-1 must not migrate alone.
+    # 0-agent-1 has a pending attempt planted. Pending does not block
+    # migration; the attempt file follows the agent to island 1.
     pending = Attempt(
         commit_hash="pend-1",
         agent_id="0-agent-1",
@@ -1313,34 +1304,14 @@ def test_maybe_run_migration_cycle_defers_whole_swap_until_pending_clears(tmp_pa
 
     mgr._maybe_run_migration_cycle()
 
-    assert mgr._agent_island == {"0-agent-1": "0", "1-agent-1": "1"}
-    assert spawn_calls == []
-    assert [(c.agent_id, r) for c, r, _n in mgr._deferred_candidates] == [
-        ("0-agent-1", "pending"),
-        ("1-agent-1", "waiting-for-batch"),
-    ]
-
-    # The grader finalizes the pending attempt. The deferred batch should retry
-    # immediately on the next manager tick, even though a fresh full cycle is
-    # not due.
-    finished = Attempt(
-        commit_hash="pend-1",
-        agent_id="0-agent-1",
-        title="graded",
-        score=0.6,
-        status="improved",
-        parent_hash=None,
-        timestamp="2026-06-01T11:00:00Z",
-    )
-    write_attempt(coral_dir, finished, island_id="0")
-    mgr._migration_runner.should_run = lambda **_: False  # type: ignore[assignment]
-    mgr._migration_runner.run_cycle = pytest.fail  # type: ignore[assignment]
-
-    mgr._maybe_run_migration_cycle()
-
     assert mgr._agent_island == {"0-agent-1": "1", "1-agent-1": "0"}
     assert [call["agent_id"] for call in spawn_calls] == ["0-agent-1", "1-agent-1"]
     assert mgr._deferred_candidates == []
+    assert not (coral_dir / "islands" / "0" / "attempts" / "pend-1.json").exists()
+    moved = read_attempt(coral_dir, "pend-1", island_id="1")
+    assert moved is not None
+    assert moved.status == "pending"
+    assert moved.metadata["island_id"] == "1"
 
 
 def test_maybe_run_migration_cycle_ignores_raw_eval_count_for_tune_only(tmp_path):
@@ -1412,17 +1383,17 @@ def test_prune_deferred_drops_whole_batch_on_exceeded_retries_or_stale_agents():
     mgr._deferred_candidates = [
         (
             MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.1),
-            "pending",
+            "paused",
             1,
         ),
         (
             MigrationCandidate(agent_id="0-agent-2", src_island="0", dst_island="1", score=0.2),
-            "pending",
+            "paused",
             1,
         ),
         (
             MigrationCandidate(agent_id="0-agent-3", src_island="0", dst_island="1", score=0.3),
-            "pending",
+            "paused",
             mgr.MIGRATION_MAX_RETRIES,
         ),
     ]
@@ -1470,7 +1441,7 @@ def test_maybe_run_migration_cycle_retries_deferred_batch_before_fresh_cycle(tmp
     mgr._deferred_candidates = [
         (
             MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5),
-            "pending",
+            "paused",
             2,
         ),
     ]
@@ -1518,7 +1489,7 @@ def test_maybe_run_migration_cycle_does_not_mix_blocked_deferred_with_fresh(tmp_
     mgr._agent_island = {"0-agent-1": "0", "1-agent-1": "1"}
     applied: list[MigrationCandidate] = []
 
-    mgr._migration_block_reason = lambda _candidate: "pending:abc123"  # type: ignore[assignment]
+    mgr._migration_block_reason = lambda _candidate: "paused"  # type: ignore[assignment]
     mgr._apply_migration = lambda candidate, **_kwargs: applied.append(  # type: ignore[assignment]
         candidate
     )
@@ -1527,7 +1498,7 @@ def test_maybe_run_migration_cycle_does_not_mix_blocked_deferred_with_fresh(tmp_
     mgr._deferred_candidates = [
         (
             MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5),
-            "pending",
+            "paused",
             1,
         ),
     ]
@@ -1536,5 +1507,5 @@ def test_maybe_run_migration_cycle_does_not_mix_blocked_deferred_with_fresh(tmp_
 
     assert applied == []
     assert [(c.agent_id, r, n) for c, r, n in mgr._deferred_candidates] == [
-        ("0-agent-1", "pending", 1)
+        ("0-agent-1", "paused", 1)
     ]

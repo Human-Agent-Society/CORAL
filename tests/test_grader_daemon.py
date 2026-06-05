@@ -754,6 +754,87 @@ def test_find_pending_multi_island_scans_every_island(tmp_path):
     assert hashes == {"aaa000", "bbb111"}
 
 
+def test_grade_one_finalizes_migrated_pending_attempt_in_current_island(tmp_path, monkeypatch):
+    """If migration moves a pending attempt mid-grade, finalize into its current island."""
+    import coral.grader.daemon as daemon
+
+    coral_dir = tmp_path / ".coral"
+    for island in ("0", "1"):
+        (coral_dir / "islands" / island / "attempts").mkdir(parents=True)
+        (coral_dir / "islands" / island / "eval_logs").mkdir(parents=True)
+    (coral_dir / "public").mkdir(parents=True)
+
+    queued = Attempt(
+        commit_hash="abc123",
+        agent_id="0-agent-1",
+        title="queued before migration",
+        score=None,
+        status="pending",
+        parent_hash=None,
+        timestamp="2026-05-31T10:00:00Z",
+        metadata={"island_id": "0"},
+    )
+    write_attempt(coral_dir, queued, island_id="0")
+
+    moved = Attempt(
+        commit_hash="abc123",
+        agent_id="0-agent-1",
+        title="queued before migration",
+        score=None,
+        status="pending",
+        parent_hash=None,
+        timestamp="2026-05-31T10:00:00Z",
+        metadata={"island_id": "1"},
+    )
+    write_attempt(coral_dir, moved, island_id="1")
+    (coral_dir / "islands" / "0" / "attempts" / "abc123.json").unlink()
+    old_log = coral_dir / "islands" / "0" / "eval_logs" / "abc123" / "metrics.json"
+    old_log.parent.mkdir(parents=True)
+    old_log.write_text("{}")
+
+    config = CoralConfig.from_dict(
+        {
+            "task": {"name": "daemon_test", "description": "Daemon test"},
+            "grader": {"timeout": 60},
+            "agents": {"count": 1},
+        }
+    )
+    config_path = coral_dir / "config.yaml"
+    config_path.write_text("task:\n  name: daemon_test\n  description: Daemon test\n")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    class Bundle:
+        aggregated = 0.9
+        feedback = "ok"
+        metadata = {"grader_key": "grader_value"}
+        scores = {}
+
+    monkeypatch.setattr(daemon, "_repo_dir", lambda _coral_dir: repo)
+    monkeypatch.setattr(
+        daemon,
+        "_add_isolated_worktree",
+        lambda _repo_dir, _commit_hash, dest: dest.mkdir(parents=True, exist_ok=True),
+    )
+    monkeypatch.setattr(daemon, "_remove_worktree", lambda _repo_dir, _dest: None)
+    monkeypatch.setattr(daemon, "_run_grader_with_timeout", lambda *args, **kwargs: Bundle())
+
+    finalized = daemon._grade_one(queued, config_path, coral_dir, config)
+
+    assert finalized.status == "improved"
+    assert read_attempt(coral_dir, "abc123", island_id="0") is None
+    current = read_attempt(coral_dir, "abc123", island_id="1")
+    assert current is not None
+    assert current.score == 0.9
+    assert current.metadata["island_id"] == "1"
+    assert current.metadata["grader_key"] == "grader_value"
+    assert read_eval_count(coral_dir, island_id="0") == 0
+    assert read_eval_count(coral_dir, island_id="1") == 1
+    assert read_eval_count(coral_dir) == 1
+    assert not (coral_dir / "islands" / "0" / "eval_logs" / "abc123").exists()
+    assert (coral_dir / "islands" / "1" / "eval_logs" / "abc123" / "metrics.json").exists()
+
+
 def test_find_pending_single_island_unchanged(tmp_path):
     """Single-island: _find_pending scans only public/attempts/."""
     from coral.grader.daemon import _find_pending
