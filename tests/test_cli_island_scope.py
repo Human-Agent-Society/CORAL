@@ -471,6 +471,92 @@ def test_status_in_worktree_only_lists_island_attempts(
     assert "2-agent-1" not in out
 
 
+def test_status_default_hides_tune_attempts(monkeypatch, tmp_path, capsys):
+    """When all attempts are tune-mode, default ``coral status`` should
+    not surface them in the body summary or leaderboard — only the
+    per-agent counter line shows the tune count (the per-agent counter
+    is intentionally not gated by include_tune so operators can see the
+    team is alive even when no real attempt has landed yet)."""
+    coral_dir = tmp_path / ".coral"
+    for i in (0, 1):
+        island_dir = coral_dir / "islands" / str(i)
+        (island_dir / "attempts").mkdir(parents=True)
+        # A per-agent log file is what triggers the per-agent counter
+        # section in cmd_status; without one, the whole agents block is
+        # suppressed and the tune=1 line never gets a chance to render.
+        (island_dir / "logs").mkdir(parents=True)
+        (island_dir / "logs" / f"{i}-agent-1.1.log").write_text("dummy\n")
+        write_attempt(
+            coral_dir,
+            Attempt(
+                commit_hash=f"{i:02d}tune0000000000000000000000000000000000",
+                agent_id=f"{i}-agent-1",
+                title=f"tune-attempt-island-{i}",
+                score=0.0,
+                status="improved",
+                parent_hash=None,
+                timestamp=datetime.now(UTC).isoformat(),
+                metadata={"budget_class": "tune", "island_id": str(i)},
+            ),
+            island_id=str(i),
+        )
+    monkeypatch.setattr(start_module, "pick_run", lambda: coral_dir)
+    monkeypatch.setattr(
+        start_module,
+        "find_coral_dir_and_island",
+        lambda task=None, run=None: (coral_dir, None),
+    )
+    cmd_status(argparse.Namespace(task=None, run=None, all=False))
+    out = capsys.readouterr().out
+    # Body summary hides tune — operator sees "No attempts yet." for the
+    # headline even though agents are clearly busy (the per-agent counter
+    # line below still surfaces the activity).
+    assert "No attempts yet." in out
+    # But the per-agent counter row IS rendered and shows the tune count.
+    assert "tune=1" in out
+    # And the actual tune attempt title is hidden from both the body
+    # summary and the leaderboard.
+    assert "tune-attempt-island-0" not in out
+    assert "tune-attempt-island-1" not in out
+    assert "## Leaderboard" not in out
+
+
+def test_status_all_shows_tune_attempts(monkeypatch, tmp_path, capsys):
+    """``coral status --all`` should include tune attempts in the body
+    summary and the leaderboard — the operator's escape hatch for the
+    'team is alive but only on tune mode' case."""
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "islands" / "0" / "attempts").mkdir(parents=True)
+    write_attempt(
+        coral_dir,
+        Attempt(
+            commit_hash="00tune0000000000000000000000000000000a0a",
+            agent_id="0-agent-1",
+            title="tune-baseline-seed",
+            score=1829.16,
+            status="improved",
+            parent_hash=None,
+            timestamp=datetime.now(UTC).isoformat(),
+            metadata={"budget_class": "tune", "island_id": "0"},
+        ),
+        island_id="0",
+    )
+    monkeypatch.setattr(start_module, "pick_run", lambda: coral_dir)
+    monkeypatch.setattr(
+        start_module,
+        "find_coral_dir_and_island",
+        lambda task=None, run=None: (coral_dir, None),
+    )
+    cmd_status(argparse.Namespace(task=None, run=None, all=True))
+    out = capsys.readouterr().out
+    # Body summary now sees the tune attempt and surfaces the score.
+    assert "tune-baseline-seed" in out
+    assert "1829" in out
+    # Leaderboard table is also rendered (was suppressed when the
+    # filtered attempt set was empty in the default path).
+    assert "## Leaderboard" in out
+
+
 # --------------------------------------------------------------------------- #
 # Step 7: cmd_notes                                                           #
 # --------------------------------------------------------------------------- #

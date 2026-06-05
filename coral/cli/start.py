@@ -875,10 +875,15 @@ def cmd_status(args: argparse.Namespace) -> None:
 
     direction = read_direction(coral_dir)
     print()
-    summary = format_status_summary(str(coral_dir), direction=direction, island_id=island_id)
+    show_all = getattr(args, "all", False)
+    summary = format_status_summary(
+        str(coral_dir), direction=direction, island_id=island_id, include_tune=show_all
+    )
     print(summary)
 
-    top = get_leaderboard(str(coral_dir), top_n=10, direction=direction, island_id=island_id)
+    top = get_leaderboard(
+        str(coral_dir), top_n=10, direction=direction, island_id=island_id, include_tune=show_all
+    )
     if top:
         print(f"\n## Leaderboard (top {len(top)})")
         print(format_leaderboard(top))

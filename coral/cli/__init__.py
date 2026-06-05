@@ -219,6 +219,12 @@ Run 'coral <command> --help' for details on any command."""
         description="Show manager/agent status and top leaderboard entries.",
         formatter_class=_CommandHelpFormatter,
     )
+    p_status.add_argument(
+        "--all",
+        action="store_true",
+        help="Include tune-mode and grader-error attempts in the body summary "
+        "and leaderboard (hidden by default, matching `coral log`)",
+    )
     _add_run_args(p_status)
 
     # --- Inspecting Results ---
