@@ -1177,9 +1177,7 @@ def test_deferred_candidate_is_retried_on_next_cycle(tmp_path):
         MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5)
     )
     assert spawn_calls == []
-    assert [(c.agent_id, r) for c, r in mgr._deferred_candidates] == [
-        ("0-agent-1", "paused")
-    ]
+    assert [(c.agent_id, r) for c, r in mgr._deferred_candidates] == [("0-agent-1", "paused")]
 
     # ---- Cycle 2: deferred candidate should now apply cleanly. ----
     blocked = False
@@ -1517,6 +1515,4 @@ def test_maybe_run_migration_cycle_does_not_mix_blocked_deferred_with_fresh(tmp_
     mgr._maybe_run_migration_cycle()
 
     assert applied == []
-    assert [(c.agent_id, r) for c, r in mgr._deferred_candidates] == [
-        ("0-agent-1", "paused")
-    ]
+    assert [(c.agent_id, r) for c, r in mgr._deferred_candidates] == [("0-agent-1", "paused")]

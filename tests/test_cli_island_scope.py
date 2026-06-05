@@ -526,9 +526,7 @@ def test_status_in_worktree_only_lists_island_attempts(
     assert "Agents: 1" in out
 
 
-def test_stop_from_worktree_subdir_uses_breadcrumb_run(
-    monkeypatch, multi_island_layout, worktree
-):
+def test_stop_from_worktree_subdir_uses_breadcrumb_run(monkeypatch, multi_island_layout, worktree):
     """``coral stop`` from a worktree subdir should not fall through to the picker."""
     stopped: list[Path] = []
     monkeypatch.setattr(start_module, "pick_run", lambda *args, **kwargs: pytest.fail("picker"))
