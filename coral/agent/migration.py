@@ -9,8 +9,8 @@ handle. The split keeps the policy code pure and trivially testable.
 
 Migration semantics in one paragraph:
 
-A migration cycle fires every ``MigrationConfig.every`` global evals. For
-each source island we look at its current residents (the live roster, not
+A migration cycle fires every ``MigrationConfig.every`` finalized real evals.
+For each source island we look at its current residents (the live roster, not
 historical attempt locations), rank each resident by the last
 ``rank_window`` *real* attempts it submitted on that island, and pick the
 top-1 eligible resident per island. Each candidate is then assigned a
@@ -393,7 +393,7 @@ class MigrationRunner:
     Holds the cross-cycle state (``last_cycle_evals``, cycle counter, RNG)
     so the policy functions above can stay pure. The manager constructs
     one of these in ``start_all``/``resume_all`` and calls ``should_run``
-    on each scored-attempt tick; when it fires, the manager calls
+    on each finalized real-attempt tick; when it fires, the manager calls
     ``run_cycle`` to get the planned migrations, applies each via its own
     file/process mechanics, then calls ``mark_cycle_complete``.
     """
@@ -496,12 +496,18 @@ class MigrationRunner:
         )
         if roster is None:
             return assigned
-        return choose_roster_balanced_subset(
+        selected = choose_roster_balanced_subset(
             assigned,
             roster=roster,
             max_per_cycle=self.migration_config.max_per_cycle,
             minimize=self.minimize,
         )
+        if assigned and not selected:
+            logger.info(
+                "Migration cycle skipped %d candidate(s) to preserve island roster balance",
+                len(assigned),
+            )
+        return selected
 
 
 def _discover_island_ids(coral_dir: Path, *, expected_count: int) -> list[str]:

@@ -748,6 +748,47 @@ def test_write_arrival_note_lands_on_dst_island_as_coral_authored():
         assert notes_by(coral_dir, island_id="1", agent_id="0-agent-1") == []
 
 
+def test_manager_migration_eval_count_ignores_tune_and_pending(tmp_path):
+    """Migration cadence advances only on finalized real attempts."""
+    from coral.agent.manager import AgentManager
+    from coral.config import AgentAssignmentConfig, AgentConfig, CoralConfig
+    from coral.workspace.project import ProjectPaths
+
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public").mkdir(parents=True)
+    _make_multi_island(coral_dir, n=2)
+    write_attempt(coral_dir, _make_attempt("real-1", "0-agent-1", 1.0), island_id="0")
+    write_attempt(
+        coral_dir,
+        _make_attempt("real-failed", "0-agent-2", None, status="timeout"),
+        island_id="0",
+    )
+    write_attempt(
+        coral_dir,
+        _make_attempt("tune-1", "1-agent-1", 9.0, budget_class="tune"),
+        island_id="1",
+    )
+    write_attempt(
+        coral_dir,
+        _make_attempt("pending-real", "1-agent-2", None, status="pending"),
+        island_id="1",
+    )
+
+    mgr = AgentManager(
+        CoralConfig(agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]))
+    )
+    mgr.paths = ProjectPaths(
+        results_dir=tmp_path,
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=tmp_path / "agents",
+        repo_dir=tmp_path / "repo",
+    )
+
+    assert mgr._get_migration_eval_count() == 2
+
+
 def test_build_migration_prompt_includes_shared_dir_paths():
     """The arrival prompt names the runtime's shared dir so paths are correct."""
     from coral.agent.manager import _build_migration_prompt
@@ -1285,6 +1326,56 @@ def test_maybe_run_migration_cycle_prepends_deferred_over_fresh(tmp_path, monkey
     assert len(mgr._deferred_candidates) == 1
     _c, _r, n = mgr._deferred_candidates[0]
     assert n == 3  # was 2, bumped once more by the second deferral
+
+
+def test_maybe_run_migration_cycle_ignores_raw_eval_count_for_tune_only(tmp_path):
+    """A high raw eval counter from tune attempts must not trigger migration."""
+    from coral.agent.manager import AgentManager
+    from coral.config import AgentAssignmentConfig, AgentConfig, CoralConfig, IslandsConfig
+    from coral.workspace.project import ProjectPaths
+
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public").mkdir(parents=True)
+    (coral_dir / "eval_count").write_text("100")
+    _make_multi_island(coral_dir, n=2)
+    write_attempt(
+        coral_dir,
+        _make_attempt("tune-0", "0-agent-1", 1.0, budget_class="tune"),
+        island_id="0",
+    )
+    write_attempt(
+        coral_dir,
+        _make_attempt("tune-1", "1-agent-1", 2.0, budget_class="tune"),
+        island_id="1",
+    )
+
+    mgr = AgentManager(
+        CoralConfig(
+            agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
+            islands=IslandsConfig(count=2),
+        )
+    )
+    mgr.paths = ProjectPaths(
+        results_dir=tmp_path,
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=tmp_path / "agents",
+        repo_dir=tmp_path / "repo",
+    )
+    called = False
+
+    def fake_run_cycle(**_kwargs):
+        nonlocal called
+        called = True
+        return []
+
+    mgr._migration_runner.run_cycle = fake_run_cycle  # type: ignore[assignment]
+
+    mgr._maybe_run_migration_cycle()
+
+    assert called is False
+    assert mgr._migration_runner.last_cycle_evals == -1
 
 
 def test_prune_deferred_drops_exceeded_retries_and_stale_agents():

@@ -988,6 +988,28 @@ class AgentManager:
                 pass
         return 0
 
+    def _get_migration_eval_count(self) -> int:
+        """Count finalized real attempts for migration cadence.
+
+        Raw eval counters include tune and grader-error attempts. Migration
+        selection intentionally ignores those, so using the raw counter can
+        consume a cycle before any source island has eligible real signal.
+        """
+        assert self.paths is not None
+        coral_dir = self.paths.coral_dir
+        if (coral_dir / "islands").exists():
+            attempts = []
+            for island_dir in sorted((coral_dir / "islands").iterdir()):
+                if island_dir.is_dir():
+                    attempts.extend(read_attempts(coral_dir, island_id=island_dir.name))
+        else:
+            attempts = read_attempts(coral_dir)
+        return sum(
+            1
+            for attempt in attempts
+            if attempt.status != "pending" and attempt.budget_class == BUDGET_CLASS_REAL
+        )
+
     def _get_heartbeat_runner(self, agent_id: str) -> HeartbeatRunner:
         """Build a HeartbeatRunner by merging local + global heartbeat configs."""
         from coral.agent.heartbeat import HeartbeatAction
@@ -1339,7 +1361,7 @@ class AgentManager:
         runner = self._migration_runner
         if not runner.enabled or self.paths is None:
             return
-        current_evals = self._get_eval_count()
+        current_evals = self._get_migration_eval_count()
         if not runner.should_run(current_global_evals=current_evals):
             return
 
@@ -1378,7 +1400,9 @@ class AgentManager:
         )
 
         if not migrations:
-            logger.info(f"Migration cycle @ eval#{current_evals}: no eligible candidates")
+            logger.info(
+                f"Migration cycle @ real eval#{current_evals}: no executable migration candidates"
+            )
             return
 
         for candidate in migrations:
