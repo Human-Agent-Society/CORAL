@@ -10,20 +10,25 @@ handle. The split keeps the policy code pure and trivially testable.
 Migration semantics in one paragraph:
 
 A migration cycle fires every ``MigrationConfig.every`` global evals. For
-each source island we look at the last ``rank_window`` *real* attempts per
-agent, take the max (or min, if the grader minimizes), keep agents with at
-least ``min_evals`` real attempts, and pick the top-1 per island. The
-combined list is truncated to ``max_per_cycle`` candidates per cycle. Each
-candidate is then assigned a destination island under
+each source island we look at its current residents (the live roster, not
+historical attempt locations), rank each resident by the last
+``rank_window`` *real* attempts it submitted on that island, and pick the
+top-1 eligible resident per island. Each candidate is then assigned a
+destination island under
 ``MigrationConfig.dest_weighting``: ``uniform`` (random non-source island),
 ``round_robin`` (deterministic shift by cycle index), or ``score`` (weight
 each non-source island by its current best — higher attracts more migrants
 under maximize, lower under minimize). The runner *never* picks the
-source island as a destination.
+source island as a destination. When the manager supplies a live roster,
+the assigned candidates are reduced to the best subset of at most
+``max_per_cycle`` moves that does not worsen the per-island agent-count
+balance; from an already-balanced roster, that means migration happens as
+a swap/cycle rather than as a one-way drain.
 
-What moves with an agent (mechanics in the manager): ``roles/<agent>.md``
-and ``heartbeat/<agent>.json`` follow them. Attempts, notes, and skills
-authored on the source island stay put — they're history. The agent's
+What moves with an agent (mechanics in the manager): ``roles/<agent>.md``,
+``heartbeat/<agent>.json``, that agent's attempt records, and matching
+``eval_logs/<commit>/`` directories follow them. Notes and skills authored
+on the source island stay put as island-local shared knowledge. The agent's
 worktree symlinks and ``.coral_island`` breadcrumb are repointed at the
 destination, and an optional arrival note is dropped on the destination's
 ``notes/`` when ``notify_island=True`` so other agents see the newcomer
@@ -36,6 +41,7 @@ import logging
 import random
 from collections.abc import Iterable
 from dataclasses import dataclass
+from itertools import combinations
 from pathlib import Path
 
 from coral.config import IslandsConfig
@@ -60,6 +66,45 @@ class MigrationCandidate:
     src_island: str
     dst_island: str
     score: float
+
+
+@dataclass(frozen=True)
+class IslandRoster:
+    """Current live-agent membership for a multi-island run.
+
+    This is deliberately separate from attempt storage. Current code moves
+    attempt records with the agent, but old runs or partial failures may still
+    leave records behind; the roster is the source of truth for where each live
+    agent belongs now.
+    """
+
+    agent_islands: dict[str, str]
+    island_ids: tuple[str, ...]
+    target_counts: dict[str, int]
+
+    @classmethod
+    def from_agent_islands(
+        cls,
+        agent_islands: dict[str, str],
+        *,
+        island_ids: list[str],
+    ) -> IslandRoster:
+        ids = tuple(island_ids)
+        targets = _balanced_target_counts(ids, len(agent_islands))
+        return cls(agent_islands=dict(agent_islands), island_ids=ids, target_counts=targets)
+
+    def current_island(self, agent_id: str) -> str | None:
+        return self.agent_islands.get(agent_id)
+
+    def is_on(self, agent_id: str, island_id: str) -> bool:
+        return self.current_island(agent_id) == island_id
+
+    def counts(self) -> dict[str, int]:
+        counts = {island_id: 0 for island_id in self.island_ids}
+        for island_id in self.agent_islands.values():
+            if island_id in counts:
+                counts[island_id] += 1
+        return counts
 
 
 def score_for_agent(
@@ -97,6 +142,8 @@ def select_candidates(
     rank_window: int,
     min_evals: int,
     minimize: bool,
+    roster: IslandRoster | None = None,
+    current_agent_islands: dict[str, str] | None = None,
 ) -> list[MigrationCandidate]:
     """For each source island, return its best eligible agent (at most one).
 
@@ -105,6 +152,9 @@ def select_candidates(
         island (tune / grader_error attempts don't count toward the
         threshold). This both protects newcomers from being yanked out
         too early and ensures the score aggregation has signal.
+      * When a roster is provided, the agent currently lives on this
+        source island. Attempt directories are historical evidence, not
+        membership truth.
       * The agent has at least one real attempt with a non-None score in
         the trailing ``rank_window`` — otherwise we'd have no score to
         rank by.
@@ -113,6 +163,11 @@ def select_candidates(
     agent), each with ``dst_island = ""`` for the assignment step to fill in.
     """
     candidates: list[MigrationCandidate] = []
+    if roster is None and current_agent_islands is not None:
+        roster = IslandRoster.from_agent_islands(
+            current_agent_islands,
+            island_ids=island_ids,
+        )
     for src in island_ids:
         attempts = read_attempts(coral_dir, island_id=src)
         per_agent: dict[str, list[Attempt]] = {}
@@ -122,6 +177,8 @@ def select_candidates(
         best_agent: str | None = None
         best_score: float | None = None
         for agent_id, agent_attempts in per_agent.items():
+            if roster is not None and not roster.is_on(agent_id, src):
+                continue
             real = [a for a in agent_attempts if a.budget_class == BUDGET_CLASS_REAL]
             if len(real) < min_evals:
                 continue
@@ -259,6 +316,78 @@ def _score_weights(
     return [w if w is not None else fallback for _, w in transformed]
 
 
+def choose_roster_balanced_subset(
+    candidates: list[MigrationCandidate],
+    *,
+    roster: IslandRoster,
+    max_per_cycle: int,
+    minimize: bool,
+) -> list[MigrationCandidate]:
+    """Choose the best candidate subset without worsening roster balance.
+
+    Because migration *moves* an agent, a one-way migration from an already
+    balanced roster necessarily drains one island and overloads another. This
+    chooser therefore accepts only subsets whose post-migration counts are no
+    farther from the balanced target than the current counts. If the run is
+    already imbalanced, a one-way migration is allowed when it reduces that
+    imbalance.
+    """
+    if max_per_cycle <= 0 or not candidates:
+        return []
+
+    current_counts = roster.counts()
+    start_deviation = _count_deviation(current_counts, roster.target_counts)
+    limit = min(max_per_cycle, len(candidates))
+
+    best_subset: tuple[MigrationCandidate, ...] = ()
+    best_key = (-start_deviation, 0, 0.0)
+    for size in range(1, limit + 1):
+        for subset in combinations(candidates, size):
+            if len({c.agent_id for c in subset}) != len(subset):
+                continue
+            post_counts = _counts_after(current_counts, subset)
+            if post_counts is None:
+                continue
+            deviation = _count_deviation(post_counts, roster.target_counts)
+            if deviation > start_deviation:
+                continue
+            score_signal = sum((-c.score if minimize else c.score) for c in subset)
+            key = (-deviation, len(subset), score_signal)
+            if key > best_key:
+                best_key = key
+                best_subset = subset
+
+    return list(best_subset)
+
+
+def _balanced_target_counts(island_ids: tuple[str, ...], total_agents: int) -> dict[str, int]:
+    if not island_ids:
+        return {}
+    base, remainder = divmod(total_agents, len(island_ids))
+    return {
+        island_id: base + (1 if idx < remainder else 0)
+        for idx, island_id in enumerate(island_ids)
+    }
+
+
+def _count_deviation(counts: dict[str, int], targets: dict[str, int]) -> int:
+    island_ids = set(counts) | set(targets)
+    return sum(abs(counts.get(i, 0) - targets.get(i, 0)) for i in island_ids)
+
+
+def _counts_after(
+    counts: dict[str, int],
+    migrations: Iterable[MigrationCandidate],
+) -> dict[str, int] | None:
+    post = dict(counts)
+    for candidate in migrations:
+        if post.get(candidate.src_island, 0) <= 0:
+            return None
+        post[candidate.src_island] = post.get(candidate.src_island, 0) - 1
+        post[candidate.dst_island] = post.get(candidate.dst_island, 0) + 1
+    return post
+
+
 class MigrationRunner:
     """Per-run migration coordinator.
 
@@ -311,6 +440,7 @@ class MigrationRunner:
         *,
         coral_dir: str | Path,
         island_best_scores: dict[str, float],
+        current_agent_islands: dict[str, str] | None = None,
     ) -> list[MigrationCandidate]:
         """Plan one migration cycle. Caller applies the returned candidates.
 
@@ -333,6 +463,11 @@ class MigrationRunner:
         island_ids = _discover_island_ids(coral_dir, expected_count=self.islands_config.count)
         if len(island_ids) <= 1:
             return []
+        roster = (
+            IslandRoster.from_agent_islands(current_agent_islands, island_ids=island_ids)
+            if current_agent_islands is not None
+            else None
+        )
 
         raw = select_candidates(
             coral_dir,
@@ -340,6 +475,7 @@ class MigrationRunner:
             rank_window=self.migration_config.rank_window,
             min_evals=self.migration_config.min_evals,
             minimize=self.minimize,
+            roster=roster,
         )
         if not raw:
             return []
@@ -347,15 +483,24 @@ class MigrationRunner:
         # When there are more candidates than ``max_per_cycle`` slots, prefer
         # the ones with the strongest source score (in the grader's direction).
         raw.sort(key=lambda c: c.score, reverse=not self.minimize)
-        capped = raw[: self.migration_config.max_per_cycle]
+        if roster is None:
+            raw = raw[: self.migration_config.max_per_cycle]
 
-        return assign_destinations(
-            capped,
+        assigned = assign_destinations(
+            raw,
             island_ids=island_ids,
             weighting=self.migration_config.dest_weighting,
             cycle_idx=self.cycle_idx,
             island_best_scores=island_best_scores,
             rng=self.rng,
+            minimize=self.minimize,
+        )
+        if roster is None:
+            return assigned
+        return choose_roster_balanced_subset(
+            assigned,
+            roster=roster,
+            max_per_cycle=self.migration_config.max_per_cycle,
             minimize=self.minimize,
         )
 

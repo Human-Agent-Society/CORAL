@@ -154,6 +154,13 @@ class AgentManager:
             minimize=(config.grader.direction == "minimize"),
             rng=random.Random(),
         )
+        # Candidates the last cycle couldn't apply (paused, or had a pending
+        # grader attempt). Retried at the top of the next cycle so a single
+        # deferred agent doesn't strand a swap direction forever — without
+        # this, a busy grader queue can keep an entire swap direction silent
+        # across many cycles. Each entry: (candidate, reason, retry_count);
+        # retry_count caps at MIGRATION_MAX_RETRIES to bound log noise.
+        self._deferred_candidates: list[tuple[MigrationCandidate, str, int]] = []
 
     def _runtime_for(self, agent_id: str) -> AgentRuntime:
         """Return the runtime instance for an agent_id, creating one on demand.
@@ -1317,6 +1324,12 @@ class AgentManager:
         each planned migration is applied via :meth:`_apply_migration`;
         partial failures are logged and skipped so one bad candidate
         doesn't sink the rest of the cycle.
+
+        Soft-failed candidates from prior cycles (paused, or had a
+        pending grader attempt) live in ``self._deferred_candidates`` and
+        are retried at the top of the next cycle before fresh candidates
+        are computed. Without this retry, a persistently-busy agent on
+        one side of a swap could strand that direction for many cycles.
         """
         runner = self._migration_runner
         if not runner.enabled or self.paths is None:
@@ -1325,14 +1338,38 @@ class AgentManager:
         if not runner.should_run(current_global_evals=current_evals):
             return
 
+        # Drop deferred entries that have retried too many times or that
+        # no longer match the agent's current island. Done before run_cycle
+        # so the dedupe below reflects the survivors.
+        self._prune_deferred()
+
         best_scores = self._gather_island_best_scores()
         migrations = runner.run_cycle(
             coral_dir=self.paths.coral_dir,
             island_best_scores=best_scores,
+            current_agent_islands=dict(self._agent_island),
         )
         # Mark the cycle as done even if no candidates matched — otherwise
         # every subsequent tick would re-enter run_cycle on the same boundary.
         runner.mark_cycle_complete(current_global_evals=current_evals)
+
+        # Prepend deferred candidates so a previously-deferred agent gets
+        # another shot before any fresh candidate for the same src island.
+        # If the fresh cycle happened to re-pick the same agent, the fresh
+        # candidate wins (its score is from the current cycle, not stale).
+        fresh_agent_ids = {m.agent_id for m in migrations}
+        deferred_retry = [
+            c for c, _r, _n in self._deferred_candidates
+            if c.agent_id not in fresh_agent_ids
+        ]
+        if deferred_retry:
+            logger.info(
+                f"Re-attempting {len(deferred_retry)} deferred migration(s) "
+                f"before fresh candidates: "
+                f"{[c.agent_id for c in deferred_retry]}"
+            )
+        migrations = deferred_retry + migrations
+        migrations = self._filter_current_migration_candidates(migrations)
 
         if not migrations:
             logger.info(f"Migration cycle @ eval#{current_evals}: no eligible candidates")
@@ -1373,6 +1410,93 @@ class AgentManager:
                 results[island_dir.name] = top[0].score
         return results
 
+    # --- Deferred-candidate bookkeeping ----------------------------------
+    #
+    # _apply_migration has two soft-fail exits (paused, pending). The
+    # former docs said "re-attempt next cycle" but the implementation
+    # dropped the candidate, so a persistently-busy agent on one side
+    # could strand an entire swap direction (e.g. agent 0-agent-1 was
+    # the right candidate to move island 0→1 for several cycles, but
+    # each time a grader attempt was in flight and the candidate was
+    # lost). The list below carries those soft-failed candidates across
+    # cycles so they get another shot at the top of the next run.
+    MIGRATION_MAX_RETRIES = 5
+
+    def _filter_current_migration_candidates(
+        self,
+        migrations: list[MigrationCandidate],
+    ) -> list[MigrationCandidate]:
+        """Drop stale or duplicate migration candidates before applying them.
+
+        Old runs or interrupted migrations can leave attempt records on an
+        island after the agent has moved away. Do not let those stale records
+        move the same live agent twice in one cycle.
+        """
+        filtered: list[MigrationCandidate] = []
+        seen_agents: set[str] = set()
+        for candidate in migrations:
+            current = self._agent_island.get(candidate.agent_id)
+            if current is not None and current != candidate.src_island:
+                logger.info(
+                    f"Skipping stale migration candidate for {candidate.agent_id}: "
+                    f"planned from island {candidate.src_island}, currently on {current}"
+                )
+                continue
+            if candidate.agent_id in seen_agents:
+                logger.info(
+                    f"Skipping duplicate migration candidate for {candidate.agent_id} "
+                    f"in the same cycle"
+                )
+                continue
+            seen_agents.add(candidate.agent_id)
+            filtered.append(candidate)
+        return filtered
+
+    def _defer_candidate(
+        self,
+        candidate: MigrationCandidate,
+        *,
+        reason: str,
+    ) -> None:
+        """Add or bump a deferred candidate for retry on the next cycle."""
+        for i, (c, _r, n) in enumerate(self._deferred_candidates):
+            if c.agent_id == candidate.agent_id:
+                self._deferred_candidates[i] = (candidate, reason, n + 1)
+                return
+        self._deferred_candidates.append((candidate, reason, 1))
+
+    def _drop_deferred_for(self, agent_id: str) -> None:
+        """Remove any deferred entry for this agent (called on success)."""
+        self._deferred_candidates = [
+            (c, r, n)
+            for c, r, n in self._deferred_candidates
+            if c.agent_id != agent_id
+        ]
+
+    def _prune_deferred(self) -> None:
+        """Drop deferred candidates that exceeded max retries or went stale.
+
+        A deferred candidate is considered stale if the agent is no longer
+        on its recorded source island — meaning some other path (a fresh
+        cycle, a manual move) already moved them, and the deferred entry
+        would just fail again. Same for agents that have been retrying
+        longer than MIGRATION_MAX_RETRIES cycles without success.
+        """
+        surviving: list[tuple[MigrationCandidate, str, int]] = []
+        for candidate, reason, n in self._deferred_candidates:
+            if n >= self.MIGRATION_MAX_RETRIES:
+                logger.warning(
+                    f"Dropping deferred migration for {candidate.agent_id} "
+                    f"({candidate.src_island}→{candidate.dst_island}) after "
+                    f"{n} cycles; still {reason}"
+                )
+                continue
+            if self._agent_island.get(candidate.agent_id) != candidate.src_island:
+                # Agent already moved off the recorded source — nothing to retry.
+                continue
+            surviving.append((candidate, reason, n))
+        self._deferred_candidates = surviving
+
     def _apply_migration(self, candidate: MigrationCandidate) -> None:
         """Move ``candidate.agent_id`` from src island to dst, then restart it.
 
@@ -1383,10 +1507,10 @@ class AgentManager:
            re-attempt the agent in a future cycle.
         2. Locate the live handle, SIGINT it so the runtime can save its
            session and any in-flight file writes complete.
-        3. Move per-agent files (``roles/<agent>.md``, ``heartbeat/<agent>.json``)
-           from src island to dst — these encode identity / cadence and
-           must follow the agent. Notes, skills, and attempts stay on the
-           source island per the existing "history is immutable" policy.
+        3. Move per-agent files (``roles/<agent>.md``,
+           ``heartbeat/<agent>.json``, attempts, and matching eval logs)
+           from src island to dst. Notes and skills stay on the source
+           island as island-local shared knowledge.
         4. Repoint the worktree's shared-state symlinks at the dst island.
         5. Re-write the runtime's permission settings with the new
            island_id (so Read scopes follow the move).
@@ -1411,10 +1535,19 @@ class AgentManager:
             return
         if self._is_paused(agent_id):
             logger.info(f"Migration target {agent_id} is paused; deferring")
+            self._defer_candidate(candidate, reason="paused")
             return
 
         src = candidate.src_island
         dst = candidate.dst_island
+        current_island = self._agent_island.get(agent_id)
+        if current_island is not None and current_island != src:
+            logger.info(
+                f"Migration target {agent_id} no longer lives on island {src} "
+                f"(current: {current_island}); skipping stale candidate"
+            )
+            self._drop_deferred_for(agent_id)
+            return
         coral_dir = self.paths.coral_dir
         runtime = self._runtime_for(agent_id)
         shared_dir_name = runtime.shared_dir_name
@@ -1422,7 +1555,10 @@ class AgentManager:
 
         # Skip if the agent has anything in the grader queue — running the
         # restart now would orphan the pending submission against an old
-        # island view. The candidate will be reconsidered next cycle.
+        # island view. Defer the candidate so it gets retried at the top
+        # of the next cycle (otherwise a busy grader queue can strand
+        # an entire swap direction for many cycles — see the deferred-
+        # candidate bookkeeping in __init__).
         pending = agent_in_grader_queue(
             coral_dir,
             agent_id,
@@ -1434,7 +1570,12 @@ class AgentManager:
                 f"Migration target {agent_id} has pending attempt "
                 f"{pending.commit_hash[:12]}; deferring"
             )
+            self._defer_candidate(candidate, reason="pending")
             return
+
+        # Soft-fail gates passed — clear any prior deferral so a future
+        # cycle doesn't try to re-apply a candidate we already handled.
+        self._drop_deferred_for(agent_id)
 
         # (2) Interrupt so file moves and symlink swaps happen with a quiet agent.
         self.handles[idx].interrupt()
@@ -1990,10 +2131,10 @@ def _move_agent_files(
 ) -> None:
     """Move per-agent identity files from one island to another.
 
-    Currently moves ``roles/<agent>.md`` and ``heartbeat/<agent>.json`` —
-    everything that encodes an agent's evolved state and must stay with
-    them. Notes / skills / attempts deliberately stay on the source
-    island (the framework treats run history as immutable).
+    Moves ``roles/<agent>.md`` and ``heartbeat/<agent>.json`` plus the
+    agent's attempt records and matching ``eval_logs/<commit>/`` directories.
+    Notes / skills deliberately stay on the source island as shared
+    island-local knowledge.
 
     Idempotent: missing source files are silently skipped, so the helper
     is safe to call twice on the same agent. Existing files at the
@@ -2009,12 +2150,70 @@ def _move_agent_files(
         dst_dir = dst_root / subdir
         dst_dir.mkdir(parents=True, exist_ok=True)
         dst_path = dst_dir / f"{agent_id}.{ext}"
-        # Cross-island within the same filesystem → rename is atomic.
-        # Fall back to copy + unlink if rename complains (e.g. across
-        # mount points in some test setups).
-        try:
-            os.replace(src_path, dst_path)
-        except OSError:
+        _move_path_replace(src_path, dst_path)
+
+    src_attempts = src_root / "attempts"
+    if not src_attempts.exists():
+        return
+    for attempt_path in sorted(
+        p for pattern in ("*.json", "*.jsonl") for p in src_attempts.glob(pattern)
+    ):
+        if not _attempt_file_belongs_to_agent(attempt_path, agent_id):
+            continue
+        dst_attempt = dst_root / "attempts" / attempt_path.name
+        dst_attempt.parent.mkdir(parents=True, exist_ok=True)
+        _move_path_replace(attempt_path, dst_attempt)
+
+        commit_hash = attempt_path.stem
+        src_eval_log = src_root / "eval_logs" / commit_hash
+        if src_eval_log.exists():
+            dst_eval_log = dst_root / "eval_logs" / commit_hash
+            dst_eval_log.parent.mkdir(parents=True, exist_ok=True)
+            _move_path_replace(src_eval_log, dst_eval_log)
+
+
+def _attempt_file_belongs_to_agent(path: Path, agent_id: str) -> bool:
+    """Return True when an attempt record file is owned by ``agent_id``."""
+    try:
+        text = path.read_text()
+    except OSError:
+        return False
+    if path.suffix == ".jsonl":
+        for line in text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+            except json.JSONDecodeError:
+                return False
+            if data.get("agent_id") != agent_id:
+                return False
+        return bool(text.strip())
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        return False
+    return data.get("agent_id") == agent_id
+
+
+def _move_path_replace(src_path: Path, dst_path: Path) -> None:
+    """Move a file or directory, replacing any existing destination."""
+    if dst_path.exists():
+        if dst_path.is_dir() and not dst_path.is_symlink():
+            shutil.rmtree(dst_path)
+        else:
+            dst_path.unlink()
+    # Cross-island within the same filesystem → rename is atomic.
+    # Fall back to copy + unlink if rename complains (e.g. across
+    # mount points in some test setups).
+    try:
+        os.replace(src_path, dst_path)
+    except OSError:
+        if src_path.is_dir():
+            shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
+            shutil.rmtree(src_path, ignore_errors=True)
+        else:
             shutil.copy2(src_path, dst_path)
             try:
                 src_path.unlink()
@@ -2100,9 +2299,9 @@ def _write_arrival_note(coral_dir: Path, candidate: MigrationCandidate) -> None:
         f"`{candidate.agent_id}` migrated to this island from "
         f"island `{candidate.src_island}` with a recent best score of "
         f"`{candidate.score:.6f}` over the last several real evals.\n\n"
-        f"They bring their evolved role and heartbeat cadence with "
-        f"them; their prior attempts, notes, and skills stay on island "
-        f"`{candidate.src_island}` (run history is immutable).\n"
+        f"They bring their evolved role, heartbeat cadence, attempts, "
+        f"and eval logs with them; notes and skills stay on island "
+        f"`{candidate.src_island}` as island-local shared knowledge.\n"
     )
     fname = f"migration_{fname_ts}_{candidate.agent_id}.md"
     (notes_dir / fname).write_text(body)
@@ -2118,13 +2317,13 @@ def _build_migration_prompt(candidate: MigrationCandidate, *, shared_dir: str) -
         f"wired to that island's shared state.\n\n"
         f"What changed:\n"
         f"- `{shared_dir}/notes`, `{shared_dir}/skills`, "
-        f"`{shared_dir}/attempts`, `{shared_dir}/heartbeat`, and "
-        f"`{shared_dir}/roles` now resolve to island "
+        f"`{shared_dir}/attempts`, `{shared_dir}/heartbeat`, "
+        f"`{shared_dir}/roles`, and `{shared_dir}/eval_logs` now resolve to island "
         f"`{candidate.dst_island}`.\n"
-        f"- Your evolved role and heartbeat cadence followed you here.\n"
-        f"- Your prior attempts, notes, and skills stayed on island "
-        f"`{candidate.src_island}` — they are part of that island's "
-        f"history and you cannot edit them now.\n\n"
+        f"- Your evolved role, heartbeat cadence, attempts, and eval logs "
+        f"followed you here.\n"
+        f"- Notes and skills stayed on island `{candidate.src_island}` as "
+        f"that island's shared knowledge base.\n\n"
         f"What to do first:\n"
         f"1. `coral log -n 10` to see this island's current leaderboard.\n"
         f"2. `coral notes --recent` to read what your new teammates "
