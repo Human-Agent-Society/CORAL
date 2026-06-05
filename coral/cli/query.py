@@ -9,7 +9,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from coral.cli._helpers import find_coral_dir, is_docker_container_running, read_direction
+from coral.cli._helpers import (
+    find_coral_dir_and_island,
+    is_docker_container_running,
+    read_direction,
+)
 
 
 def cmd_log(args: argparse.Namespace) -> None:
@@ -33,7 +37,10 @@ def cmd_log(args: argparse.Namespace) -> None:
     )
     from coral.types import BUDGET_CLASS_REAL
 
-    coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
+    coral_dir, island_id = find_coral_dir_and_island(
+        getattr(args, "task", None),
+        getattr(args, "run", None),
+    )
     direction = read_direction(coral_dir)
     count = getattr(args, "count", None) or 20
     show_all = getattr(args, "all", False)
@@ -50,21 +57,25 @@ def cmd_log(args: argparse.Namespace) -> None:
         return [a for a in attempts if a.budget_class == BUDGET_CLASS_REAL]
 
     if args.search:
-        attempts = filter_attempts(search_attempts(str(coral_dir), args.search))[:count]
+        attempts = filter_attempts(
+            search_attempts(str(coral_dir), args.search, island_id=island_id)
+        )[:count]
         if attempts:
             print(f"Search results for '{args.search}':")
             print(format_leaderboard(attempts))
         else:
             print(f"No attempts matching '{args.search}'.")
     elif args.agent:
-        attempts = filter_attempts(get_agent_attempts(str(coral_dir), args.agent))[:count]
+        attempts = filter_attempts(
+            get_agent_attempts(str(coral_dir), args.agent, island_id=island_id)
+        )[:count]
         if attempts:
             print(f"Attempts by {args.agent}:")
             print(format_leaderboard(attempts))
         else:
             print(f"No attempts by {args.agent}.")
     elif args.recent:
-        attempts = filter_attempts(get_recent(str(coral_dir), n=raw_n))[:count]
+        attempts = filter_attempts(get_recent(str(coral_dir), n=raw_n, island_id=island_id))[:count]
         if attempts:
             print(f"Recent {len(attempts)} attempt(s):")
             print(format_leaderboard(attempts))
@@ -76,7 +87,13 @@ def cmd_log(args: argparse.Namespace) -> None:
         # callback narrow it. get_leaderboard's default hides tune, but log
         # wants everything up front.
         attempts = filter_attempts(
-            get_leaderboard(str(coral_dir), top_n=raw_n, direction=direction, include_tune=True)
+            get_leaderboard(
+                str(coral_dir),
+                top_n=raw_n,
+                direction=direction,
+                island_id=island_id,
+                include_tune=True,
+            )
         )[:count]
         if attempts:
             print(f"Leaderboard (top {len(attempts)}):")
@@ -92,15 +109,23 @@ def cmd_show(args: argparse.Namespace) -> None:
       coral show abc123             Show attempt by hash prefix
       coral show <full-hash>        Show attempt by full hash
     """
-    from coral.hub._island import all_view_roots
+    from coral.hub._island import all_view_roots, island_root
 
-    coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
+    coral_dir, island_id = find_coral_dir_and_island(
+        getattr(args, "task", None),
+        getattr(args, "run", None),
+    )
     # In multi-island mode the attempt lives in islands/<id>/attempts/, not
-    # public/attempts/ — search every view root so the hash can be found
-    # regardless of which island committed it.
+    # public/attempts/. When a worktree is in scope, look only at that
+    # island (an agent must not see another island's attempts); otherwise
+    # sweep every view root so a user outside any worktree can resolve a
+    # hash from any island.
+    if island_id is not None:
+        attempts_dirs = [island_root(coral_dir, island_id) / "attempts"]
+    else:
+        attempts_dirs = [r / "attempts" for r in all_view_roots(coral_dir)]
     candidates: list[Path] = []
-    for view_root in all_view_roots(coral_dir):
-        attempts_dir = view_root / "attempts"
+    for attempts_dir in attempts_dirs:
         if not attempts_dir.is_dir():
             continue
         direct = attempts_dir / f"{args.hash}.json"
@@ -166,7 +191,10 @@ def cmd_notes(args: argparse.Namespace) -> None:
         search_notes,
     )
 
-    coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
+    coral_dir, island_id = find_coral_dir_and_island(
+        getattr(args, "task", None),
+        getattr(args, "run", None),
+    )
 
     if getattr(args, "history", False):
         from coral.hub.checkpoint import checkpoint_history
@@ -190,26 +218,26 @@ def cmd_notes(args: argparse.Namespace) -> None:
     if args.read:
         try:
             idx = int(args.read)
-            entry = read_note(str(coral_dir), idx)
+            entry = read_note(str(coral_dir), idx, island_id=island_id)
             if entry:
                 print(entry)
             else:
                 print(f"Note #{idx} not found.")
         except ValueError:
-            print(read_all_notes(str(coral_dir)))
+            print(read_all_notes(str(coral_dir), island_id=island_id))
     elif args.search:
-        results = search_notes(str(coral_dir), args.search)
+        results = search_notes(str(coral_dir), args.search, island_id=island_id)
         if results:
             print(f"Notes matching '{args.search}':")
             print(format_notes_list(results))
         else:
             print(f"No notes matching '{args.search}'.")
     elif args.recent:
-        entries = get_recent_notes(str(coral_dir), n=args.recent)
+        entries = get_recent_notes(str(coral_dir), n=args.recent, island_id=island_id)
         print(f"Recent notes ({len(entries)}):")
         print(format_notes_list(entries))
     else:
-        entries = list_notes(str(coral_dir))
+        entries = list_notes(str(coral_dir), island_id=island_id)
         print(f"Notes ({len(entries)}):")
         print(format_notes_list(entries))
 
@@ -301,18 +329,23 @@ def cmd_skills(args: argparse.Namespace) -> None:
       coral skills                  List all skills
       coral skills --read optim     Show skill by name (or prefix)
     """
-    from coral.hub._island import all_view_roots
+    from coral.hub._island import all_view_roots, island_root
     from coral.hub.skills import format_skills_list, list_skills, read_skill
 
-    coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
+    coral_dir, island_id = find_coral_dir_and_island(
+        getattr(args, "task", None),
+        getattr(args, "run", None),
+    )
 
     if args.read:
-        # In multi-island mode, skills may live in any islands/<id>/skills/ —
-        # not just public/skills/. Collect candidates from every view root so
-        # the user can read a skill by name regardless of which island owns it.
+        # Same scoping as cmd_show: a worktree caller can only see its own
+        # island's skills; a user outside a worktree sees the union.
+        if island_id is not None:
+            search_roots = [island_root(coral_dir, island_id) / "skills"]
+        else:
+            search_roots = [r / "skills" for r in all_view_roots(coral_dir)]
         skill_dirs: list[Path] = []
-        for view_root in all_view_roots(coral_dir):
-            skills_dir = view_root / "skills"
+        for skills_dir in search_roots:
             if not skills_dir.is_dir():
                 continue
             direct = skills_dir / args.read
@@ -346,7 +379,7 @@ def cmd_skills(args: argparse.Namespace) -> None:
         if info["files"]:
             print(f"\nFiles: {', '.join(info['files'])}")
     else:
-        skills = list_skills(str(coral_dir))
+        skills = list_skills(str(coral_dir), island_id=island_id)
         print(f"Skills ({len(skills)}):")
         print(format_skills_list(skills))
 

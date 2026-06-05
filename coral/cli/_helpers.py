@@ -302,6 +302,65 @@ def read_direction(coral_dir: Path) -> str:
     return "maximize"
 
 
+def find_coral_dir_and_island(
+    task: str | None = None,
+    run: str | None = None,
+) -> tuple[Path, str | None]:
+    """Find the .coral directory and the current agent's island_id, if any.
+
+    Search order:
+    1. Walk up from cwd looking for a ``.coral_dir`` breadcrumb. If found,
+       pair it with a ``.coral_island`` breadcrumb in the same directory.
+       ``island_id`` is the breadcrumb's contents when:
+         - the file exists, AND
+         - its value is non-empty, AND
+         - ``coral_dir / "islands" / <value>`` is a real directory.
+       Otherwise ``island_id`` is None (single-island run, or stale
+       breadcrumb pointing at a deleted island).
+    2. Fall back to :func:`find_coral_dir`'s ``--task``/``--run`` logic and
+       return ``(coral_dir, None)`` — an explicit ``--task`` must override
+       the worktree scope, never silently keep it.
+
+    Returns:
+        (coral_dir, island_id) — island_id is None unless the caller is
+        inside an agent worktree that advertises a valid island.
+    """
+    if not task and not run:
+        cur = Path.cwd().resolve()
+        coral_dir: Path | None = None
+        breadcrumb_dir: Path | None = None
+        while True:
+            breadcrumb = cur / ".coral_dir"
+            if breadcrumb.exists():
+                try:
+                    candidate = Path(breadcrumb.read_text().strip()).resolve()
+                except (OSError, ValueError):
+                    candidate = None
+                if candidate is not None and candidate.is_dir():
+                    coral_dir = candidate
+                    breadcrumb_dir = cur
+                    break
+            if cur == cur.parent:  # reached fs root
+                break
+            cur = cur.parent
+
+        if coral_dir is not None:
+            island_id: str | None = None
+            island_file = breadcrumb_dir / ".coral_island"  # type: ignore[operator]
+            if island_file.exists():
+                try:
+                    value = island_file.read_text().strip()
+                except OSError:
+                    value = ""
+                if value and (coral_dir / "islands" / value).is_dir():
+                    island_id = value
+            return coral_dir, island_id
+
+    # Fall through to --task/--run discovery; explicit --task/--run wins
+    # and we never silently scope by island in that mode.
+    return find_coral_dir(task, run), None
+
+
 def find_coral_dir(task: str | None = None, run: str | None = None) -> Path:
     """Find the .coral directory for a task run.
 

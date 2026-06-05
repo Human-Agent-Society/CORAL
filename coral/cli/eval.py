@@ -8,10 +8,71 @@ import sys
 import time
 from pathlib import Path
 
-from coral.cli._helpers import find_coral_dir, read_agent_id
+from coral.cli._helpers import find_coral_dir_and_island, read_agent_id
 
 # Poll cadence used by `coral wait` while blocking on the attempt file.
 _WAIT_POLL_INTERVAL_SEC = 0.2
+
+
+def _resolve_attempt_file(
+    coral_dir: Path,
+    target: str,
+    island_id: str | int | None,
+) -> Path | None:
+    """Locate the attempt JSON file for ``target`` (full hash or prefix).
+
+    Scoped to a single island when ``island_id`` is set (worktree mode);
+    swept across every view root (``islands/<id>`` + ``public``, single-
+    island runs have just one root) otherwise. Returns the file path so
+    the caller can re-read it as the grader daemon updates it, or None
+    if no file matches.
+
+    Ambiguous (multiple matches across view roots) is reported as None so
+    the caller can print the standard "No attempt matches" message; the
+    global ambiguity case is rare in practice because hash prefixes long
+    enough to collide across islands almost never appear in one run.
+    """
+    from coral.hub._island import all_view_roots, island_root
+
+    if island_id is not None:
+        attempts_dirs = [island_root(coral_dir, island_id) / "attempts"]
+    else:
+        attempts_dirs = [r / "attempts" for r in all_view_roots(coral_dir)]
+
+    if len(target) < 40:
+        matches: list[Path] = []
+        for d in attempts_dirs:
+            if d.is_dir():
+                matches.extend(d.glob(f"{target}*.json"))
+        if len(matches) == 1:
+            return matches[0]
+        return None  # 0 or >1 matches: caller prints the standard message
+
+    # Exact 40-char hash: find the file directly.
+    for d in attempts_dirs:
+        candidate = d / f"{target}.json"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _read_attempt_file(attempts_file: Path):
+    """Read + parse an attempt JSON, returning ``None`` on any I/O error.
+
+    Mirrors the tolerant half of :func:`coral.hub.attempts.read_attempt`
+    but takes a file path directly so callers that already resolved the
+    file (e.g. after a multi-island sweep) don't have to re-glob.
+    """
+    import json as _json
+
+    from coral.types import Attempt
+
+    if not attempts_file.exists():
+        return None
+    try:
+        return Attempt.from_dict(_json.loads(attempts_file.read_text()))
+    except (_json.JSONDecodeError, KeyError, OSError):
+        return None
 
 
 def cmd_eval(args: argparse.Namespace) -> None:
@@ -51,44 +112,35 @@ def cmd_eval(args: argparse.Namespace) -> None:
 
 def cmd_wait(args: argparse.Namespace) -> None:
     """Block until a previously submitted attempt is finalized by the grader."""
+
     from coral.config import CoralConfig
-    from coral.hub.attempts import read_attempt, read_eval_count
+    from coral.hub.attempts import read_eval_count
 
-    # Prefer the workdir's .coral_dir breadcrumb (agent-local); otherwise
-    # fall back to find_coral_dir's search logic.
-    workdir = Path(args.workdir or ".").resolve()
-    coral_dir: Path | None = None
-    breadcrumb = workdir / ".coral_dir"
-    if breadcrumb.exists():
-        try:
-            coral_dir = Path(breadcrumb.read_text().strip()).resolve()
-        except OSError:
-            coral_dir = None
-    if coral_dir is None:
-        try:
-            coral_dir = find_coral_dir(
-                getattr(args, "task", None),
-                getattr(args, "run", None),
-            )
-        except Exception as e:
-            print(f"Error: Could not locate .coral directory: {e}", file=sys.stderr)
-            sys.exit(1)
+    # Resolve coral_dir + island scope from breadcrumbs/--task. When invoked
+    # from a worktree, island_id scopes the hash lookup to that agent's
+    # island; outside a worktree (or with explicit --task) we aggregate.
+    try:
+        coral_dir, island_id = find_coral_dir_and_island(
+            getattr(args, "task", None),
+            getattr(args, "run", None),
+        )
+    except Exception as e:
+        print(f"Error: Could not locate .coral directory: {e}", file=sys.stderr)
+        sys.exit(1)
 
-    # Resolve partial hash against the attempts directory.
+    # Find the attempt file. Same scoping rules as cmd_checkout: scoped to
+    # a single island in a worktree, swept across all view roots otherwise.
+    # We resolve to a concrete file path (not just a hash) so the poll
+    # loop can re-read the same JSON the grader daemon updates in place.
     target = args.hash
-    attempts_dir = coral_dir / "public" / "attempts"
-    if attempts_dir.exists() and len(target) < 40:
-        matches = list(attempts_dir.glob(f"{target}*.json"))
-        if len(matches) == 1:
-            target = matches[0].stem
-        elif len(matches) > 1:
-            print(f"Ambiguous hash prefix '{target}'. Matches:", file=sys.stderr)
-            for m in matches:
-                print(f"  {m.stem}", file=sys.stderr)
-            sys.exit(1)
+    attempts_file = _resolve_attempt_file(coral_dir, target, island_id)
+    if attempts_file is None:
+        if len(target) >= 40:
+            print(f"Error: No attempt matches '{target}'.", file=sys.stderr)
         else:
             print(f"Error: No attempt matches '{target}'.", file=sys.stderr)
-            sys.exit(1)
+        sys.exit(1)
+    target = attempts_file.stem  # normalized 40-char hash
 
     # Derive timeout.
     timeout = args.timeout
@@ -103,10 +155,10 @@ def cmd_wait(args: argparse.Namespace) -> None:
     deadline = time.monotonic() + timeout
     attempt = None
     while time.monotonic() < deadline:
-        attempt = read_attempt(coral_dir, target)
+        attempt = _read_attempt_file(attempts_file)
         if attempt is not None and attempt.status != "pending":
             try:
-                attempt._eval_count = read_eval_count(coral_dir)  # type: ignore[attr-defined]
+                attempt._eval_count = read_eval_count(coral_dir, island_id=island_id)  # type: ignore[attr-defined]
             except Exception:
                 pass
             _print_attempt_result(attempt, header="CORAL Wait")
@@ -184,17 +236,19 @@ def cmd_checkout(args: argparse.Namespace) -> None:
     workdir = args.workdir or "."
     target = args.hash
 
-    coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
-    attempts_dir = coral_dir / "public" / "attempts"
-    if attempts_dir.exists():
-        matches = list(attempts_dir.glob(f"{target}*.json"))
-        if len(matches) == 1:
-            target = matches[0].stem
-        elif len(matches) > 1:
-            print(f"Ambiguous hash prefix '{target}'. Matches:")
-            for m in matches:
-                print(f"  {m.stem}")
-            return
+    coral_dir, island_id = find_coral_dir_and_island(
+        getattr(args, "task", None),
+        getattr(args, "run", None),
+    )
+    # Resolve to a known attempt file before touching git. When a worktree
+    # caller asks for a hash that lives only on another island, we want a
+    # clear "No attempt matches" message (and a quiet return — checkout is
+    # destructive, so we don't sys.exit on miss; the agent can decide).
+    attempts_file = _resolve_attempt_file(coral_dir, target, island_id)
+    if attempts_file is None:
+        print(f"Error: No attempt matches '{target}'.", file=sys.stderr)
+        return
+    target = attempts_file.stem  # normalized 40-char hash
 
     result = subprocess.run(
         ["git", "cat-file", "-t", target],

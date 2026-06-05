@@ -15,6 +15,7 @@ from coral.agent.state import read_agent_state
 from coral.cli._helpers import (
     docker_cmd,
     find_coral_dir,
+    find_coral_dir_and_island,
     find_tmux_session,
     has_docker,
     has_docker_marker,
@@ -752,12 +753,15 @@ def cmd_status(args: argparse.Namespace) -> None:
     run = getattr(args, "run", None)
     if task or run:
         coral_dir = find_coral_dir(task, run)
+        island_id = None
     elif (Path.cwd() / ".coral_dir").exists() or in_docker():
         # Agent in a worktree (or Docker run): lock to the current run
-        # via the .coral_dir breadcrumb instead of showing all runs.
-        coral_dir = find_coral_dir(None, None)
+        # via the .coral_dir breadcrumb, scoped to the worktree's island
+        # so the leaderboard / status summary only see that island.
+        coral_dir, island_id = find_coral_dir_and_island()
     else:
         coral_dir = pick_run()
+        island_id = None
 
     real_coral = coral_dir.resolve()
     run_dir = real_coral.parent
@@ -871,10 +875,10 @@ def cmd_status(args: argparse.Namespace) -> None:
 
     direction = read_direction(coral_dir)
     print()
-    summary = format_status_summary(str(coral_dir), direction=direction)
+    summary = format_status_summary(str(coral_dir), direction=direction, island_id=island_id)
     print(summary)
 
-    top = get_leaderboard(str(coral_dir), top_n=10, direction=direction)
+    top = get_leaderboard(str(coral_dir), top_n=10, direction=direction, island_id=island_id)
     if top:
         print(f"\n## Leaderboard (top {len(top)})")
         print(format_leaderboard(top))

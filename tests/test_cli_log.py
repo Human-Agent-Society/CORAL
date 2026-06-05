@@ -35,7 +35,11 @@ def coral_dir_with_mixed_attempts(monkeypatch: pytest.MonkeyPatch):
         write_attempt(coral_dir, _make("ccc3", 0.5, "tune", title="tune-A"))
         write_attempt(coral_dir, _make("ddd4", 0.3, "grader_error", title="error-A"))
 
-        monkeypatch.setattr(query_module, "find_coral_dir", lambda task=None, run=None: coral_dir)
+        monkeypatch.setattr(
+            query_module,
+            "find_coral_dir_and_island",
+            lambda task=None, run=None: (coral_dir, None),
+        )
         monkeypatch.setattr(query_module, "read_direction", lambda _coral_dir: "maximize")
         yield coral_dir
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from coral.cli._helpers import find_coral_dir, read_agent_id
+from coral.cli._helpers import find_coral_dir_and_island, read_agent_id
 
 
 def cmd_heartbeat(args: argparse.Namespace) -> None:
@@ -29,14 +29,14 @@ def _cmd_heartbeat_show(args: argparse.Namespace) -> None:
         read_global_heartbeat,
     )
 
-    coral_dir = find_coral_dir(
+    coral_dir, island_id = find_coral_dir_and_island(
         getattr(args, "task", None),
         getattr(args, "run", None),
     )
     agent_id = read_agent_id()
 
-    local_actions = read_agent_heartbeat(coral_dir, agent_id)
-    global_actions = read_global_heartbeat(coral_dir)
+    local_actions = read_agent_heartbeat(coral_dir, agent_id, island_id=island_id)
+    global_actions = read_global_heartbeat(coral_dir, island_id=island_id)
 
     if not local_actions and not global_actions:
         print(f"No heartbeat config found for {agent_id}.")
@@ -83,7 +83,7 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
         write_global_heartbeat,
     )
 
-    coral_dir = find_coral_dir(
+    coral_dir, island_id = find_coral_dir_and_island(
         getattr(args, "task", None),
         getattr(args, "run", None),
     )
@@ -122,7 +122,7 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
     # Determine scope: explicit flag > existing location > built-in default
     if is_global is None:
         # Check if action already exists in either file
-        global_actions = read_global_heartbeat(coral_dir)
+        global_actions = read_global_heartbeat(coral_dir, island_id=island_id)
         if any(a["name"] == name for a in global_actions):
             is_global = True
         else:
@@ -133,7 +133,7 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
         trigger = DEFAULT_TRIGGER.get(name, "interval")
 
     if is_global:
-        actions = read_global_heartbeat(coral_dir)
+        actions = read_global_heartbeat(coral_dir, island_id=island_id)
         found = False
         for action in actions:
             if action["name"] == name:
@@ -154,7 +154,7 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
                 "options": {"epsilon": epsilon} if epsilon is not None else {},
             }
             actions.append(new_action)
-        write_global_heartbeat(coral_dir, actions)
+        write_global_heartbeat(coral_dir, actions, island_id=island_id)
         label = (
             f"after {every} non-improving eval(s) [plateau]"
             if trigger == "plateau"
@@ -164,7 +164,7 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
             label = f"{label} (epsilon={epsilon})"
         print(f"Set '{name}' to {label} (global) for all agents.")
     else:
-        actions = read_agent_heartbeat(coral_dir, agent_id)
+        actions = read_agent_heartbeat(coral_dir, agent_id, island_id=island_id)
         found = False
         for action in actions:
             if action["name"] == name:
@@ -185,7 +185,7 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
                 "options": {"epsilon": epsilon} if epsilon is not None else {},
             }
             actions.append(new_action)
-        write_agent_heartbeat(coral_dir, agent_id, actions)
+        write_agent_heartbeat(coral_dir, agent_id, actions, island_id=island_id)
         label = (
             f"after {every} non-improving eval(s) [plateau]"
             if trigger == "plateau"
@@ -206,7 +206,7 @@ def _cmd_heartbeat_remove(args: argparse.Namespace) -> None:
         write_global_heartbeat,
     )
 
-    coral_dir = find_coral_dir(
+    coral_dir, island_id = find_coral_dir_and_island(
         getattr(args, "task", None),
         getattr(args, "run", None),
     )
@@ -221,17 +221,17 @@ def _cmd_heartbeat_remove(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     # Try removing from local first, then global
-    local_actions = read_agent_heartbeat(coral_dir, agent_id)
+    local_actions = read_agent_heartbeat(coral_dir, agent_id, island_id=island_id)
     new_local = [a for a in local_actions if a["name"] != name]
     if len(new_local) < len(local_actions):
-        write_agent_heartbeat(coral_dir, agent_id, new_local)
+        write_agent_heartbeat(coral_dir, agent_id, new_local, island_id=island_id)
         print(f"Removed '{name}' (local) for {agent_id}.")
         return
 
-    global_actions = read_global_heartbeat(coral_dir)
+    global_actions = read_global_heartbeat(coral_dir, island_id=island_id)
     new_global = [a for a in global_actions if a["name"] != name]
     if len(new_global) < len(global_actions):
-        write_global_heartbeat(coral_dir, new_global)
+        write_global_heartbeat(coral_dir, new_global, island_id=island_id)
         print(f"Removed '{name}' (global) for all agents.")
         return
 
@@ -249,7 +249,7 @@ def _cmd_heartbeat_reset(args: argparse.Namespace) -> None:
         write_global_heartbeat,
     )
 
-    coral_dir = find_coral_dir(
+    coral_dir, island_id = find_coral_dir_and_island(
         getattr(args, "task", None),
         getattr(args, "run", None),
     )
@@ -261,6 +261,15 @@ def _cmd_heartbeat_reset(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     config = CoralConfig.from_yaml(config_path)
-    write_agent_heartbeat(coral_dir, agent_id, default_local_actions(config))
-    write_global_heartbeat(coral_dir, default_global_actions(config))
+    write_agent_heartbeat(
+        coral_dir,
+        agent_id,
+        default_local_actions(config),
+        island_id=island_id,
+    )
+    write_global_heartbeat(
+        coral_dir,
+        default_global_actions(config),
+        island_id=island_id,
+    )
     print(f"Reset heartbeat config to defaults for {agent_id}.")
