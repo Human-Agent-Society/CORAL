@@ -266,7 +266,7 @@ class MigrationConfig:
     rank_window: int = 20  # "best agent" judged by max-over-last-N evals
     min_evals: int = 3  # candidate must have >= N attempts to be eligible
     dest_weighting: str = "score"  # score | uniform | round_robin
-    max_per_cycle: int = 1
+    max_per_cycle: int = 2
     notify_island: bool = True
 
     def __post_init__(self) -> None:

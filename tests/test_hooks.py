@@ -521,6 +521,68 @@ def test_submit_eval_multi_island_writes_to_island_attempts(tmp_path, monkeypatc
     assert (attempt.metadata or {}).get("island_id") == "1"
 
 
+def test_submit_eval_walks_up_for_multi_island_breadcrumbs(tmp_path):
+    """submit_eval from a worktree subdir still writes to that worktree's island."""
+    import subprocess
+
+    from coral.config import CoralConfig
+    from coral.hooks.post_commit import submit_eval
+
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "islands" / "1" / "attempts").mkdir(parents=True)
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "islands": {"count": 2},
+            "workspace": {
+                "results_dir": str(tmp_path / "results"),
+                "repo_path": str(tmp_path / "src"),
+            },
+        }
+    )
+    cfg.to_yaml(coral_dir / "config.yaml")
+
+    worktree = tmp_path / "worktree"
+    subdir = worktree / "pkg"
+    subdir.mkdir(parents=True)
+    subprocess.run(
+        ["git", "init", "-b", "main"], cwd=str(worktree), check=True, capture_output=True
+    )
+    subprocess.run(
+        ["git", "config", "user.email", "t@t"],
+        cwd=str(worktree),
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "t"],
+        cwd=str(worktree),
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "commit", "--allow-empty", "-m", "init"],
+        cwd=str(worktree),
+        check=True,
+        capture_output=True,
+    )
+    (subdir / "file.txt").write_text("change")
+    (worktree / ".coral_dir").write_text(str(coral_dir.resolve()))
+    (worktree / ".coral_agent_id").write_text("1-agent-1")
+    (worktree / ".coral_island").write_text("1")
+
+    attempt = submit_eval(
+        message="island-1 eval from subdir",
+        agent_id="1-agent-1",
+        workdir=str(subdir),
+        wait=False,
+    )
+
+    expected = coral_dir / "islands" / "1" / "attempts" / f"{attempt.commit_hash}.json"
+    assert expected.exists()
+    assert (attempt.metadata or {}).get("island_id") == "1"
+
+
 def test_submit_eval_single_island_unchanged(tmp_path):
     """No .coral_island -> today's behavior: write to public/attempts/."""
     import subprocess

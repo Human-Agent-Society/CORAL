@@ -435,6 +435,19 @@ def test_should_run_returns_false_in_single_island_mode():
     assert runner.should_run(current_global_evals=100) is False
 
 
+def test_manager_rejects_more_islands_than_agents():
+    from coral.agent.manager import AgentManager
+    from coral.config import AgentConfig, CoralConfig
+
+    cfg = CoralConfig(
+        agents=AgentConfig(count=1),
+        islands=IslandsConfig(count=2),
+    )
+
+    with pytest.raises(ValueError, match="islands.count cannot exceed"):
+        AgentManager(cfg)
+
+
 # ---------------------------------------------------------------------------
 # MigrationRunner.run_cycle: end-to-end candidate -> dest assignment with cap
 # ---------------------------------------------------------------------------
@@ -847,7 +860,7 @@ def test_swap_spec_island_updates_specs_in_place():
     from coral.config import AgentAssignmentConfig, AgentConfig, CoralConfig
 
     cfg = CoralConfig(
-        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
+        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=2)]),
         islands=IslandsConfig(count=2),
     )
     mgr = AgentManager(cfg)
@@ -909,7 +922,7 @@ def test_apply_migration_end_to_end_moves_state_and_repoints_worktree(tmp_path):
 
     # Build a manager and pin every component the migration touches.
     cfg = CoralConfig(
-        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
+        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=2)]),
         islands=IslandsConfig(count=2, migration=MigrationConfig(every=5, rank_window=3)),
     )
     mgr = AgentManager(cfg)
@@ -1047,7 +1060,7 @@ def test_apply_migration_moves_pending_attempt_with_agent(tmp_path):
     (coral_dir / "public").mkdir(parents=True)
 
     cfg = CoralConfig(
-        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
+        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=2)]),
         islands=IslandsConfig(count=2),
     )
     mgr = AgentManager(cfg)
@@ -1123,7 +1136,7 @@ def test_deferred_candidate_is_retried_on_next_cycle(tmp_path):
     setup_shared_state(worktree, coral_dir, ".claude", island_id="0")
 
     cfg = CoralConfig(
-        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
+        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=2)]),
         islands=IslandsConfig(count=2),
     )
     mgr = AgentManager(cfg)
@@ -1164,8 +1177,8 @@ def test_deferred_candidate_is_retried_on_next_cycle(tmp_path):
         MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5)
     )
     assert spawn_calls == []
-    assert [(c.agent_id, r, n) for c, r, n in mgr._deferred_candidates] == [
-        ("0-agent-1", "paused", 1)
+    assert [(c.agent_id, r) for c, r in mgr._deferred_candidates] == [
+        ("0-agent-1", "paused")
     ]
 
     # ---- Cycle 2: deferred candidate should now apply cleanly. ----
@@ -1239,7 +1252,7 @@ def test_maybe_run_migration_cycle_migrates_whole_swap_with_pending_attempt(tmp_
             write_attempt(coral_dir, a, island_id=island)
 
     cfg = CoralConfig(
-        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
+        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=2)]),
         islands=IslandsConfig(count=2, migration=MigrationConfig(max_per_cycle=2)),
     )
     mgr = AgentManager(cfg)
@@ -1337,7 +1350,7 @@ def test_maybe_run_migration_cycle_ignores_raw_eval_count_for_tune_only(tmp_path
 
     mgr = AgentManager(
         CoralConfig(
-            agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
+            agents=AgentConfig(assignments=[AgentAssignmentConfig(count=2)]),
             islands=IslandsConfig(count=2),
         )
     )
@@ -1364,40 +1377,40 @@ def test_maybe_run_migration_cycle_ignores_raw_eval_count_for_tune_only(tmp_path
     assert mgr._migration_runner.last_cycle_evals == -1
 
 
-def test_prune_deferred_drops_whole_batch_on_exceeded_retries_or_stale_agents():
-    """A stale member invalidates the whole deferred batch."""
+def test_prune_deferred_keeps_blocked_batch_until_stale():
+    """Deferred batches retry indefinitely unless a member is stale."""
     from coral.agent.manager import AgentManager
     from coral.agent.migration import MigrationCandidate
     from coral.config import AgentAssignmentConfig, AgentConfig, CoralConfig, IslandsConfig
 
     cfg = CoralConfig(
-        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
+        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=2)]),
         islands=IslandsConfig(count=2),
     )
     mgr = AgentManager(cfg)
     mgr._agent_island = {
-        "0-agent-1": "0",  # still on src — survives
-        "0-agent-2": "1",  # moved off recorded src=0 — pruned (stale)
-        "0-agent-3": "0",  # over the cap — pruned
+        "0-agent-1": "0",
+        "1-agent-1": "1",
     }
     mgr._deferred_candidates = [
         (
             MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.1),
             "paused",
-            1,
         ),
         (
-            MigrationCandidate(agent_id="0-agent-2", src_island="0", dst_island="1", score=0.2),
-            "paused",
-            1,
-        ),
-        (
-            MigrationCandidate(agent_id="0-agent-3", src_island="0", dst_island="1", score=0.3),
-            "paused",
-            mgr.MIGRATION_MAX_RETRIES,
+            MigrationCandidate(agent_id="1-agent-1", src_island="1", dst_island="0", score=0.2),
+            "still-paused",
         ),
     ]
 
+    mgr._prune_deferred()
+
+    assert [(c.agent_id, r) for c, r in mgr._deferred_candidates] == [
+        ("0-agent-1", "paused"),
+        ("1-agent-1", "still-paused"),
+    ]
+
+    mgr._agent_island["0-agent-1"] = "1"
     mgr._prune_deferred()
 
     assert mgr._deferred_candidates == []
@@ -1417,7 +1430,7 @@ def test_maybe_run_migration_cycle_retries_deferred_batch_before_fresh_cycle(tmp
     (coral_dir / "eval_count").write_text("100")  # _get_eval_count reads this
 
     cfg = CoralConfig(
-        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
+        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=2)]),
         islands=IslandsConfig(count=2),
     )
     mgr = AgentManager(cfg)
@@ -1442,7 +1455,6 @@ def test_maybe_run_migration_cycle_retries_deferred_batch_before_fresh_cycle(tmp
         (
             MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5),
             "paused",
-            2,
         ),
     ]
 
@@ -1474,7 +1486,7 @@ def test_maybe_run_migration_cycle_does_not_mix_blocked_deferred_with_fresh(tmp_
     (coral_dir / "eval_count").write_text("100")
 
     cfg = CoralConfig(
-        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
+        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=2)]),
         islands=IslandsConfig(count=2, migration=MigrationConfig(max_per_cycle=2)),
     )
     mgr = AgentManager(cfg)
@@ -1499,13 +1511,12 @@ def test_maybe_run_migration_cycle_does_not_mix_blocked_deferred_with_fresh(tmp_
         (
             MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5),
             "paused",
-            1,
         ),
     ]
 
     mgr._maybe_run_migration_cycle()
 
     assert applied == []
-    assert [(c.agent_id, r, n) for c, r, n in mgr._deferred_candidates] == [
-        ("0-agent-1", "paused", 1)
+    assert [(c.agent_id, r) for c, r in mgr._deferred_candidates] == [
+        ("0-agent-1", "paused")
     ]

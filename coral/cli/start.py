@@ -16,6 +16,7 @@ from coral.cli._helpers import (
     docker_cmd,
     find_coral_dir,
     find_coral_dir_and_island,
+    find_worktree_coral_dir_and_island,
     find_tmux_session,
     has_docker,
     has_docker_marker,
@@ -530,12 +531,13 @@ def cmd_resume(args: argparse.Namespace) -> None:
 
     task = getattr(args, "task", None)
     run = getattr(args, "run", None)
+    worktree_scope = None if task or run else find_worktree_coral_dir_and_island()
     if task or run or in_docker():
         coral_dir = find_coral_dir(task, run)
-    elif (Path.cwd() / ".coral_dir").exists():
+    elif worktree_scope is not None:
         # Agent in a worktree: lock to the current run via the breadcrumb
         # instead of showing all stopped runs in a picker.
-        coral_dir = find_coral_dir(None, None)
+        coral_dir = worktree_scope[0]
     else:
         coral_dir = pick_run(status_filter="stopped", allow_cancel=True)
     if coral_dir is None:
@@ -708,6 +710,27 @@ def _stop_one(coral_dir: Path) -> None:
         kill_tmux_session(coral_dir)
 
 
+def _current_agent_islands(run_dir: Path) -> dict[str, str]:
+    """Read current island membership from agent worktree breadcrumbs."""
+    agents_dir = run_dir / "agents"
+    if not agents_dir.is_dir():
+        return {}
+    current: dict[str, str] = {}
+    for agent_dir in agents_dir.iterdir():
+        if not agent_dir.is_dir():
+            continue
+        island_file = agent_dir / ".coral_island"
+        if not island_file.exists():
+            continue
+        try:
+            island_id = island_file.read_text().strip()
+        except OSError:
+            continue
+        if island_id:
+            current[agent_dir.name] = island_id
+    return current
+
+
 def cmd_stop(args: argparse.Namespace) -> None:
     """Stop CORAL agents."""
     if getattr(args, "all", False):
@@ -727,12 +750,15 @@ def cmd_stop(args: argparse.Namespace) -> None:
     else:
         task = getattr(args, "task", None)
         run = getattr(args, "run", None)
+        worktree_scope = None if task or run else find_worktree_coral_dir_and_island()
         if task or run:
             coral_dir = find_coral_dir(task, run)
-        elif (Path.cwd() / ".coral_dir").exists() or in_docker():
-            # Agent in a worktree (or Docker run): lock to the current run
-            # via the breadcrumb instead of showing all running runs.
+        elif in_docker():
             coral_dir = find_coral_dir(None, None)
+        elif worktree_scope is not None:
+            # Agent in a worktree: lock to the current run via the breadcrumb
+            # instead of showing all running runs.
+            coral_dir = worktree_scope[0]
         else:
             coral_dir = pick_run(status_filter="running", allow_cancel=True)
         if coral_dir is None:
@@ -751,14 +777,17 @@ def cmd_status(args: argparse.Namespace) -> None:
 
     task = getattr(args, "task", None)
     run = getattr(args, "run", None)
+    worktree_scope = None if task or run else find_worktree_coral_dir_and_island()
     if task or run:
         coral_dir = find_coral_dir(task, run)
         island_id = None
-    elif (Path.cwd() / ".coral_dir").exists() or in_docker():
-        # Agent in a worktree (or Docker run): lock to the current run
-        # via the .coral_dir breadcrumb, scoped to the worktree's island
-        # so the leaderboard / status summary only see that island.
+    elif in_docker():
         coral_dir, island_id = find_coral_dir_and_island()
+    elif worktree_scope is not None:
+        # Agent in a worktree: lock to the current run via the .coral_dir
+        # breadcrumb, scoped to the worktree's island so the leaderboard /
+        # status summary only see that island.
+        coral_dir, island_id = worktree_scope
     else:
         coral_dir = pick_run()
         island_id = None
@@ -795,13 +824,18 @@ def cmd_status(args: argparse.Namespace) -> None:
         else:
             print("Manager: not running")
 
-    # Aggregate agent liveness across every view root. In multi-island
-    # mode logs live in islands/<id>/logs/ — public/logs is empty — so a
-    # single-dir glob would skip the whole section.
-    from coral.hub._island import all_view_roots
+    # Agent liveness follows the same scope as attempts/leaderboards. In
+    # multi-island mode logs live in islands/<id>/logs/ — public/logs is
+    # empty — so unscoped operator views aggregate, while worktree views
+    # stay pinned to their island.
+    from coral.hub._island import all_view_roots, island_root
 
     log_files: list[Path] = []
-    for view_root in all_view_roots(coral_dir):
+    if island_id is not None or not (coral_dir / "islands").exists():
+        view_roots = [island_root(coral_dir, island_id)]
+    else:
+        view_roots = all_view_roots(coral_dir)
+    for view_root in view_roots:
         view_logs = view_root / "logs"
         if view_logs.is_dir():
             log_files.extend(view_logs.glob("*.log"))
@@ -811,17 +845,26 @@ def cmd_status(args: argparse.Namespace) -> None:
             parts = lf.stem.rsplit(".", 1)
             agent_name = parts[0] if len(parts) == 2 else lf.stem
             agent_logs.setdefault(agent_name, []).append(lf)
+        current_agent_islands = _current_agent_islands(run_dir)
+        if island_id is not None and current_agent_islands:
+            agent_logs = {
+                agent_name: logs
+                for agent_name, logs in agent_logs.items()
+                if current_agent_islands.get(agent_name) == str(island_id)
+            }
 
         # Best-effort read of the manager-persisted reliability state.
         # Missing or corrupt agent_state.json falls back to log inference.
         agent_state_doc = read_agent_state(coral_dir)
         agent_states = agent_state_doc.agents
-        # per_agent_class_counts doesn't aggregate across islands yet — fan
-        # out manually so the grader-error rate below reflects the whole run.
-        from coral.hub.attempts import _read_all_island_attempts
+        from coral.hub.attempts import _read_all_island_attempts, read_attempts
 
         class_counts: dict[str, dict[str, int]] = {}
-        for a in _read_all_island_attempts(coral_dir):
+        if island_id is not None or not (coral_dir / "islands").exists():
+            attempts = read_attempts(coral_dir, island_id=island_id)
+        else:
+            attempts = _read_all_island_attempts(coral_dir)
+        for a in attempts:
             if a.status == "pending":
                 continue
             bucket = class_counts.setdefault(a.agent_id, {})

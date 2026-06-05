@@ -25,6 +25,7 @@ from coral.hub.attempts import (
 )
 from coral.hub.checkpoint import checkpoint
 from coral.types import BUDGET_CLASS_TUNE, Attempt
+from coral.workspace.breadcrumbs import find_coral_breadcrumb, read_island_breadcrumb
 
 # Legacy alias — external tests/hooks may still import the underscore-prefixed
 # name. Prefer `coral.hub.attempts.increment_eval_count` directly.
@@ -92,13 +93,11 @@ def _get_parent_hash(commit_hash: str, cwd: str) -> str | None:
 
 def _find_coral_dir(workdir: Path) -> Path | None:
     """Find the shared .coral directory from the .coral_dir breadcrumb file."""
-    coral_dir_file = workdir / ".coral_dir"
-    if coral_dir_file.exists():
-        try:
-            return Path(coral_dir_file.read_text().strip()).resolve()
-        except (OSError, ValueError):
-            pass
-    return None
+    found = find_coral_breadcrumb(workdir)
+    if found is None:
+        return None
+    coral_dir, _breadcrumb_dir = found
+    return coral_dir
 
 
 def _poll_until_graded(
@@ -149,23 +148,19 @@ def submit_eval(
     """
     workdir_path = Path(workdir).resolve()
 
-    coral_dir = _find_coral_dir(workdir_path)
-    if coral_dir is None:
+    breadcrumb = find_coral_breadcrumb(workdir_path)
+    if breadcrumb is None:
         raise FileNotFoundError(f"No .coral directory found from {workdir_path}")
+    coral_dir, breadcrumb_dir = breadcrumb
 
     config_path = coral_dir / "config.yaml"
     if not config_path.exists():
         raise FileNotFoundError(f"No config.yaml found at {config_path}")
     config = CoralConfig.from_yaml(config_path)
 
-    # Determine the agent's island (if any) from the .coral_island breadcrumb.
-    island_id: str | None = None
-    bc = workdir_path / ".coral_island"
-    if bc.exists():
-        try:
-            island_id = bc.read_text().strip() or None
-        except OSError:
-            island_id = None
+    # Determine the agent's island (if any) from the .coral_island breadcrumb
+    # adjacent to the .coral_dir breadcrumb we discovered above.
+    island_id = read_island_breadcrumb(coral_dir, breadcrumb_dir)
 
     # Producer-side queue cap: refuse to commit when this agent already has
     # `max_pending_per_agent` ungraded submissions in flight. The grader is

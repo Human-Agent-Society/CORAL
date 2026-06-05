@@ -171,14 +171,18 @@ def list_notes(
 
     entries: list[dict[str, Any]] = []
     for view_root in _note_view_roots(coral_dir):
-        sub = _list_notes_single(coral_dir, island_id=view_root.name)
+        sub = _list_notes_single(coral_dir, island_id=view_root.name, clean=False)
         for entry in sub:
             entry["island_id"] = view_root.name
         entries.extend(sub)
+    entries.sort(key=_sort_key)
+    _clean_note_entries(entries)
     return entries
 
 
-def _list_notes_single(coral_dir: Path, island_id: str | int | None) -> list[dict[str, Any]]:
+def _list_notes_single(
+    coral_dir: Path, island_id: str | int | None, *, clean: bool = True
+) -> list[dict[str, Any]]:
     notes_dir = _notes_dir(coral_dir, island_id)
     entries = _collect_from_dir(notes_dir)
 
@@ -192,12 +196,24 @@ def _list_notes_single(coral_dir: Path, island_id: str | int | None) -> list[dic
 
     entries.sort(key=_sort_key)
 
-    # Add relative path and category for UI grouping, clean up internal fields
+    if clean:
+        _clean_note_entries(entries)
+    return entries
+
+
+def _clean_note_entries(entries: list[dict[str, Any]]) -> None:
+    """Add display path/category fields and remove internal sort fields in place."""
     for entry in entries:
         entry.pop("_mtime", None)
         full_path = entry.pop("_path", None)
         if full_path:
-            rel = str(full_path.relative_to(notes_dir))
+            rel_path = Path(full_path)
+            try:
+                reversed_idx = list(reversed(rel_path.parts)).index("notes")
+                notes_idx = len(rel_path.parts) - reversed_idx - 1
+                rel = str(Path(*rel_path.parts[notes_idx + 1 :]))
+            except ValueError:
+                rel = rel_path.name
             entry["relative_path"] = rel
             # Categorize by top-level directory
             parts = rel.split(os.sep)
@@ -208,8 +224,6 @@ def _list_notes_single(coral_dir: Path, island_id: str | int | None) -> list[dic
         else:
             entry["relative_path"] = entry.get("filename", "")
             entry["category"] = "other"
-
-    return entries
 
 
 def _note_view_roots(coral_dir: Path) -> list[Path]:

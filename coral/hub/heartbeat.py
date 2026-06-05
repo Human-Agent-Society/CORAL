@@ -72,6 +72,13 @@ def _heartbeat_path(
     return island_root(coral_dir, island_id) / "heartbeat" / f"{agent_id}.json"
 
 
+def _require_write_scope(coral_dir: Path, island_id: str | int | None) -> None:
+    if island_id is None and (coral_dir / "islands").exists():
+        raise ValueError(
+            "island_id is required when writing heartbeat config in a multi-island run"
+        )
+
+
 def _read_actions(path: Path) -> list[dict]:
     """Read actions from a heartbeat JSON file."""
     if not path.exists():
@@ -146,6 +153,8 @@ def write_agent_heartbeat(
 
     Protected local actions (reflect) are re-added if missing.
     """
+    coral_dir = Path(coral_dir)
+    _require_write_scope(coral_dir, island_id)
     present = {a["name"] for a in actions}
     for name in PROTECTED_LOCAL:
         if name not in present:
@@ -207,6 +216,8 @@ def write_global_heartbeat(
 
     Protected global actions (consolidate) are re-added if missing.
     """
+    coral_dir = Path(coral_dir)
+    _require_write_scope(coral_dir, island_id)
     present = {a["name"] for a in actions}
     for name in PROTECTED_GLOBAL:
         if name not in present:

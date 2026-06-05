@@ -99,6 +99,11 @@ class AgentManager:
         # Resolve concrete per-agent specs, then (when multi-island) partition them
         # across islands round-robin. Single-island (count=1) returns specs unchanged.
         base_specs = resolve_agent_specs(config)
+        if config.islands.count > len(base_specs):
+            raise ValueError(
+                "islands.count cannot exceed the number of agents "
+                f"(got islands.count={config.islands.count}, agents={len(base_specs)})"
+            )
         self.specs: list[AgentSpec] = partition_into_islands(base_specs, count=config.islands.count)
         self.specs_by_id: dict[str, AgentSpec] = {s.agent_id: s for s in self.specs}
         # One runtime instance per agent_id. In uniform mode all entries point
@@ -164,8 +169,9 @@ class AgentManager:
         # attempt). Retried on every monitor tick before fresh candidate
         # selection so a blocked swap resumes as soon as the grader clears,
         # without waiting for the next full migration cadence.
-        # Each entry: (candidate, reason, retry_count).
-        self._deferred_candidates: list[tuple[MigrationCandidate, str, int]] = []
+        # Each entry: (candidate, reason). Deferred batches retry until they
+        # apply or go stale; paused agents can stay paused for arbitrarily long.
+        self._deferred_candidates: list[tuple[MigrationCandidate, str]] = []
 
     def _runtime_for(self, agent_id: str) -> AgentRuntime:
         """Return the runtime instance for an agent_id, creating one on demand.
@@ -1456,11 +1462,9 @@ class AgentManager:
     # --- Deferred-candidate bookkeeping ----------------------------------
     #
     # _apply_migration still has soft-fail exits (for example paused
-    # agents). The former docs said "re-attempt next cycle" but the
-    # implementation dropped the candidate. The list below carries those
-    # soft-failed candidates across cycles so they get another shot at the
-    # top of the next run.
-    MIGRATION_MAX_RETRIES = 5
+    # agents). The list below carries those soft-failed candidates across
+    # cycles so they get another shot at the top of the next run. Deferred
+    # batches retry indefinitely until they apply or become stale.
 
     def _retry_deferred_migration_batch(self) -> bool:
         """Retry a previously blocked migration batch outside the normal cadence.
@@ -1480,7 +1484,7 @@ class AgentManager:
         self._prune_deferred()
         if not self._deferred_candidates:
             return False
-        migrations = [candidate for candidate, _reason, _n in self._deferred_candidates]
+        migrations = [candidate for candidate, _reason in self._deferred_candidates]
         logger.info(f"Re-attempting deferred migration batch: {[c.agent_id for c in migrations]}")
         self._apply_migration_batch(migrations, retry=True)
         return True
@@ -1570,12 +1574,10 @@ class AgentManager:
             candidate.agent_id: self._migration_defer_reason(reason)
             for candidate, reason in blocked
         }
-        prior = {candidate.agent_id: n for candidate, _reason, n in self._deferred_candidates}
         self._deferred_candidates = [
             (
                 candidate,
                 blocked_reasons.get(candidate.agent_id, "waiting-for-batch"),
-                max(prior.get(candidate.agent_id, 0), 1),
             )
             for candidate in migrations
         ]
@@ -1638,36 +1640,27 @@ class AgentManager:
         reason: str,
     ) -> None:
         """Add or bump a deferred candidate for retry on the next cycle."""
-        for i, (c, _r, n) in enumerate(self._deferred_candidates):
+        for i, (c, _r) in enumerate(self._deferred_candidates):
             if c.agent_id == candidate.agent_id:
-                self._deferred_candidates[i] = (candidate, reason, n + 1)
+                self._deferred_candidates[i] = (candidate, reason)
                 return
-        self._deferred_candidates.append((candidate, reason, 1))
+        self._deferred_candidates.append((candidate, reason))
 
     def _drop_deferred_for(self, agent_id: str) -> None:
         """Remove any deferred entry for this agent (called on success)."""
         self._deferred_candidates = [
-            (c, r, n) for c, r, n in self._deferred_candidates if c.agent_id != agent_id
+            (c, r) for c, r in self._deferred_candidates if c.agent_id != agent_id
         ]
 
     def _prune_deferred(self) -> None:
-        """Drop the deferred batch if any member exceeded retries or went stale.
+        """Drop the deferred batch if any member went stale.
 
         A deferred candidate is considered stale if the agent is no longer
         on its recorded source island — meaning some other path (a fresh
         cycle, a manual move) already moved them, and the deferred entry
-        would just fail again. Same for agents that have been retrying
-        longer than MIGRATION_MAX_RETRIES cycles without success.
+        would just fail again.
         """
-        for candidate, reason, n in self._deferred_candidates:
-            if n >= self.MIGRATION_MAX_RETRIES:
-                logger.warning(
-                    f"Dropping deferred migration batch because {candidate.agent_id} "
-                    f"({candidate.src_island}→{candidate.dst_island}) retried "
-                    f"{n} times; still {reason}"
-                )
-                self._deferred_candidates = []
-                return
+        for candidate, _reason in self._deferred_candidates:
             if self._agent_island.get(candidate.agent_id) != candidate.src_island:
                 logger.info(
                     f"Dropping deferred migration batch because {candidate.agent_id} "

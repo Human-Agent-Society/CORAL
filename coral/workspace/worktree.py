@@ -180,17 +180,7 @@ def setup_shared_state(
 
     shared_dir.mkdir(exist_ok=True)
 
-    shared_items = [
-        "notes",
-        "skills",
-        "agents",
-        "attempts",
-        "logs",
-        "heartbeat",
-        "roles",
-        "eval_logs",
-    ]
-    for item in shared_items:
+    for item in _SHARED_STATE_ITEMS:
         src = state_root / item
         dst = shared_dir / item
         # If a previous (buggy) run wrote into a real local dir at this path

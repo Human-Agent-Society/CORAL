@@ -8,6 +8,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+from coral.workspace.breadcrumbs import (
+    find_breadcrumb_file,
+    find_coral_breadcrumb,
+    read_island_breadcrumb,
+)
+
 
 def setup_logging(verbose: bool = False) -> None:
     """Configure logging. Verbose mode logs to stderr at DEBUG level."""
@@ -282,12 +288,23 @@ def kill_orphaned_agents(agent_pids_file: Path) -> None:
     agent_pids_file.unlink(missing_ok=True)
 
 
-def read_agent_id() -> str:
-    """Read agent ID from .coral_agent_id file in cwd."""
-    agent_id_file = Path.cwd() / ".coral_agent_id"
-    if agent_id_file.exists():
+def read_agent_id(start: str | Path | None = None) -> str:
+    """Read agent ID from the nearest .coral_agent_id breadcrumb."""
+    agent_id_file = find_breadcrumb_file(".coral_agent_id", start)
+    if agent_id_file is not None:
         return agent_id_file.read_text().strip()
     return "unknown"
+
+
+def find_worktree_coral_dir_and_island(
+    start: str | Path | None = None,
+) -> tuple[Path, str | None] | None:
+    """Find the current worktree's run and island without falling back or exiting."""
+    found = find_coral_breadcrumb(start)
+    if found is None:
+        return None
+    coral_dir, breadcrumb_dir = found
+    return coral_dir, read_island_breadcrumb(coral_dir, breadcrumb_dir)
 
 
 def read_direction(coral_dir: Path) -> str:
@@ -326,35 +343,9 @@ def find_coral_dir_and_island(
         inside an agent worktree that advertises a valid island.
     """
     if not task and not run:
-        cur = Path.cwd().resolve()
-        coral_dir: Path | None = None
-        breadcrumb_dir: Path | None = None
-        while True:
-            breadcrumb = cur / ".coral_dir"
-            if breadcrumb.exists():
-                try:
-                    candidate = Path(breadcrumb.read_text().strip()).resolve()
-                except (OSError, ValueError):
-                    candidate = None
-                if candidate is not None and candidate.is_dir():
-                    coral_dir = candidate
-                    breadcrumb_dir = cur
-                    break
-            if cur == cur.parent:  # reached fs root
-                break
-            cur = cur.parent
-
-        if coral_dir is not None:
-            island_id: str | None = None
-            island_file = breadcrumb_dir / ".coral_island"  # type: ignore[operator]
-            if island_file.exists():
-                try:
-                    value = island_file.read_text().strip()
-                except OSError:
-                    value = ""
-                if value and (coral_dir / "islands" / value).is_dir():
-                    island_id = value
-            return coral_dir, island_id
+        found = find_worktree_coral_dir_and_island()
+        if found is not None:
+            return found
 
     # Fall through to --task/--run discovery; explicit --task/--run wins
     # and we never silently scope by island in that mode.
@@ -372,14 +363,10 @@ def find_coral_dir(task: str | None = None, run: str | None = None) -> Path:
     """
     # Priority 1: read .coral_dir breadcrumb from cwd (agents always have this)
     if not task and not run:
-        coral_dir_file = Path.cwd() / ".coral_dir"
-        if coral_dir_file.exists():
-            try:
-                coral_dir = Path(coral_dir_file.read_text().strip()).resolve()
-                if coral_dir.is_dir():
-                    return coral_dir
-            except (OSError, ValueError):
-                pass
+        found = find_coral_breadcrumb()
+        if found is not None:
+            coral_dir, _breadcrumb_dir = found
+            return coral_dir
 
     # Docker shortcut: run dir is mounted at /run, no results/ tree exists
     if in_docker():

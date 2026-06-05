@@ -23,7 +23,7 @@ from coral.hub.heartbeat import (
     write_agent_heartbeat,
     write_global_heartbeat,
 )
-from coral.hub.notes import list_notes, notes_by
+from coral.hub.notes import get_recent_notes, list_notes, notes_by
 from coral.hub.skills import list_skills, skills_by
 from coral.types import Attempt
 
@@ -159,6 +159,27 @@ def test_list_notes_multi_island_isolation():
         assert names1 == {"b.md"}
 
 
+def test_recent_notes_multi_island_uses_global_date_order():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        for i in range(2):
+            (coral_dir / "islands" / str(i) / "notes").mkdir(parents=True)
+        (coral_dir / "islands" / "0" / "notes" / "old.md").write_text(
+            "---\ncreator: agent-1\ncreated: 2026-06-01T00:00:00Z\n---\n# Old\nbody\n"
+        )
+        (coral_dir / "islands" / "0" / "notes" / "new.md").write_text(
+            "---\ncreator: agent-1\ncreated: 2026-06-03T00:00:00Z\n---\n# New\nbody\n"
+        )
+        (coral_dir / "islands" / "1" / "notes" / "middle.md").write_text(
+            "---\ncreator: agent-2\ncreated: 2026-06-02T00:00:00Z\n---\n# Middle\nbody\n"
+        )
+
+        recent = get_recent_notes(coral_dir, n=2)
+
+        assert [entry["title"] for entry in recent] == ["Middle", "New"]
+        assert [entry["island_id"] for entry in recent] == ["1", "0"]
+
+
 def test_notes_by_returns_creator_matched_paths():
     with tempfile.TemporaryDirectory() as d:
         coral_dir = Path(d)
@@ -292,6 +313,17 @@ def test_global_heartbeat_multi_island_isolation():
         g1 = read_global_heartbeat(coral_dir, island_id="1")
         assert next(a for a in g0 if a["name"] == "consolidate")["every"] == 10
         assert next(a for a in g1 if a["name"] == "consolidate")["every"] == 20
+
+
+def test_heartbeat_multi_island_unscoped_writes_are_rejected():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        (coral_dir / "islands" / "0" / "heartbeat").mkdir(parents=True)
+
+        with pytest.raises(ValueError, match="island_id is required"):
+            write_agent_heartbeat(coral_dir, "agent-1", [])
+        with pytest.raises(ValueError, match="island_id is required"):
+            write_global_heartbeat(coral_dir, [])
 
 
 def test_checkpoint_multi_island_separate_repos():

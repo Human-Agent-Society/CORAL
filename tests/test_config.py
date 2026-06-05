@@ -362,7 +362,7 @@ def test_islands_defaults_single_island():
     assert cfg.islands.migration.rank_window == 20
     assert cfg.islands.migration.min_evals == 3
     assert cfg.islands.migration.dest_weighting == "score"
-    assert cfg.islands.migration.max_per_cycle == 1
+    assert cfg.islands.migration.max_per_cycle == 2
     assert cfg.islands.migration.notify_island is True
 
 

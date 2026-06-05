@@ -25,7 +25,7 @@ from coral.cli import heartbeat as heartbeat_module
 from coral.cli import query as query_module
 from coral.cli import start as start_module
 from coral.cli._helpers import find_coral_dir_and_island
-from coral.cli.eval import cmd_checkout, cmd_wait
+from coral.cli.eval import cmd_checkout, cmd_eval, cmd_wait
 from coral.cli.heartbeat import (
     _cmd_heartbeat_remove,
     _cmd_heartbeat_reset,
@@ -280,6 +280,43 @@ def test_log_without_breadcrumb_aggregates_all_islands(monkeypatch, multi_island
 # --------------------------------------------------------------------------- #
 
 
+def test_eval_reads_agent_id_from_workdir_breadcrumb(monkeypatch, tmp_path, capsys):
+    from coral.hooks import post_commit
+
+    worktree = tmp_path / "wt"
+    subdir = worktree / "deep"
+    subdir.mkdir(parents=True)
+    (worktree / ".coral_agent_id").write_text("0-agent-1")
+    captured: dict[str, str] = {}
+
+    def fake_submit_eval(**kwargs):
+        captured["agent_id"] = kwargs["agent_id"]
+        return Attempt(
+            commit_hash="abc123",
+            agent_id=kwargs["agent_id"],
+            title="t",
+            score=None,
+            status="pending",
+            parent_hash=None,
+            timestamp=datetime.now(UTC).isoformat(),
+        )
+
+    monkeypatch.setattr(post_commit, "submit_eval", fake_submit_eval)
+
+    cmd_eval(
+        argparse.Namespace(
+            agent=None,
+            message="m",
+            workdir=str(subdir),
+            wait=False,
+            timeout=None,
+            tune=False,
+        )
+    )
+
+    assert captured["agent_id"] == "0-agent-1"
+
+
 def test_wait_resolves_hash_on_other_island_when_unscoped(monkeypatch, multi_island_layout, capsys):
     """Pre-fix bug: ``coral wait`` looked in public/attempts (empty in multi-island)
     and returned "No attempt matches" for hashes living on any island."""
@@ -459,16 +496,103 @@ def test_status_in_worktree_only_lists_island_attempts(
     )
     # No manager pid file -> "not running" branch
     (multi_island_layout / "public" / "manager.pid").parent.mkdir(parents=True, exist_ok=True)
-    # cmd_status only takes the worktree branch if cwd has a .coral_dir
-    # breadcrumb, so cd into the worktree.
-    with _chdir(worktree):
+    island0_logs = multi_island_layout / "islands" / "0" / "logs"
+    island0_logs.mkdir(parents=True)
+    (island0_logs / "0-agent-1.1.log").write_text("current island 0 agent\n")
+    (island0_logs / "0-agent-2.1.log").write_text("stale pre-migration log\n")
+    agents_dir = multi_island_layout.parent / "agents"
+    for agent_id, current_island in {
+        "0-agent-1": "0",
+        "0-agent-2": "1",
+        "1-agent-1": "1",
+        "2-agent-1": "2",
+    }.items():
+        agent_dir = agents_dir / agent_id
+        agent_dir.mkdir(parents=True)
+        (agent_dir / ".coral_island").write_text(current_island)
+    # cd into a subdir to ensure command-level discovery walks up to the
+    # worktree breadcrumbs before falling back to the run picker.
+    subdir = worktree / "deep" / "nested"
+    subdir.mkdir(parents=True)
+    with _chdir(subdir):
         args = argparse.Namespace(task=None, run=None)
         cmd_status(args)
     out = capsys.readouterr().out
     # The leaderboard should mention island 0's agent, not islands 1 or 2.
     assert "0-agent-1" in out
+    assert "0-agent-2" not in out
     assert "1-agent-1" not in out
     assert "2-agent-1" not in out
+    assert "Agents: 1" in out
+
+
+def test_stop_from_worktree_subdir_uses_breadcrumb_run(
+    monkeypatch, multi_island_layout, worktree
+):
+    """``coral stop`` from a worktree subdir should not fall through to the picker."""
+    stopped: list[Path] = []
+    monkeypatch.setattr(start_module, "pick_run", lambda *args, **kwargs: pytest.fail("picker"))
+    monkeypatch.setattr(start_module, "_stop_one", lambda coral_dir: stopped.append(coral_dir))
+
+    subdir = worktree / "deep" / "nested"
+    subdir.mkdir(parents=True)
+    with _chdir(subdir):
+        start_module.cmd_stop(argparse.Namespace(task=None, run=None, all=False))
+
+    assert stopped == [multi_island_layout.resolve()]
+
+
+def test_resume_from_worktree_subdir_uses_breadcrumb_run(monkeypatch, tmp_path):
+    """``coral resume`` from a worktree subdir should resume that run directly."""
+    from coral.agent import manager as manager_module
+
+    run_dir = tmp_path / "results" / "task" / "run"
+    coral_dir = run_dir / ".coral"
+    (coral_dir / "public").mkdir(parents=True)
+    (coral_dir / "config.yaml").write_text(
+        textwrap.dedent(
+            """
+            task:
+              name: task
+              description: resume test
+            agents:
+              count: 2
+            islands:
+              count: 2
+            run:
+              session: local
+              ui: false
+            workspace:
+              results_dir: results
+            """
+        ).strip()
+    )
+    worktree = tmp_path / "wt"
+    subdir = worktree / "deep" / "nested"
+    subdir.mkdir(parents=True)
+    (worktree / ".coral_dir").write_text(str(coral_dir))
+    (worktree / ".coral_island").write_text("0")
+
+    resumed: list[Path] = []
+
+    class DummyManager:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def resume_all(self, paths, instruction=None):
+            resumed.append(paths.coral_dir)
+            return [argparse.Namespace(agent_id="0-agent-1", process=None, session_id=None)]
+
+        def monitor_loop(self):
+            raise StopIteration
+
+    monkeypatch.setattr(start_module, "pick_run", lambda *args, **kwargs: pytest.fail("picker"))
+    monkeypatch.setattr(manager_module, "AgentManager", DummyManager)
+
+    with _chdir(subdir), pytest.raises(StopIteration):
+        start_module.cmd_resume(argparse.Namespace(task=None, run=None, overrides=[]))
+
+    assert resumed == [coral_dir.resolve()]
 
 
 def test_status_default_hides_tune_attempts(monkeypatch, tmp_path, capsys):
@@ -616,6 +740,39 @@ def test_skills_in_worktree_only_lists_island_skills(
 # --------------------------------------------------------------------------- #
 
 
+def test_heartbeat_mutations_require_island_scope(monkeypatch, multi_island_layout, capsys):
+    """Unscoped multi-island heartbeat writes fail clearly instead of crashing."""
+    monkeypatch.setattr(
+        heartbeat_module,
+        "find_coral_dir_and_island",
+        lambda task=None, run=None: (multi_island_layout, None),
+    )
+    cases = [
+        (
+            _cmd_heartbeat_set,
+            argparse.Namespace(
+                name="custom-rotate",
+                every=3,
+                prompt="rotate strategy",
+                is_global=True,
+                trigger=None,
+                epsilon=None,
+                task=None,
+                run=None,
+            ),
+        ),
+        (_cmd_heartbeat_remove, argparse.Namespace(name="custom-rotate", task=None, run=None)),
+        (_cmd_heartbeat_reset, argparse.Namespace(task=None, run=None)),
+    ]
+
+    for command, args in cases:
+        with pytest.raises(SystemExit):
+            command(args)
+
+    err = capsys.readouterr().err
+    assert "must be made from an agent worktree" in err
+
+
 def test_heartbeat_set_global_writes_to_worktree_island(monkeypatch, multi_island_layout, worktree):
     """``coral heartbeat set --global <name> --every N`` from an island-1
     worktree must write to ``islands/1/heartbeat/_global.json`` — not
@@ -670,8 +827,8 @@ def test_heartbeat_set_local_writes_to_worktree_island(monkeypatch, multi_island
         task=None,
         run=None,
     )
-    # read_agent_id() reads .coral_agent_id from cwd — chdir into the
-    # worktree so the per-agent file is found and named after the right agent.
+    # chdir into the worktree so the per-agent file is named after its
+    # .coral_agent_id breadcrumb.
     with _chdir(worktree):
         _cmd_heartbeat_set(args)
 

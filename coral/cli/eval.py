@@ -79,7 +79,8 @@ def cmd_eval(args: argparse.Namespace) -> None:
     """Stage changes, commit, and submit evaluation (blocking by default)."""
     from coral.hooks.post_commit import submit_eval
 
-    agent_id = args.agent or read_agent_id()
+    workdir = args.workdir or "."
+    agent_id = args.agent or read_agent_id(workdir)
     wait = getattr(args, "wait", True)
     timeout = getattr(args, "timeout", None)
     tune = getattr(args, "tune", False)
@@ -88,7 +89,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
         attempt = submit_eval(
             message=args.message,
             agent_id=agent_id,
-            workdir=args.workdir or ".",
+            workdir=workdir,
             wait=wait,
             poll_timeout=timeout,
             tune=tune,

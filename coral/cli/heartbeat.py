@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from coral.cli._helpers import find_coral_dir_and_island, read_agent_id
 
@@ -19,6 +20,18 @@ def cmd_heartbeat(args: argparse.Namespace) -> None:
         _cmd_heartbeat_reset(args)
     else:
         _cmd_heartbeat_show(args)
+
+
+def _require_heartbeat_write_scope(coral_dir, island_id: str | int | None) -> None:
+    """Reject ambiguous heartbeat mutations from aggregate multi-island views."""
+    coral_dir = Path(coral_dir)
+    if island_id is None and (coral_dir / "islands").exists():
+        print(
+            "Error: heartbeat changes in a multi-island run must be made from "
+            "an agent worktree with a valid .coral_island breadcrumb.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 def _cmd_heartbeat_show(args: argparse.Namespace) -> None:
@@ -87,6 +100,7 @@ def _cmd_heartbeat_set(args: argparse.Namespace) -> None:
         getattr(args, "task", None),
         getattr(args, "run", None),
     )
+    _require_heartbeat_write_scope(coral_dir, island_id)
     agent_id = read_agent_id()
     name = args.name
     every = args.every
@@ -210,6 +224,7 @@ def _cmd_heartbeat_remove(args: argparse.Namespace) -> None:
         getattr(args, "task", None),
         getattr(args, "run", None),
     )
+    _require_heartbeat_write_scope(coral_dir, island_id)
     agent_id = read_agent_id()
     name = args.name
 
@@ -253,6 +268,7 @@ def _cmd_heartbeat_reset(args: argparse.Namespace) -> None:
         getattr(args, "task", None),
         getattr(args, "run", None),
     )
+    _require_heartbeat_write_scope(coral_dir, island_id)
     agent_id = read_agent_id()
 
     config_path = coral_dir / "config.yaml"
