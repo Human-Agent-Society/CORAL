@@ -17,7 +17,7 @@ agents:
 Or override at launch:
 
 ```bash
-coral start -c task.yaml --agents 4
+coral start -c task.yaml agents.count=4
 ```
 
 ### Mix-and-match runtimes
@@ -53,6 +53,83 @@ Empty fields on an assignment inherit from the top-level `agents.*` defaults
 
 Mix-and-match runs require `run.session=tmux` or `run.session=local` —
 `run.session=docker` is single-runtime only.
+
+## Multi-island runs
+
+Multi-island mode splits a multi-agent run into isolated islands. Agents on the
+same island share attempts, notes, skills, heartbeat state, and roles. Agents
+on different islands cannot directly see each other's shared state from inside
+their worktrees, so each island can explore a different region of the solution
+space without immediately converging on the same ideas.
+
+```yaml
+agents:
+  count: 4
+
+islands:
+  count: 2
+```
+
+Or override at launch:
+
+```bash
+coral start -c task.yaml agents.count=4 islands.count=2
+```
+
+`islands.count` must be no larger than the total agent count. With
+`agents.assignments`, the total is the sum of all assignment `count` values.
+
+CORAL partitions agents round-robin and prefixes IDs by birth island. A
+four-agent, two-island run starts as:
+
+```
+island 0: 0-agent-1, 0-agent-2
+island 1: 1-agent-1, 1-agent-2
+```
+
+The prefix is the birth island, not necessarily the current island. If
+migration later moves `1-agent-2` to island 0, it keeps the ID `1-agent-2`.
+
+### Island-scoped CLI behavior
+
+From inside an agent worktree, CORAL reads `.coral_island` and scopes commands
+to that agent's current island:
+
+```bash
+coral status          # current island's agents and leaderboard
+coral log             # current island's attempts
+coral notes --recent  # current island's notes
+coral skills          # current island's skills
+coral heartbeat       # current island's heartbeat config
+```
+
+From outside an agent worktree, read-only commands aggregate across islands so
+operators can inspect the whole run. Mutating heartbeat commands must be run
+from an agent worktree so CORAL knows which island to update.
+
+### Migration
+
+Migration is enabled by default when `islands.count > 1`. A migration cycle
+selects strong agents from their current islands and moves up to
+`migration.max_per_cycle` agents without worsening island roster balance.
+
+```yaml
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 50
+    rank_window: 20
+    min_evals: 3
+    dest_weighting: score     # score | uniform | round_robin
+    max_per_cycle: 2
+    notify_island: true
+```
+
+When an agent migrates, its role, per-agent heartbeat config, attempts, and
+eval logs move with it. Notes and skills stay on the source island as
+island-local knowledge. The agent's worktree symlinks and `.coral_island`
+breadcrumb are repointed to the destination island.
 
 #### Full task.yaml example
 
@@ -205,4 +282,3 @@ The dashboard shows:
 - Attempt history with agent filtering
 - Notes and skills browsers
 - Live agent logs
-

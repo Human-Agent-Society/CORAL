@@ -39,6 +39,17 @@ agents:
       every: 10
       global: true
 
+islands:
+  count: 1
+  migration:
+    enabled: true
+    every: 50
+    rank_window: 20
+    min_evals: 3
+    dest_weighting: score
+    max_per_cycle: 2
+    notify_island: true
+
 sharing:
   attempts: true
   notes: true
@@ -115,6 +126,69 @@ You can also define custom heartbeat actions with a prompt:
 ```bash
 coral heartbeat set review --every 5 --prompt "Review your approach and consider alternatives."
 ```
+
+## `islands` section
+
+Multi-island mode partitions a run into isolated agent groups. Agents on the
+same island share attempts, notes, skills, heartbeat state, roles, and logs.
+Agents on different islands evolve independently until migration moves an
+agent between islands.
+
+```yaml
+agents:
+  count: 4
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 50
+    rank_window: 20
+    min_evals: 3
+    dest_weighting: score
+    max_per_cycle: 2
+    notify_island: true
+```
+
+You can also enable it from the command line:
+
+```bash
+coral start -c task.yaml agents.count=4 islands.count=2
+```
+
+`islands.count` defaults to `1`, which preserves the normal single-island
+layout. When `islands.count > 1`, the total number of agents must be at least
+the number of islands. With `agents.assignments`, the total agent count is the
+sum of all assignment counts.
+
+CORAL distributes agents round-robin across islands and rewrites IDs with a
+birth-island prefix, for example `0-agent-1`, `0-agent-2`, `1-agent-1`,
+`1-agent-2`. The prefix records where the agent started; after migration, the
+agent may live on a different island.
+
+From inside an agent worktree, CLI commands such as `coral status`,
+`coral log`, `coral notes`, `coral skills`, `coral wait`, `coral checkout`,
+and `coral heartbeat` are scoped to that agent's current island. From outside
+an agent worktree, read commands aggregate across islands.
+
+### Migration options
+
+Migration is ignored when `islands.count == 1`.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `count` | int | `1` | Number of isolated islands. Must be `<=` total agents. |
+| `migration.enabled` | bool | `true` | Enable agent migration between islands. |
+| `migration.every` | int | `50` | Run a migration cycle every N finalized real evals. |
+| `migration.rank_window` | int | `20` | Rank candidate agents by their best score over the last N real evals. Must be `<= every`. |
+| `migration.min_evals` | int | `3` | Minimum real evals an agent needs before it can migrate. |
+| `migration.dest_weighting` | string | `"score"` | Destination policy: `score`, `uniform`, or `round_robin`. |
+| `migration.max_per_cycle` | int | `2` | Maximum migrations to apply in one cycle. |
+| `migration.notify_island` | bool | `true` | Drop an arrival note on the destination island when an agent migrates. |
+
+When an agent migrates, its role, per-agent heartbeat config, attempts, and
+eval logs move with it. Notes and skills stay on the source island as
+island-local knowledge.
 
 ## `sharing` section
 

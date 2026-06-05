@@ -67,6 +67,11 @@ source = "vcs"
 [tool.hatch.build.hooks.vcs]
 version-file = "coral/_version.py"
 
+[tool.hatch.build]
+exclude = [
+    "/examples",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["coral"]
 
