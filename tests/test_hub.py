@@ -65,6 +65,20 @@ def test_agent_filter():
         assert len(agent1) == 2
 
 
+def test_agent_filter_scans_migrated_agent_current_island():
+    """A prefixed agent id is birth lineage, not current island after migration."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        for island in ("0", "1"):
+            (coral_dir / "islands" / island / "attempts").mkdir(parents=True)
+
+        write_attempt(coral_dir, _make_attempt("after-move", agent="0-agent-1"), island_id="1")
+
+        assert get_agent_attempts(coral_dir, "0-agent-1", island_id="0") == []
+        assert len(get_agent_attempts(coral_dir, "0-agent-1", island_id="1")) == 1
+        assert len(get_agent_attempts(coral_dir, "0-agent-1")) == 1
+
+
 def test_search():
     with tempfile.TemporaryDirectory() as d:
         write_attempt(d, _make_attempt("a", title="learning rate tuning"))

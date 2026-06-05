@@ -198,20 +198,12 @@ def get_agent_attempts(
     """Get all attempts from a specific agent.
 
     When ``island_id`` is None in multi-island mode, scans every island.
-    If the agent id is partition-prefixed (``0-agent-1``) the island is
-    derived from the prefix and only that island is read.
+    Partition-prefixed agent ids (``0-agent-1``) encode the agent's birth
+    island, not necessarily its current island after migration, so the prefix
+    must not be used for current-location routing.
     """
     coral_dir = Path(coral_dir)
     if island_id is None and (coral_dir / "islands").exists():
-        from coral.hub._island import island_id_from_agent_id
-
-        routed_island = island_id_from_agent_id(agent_id)
-        if routed_island is not None:
-            return [
-                a
-                for a in read_attempts(coral_dir, island_id=routed_island)
-                if a.agent_id == agent_id
-            ]
         attempts: list[Attempt] = []
         for view_root in _all_view_attempt_roots(coral_dir):
             attempts.extend(

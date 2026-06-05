@@ -113,26 +113,15 @@ def read_agent_heartbeat(
     """Read local heartbeat actions for an agent.
 
     Routing rules in multi-island mode (``coral_dir/islands/`` exists):
-    - If the agent id is partition-prefixed (``0-agent-1``) the prefix is
-      used to pick the island — partitioning writes one heartbeat file
-      per agent, and the prefix is the only authoritative island marker.
-    - If the agent id is bare (``agent-N`` or ``"unknown"`` from the CLI
-      running outside a worktree) the read fans out across every island
-      and actions are merged (deduped by ``(name, every, trigger)``).
-      Same-name entries on multiple islands collapse; a per-island
-      override still surfaces because it differs on ``every``/``trigger``.
+    - If ``island_id`` is provided, read only that island.
+    - If ``island_id`` is omitted, fan out across every island and merge
+      matches. The prefix in ids like ``0-agent-1`` is birth lineage, not
+      current location after migration.
     """
     coral_dir = Path(coral_dir)
     if island_id is not None or not (coral_dir / "islands").exists():
         return _read_actions(_heartbeat_path(coral_dir, agent_id, island_id))
 
-    from coral.hub._island import island_id_from_agent_id
-
-    routed = island_id_from_agent_id(agent_id)
-    if routed is not None:
-        return _read_actions(_heartbeat_path(coral_dir, agent_id, island_id=routed))
-
-    # Bare agent id (no island prefix) in multi-island mode — fan out.
     from coral.hub._island import all_view_roots
 
     merged: list[dict] = []

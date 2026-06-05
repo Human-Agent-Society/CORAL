@@ -1,12 +1,12 @@
 # Multi-Island CORAL with Agent Migration
 
-**Status:** Design draft — knockout deferred to follow-up.
+**Status:** Implemented v1 design — knockout deferred to follow-up.
 **Author:** brainstormed with Claude.
 **Scope:** v1 = islands + migration. v2 (TODO) = knockout-and-respawn.
 
 ## 1. Goal
 
-Run multiple isolated CORAL "islands" inside a single run. Each island is a self-contained shared-knowledge space (its own attempts, notes, skills, roles); agents on an island only ever read their own island's state, with the same primitives they use today. Periodically, the **best-performing agent on one island migrates** to another island, carrying its full contribution (role, attempts, notes, skills) so that good work cross-pollinates without erasing the diversity that island isolation creates.
+Run multiple isolated CORAL "islands" inside a single run. Each island is a self-contained shared-knowledge space (its own attempts, notes, skills, roles); agents on an island only ever read their own island's state, with the same primitives they use today. Periodically, the **best-performing agent on one island migrates** to another island, carrying its agent identity and eval history (role, heartbeat, attempts, eval logs) while notes and skills remain island-local shared knowledge.
 
 The framework's job is selection and bookkeeping. The agents' job is the same as today: read shared state, do work, write shared state. Migration is a manager-side mechanism the agents do not need to understand explicitly.
 
@@ -14,7 +14,7 @@ The framework's job is selection and bookkeeping. The agents' job is the same as
 
 - **Knockout-and-respawn** is deferred. v1 ships migration only. The directory layout and config schema are designed so knockout slots in later without a migration.
 - **Cross-island reading** by agents during normal work (e.g. `coral log --island 2` from inside island 0). The infrastructure could support it, but it adds another mental model surface and the user prefers selection-only for v1.
-- **Skill conflict resolution** beyond filename renaming. If two islands' skills with the same name end up co-resident on the destination, we rename the migrant; we do not try to merge.
+- **Migrating notes or skills authored by the agent.** v1 keeps notes and skills on the source island as island-local shared knowledge. Cross-island note/skill copying can be added later if it proves useful.
 - **Cross-run migration** (between separate `coral start` invocations). All islands live inside one run.
 - **Heterogeneous islands** (different runtimes / models per island). Existing `agents.assignments` mix-and-match remains unchanged; islands are partitions of the resolved agent pool.
 
@@ -24,11 +24,11 @@ The arxiv reference (2506.13131 — AlphaEvolve) cites "island-based population 
 
 CORAL is meaningfully different from FunSearch:
 
-- The "individual" is not just a program. It is an **agent + their accumulated context** (notes, skills, role, attempts).
+- The "individual" is not just a program. It is an **agent + its mutable role, cadence, attempt history, and runtime context**.
 - Knowledge accumulates in the shared `.coral/public/` directory over the lifetime of a run. Wiping that knowledge on a few bad rolls is wasteful in a way it is not in FunSearch.
 - Agents read shared state through `coral log`, `coral show`, `coral notes`, `coral skills`, and reading files under `.claude/`. Any new mechanism that does not flow through these primitives is invisible to them.
 
-The design below treats the **agent's full contribution** as the migrating unit and routes everything through CORAL's existing reading surface.
+The design below treats the **live agent identity and eval history** as the migrating unit and routes all visible state through CORAL's existing reading surface.
 
 ## 4. Architecture
 
@@ -61,11 +61,8 @@ run_dir/
 │   │       ├── eval_logs/
 │   │       ├── logs/
 │   │       ├── eval_count            # per-island counter (NEW)
-│   │       ├── _agent_seq            # next agent slot # (NEW; see §4.4)
 │   │       └── .git                  # per-island checkpoint repo (NEW; see §4.3)
 │   ├── eval_count                    # GLOBAL counter (kept for migration cadence)
-│   ├── migration_cursor              # cadence + RR state (NEW; see §6.4)
-│   ├── migration_log.jsonl           # append-only history (NEW; see §8.2)
 │   ├── config.yaml
 │   └── config_dir
 ├── repo/                             # cloned source repo, single shared object DB
@@ -135,7 +132,7 @@ Today, agent IDs are `agent-1`, `agent-2`, etc. — flat per run. In multi-islan
 
 When `0-agent-2` migrates from island 0 to island 1, it **keeps its `0-agent-2` ID** — the prefix is the *birth-island lineage marker*, not the current location. This makes migration history visible: the existence of `0-agent-2` on island 1's leaderboard is itself the signal that "this agent came from island 0."
 
-The replacement agent that island 0 spawns to fill the vacated slot gets a fresh ID with the next available sequence number for that island (e.g. `0-agent-3`, then `0-agent-4`, ...). Sequence numbers are tracked in a per-island file `islands/<id>/_agent_seq` (a small text counter, written atomically).
+v1 does not spawn replacement agents, so no per-island agent-id sequence state is needed after startup.
 
 In single-island mode (`islands.count == 1`), IDs stay `agent-1`, `agent-2`, ... unchanged.
 
@@ -253,90 +250,50 @@ Validation in `IslandsConfig.__post_init__`:
 
 ### 6.1 What moves
 
-A migration moves **one agent's full contribution** from a source island to a destination island. The migrating unit comprises:
+A migration **moves one live agent identity** from a source island to a destination island. The moving unit comprises:
 
 | Artifact | Source path | Destination path | Collision behavior |
 |---|---|---|---|
-| **Role file** | `islands/<src>/roles/<aid>.md` | `islands/<dst>/roles/<aid>.md` | Cannot collide — `<aid>` is globally unique. |
-| **Attempts authored by `<aid>`** | `islands/<src>/attempts/<hash>.json` (filtered by `agent_id == aid`) | `islands/<dst>/attempts/<hash>.json` | Cannot collide — commit hashes are globally unique in the shared object DB. |
-| **Notes authored by `<aid>`** | `islands/<src>/notes/**/*.md` filtered by frontmatter `creator: <aid>` | `islands/<dst>/notes/<original-relative-path>.md` | On filename collision, prefix with `<aid>-`. |
-| **Skills authored by `<aid>`** | `islands/<src>/skills/<name>/` filtered by SKILL.md frontmatter `creator: <aid>` | `islands/<dst>/skills/<name>/` | On directory collision, rename to `<name>-from-island-<src>/`. |
+| **Role file** | `islands/<src>/roles/<aid>.md` | `islands/<dst>/roles/<aid>.md` | Cannot collide in normal operation because `<aid>` is globally unique. |
+| **Heartbeat config** | `islands/<src>/heartbeat/<aid>.json` | `islands/<dst>/heartbeat/<aid>.json` | Existing destination file is replaced. |
+| **Attempts authored by `<aid>`** | `islands/<src>/attempts/<hash>.json` and `*.jsonl` records filtered by `agent_id == aid` | `islands/<dst>/attempts/<hash>.*` | Existing destination file is replaced. |
+| **Eval logs for moved attempts** | `islands/<src>/eval_logs/<hash>/` | `islands/<dst>/eval_logs/<hash>/` | Existing destination directory is replaced. |
 
 What does **not** move:
 
-- The agent's session ID (reset on arrival; new session starts fresh on the destination worktree).
-- The agent's heartbeat config (re-seeded from `default_local_actions(config)` on arrival, same as a fresh agent).
-- `eval_logs/` (stays on source — those are per-attempt grader artifacts and the attempts that reference them are already being copied; the eval_log path becomes a cross-island reference but `coral show` does not currently read eval_logs, so no breakage).
-- The agent's runtime process (killed on source, fresh process spawned on destination).
+- Notes and skills. They stay on the source island as island-local shared knowledge.
+- The source island's other agents, attempts, logs, notes, skills, roles, and heartbeat files.
+- The agent id prefix. `0-agent-1` keeps the `0-` birth-lineage prefix even after moving to island 1.
 
-**Source island retains everything.** Migration is a *copy*, not a move, for all four artifact types. This preserves historical reference on the source island so other source-side agents can still see "agent-X's old work." The agent process is the only thing that strictly moves.
+The agent process is interrupted, its worktree shared-state symlinks and `.coral_island` breadcrumb are repointed at the destination island, runtime permission settings are refreshed, and the manager restarts the same agent on the destination. v1 does not spawn a replacement agent on the source island.
 
 ### 6.2 Author attribution
 
-The migration mechanism needs to filter notes and skills by author. Today:
-
-- **Attempts** already carry `agent_id` — no change needed.
-- **Notes** are markdown with YAML frontmatter. `coral/hub/notes.py` already parses a `creator:` field from each note's frontmatter — we reuse it. Notes with `creator: <aid>` are eligible to migrate; notes without `creator:` (or with mismatched values) stay on the source island.
-- **Skills** have a SKILL.md with frontmatter. `coral/hub/skills.py` already reads a `creator:` field — we reuse it. Skills with `creator: <aid>` migrate; skills without `creator:` are treated as bundled-framework skills (deep-research, librarian, etc., which are seeded per-island already) and **not migrated**.
-
-The bundled `coral/template/skills/*/SKILL.md` files will be audited as part of Phase 1 to confirm none have a `creator:` field — those that do will be cleaned up so they don't accidentally migrate.
-
-**Reliability of `creator:` stamping is a soft dependency.** If an agent writes a note via `Write` directly without a `creator:` field, it will not migrate. Mitigations:
-
-- Bundled `librarian` / `skill-creator` subagent templates and the heartbeat `consolidate` prompt are updated (Phase 1) to instruct stamping `creator: <agent_id>` in frontmatter — agents already know their `agent_id` from the `.coral_agent_id` breadcrumb.
-- A small helper command `coral note new <slug>` (Phase 1) is offered: it takes a body on stdin, writes the file under the current island's `notes/` with `creator:` and `created:` pre-stamped. Optional — agents that don't use it just don't get migration for their notes.
-
-We deliberately do not auto-stamp notes via a post-write hook: that adds invisible behavior to a file-write the agent thinks it controls, and creates trouble if the agent expected the file content to match exactly what they wrote.
-
-### 6.2.1 Filter helpers
-
-Add to `coral/hub/notes.py`:
-
-```python
-def notes_by(coral_dir: Path, island_id: str | None, agent_id: str) -> list[Path]:
-    """Return absolute paths of notes whose frontmatter `creator` matches agent_id."""
-```
-
-Add to `coral/hub/skills.py`:
-
-```python
-def skills_by(coral_dir: Path, island_id: str | None, agent_id: str) -> list[Path]:
-    """Return absolute paths of skill directories whose SKILL.md frontmatter `creator` matches agent_id."""
-```
-
-Both honor the multi-island layout via `island_root()`.
+Attempts already carry `agent_id`, which is enough for v1 migration to move the correct attempt records and matching eval logs. Notes and skills may still carry creator metadata for auditing and future features, but migration does not consume that metadata in v1.
 
 ### 6.3 Selection
 
 Every `islands.migration.every` global evals (read from `.coral/eval_count`), the manager runs **one migration cycle**:
 
-1. **Score each island.** For each island, compute `island_score[i] = max(score for attempt in islands/<i>/attempts/* with score is not None and submitted within last rank_window evals on that island)`. Treat unscored islands as `-inf` (maximize) or `+inf` (minimize).
-2. **Pick a source island.** The source is the island with the *highest* island score (for `direction = maximize`).
-3. **Pick the migrating agent.** On the source island, find the agent with the highest `max(score)` over their last `rank_window` attempts. Filter to agents with at least `min_evals` finalized attempts. Ties broken by most-recent-best-score timestamp.
-4. **Pick the destination island.** Excluding the source, rank the remaining islands by `island_score` (best first), then weight by `dest_weighting`:
-    - `score`: rank-based, rescue-biased. The lowest-ranked (worst) destination gets the highest weight: `weight[i] = rank[i]` where `rank[i] = 1` for the best remaining and `N-1` for the worst. Probability `∝ weight[i]`. Robust to score magnitude, sign, and direction.
-    - `uniform`: equal probability.
-    - `round_robin`: rotate through destinations in island-id order, persisted via `.coral/migration_rr_cursor`.
-5. **Cap.** At most `max_per_cycle` migrations per cycle (default 1). If multiple cycles fall on the same eval boundary (shouldn't happen but defensive), still cap to `max_per_cycle`.
+1. For each source island, consider current residents from the live roster, not from historical attempt locations.
+2. Pick that island's best eligible resident using the best score over its last `rank_window` real attempts, requiring at least `min_evals` real attempts.
+3. Assign each candidate a non-source destination via `dest_weighting`:
+    - `score`: weight destinations by their current best score, direction-aware.
+    - `uniform`: equal probability across non-source islands.
+    - `round_robin`: deterministic shift by cycle index.
+4. Select a final subset of at most `max_per_cycle` migrations that does not worsen per-island live-agent count balance. On an already-balanced two-island run, `max_per_cycle=2` permits a swap; `max_per_cycle=1` skips one-way moves that would create imbalance.
 
 Edge cases:
 
 - **Fewer than 2 islands** (e.g. `islands.count == 1` reached via override): migration is skipped silently.
-- **No eligible candidate** (all source-island agents have fewer than `min_evals` attempts): migration is skipped this cycle, retried next cycle.
+- **No eligible candidate** (all source-island agents have fewer than `min_evals` attempts): that source island contributes no candidate for this cycle.
 - **Pending attempt in flight**: see §6.6.
 
 ### 6.4 Cadence and trigger
 
 Migration cycles are triggered from inside `AgentManager.monitor_loop`, on the same tick that already checks for new attempts and dead agents. Each tick:
 
-```python
-global_evals = read_global_eval_count(coral_dir)
-if global_evals >= self._next_migration_at:
-    self._run_migration_cycle()
-    self._next_migration_at = global_evals + config.islands.migration.every
-```
-
-The `_next_migration_at` cursor is initialized to `config.islands.migration.every` at startup (so the first migration fires after `every` evals, not at startup) and persisted to `.coral/migration_cursor` so resume picks up where it left off.
+`MigrationRunner` tracks the last completed eval boundary in memory. On resume, it starts from the current global counter and fires only after the configured interval is crossed.
 
 ### 6.5 Process lifecycle
 
@@ -344,107 +301,43 @@ A migration cycle is conceptually:
 
 ```
 1. Quiesce migrating agent on source.
-2. Copy artifacts from source island to destination island.
-3. Stop source agent's process.
-4. Start fresh process on destination worktree (same agent_id).
-5. Spawn replacement agent on source.
-6. (Optional) Notify destination island.
+2. Move per-agent artifacts from source island to destination island.
+3. Repoint the same worktree at the destination island.
+4. Refresh runtime permissions and restart the same agent_id.
+5. (Optional) Write an arrival note on the destination island.
 ```
 
 Concretely, in `AgentManager`:
 
 ```python
-def _run_migration_cycle(self) -> None:
-    cycle = self._select_migration_candidate()
-    if cycle is None:
+def _apply_migration(candidate: MigrationCandidate) -> None:
+    if agent_is_paused_or_has_pending_attempt(candidate.agent_id):
+        defer_for_next_cycle(candidate)
         return
-    src_island, dst_island, aid = cycle
-
-    # 1. Wait for any pending attempt from this agent to finalize.
-    self._wait_for_pending(aid, timeout=self.config.agents.grader_pending_max_age)
-
-    # 2. Copy artifacts (idempotent, atomic per-file via tmp+rename).
-    copy_agent_contribution(
-        coral_dir=self.paths.coral_dir,
-        agent_id=aid,
-        src_island=src_island,
-        dst_island=dst_island,
-    )
-
-    # 3. Stop source process. Use SIGINT first to save session, fall back to SIGTERM.
-    src_handle = self._find_handle(aid)
-    src_handle.stop()
-
-    # 4. Rebuild the worktree in place: `git worktree remove agents/<aid>` then
-    #    `git worktree add agents/<aid> coral/<aid>`. Path is stable; only the
-    #    symlinks (via setup_shared_state) and .coral_island breadcrumb change
-    #    to target the destination island. Per-agent counters (eval count,
-    #    score history, plateau anchors) are reset on arrival — fresh start.
-    new_handle = self._setup_and_start_agent(
-        agent_id=aid,
-        island_id=dst_island,
-        prompt=self._migration_arrival_prompt(src_island, dst_island),
-        prompt_source="migration:arrival",
-    )
-    self._replace_handle(aid, new_handle)
-
-    # 5. Spawn replacement on source.
-    replacement_aid = self._next_agent_id_for_island(src_island)  # e.g. "0-agent-3"
-    self._setup_and_start_agent(
-        agent_id=replacement_aid,
-        island_id=src_island,
-        prompt=self._replacement_intro_prompt(src_island, aid),
-        prompt_source="migration:replacement",
-    )
-
-    # 6. Notify destination island agents (other than the migrant itself).
-    if self.config.islands.migration.notify_island:
-        for other_handle in self._island_handles(dst_island):
-            if other_handle.agent_id == aid:
-                continue
-            self._interrupt_and_resume(
-                self._handle_index(other_handle.agent_id),
-                self._migration_neighbor_prompt(aid, src_island),
-                prompt_source="migration:neighbor",
-            )
+    interrupt_live_handle(candidate.agent_id)
+    _move_agent_files(coral_dir, candidate.agent_id, src=candidate.src_island, dst=candidate.dst_island)
+    repoint_shared_state(worktree, coral_dir, shared_dir_name, new_island_id=candidate.dst_island)
+    _refresh_runtime_settings(..., island_id=candidate.dst_island)
+    _swap_spec_island(candidate.agent_id, new_island_id=candidate.dst_island)
+    _setup_and_start_agent(candidate.agent_id, island_id=candidate.dst_island, prompt=arrival_prompt)
 ```
 
 The migrant arrival prompt (terse, hand-written):
 
-> "You moved from island {src} to island {dst}. Your role, attempts, notes, and skills came with you. The other agents here are working on the same task but with different history. Run `coral log` and `coral notes` to see their work; carry on from where you left off."
-
-The neighbor prompt:
-
-> "Agent {aid} just joined this island from island {src} — they brought their attempts, notes, and skills with them. Run `coral log` and `coral notes` to see their work, then decide whether their approach changes what you should be doing."
-
-The replacement prompt (for the rookie spawned on source):
-
-> "You are a fresh agent on island {src}. Your predecessor was the strongest contributor here and migrated to another island. Read the existing notes, attempts, and skills on this island to catch up, then start contributing."
+> "You moved from island {src} to island {dst}. Your role, heartbeat cadence, attempts, and eval logs moved with you. Notes and skills remain island-local, so run `coral log` and `coral notes` to understand your new island before continuing."
 
 ### 6.6 Pending attempts
 
-If the migrating agent has a pending attempt in the grader queue when migration triggers:
-
-- **Wait for it to land** (up to `agents.grader_pending_max_age` seconds — we already have this knob).
-- The finalized attempt is then included in the artifacts copied to the destination.
-- If it times out before finalizing, log a warning and skip the wait — the pending attempt stays on the source island (its `agent_id` won't match anyone live there, but that's harmless; the leaderboard record is still valid).
+If the migrating agent has a pending attempt in the grader queue when migration triggers, the manager defers that candidate. Deferred candidates are retried at the next migration cycle and count against the same final `max_per_cycle` and roster-balance selection as fresh candidates.
 
 ### 6.7 Collision handling
 
-- **Notes filename collision** (`notes/<x>.md` exists on destination): rename the migrant's copy to `notes/<aid>-<x>.md` to preserve both. Do not overwrite — even if both notes are by the same agent (impossible in v1 since `<aid>` is unique, but defensive).
-- **Skills directory collision** (`skills/<name>/` exists on destination): rename the migrant's directory to `skills/<name>-from-island-<src>/`. If SKILL.md has a `name:` field in frontmatter, update it to match the new directory name (otherwise leave SKILL.md unchanged; `list_skills` falls back to the directory name).
-- **Attempt JSON collision** (`attempts/<hash>.json` exists on destination): impossible in practice — commit hashes are globally unique. If it ever happened (e.g. corruption), prefer the existing destination copy and log a warning.
-- **Role file collision**: impossible — `<aid>` is globally unique.
+- **Role/heartbeat/attempt/eval-log collision**: destination state is replaced. This keeps retries idempotent and makes the most recent migration attempt authoritative.
+- **Notes/skills collision**: not applicable in v1 because notes and skills do not migrate.
 
 ### 6.8 Atomicity
 
-Migration is **not transactional**. If we crash mid-copy, partial state on the destination island is possible. Mitigations:
-
-- **Per-file atomicity**: every file write goes through tmp + rename (already the pattern in `hub.attempts.write_attempt`). Notes and skills get the same treatment.
-- **Idempotent retry**: a migration cycle that crashed mid-way leaves a `migration_in_progress` marker file at `.coral/migration_in_progress`. On manager startup (including resume), if this marker exists, the manager retries the migration step it was on (file copies are idempotent). The marker is removed only after the destination process is successfully started.
-- **Source agent already stopped**: if the source process was stopped before the crash but the destination process never started, the next manager tick observes a missing handle and treats it as a dead agent — the existing `_restart_agent` path will resume the agent on its current worktree. To avoid resurrecting the source, the marker file also records the post-migration island; the dead-agent restart path consults it.
-
-For v1 we accept that a sufficiently bad crash mid-migration may require manual cleanup. Migration is rare (every `every >= 50` evals) so the exposure window is small.
+Migration is **not transactional**. File moves are idempotent and replace existing destinations, but v1 does not persist a migration-in-progress marker or replay log. A crash in the middle of `_apply_migration` may require manual cleanup.
 
 ## 7. Agent-side experience
 
@@ -456,13 +349,13 @@ For v1 we accept that a sufficiently bad crash mid-migration may require manual 
 - `coral show <hash>` works for any commit in the shared object DB — so even if a migrant brings in attempts from another island, `coral show` works.
 - `coral notes`, `coral skills` — read island-local state.
 - `coral status` — manager-level command; in multi-island mode renders per-island sections (see §8.1). Available from inside or outside a worktree.
-- The arrival of a migrant manifests as: new attempts in `coral log`, new notes in `notes/`, new skills in `skills/`, plus a heartbeat-style prompt injected by the manager (§6.5).
+- The arrival of a migrant manifests as the agent appearing in that island's `coral log`, plus an optional arrival note written by the manager (§6.5).
 
 ### 7.2 Provenance hint in CORAL.md
 
 The generated CORAL.md gets a one-paragraph note (only in multi-island runs):
 
-> "You are working on island `<island_id>` in a multi-island run. Other islands exist with their own attempts, notes, and skills, but you cannot see their state directly. Periodically, the strongest-performing agent on one island migrates to another, bringing their attempts, notes, and skills with them. You may notice teammates appearing or vanishing — this is normal."
+> "You are working on island `<island_id>` in a multi-island run. Other islands exist with their own attempts, notes, and skills, but you cannot see their state directly. Periodically, a strong agent may migrate between islands; its role, heartbeat cadence, attempts, and eval logs move with it, while notes and skills remain island-local. You may notice teammates appearing or vanishing — this is normal."
 
 That's the entire surface area. No new commands, no new file paths to memorize.
 
@@ -470,27 +363,25 @@ That's the entire surface area. No new commands, no new file paths to memorize.
 
 ### 8.1 New / modified commands
 
-- `coral log [--island N] [--all-islands]`
-   - With `--island N`: read leaderboard from `islands/N/attempts/`. Available from anywhere (does not require an agent worktree).
-   - With `--all-islands`: stack per-island leaderboards. Default for `coral log` invoked from a non-worktree cwd.
-   - Without flags from inside a worktree: read the current island's leaderboard (existing behavior, just with island-aware path resolution).
+- `coral log`
+   - From inside an agent worktree: read the current island's leaderboard via the `.coral_island` breadcrumb.
+   - From outside a worktree: aggregate across all islands.
 - `coral status`
    - Multi-island runs render per-island sections. Each section shows that island's agents, their attempts, and their best score. A "Global best" header shows the across-island maximum.
 - `coral runs [--all] [--task NAME]`
    - Unchanged. The run dir contains the islands; `coral runs` lists run dirs.
-- `coral show <hash> [--island N]`
-   - `--island N` overrides the JSON-lookup island. Without it, scans all islands' attempts dirs (since hashes are globally unique).
-- `coral notes [--island N]`
-- `coral skills [--island N]`
+- `coral show <hash>`
+   - From inside a worktree, resolves within the current island where applicable. From outside, scans all islands' attempts dirs.
+- `coral notes`
+- `coral skills`
+   - Same scoped-vs-aggregate behavior as `coral log`.
 - `coral heartbeat [set|remove|reset]`
    - Resolves `island_id` from the worktree breadcrumb, same as `coral eval`.
 
 ### 8.2 Web UI
 
-- Per-island leaderboard tabs (or columns).
-- Per-island agent status.
-- Global header: "Best score across all islands."
-- A "Migration history" panel (small, collapsed by default) showing the cycle history: `[eval #N] 0-agent-2 migrated from island 0 to island 1`. Sourced from `.coral/migration_log.jsonl` (new file, append-only).
+- Dashboard API endpoints aggregate attempts, logs, agent status, skills, notes, and eval count across island roots.
+- Per-island tabs and migration history are follow-up UI work; v1 does not persist a `migration_log.jsonl`.
 
 ### 8.3 `coral validate`
 
@@ -500,7 +391,7 @@ That's the entire surface area. No new commands, no new file paths to memorize.
 
 - **Single-island runs** (`islands.count == 1` or `islands` block omitted): behavior is exactly as today. No `islands/` dir. No agent-id prefix. No new breadcrumbs. No grader daemon globbing changes (the daemon detects the missing `islands/` dir and falls back to the single attempts dir).
 - **Resume of a single-island run**: works as today. `coral resume` reads the existing layout and never sees the multi-island code paths.
-- **Resume of a multi-island run**: `reconstruct_paths` extends to discover islands by scanning `coral_dir / "islands"`. The migration cursor is read from `.coral/migration_cursor`. Pending attempts left in `islands/<id>/attempts/` are picked up by the daemon as today.
+- **Resume of a multi-island run**: `reconstruct_paths` extends to discover islands by scanning `coral_dir / "islands"`. Pending attempts left in `islands/<id>/attempts/` are picked up by the daemon as today.
 - **Existing tasks**: every task in `examples/` works unchanged in single-island mode. Adding `islands.count: 4` to a task's `task.yaml` is the only change needed to enable multi-island.
 
 ## 10. Implementation phases
@@ -540,40 +431,37 @@ The implementation breaks into independent phases that can each be a separate PR
 
 ### Phase 5 — Migration cycle
 - `coral/agent/migration.py`: new module containing:
-   - `select_candidate(coral_dir, config) -> tuple[src_id, dst_id, aid] | None`
-   - `copy_agent_contribution(coral_dir, agent_id, src_island, dst_island)`
-   - `MigrationCursor` (persists `_next_migration_at` and round-robin state)
-- `AgentManager._wait_for_pending(aid, timeout)`: new helper that polls until the agent has no pending attempts (or timeout). Reuses `count_agent_pending`.
-- `AgentManager._run_migration_cycle`: orchestrate the lifecycle from §6.5.
-- Migration arrival/neighbor/replacement prompts (constants in `coral/agent/migration.py`).
-- `.coral/migration_cursor`, `.coral/migration_log.jsonl`, and `migration_in_progress` marker for crash recovery.
-- Tests: unit tests for `select_candidate` (each weighting mode), `copy_agent_contribution` (collision handling on notes/skills, idempotency), and a manager-level integration test that triggers one migration cycle in a 2-island fixture.
+   - `select_candidates(...)`
+   - `assign_destinations(...)`
+   - `choose_roster_balanced_subset(...)`
+   - `MigrationRunner`
+- `AgentManager._maybe_run_migration_cycle`: orchestrates the lifecycle from §6.5.
+- Migration arrival notes/prompts.
+- Tests: unit tests for selection, destination weighting, roster-balanced final caps, file moves, and manager-level migration application.
 
 ### Phase 6 — CLI and UI surface
-- `--island` flag on `coral log`, `coral show`, `coral notes`, `coral skills`.
-- `coral status` per-island rendering.
-- Web UI per-island view + migration history panel.
-- Tests: CLI surface tests with `--island` flag; rendering smoke tests.
+- Worktree-scoped CLI reads/writes via `.coral_island`; non-worktree CLI invocations aggregate across islands.
+- `coral status` aggregates multi-island run state.
+- Web API aggregates multi-island attempts/logs/status/events.
+- Explicit `--island` flags and richer per-island Web views are deferred.
 
 ### Phase 7 — Knockout (TODO, separate spec)
-Deferred. The directory layout, config schema (`islands.knockout: {}` slot), and `migration_log.jsonl` plumbing are designed to absorb knockout without further refactor.
+Deferred. The directory layout and config schema are designed to absorb knockout without further refactor.
 
 ## 11. Testing
 
 ### Unit
 - `island_root` resolver: single-island returns `public/`, multi-island returns the right subdir, raises on `island_id=None` in multi-island.
-- `notes_by(agent_id)` / `skills_by(agent_id)`: filter by frontmatter, exclude bundled skills.
-- `select_candidate` for each `dest_weighting` mode and edge cases (1 island, 0 eligible candidates, all-tied scores).
-- `copy_agent_contribution`: collision rename for notes and skills, idempotency (run twice → no duplication), atomicity (mid-copy crash leaves no half-files visible to readers).
-- `MigrationCursor`: persistence across restarts, monotonic increment.
+- `select_candidates` and `assign_destinations` for each `dest_weighting` mode and edge cases (1 island, 0 eligible candidates, all-tied scores).
+- `choose_roster_balanced_subset`: max-per-cycle cap and live-agent count balance.
+- `_move_agent_files`: moves role, heartbeat, attempts (`*.json` and `*.jsonl`), and matching eval logs; idempotent on retry.
 
 ### Integration
 - 2-island fixture: spawn 2 agents per island, run a deterministic mock grader that ramps scores on one island faster than the other, force a migration cycle, verify:
    - The expected agent moves to the expected destination.
-   - Source island has a fresh replacement agent.
-   - Destination island's neighbor receives a heartbeat-style prompt (assert via log inspection).
-   - Migration is recorded in `migration_log.jsonl`.
-- Resume-mid-migration: simulate a crash with `migration_in_progress` marker present; verify `coral resume` retries cleanly without duplicating artifacts.
+   - Source/destination live-agent counts follow the configured cap/balance policy.
+   - Attempts and eval logs follow the migrated agent.
+- Resume after migration: verify worktree breadcrumbs and manager roster restore the current island rather than birth island.
 - Single-island run still passes the existing test suite unchanged (regression gate).
 
 ### End-to-end
@@ -581,19 +469,19 @@ Deferred. The directory layout, config schema (`islands.knockout: {}` slot), and
 
 ## 12. Open questions / future work (knockout TODO)
 
-1. **Knockout-and-respawn**. v2 will add `islands.knockout` config (`every`, `fraction`, `rank_window`). Mechanism: every K global evals, rank islands, eradicate the bottom fraction (wipe `attempts/`, `notes/`, `roles/`, `heartbeat/`; keep `skills/`), seed the eradicated island with a digest from the winner, restart all its agents fresh. Reuses the migration artifact-copy primitive. Same `migration_log.jsonl` extended with knockout entries.
+1. **Knockout-and-respawn**. v2 will add `islands.knockout` config (`every`, `fraction`, `rank_window`). Mechanism: every K global evals, rank islands, eradicate the bottom fraction (wipe `attempts/`, `notes/`, `roles/`, `heartbeat/`; keep `skills/`), seed the eradicated island with a digest from the winner, and restart all its agents fresh.
 2. **Cross-island reading by agents**. Could be added later (`coral log --island N` from inside any worktree) without architectural changes — just expand the CLI's island-id resolution to accept an explicit override. Deferred because it adds a mental-model surface we don't need for v1.
 3. **Per-island grader pools**. v1 shares `grader.parallel.max_workers` across islands. If different islands run vastly different graders (mix-and-match scenario), per-island pools may be useful. Not needed yet.
 4. **Hot island count change**. v1 fixes `islands.count` at run start. Adding/removing islands during a run is out of scope; the resume path validates that the current islands count matches the saved config.
-5. **Migration prompt tuning**. The arrival / neighbor / replacement prompts are hand-written in v1. After a few real runs we should iterate on whether agents respond well to them and whether the neighbor interrupt is too disruptive (and might be better as a passive note instead).
-6. **Skill creator-attribution discipline.** Migration filters skills by SKILL.md frontmatter `creator: <agent_id>`. v1 ships with bundled subagent prompts and a `coral note new` helper that stamp this for the agent (see §6.2), but agents that author skills via raw `Write` calls without stamping `creator:` will have those skills silently excluded from migration. After a few real runs we should check whether this is reliable enough or whether we need stronger enforcement (e.g. a settings hook that rewrites SKILL.md on close).
+5. **Migration prompt tuning.** The arrival prompt/note is hand-written in v1. After a few real runs we should iterate on whether agents respond well to it.
+6. **Skill/note migration.** v1 leaves notes and skills island-local. If cross-island knowledge transfer is too weak, a later version can add creator-filtered note/skill copy semantics.
 
 ## 13. Glossary
 
 - **Island** — an isolated subtree under `.coral/islands/<id>/` with its own attempts, notes, skills, roles, heartbeat config, and eval counter. Agents on an island only ever read state from their own island.
-- **Migration** — copying one agent's full contribution (role + attempts + notes + skills) from a source island to a destination island, then physically moving the agent's process to the destination and spawning a replacement on the source.
+- **Migration** — moving one live agent identity (role + heartbeat + attempts + eval logs) from a source island to a destination island, then restarting that same agent on the destination.
 - **Migrating agent** — the strongest-scoring agent on the source island in this cycle.
 - **Destination island** — chosen by `dest_weighting`, biased toward weaker islands by default.
-- **Replacement agent** — a fresh, blank-roled rookie spawned on the source island to fill the slot vacated by the migrant.
+- **Replacement agent** — deferred v2 concept; v1 does not spawn a replacement on the source island.
 - **Globally-unique agent ID** — `<birth_island_id>-<aid_within_island>` in multi-island mode (e.g. `0-agent-2`). The prefix is the birth-island lineage marker and is stable across migration.
 - **Island root** — `coral_dir / "public"` in single-island mode; `coral_dir / "islands" / island_id` in multi-island mode. The base path for hub-module reads/writes.

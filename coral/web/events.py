@@ -12,6 +12,9 @@ from typing import Any
 from starlette.requests import Request
 from starlette.responses import StreamingResponse
 
+from coral.hub._island import all_view_roots
+from coral.hub.attempts import read_eval_count
+
 
 class FileWatcher:
     """Watches .coral/ directory for changes and broadcasts SSE events."""
@@ -51,39 +54,36 @@ class FileWatcher:
         state: dict[str, Any] = {}
 
         # Attempts: count + latest mtime
-        attempts_dir = self.coral_dir / "public" / "attempts"
-        if attempts_dir.exists():
-            files = list(attempts_dir.glob("*.json"))
-            state["attempts_count"] = len(files)
-            state["attempts_mtime"] = max((f.stat().st_mtime for f in files), default=0)
-        else:
-            state["attempts_count"] = 0
-            state["attempts_mtime"] = 0
+        attempt_files: list[Path] = []
+        for view_root in all_view_roots(self.coral_dir):
+            attempts_dir = view_root / "attempts"
+            if attempts_dir.exists():
+                attempt_files.extend(attempts_dir.glob("*.json"))
+        state["attempts_count"] = len(attempt_files)
+        state["attempts_mtime"] = max((f.stat().st_mtime for f in attempt_files), default=0)
 
         # Notes: mtime
-        notes_file = self.coral_dir / "public" / "notes" / "notes.md"
-        if notes_file.exists():
-            state["notes_mtime"] = notes_file.stat().st_mtime
-        else:
-            state["notes_mtime"] = 0
+        note_files: list[Path] = []
+        for view_root in all_view_roots(self.coral_dir):
+            notes_dir = view_root / "notes"
+            if notes_dir.exists():
+                note_files.extend(notes_dir.rglob("*.md"))
+        state["notes_mtime"] = max((f.stat().st_mtime for f in note_files), default=0)
 
         # Logs: per-file sizes
-        logs_dir = self.coral_dir / "public" / "logs"
         log_sizes: dict[str, int] = {}
-        if logs_dir.exists():
+        is_multi = (self.coral_dir / "islands").exists()
+        for view_root in all_view_roots(self.coral_dir):
+            logs_dir = view_root / "logs"
+            if not logs_dir.exists():
+                continue
             for lf in logs_dir.glob("*.log"):
-                log_sizes[lf.name] = lf.stat().st_size
+                key = f"{view_root.name}/{lf.name}" if is_multi else lf.name
+                log_sizes[key] = lf.stat().st_size
         state["log_sizes"] = log_sizes
 
         # Eval count
-        eval_count_file = self.coral_dir / "public" / "eval_count"
-        if eval_count_file.exists():
-            try:
-                state["eval_count"] = int(eval_count_file.read_text().strip())
-            except ValueError:
-                state["eval_count"] = 0
-        else:
-            state["eval_count"] = 0
+        state["eval_count"] = read_eval_count(self.coral_dir)
 
         return state
 

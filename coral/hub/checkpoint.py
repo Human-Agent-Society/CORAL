@@ -194,6 +194,28 @@ def checkpoint_diff(
     island_id: str | int | None = None,
 ) -> str:
     """Return the stat+patch output for a specific checkpoint commit."""
+    coral_dir_path = Path(coral_dir)
+    if island_id is None and (coral_dir_path / "islands").exists():
+        from coral.hub._island import all_view_roots
+
+        outputs: list[str] = []
+        for view_root in all_view_roots(coral_dir_path):
+            if not (view_root / ".git").exists():
+                continue
+            exists = subprocess.run(
+                ["git", "cat-file", "-e", f"{commit_hash}^{{commit}}"],
+                cwd=str(view_root),
+                capture_output=True,
+                text=True,
+            )
+            if exists.returncode != 0:
+                continue
+            diff = checkpoint_diff(coral_dir, commit_hash, island_id=view_root.name)
+            outputs.append(f"Island {view_root.name}\n{'=' * 72}\n{diff}")
+        if outputs:
+            return "\n".join(outputs)
+        return f"Failed to show commit {commit_hash}: commit not found in any island."
+
     root = _checkpoint_dir(coral_dir, island_id)
     if not (root / ".git").exists():
         return "No checkpoint repo found."

@@ -115,11 +115,18 @@ async def get_skills(request: Request) -> JSONResponse:
 
 async def get_skill_detail(request: Request) -> JSONResponse:
     """GET /api/skills/{name} — return a specific skill."""
+    from coral.hub._island import all_view_roots
     from coral.hub.skills import read_skill
 
     name = request.path_params["name"]
-    skill_dir = _coral_dir(request) / "public" / "skills" / name
-    if not skill_dir.is_dir():
+    coral_dir = _coral_dir(request)
+    skill_dir = None
+    for view_root in all_view_roots(coral_dir):
+        candidate = view_root / "skills" / name
+        if candidate.is_dir():
+            skill_dir = candidate
+            break
+    if skill_dir is None:
         return JSONResponse({"error": "skill not found"}, status_code=404)
 
     info = read_skill(skill_dir)
@@ -370,13 +377,9 @@ async def get_status(request: Request) -> JSONResponse:
         manager_alive = True
 
     # Eval count
-    eval_count_file = coral_dir / "public" / "eval_count"
-    eval_count = 0
-    if eval_count_file.exists():
-        try:
-            eval_count = int(eval_count_file.read_text().strip())
-        except ValueError:
-            pass
+    from coral.hub.attempts import read_eval_count
+
+    eval_count = read_eval_count(coral_dir)
 
     # Attempts summary — aggregate across islands so the status pane shows
     # the whole team, not just public/attempts (empty in multi-island mode).

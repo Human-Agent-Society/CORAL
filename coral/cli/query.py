@@ -199,7 +199,7 @@ def cmd_notes(args: argparse.Namespace) -> None:
     if getattr(args, "history", False):
         from coral.hub.checkpoint import checkpoint_history
 
-        entries = checkpoint_history(str(coral_dir))
+        entries = checkpoint_history(str(coral_dir), island_id=island_id)
         if not entries:
             print("No checkpoint history.")
             return
@@ -212,7 +212,7 @@ def cmd_notes(args: argparse.Namespace) -> None:
     if getattr(args, "diff", None):
         from coral.hub.checkpoint import checkpoint_diff
 
-        print(checkpoint_diff(str(coral_dir), args.diff))
+        print(checkpoint_diff(str(coral_dir), args.diff, island_id=island_id))
         return
 
     if args.read:

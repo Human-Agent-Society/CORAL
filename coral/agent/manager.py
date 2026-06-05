@@ -29,7 +29,12 @@ from coral.agent.exit_classifier import (
     claude_code_log_has_session_error as _log_has_session_error,
 )
 from coral.agent.heartbeat import HeartbeatRunner
-from coral.agent.migration import MigrationCandidate, MigrationRunner
+from coral.agent.migration import (
+    IslandRoster,
+    MigrationCandidate,
+    MigrationRunner,
+    choose_roster_balanced_subset,
+)
 from coral.agent.registry import get_runtime
 from coral.agent.runtime import AgentHandle, AgentRuntime
 from coral.agent.state import (
@@ -1359,8 +1364,7 @@ class AgentManager:
         # candidate wins (its score is from the current cycle, not stale).
         fresh_agent_ids = {m.agent_id for m in migrations}
         deferred_retry = [
-            c for c, _r, _n in self._deferred_candidates
-            if c.agent_id not in fresh_agent_ids
+            c for c, _r, _n in self._deferred_candidates if c.agent_id not in fresh_agent_ids
         ]
         if deferred_retry:
             logger.info(
@@ -1369,7 +1373,9 @@ class AgentManager:
                 f"{[c.agent_id for c in deferred_retry]}"
             )
         migrations = deferred_retry + migrations
-        migrations = self._filter_current_migration_candidates(migrations)
+        migrations = self._select_executable_migration_batch(
+            self._filter_current_migration_candidates(migrations)
+        )
 
         if not migrations:
             logger.info(f"Migration cycle @ eval#{current_evals}: no eligible candidates")
@@ -1409,6 +1415,46 @@ class AgentManager:
             if top and top[0].score is not None:
                 results[island_dir.name] = top[0].score
         return results
+
+    def _select_executable_migration_batch(
+        self,
+        migrations: list[MigrationCandidate],
+    ) -> list[MigrationCandidate]:
+        """Apply the final per-cycle cap and roster-balance guard.
+
+        ``MigrationRunner.run_cycle`` already applies these rules to fresh
+        candidates, but manager-level deferred candidates are prepended after
+        that call. Re-run the final selection over the combined batch so
+        ``max_per_cycle`` remains the true execution cap.
+        """
+        if not migrations:
+            return []
+
+        max_per_cycle = self.migration_config.max_per_cycle
+        if not self._agent_island or self.paths is None:
+            return migrations[:max_per_cycle]
+
+        island_ids = self._migration_island_ids()
+        roster = IslandRoster.from_agent_islands(
+            self._agent_island,
+            island_ids=island_ids,
+        )
+        return choose_roster_balanced_subset(
+            migrations,
+            roster=roster,
+            max_per_cycle=max_per_cycle,
+            minimize=self.config.grader.direction == "minimize",
+        )
+
+    def _migration_island_ids(self) -> list[str]:
+        """Return configured island ids, preferring on-disk dirs when present."""
+        if self.paths is not None:
+            islands_dir = self.paths.coral_dir / "islands"
+            if islands_dir.exists():
+                ids = sorted(d.name for d in islands_dir.iterdir() if d.is_dir())
+                if ids:
+                    return ids
+        return [str(i) for i in range(self.config.islands.count)]
 
     # --- Deferred-candidate bookkeeping ----------------------------------
     #
@@ -1468,9 +1514,7 @@ class AgentManager:
     def _drop_deferred_for(self, agent_id: str) -> None:
         """Remove any deferred entry for this agent (called on success)."""
         self._deferred_candidates = [
-            (c, r, n)
-            for c, r, n in self._deferred_candidates
-            if c.agent_id != agent_id
+            (c, r, n) for c, r, n in self._deferred_candidates if c.agent_id != agent_id
         ]
 
     def _prune_deferred(self) -> None:

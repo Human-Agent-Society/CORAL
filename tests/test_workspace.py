@@ -123,6 +123,7 @@ def test_setup_gitignore():
         assert ".coral_agent_id" in content
         assert "CLAUDE.md" in content
         assert ".claude/" in content
+        assert ".coral_island" in content
 
 
 def test_setup_gitignore_preserves_existing():

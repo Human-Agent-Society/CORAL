@@ -46,9 +46,10 @@ def island_id_from_agent_id(agent_id: str) -> str | None:
 
     Partitioning writes agent ids as ``<island_id>-agent-<n>`` (e.g.
     ``0-agent-1``); a bare ``agent-N`` (no prefix) means single-island and
-    returns None. This lets agent-scoped hub functions route a query like
-    ``read_agent_heartbeat("0-agent-1")`` to the right island without
-    forcing the caller to pass island_id explicitly.
+    returns None. The prefix is a stable birth-lineage marker, not a current
+    island marker after migration. Use it only for lineage display or
+    backwards-compatible birth-island guesses, never as authoritative
+    current-location routing.
     """
     if "-" not in agent_id:
         return None

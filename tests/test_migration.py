@@ -672,9 +672,14 @@ def test_move_agent_files_moves_agent_state_attempts_and_eval_logs():
         (coral_dir / "islands" / "0" / "heartbeat" / "agent-1.json").write_text("{}")
         write_attempt(coral_dir, _make_attempt("aaa", "agent-1", 0.9), island_id="0")
         write_attempt(coral_dir, _make_attempt("bbb", "agent-2", 0.8), island_id="0")
+        (coral_dir / "islands" / "0" / "attempts" / "ccc.jsonl").write_text(
+            '{"agent_id": "agent-1", "commit_hash": "ccc"}\n'
+        )
         (coral_dir / "islands" / "0" / "eval_logs" / "aaa").mkdir()
         (coral_dir / "islands" / "0" / "eval_logs" / "aaa" / "metrics.json").write_text("{}")
         (coral_dir / "islands" / "0" / "eval_logs" / "bbb").mkdir()
+        (coral_dir / "islands" / "0" / "eval_logs" / "ccc").mkdir()
+        (coral_dir / "islands" / "0" / "eval_logs" / "ccc" / "metrics.json").write_text("{}")
         # Notes should NOT be touched
         (coral_dir / "islands" / "0" / "notes" / "agent-1.md").write_text("not moved")
 
@@ -686,8 +691,12 @@ def test_move_agent_files_moves_agent_state_attempts_and_eval_logs():
         assert not (coral_dir / "islands" / "0" / "heartbeat" / "agent-1.json").exists()
         assert (coral_dir / "islands" / "1" / "attempts" / "aaa.json").exists()
         assert not (coral_dir / "islands" / "0" / "attempts" / "aaa.json").exists()
+        assert (coral_dir / "islands" / "1" / "attempts" / "ccc.jsonl").exists()
+        assert not (coral_dir / "islands" / "0" / "attempts" / "ccc.jsonl").exists()
         assert (coral_dir / "islands" / "1" / "eval_logs" / "aaa" / "metrics.json").exists()
         assert not (coral_dir / "islands" / "0" / "eval_logs" / "aaa").exists()
+        assert (coral_dir / "islands" / "1" / "eval_logs" / "ccc" / "metrics.json").exists()
+        assert not (coral_dir / "islands" / "0" / "eval_logs" / "ccc").exists()
         # Other agents' attempts/logs and user notes stay on the source island.
         assert (coral_dir / "islands" / "0" / "attempts" / "bbb.json").exists()
         assert not (coral_dir / "islands" / "1" / "attempts" / "bbb.json").exists()
@@ -847,9 +856,7 @@ def test_apply_migration_end_to_end_moves_state_and_repoints_worktree(tmp_path):
     )
     write_attempt(coral_dir, _make_attempt("attempt-a", "0-agent-1", 0.5), island_id="0")
     (coral_dir / "islands" / "0" / "eval_logs" / "attempt-a").mkdir()
-    (coral_dir / "islands" / "0" / "eval_logs" / "attempt-a" / "metrics.json").write_text(
-        "{}"
-    )
+    (coral_dir / "islands" / "0" / "eval_logs" / "attempt-a" / "metrics.json").write_text("{}")
 
     # Build a manager and pin every component the migration touches.
     cfg = CoralConfig(
@@ -1150,7 +1157,13 @@ def test_maybe_run_migration_cycle_prepends_deferred_over_fresh(tmp_path, monkey
     from coral.agent.manager import AgentManager
     from coral.agent.migration import MigrationCandidate
     from coral.agent.runtime import AgentHandle
-    from coral.config import AgentAssignmentConfig, AgentConfig, CoralConfig, IslandsConfig
+    from coral.config import (
+        AgentAssignmentConfig,
+        AgentConfig,
+        CoralConfig,
+        IslandsConfig,
+        MigrationConfig,
+    )
     from coral.workspace import setup_shared_state
     from coral.workspace.project import ProjectPaths
 
@@ -1191,7 +1204,7 @@ def test_maybe_run_migration_cycle_prepends_deferred_over_fresh(tmp_path, monkey
 
     cfg = CoralConfig(
         agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
-        islands=IslandsConfig(count=2),
+        islands=IslandsConfig(count=2, migration=MigrationConfig(max_per_cycle=2)),
     )
     mgr = AgentManager(cfg)
     mgr.paths = ProjectPaths(
@@ -1208,8 +1221,18 @@ def test_maybe_run_migration_cycle_prepends_deferred_over_fresh(tmp_path, monkey
     mgr.specs_by_id = {s.agent_id: s for s in mgr.specs}
     mgr._agent_island = {"0-agent-1": "0", "1-agent-1": "1"}
     mgr.handles = [
-        AgentHandle(agent_id="0-agent-1", process=None, worktree_path=worktree_a, log_path=tmp_path / "a.log"),
-        AgentHandle(agent_id="1-agent-1", process=None, worktree_path=worktree_b, log_path=tmp_path / "b.log"),
+        AgentHandle(
+            agent_id="0-agent-1",
+            process=None,
+            worktree_path=worktree_a,
+            log_path=tmp_path / "a.log",
+        ),
+        AgentHandle(
+            agent_id="1-agent-1",
+            process=None,
+            worktree_path=worktree_b,
+            log_path=tmp_path / "b.log",
+        ),
     ]
     spawn_calls: list[dict] = []
     mgr._setup_and_start_agent = lambda agent_id, **kwargs: (
@@ -1239,8 +1262,9 @@ def test_maybe_run_migration_cycle_prepends_deferred_over_fresh(tmp_path, monkey
 
     mgr._migration_runner.should_run = fake_should_run  # type: ignore[assignment]
     mgr._migration_runner.run_cycle = fake_run_cycle  # type: ignore[assignment]
-    # 0-agent-1 has a pending attempt planted so applying it again would defer;
-    # the fresh cycle's 0-agent-1 entry is dropped from the deduped list.
+    # 0-agent-1 has a pending attempt planted so applying the fresh entry
+    # defers it again. The older deferred retry is suppressed in favor of
+    # this fresh same-agent candidate.
     pending = Attempt(
         commit_hash="pend-1",
         agent_id="0-agent-1",
@@ -1276,14 +1300,26 @@ def test_prune_deferred_drops_exceeded_retries_and_stale_agents():
     )
     mgr = AgentManager(cfg)
     mgr._agent_island = {
-        "0-agent-1": "0",     # still on src — survives
-        "0-agent-2": "1",     # moved off recorded src=0 — pruned (stale)
-        "0-agent-3": "0",     # over the cap — pruned
+        "0-agent-1": "0",  # still on src — survives
+        "0-agent-2": "1",  # moved off recorded src=0 — pruned (stale)
+        "0-agent-3": "0",  # over the cap — pruned
     }
     mgr._deferred_candidates = [
-        (MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.1), "pending", 1),
-        (MigrationCandidate(agent_id="0-agent-2", src_island="0", dst_island="1", score=0.2), "pending", 1),
-        (MigrationCandidate(agent_id="0-agent-3", src_island="0", dst_island="1", score=0.3), "pending", mgr.MIGRATION_MAX_RETRIES),
+        (
+            MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.1),
+            "pending",
+            1,
+        ),
+        (
+            MigrationCandidate(agent_id="0-agent-2", src_island="0", dst_island="1", score=0.2),
+            "pending",
+            1,
+        ),
+        (
+            MigrationCandidate(agent_id="0-agent-3", src_island="0", dst_island="1", score=0.3),
+            "pending",
+            mgr.MIGRATION_MAX_RETRIES,
+        ),
     ]
 
     mgr._prune_deferred()
@@ -1319,7 +1355,7 @@ def test_maybe_run_migration_cycle_dedupes_fresh_over_deferred_for_same_agent(tm
         agents_dir=tmp_path / "agents",
         repo_dir=tmp_path / "repo",
     )
-    mgr._agent_island = {"0-agent-1": "0"}
+    mgr._agent_island = {"0-agent-1": "0", "0-agent-2": "0"}
     applied: list[MigrationCandidate] = []
 
     mgr._apply_migration = lambda candidate: applied.append(candidate)  # type: ignore[assignment]
@@ -1328,7 +1364,11 @@ def test_maybe_run_migration_cycle_dedupes_fresh_over_deferred_for_same_agent(tm
         MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.9),
     ]
     mgr._deferred_candidates = [
-        (MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5), "pending", 2),
+        (
+            MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5),
+            "pending",
+            2,
+        ),
     ]
 
     mgr._maybe_run_migration_cycle()
@@ -1345,7 +1385,13 @@ def test_maybe_run_migration_cycle_prepends_unrelated_deferred(tmp_path):
     doesn't strand a swap direction."""
     from coral.agent.manager import AgentManager
     from coral.agent.migration import MigrationCandidate
-    from coral.config import AgentAssignmentConfig, AgentConfig, CoralConfig, IslandsConfig
+    from coral.config import (
+        AgentAssignmentConfig,
+        AgentConfig,
+        CoralConfig,
+        IslandsConfig,
+        MigrationConfig,
+    )
     from coral.workspace.project import ProjectPaths
 
     coral_dir = tmp_path / ".coral"
@@ -1356,7 +1402,7 @@ def test_maybe_run_migration_cycle_prepends_unrelated_deferred(tmp_path):
 
     cfg = CoralConfig(
         agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
-        islands=IslandsConfig(count=2),
+        islands=IslandsConfig(count=2, migration=MigrationConfig(max_per_cycle=2)),
     )
     mgr = AgentManager(cfg)
     mgr.paths = ProjectPaths(
@@ -1377,7 +1423,11 @@ def test_maybe_run_migration_cycle_prepends_unrelated_deferred(tmp_path):
         MigrationCandidate(agent_id="1-agent-1", src_island="1", dst_island="0", score=0.7),
     ]
     mgr._deferred_candidates = [
-        (MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5), "pending", 1),
+        (
+            MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5),
+            "pending",
+            1,
+        ),
     ]
 
     mgr._maybe_run_migration_cycle()
@@ -1387,3 +1437,50 @@ def test_maybe_run_migration_cycle_prepends_unrelated_deferred(tmp_path):
     assert len(applied) == 2
     assert applied[0].agent_id == "0-agent-1"
     assert applied[1].agent_id == "1-agent-1"
+
+
+def test_maybe_run_migration_cycle_does_not_let_deferred_bypass_cycle_cap(tmp_path):
+    """Deferred candidates count against the same final max_per_cycle as fresh ones."""
+    from coral.agent.manager import AgentManager
+    from coral.agent.migration import MigrationCandidate
+    from coral.config import AgentAssignmentConfig, AgentConfig, CoralConfig, IslandsConfig
+    from coral.workspace.project import ProjectPaths
+
+    coral_dir = tmp_path / ".coral"
+    coral_dir.mkdir()
+    (coral_dir / "islands").mkdir()
+    (coral_dir / "public").mkdir()
+    (coral_dir / "eval_count").write_text("100")
+
+    cfg = CoralConfig(
+        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=1)]),
+        islands=IslandsConfig(count=2),  # default max_per_cycle=1
+    )
+    mgr = AgentManager(cfg)
+    mgr.paths = ProjectPaths(
+        results_dir=tmp_path,
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=tmp_path / "agents",
+        repo_dir=tmp_path / "repo",
+    )
+    mgr._agent_island = {"0-agent-1": "0", "1-agent-1": "1"}
+    applied: list[MigrationCandidate] = []
+
+    mgr._apply_migration = lambda candidate: applied.append(candidate)  # type: ignore[assignment]
+    mgr._migration_runner.should_run = lambda **_: True  # type: ignore[assignment]
+    mgr._migration_runner.run_cycle = lambda **_: [  # type: ignore[assignment]
+        MigrationCandidate(agent_id="1-agent-1", src_island="1", dst_island="0", score=0.7),
+    ]
+    mgr._deferred_candidates = [
+        (
+            MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5),
+            "pending",
+            1,
+        ),
+    ]
+
+    mgr._maybe_run_migration_cycle()
+
+    assert applied == []

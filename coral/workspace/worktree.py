@@ -101,6 +101,7 @@ def setup_gitignore(worktree_path: Path) -> None:
     entries = {
         ".coral_agent_id",
         ".coral_dir",
+        ".coral_island",
         "CLAUDE.md",
         "AGENTS.md",
         ".claude/",
