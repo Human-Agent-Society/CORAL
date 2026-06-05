@@ -52,6 +52,7 @@ site/
 docs/.next/
 docs/node_modules/
 docs/.source/
+docs/superpowers/
 
 # OS
 .DS_Store
