@@ -343,9 +343,7 @@ def _make_git_repo(path: Path) -> None:
     subprocess.run(
         ["git", "config", "--local", "user.email", "test@coral"], cwd=str(path), check=True
     )
-    subprocess.run(
-        ["git", "config", "--local", "user.name", "test"], cwd=str(path), check=True
-    )
+    subprocess.run(["git", "config", "--local", "user.name", "test"], cwd=str(path), check=True)
     (path / "README.md").write_text("init")
     subprocess.run(["git", "add", "-A"], cwd=str(path), check=True)
     subprocess.run(
