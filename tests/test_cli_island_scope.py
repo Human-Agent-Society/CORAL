@@ -330,11 +330,22 @@ def test_wait_in_island0_worktree_cannot_see_island1_attempt(
 
 
 def _make_git_repo(path: Path) -> None:
-    """Init a git repo with one commit at ``path``."""
+    """Init a git repo with one commit at ``path``.
+
+    The ``git config`` calls must run with ``cwd=str(path)`` (or use
+    ``--local``) so the user.email/user.name land in the new repo's
+    ``.git/config``. Without it, config writes to the test process's cwd
+    or ``$HOME``, the commit inherits an empty identity from CI, and
+    fails with "Author identity unknown".
+    """
     path.mkdir(parents=True, exist_ok=True)
     subprocess.run(["git", "init", "-q", str(path)], check=True)
-    subprocess.run(["git", "config", "user.email", "test@coral"], check=True)
-    subprocess.run(["git", "config", "user.name", "test"], check=True)
+    subprocess.run(
+        ["git", "config", "--local", "user.email", "test@coral"], cwd=str(path), check=True
+    )
+    subprocess.run(
+        ["git", "config", "--local", "user.name", "test"], cwd=str(path), check=True
+    )
     (path / "README.md").write_text("init")
     subprocess.run(["git", "add", "-A"], cwd=str(path), check=True)
     subprocess.run(
