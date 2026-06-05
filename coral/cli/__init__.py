@@ -50,7 +50,6 @@ _VISIBLE_COMMANDS = [
     "log",
     "show",
     "notes",
-    "note",
     "skills",
     "runs",
     "ui",
@@ -111,7 +110,6 @@ Inspecting Results:
   log             List and search attempts (leaderboard)
   show            Show details of a specific attempt
   notes           Browse shared notes
-  note            Create a new note (creator/created stamped)
   skills          Browse shared skills
   runs            List runs (active only; --all for stopped)
 
@@ -313,25 +311,6 @@ Run 'coral <command> --help' for details on any command."""
     )
     p_notes.add_argument("--diff", metavar="HASH", help="Show diff for a checkpoint commit")
     _add_run_args(p_notes)
-
-    p_note = sub.add_parser(
-        "note",
-        help="Note-authoring helpers (singular)",
-        description="Create a new note pre-stamped with creator/created frontmatter.",
-        formatter_class=_CommandHelpFormatter,
-    )
-    note_sub = p_note.add_subparsers(dest="note_cmd", required=True)
-    p_note_new = note_sub.add_parser(
-        "new",
-        help="Create a new note (creator/created stamped)",
-        description="Create a new note in the current island with frontmatter stamping.",
-    )
-    p_note_new.add_argument("slug", help="Slug for the note filename (becomes <slug>.md)")
-    p_note_new.add_argument(
-        "--body",
-        default=None,
-        help="Note body (use stdin if omitted; pass an empty string for an empty body)",
-    )
 
     p_skills = sub.add_parser(
         "skills",
@@ -543,7 +522,7 @@ Run 'coral <command> --help' for details on any command."""
     from coral.cli.author import cmd_init, cmd_validate
     from coral.cli.eval import cmd_checkout, cmd_diff, cmd_eval, cmd_revert, cmd_wait
     from coral.cli.heartbeat import cmd_heartbeat
-    from coral.cli.query import cmd_log, cmd_note_new, cmd_notes, cmd_runs, cmd_show, cmd_skills
+    from coral.cli.query import cmd_log, cmd_notes, cmd_runs, cmd_show, cmd_skills
     from coral.cli.start import cmd_resume, cmd_start, cmd_status, cmd_stop
     from coral.cli.ui import cmd_ui
 
@@ -561,7 +540,6 @@ Run 'coral <command> --help' for details on any command."""
         "log": cmd_log,
         "show": cmd_show,
         "notes": cmd_notes,
-        "note": cmd_note_new,
         "skills": cmd_skills,
         "runs": cmd_runs,
         "init": cmd_init,

@@ -405,7 +405,6 @@ The implementation breaks into independent phases that can each be a separate PR
 - Add `notes_by(agent_id)` in `hub.notes` and `skills_by(agent_id)` in `hub.skills`. Both filter on the existing `creator:` frontmatter field.
 - Audit `coral/template/skills/*/SKILL.md` for `creator:` (should be absent on bundled skills).
 - Update bundled `librarian` / `skill-creator` subagent templates and the heartbeat `consolidate` prompt to instruct stamping `creator: <agent_id>` (Phase 1's only prompt change).
-- Optional helper: `coral note new <slug>` CLI command that pre-stamps `creator:` and `created:`.
 - Tests: hub modules return identical results in single-island mode; `notes_by` / `skills_by` round-trip correctly; bundled skills are excluded from `skills_by`.
 
 ### Phase 2 — Island layout in workspace

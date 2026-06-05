@@ -365,8 +365,7 @@ def _balanced_target_counts(island_ids: tuple[str, ...], total_agents: int) -> d
         return {}
     base, remainder = divmod(total_agents, len(island_ids))
     return {
-        island_id: base + (1 if idx < remainder else 0)
-        for idx, island_id in enumerate(island_ids)
+        island_id: base + (1 if idx < remainder else 0) for idx, island_id in enumerate(island_ids)
     }
 
 

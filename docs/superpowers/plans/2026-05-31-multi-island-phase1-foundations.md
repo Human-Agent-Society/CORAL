@@ -4,7 +4,7 @@
 
 **Goal:** Land all the plumbing needed to support multiple per-island shared-state subtrees, without yet activating multi-island behavior at runtime. After this plan, `islands.count` defaults to 1 and the existing test suite must still pass unchanged — the only difference is that every hub primitive now accepts an optional `island_id` and a new `island_root()` resolver knows how to map it to a path on disk.
 
-**Architecture:** A single new module `coral/hub/_island.py` resolves the per-island base path. Every hub module gets an optional `island_id` parameter (default `None`) threaded through its read/write functions. Two new filter helpers (`notes_by`, `skills_by`) prepare for migration. The shipped Phase 1 surface change is the config dataclasses, the resolver, the optional parameter on every hub function, two filters, one CLI helper (`coral note new`), and a small audit/prompt update so agents stamp `creator:`.
+**Architecture:** A single new module `coral/hub/_island.py` resolves the per-island base path. Every hub module gets an optional `island_id` parameter (default `None`) threaded through its read/write functions. Two new filter helpers (`notes_by`, `skills_by`) prepare for migration. The shipped Phase 1 surface change is the config dataclasses, the resolver, the optional parameter on every hub function, two filters, and a small audit/prompt update so agents stamp `creator:`.
 
 **Tech Stack:** Python 3.11+, dataclasses, OmegaConf, pytest, hatchling. No new dependencies.
 
@@ -23,14 +23,11 @@
 | `coral/hub/skills.py` | Modify | Add `island_id` parameter; add `skills_by(coral_dir, island_id, agent_id)` filter. |
 | `coral/hub/heartbeat.py` | Modify | Add `island_id` parameter on all functions. |
 | `coral/hub/checkpoint.py` | Modify | Add `island_id` parameter; per-island `.git` location in multi-island. |
-| `coral/cli/__init__.py` | Modify | Register new `note` top-level subparser; dispatch to `cmd_note_new`. |
-| `coral/cli/query.py` | Modify | Add `cmd_note_new(args)` handler. |
 | `coral/hub/prompts/consolidate.md` | Modify | Add one paragraph instructing `creator:` stamping on new notes. |
 | `coral/template/agents/librarian.md` | Modify | Add one paragraph instructing `creator:` stamping on notes the librarian writes. |
 | `tests/test_config.py` | Modify | Test `IslandsConfig` defaults and validation. |
 | `tests/test_islands.py` | Create | Test `island_root` resolver + multi-island hub round-trip. |
 | `tests/test_hub.py` | Modify | Add tests for `notes_by`, `skills_by`. Existing tests are the regression gate. |
-| `tests/test_cli_note_new.py` | Create | Test `coral note new <slug>` round-trip. |
 
 ---
 
@@ -1305,196 +1302,9 @@ git commit -m "feat(prompts): instruct agents to stamp creator on notes and skil
 
 ---
 
-## Task 9: `coral note new <slug>` CLI helper
+## Task 9: Note creation helper omitted
 
-A small helper that pre-stamps `creator:` and `created:` on a fresh note. Saves the body from stdin (or `--body` for short bodies).
-
-**Files:**
-- Modify: `coral/cli/__init__.py` (register `note` subparser, dispatch)
-- Modify: `coral/cli/query.py` (add `cmd_note_new` handler)
-- Create: `tests/test_cli_note_new.py`
-
-- [ ] **Step 1: Write the failing CLI test**
-
-Create `tests/test_cli_note_new.py`:
-
-```python
-"""End-to-end test for `coral note new <slug>`."""
-
-import os
-import subprocess
-import tempfile
-from pathlib import Path
-
-
-def test_note_new_stamps_creator_and_created(tmp_path):
-    """`coral note new <slug>` writes a note with `creator:` + `created:` stamped."""
-    coral_dir = tmp_path / ".coral"
-    (coral_dir / "public" / "notes").mkdir(parents=True)
-    worktree = tmp_path / "worktree"
-    worktree.mkdir()
-    # Single-island breadcrumbs
-    (worktree / ".coral_dir").write_text(str(coral_dir.resolve()))
-    (worktree / ".coral_agent_id").write_text("agent-7")
-
-    env = os.environ.copy()
-    result = subprocess.run(
-        ["coral", "note", "new", "my-finding", "--body", "First-line summary."],
-        cwd=str(worktree),
-        env=env,
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0, result.stderr
-
-    note_path = coral_dir / "public" / "notes" / "my-finding.md"
-    assert note_path.exists()
-    text = note_path.read_text()
-    assert text.startswith("---")
-    assert "creator: agent-7" in text
-    assert "created:" in text
-    assert "First-line summary." in text
-
-
-def test_note_new_writes_to_island_in_multi_island(tmp_path):
-    """In multi-island mode, the note lands in islands/<id>/notes/."""
-    coral_dir = tmp_path / ".coral"
-    (coral_dir / "islands" / "1" / "notes").mkdir(parents=True)
-    worktree = tmp_path / "worktree"
-    worktree.mkdir()
-    (worktree / ".coral_dir").write_text(str(coral_dir.resolve()))
-    (worktree / ".coral_agent_id").write_text("0-agent-2")
-    (worktree / ".coral_island").write_text("1")
-
-    env = os.environ.copy()
-    result = subprocess.run(
-        ["coral", "note", "new", "moved-and-found", "--body", "body"],
-        cwd=str(worktree),
-        env=env,
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode == 0, result.stderr
-    note_path = coral_dir / "islands" / "1" / "notes" / "moved-and-found.md"
-    assert note_path.exists()
-    assert "creator: 0-agent-2" in note_path.read_text()
-```
-
-- [ ] **Step 2: Run the new tests to verify they fail**
-
-```bash
-uv run pytest tests/test_cli_note_new.py -v
-```
-
-Expected: FAIL — `coral: error: invalid choice: 'note'`.
-
-- [ ] **Step 3: Add the `cmd_note_new` handler to `coral/cli/query.py`**
-
-Append to `coral/cli/query.py` (or create the function in the most appropriate existing module — query.py is where cmd_notes lives):
-
-```python
-def cmd_note_new(args: argparse.Namespace) -> int:
-    """Create a new note pre-stamped with `creator:` and `created:` frontmatter."""
-    import re
-    from datetime import UTC, datetime
-    from pathlib import Path
-
-    from coral.hub._island import island_root
-    from coral.workspace.worktree import get_coral_dir
-
-    # Resolve coral_dir, agent_id, and island_id from the agent's worktree.
-    cwd = Path.cwd()
-    coral_dir = get_coral_dir(cwd)
-    if coral_dir is None:
-        print("error: not in a coral worktree (no .coral_dir breadcrumb found)", file=sys.stderr)
-        return 1
-    aid_file = cwd / ".coral_agent_id"
-    if not aid_file.exists():
-        print("error: no .coral_agent_id found in current directory", file=sys.stderr)
-        return 1
-    agent_id = aid_file.read_text().strip()
-    island_file = cwd / ".coral_island"
-    island_id = island_file.read_text().strip() if island_file.exists() else None
-
-    # Sanitize slug: a-z0-9-_
-    slug = re.sub(r"[^a-zA-Z0-9_\-]+", "-", args.slug).strip("-")
-    if not slug:
-        print(f"error: slug {args.slug!r} is empty after sanitization", file=sys.stderr)
-        return 1
-
-    body = args.body if args.body else sys.stdin.read()
-
-    notes_dir = island_root(coral_dir, island_id) / "notes"
-    notes_dir.mkdir(parents=True, exist_ok=True)
-    note_path = notes_dir / f"{slug}.md"
-    if note_path.exists():
-        print(f"error: {note_path} already exists", file=sys.stderr)
-        return 1
-
-    created = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    content = (
-        "---\n"
-        f"creator: {agent_id}\n"
-        f"created: {created}\n"
-        "---\n"
-        f"{body.rstrip()}\n"
-    )
-    note_path.write_text(content)
-    print(str(note_path))
-    return 0
-```
-
-- [ ] **Step 4: Register the `note` subparser in `coral/cli/__init__.py`**
-
-In `coral/cli/__init__.py`, find the block where `p_notes` is registered (the existing `notes` plural subparser) and add immediately after it:
-
-```python
-    p_note = sub.add_parser(
-        "note",
-        help="Note-authoring helpers (singular)",
-        description="Create a new note pre-stamped with creator/created frontmatter.",
-        formatter_class=_CommandHelpFormatter,
-    )
-    note_sub = p_note.add_subparsers(dest="note_cmd", required=True)
-    p_note_new = note_sub.add_parser(
-        "new",
-        help="Create a new note (creator/created stamped)",
-        description="Create a new note in the current island with frontmatter stamping.",
-    )
-    p_note_new.add_argument("slug", help="Slug for the note filename (becomes <slug>.md)")
-    p_note_new.add_argument(
-        "--body",
-        default="",
-        help="Note body (use stdin if omitted)",
-    )
-```
-
-Then add `"note"` to the `_VISIBLE_COMMANDS` list near the top so "did you mean?" suggestions work.
-
-Add the dispatch entry: find the dict that maps command names to functions (around line 536, where `cmd_notes` is registered) and add `"note": cmd_note_new,`. Update the import line just above it to include `cmd_note_new`.
-
-- [ ] **Step 5: Run the new tests to verify they pass**
-
-```bash
-uv run pytest tests/test_cli_note_new.py -v
-```
-
-Expected: PASS (2 tests).
-
-- [ ] **Step 6: Run the full test suite to confirm no regression**
-
-```bash
-uv run pytest tests/ -q
-```
-
-Expected: all tests PASS (the original 289 + ~20 new Phase 1 tests).
-
-- [ ] **Step 7: Commit**
-
-```bash
-git add coral/cli/__init__.py coral/cli/query.py tests/test_cli_note_new.py
-git commit -m "feat(cli): add 'coral note new' helper with creator/created stamping"
-```
+The note creation helper was considered during planning but is not part of this PR. Agents can continue to write notes directly through the existing shared notes directory; Phase 1 only provides island-aware hub primitives and creator metadata parsing.
 
 ---
 
@@ -1520,7 +1330,6 @@ If either fails, **do not** mark Phase 1 done — investigate the failure first.
 - `island_root()` resolver in `coral/hub/_island.py`.
 - Every hub module accepts an optional `island_id` (default `None` = today's behavior).
 - `notes_by(coral_dir, island_id, agent_id)` and `skills_by(coral_dir, island_id, agent_id)` filters land migration's attribution surface.
-- `coral note new <slug>` helper writes pre-stamped notes.
 - Bundled `consolidate.md` and `librarian.md` instruct agents to stamp `creator:`.
 - Bundled `SKILL.md` files have been audited; none carry a `creator:` field.
 
