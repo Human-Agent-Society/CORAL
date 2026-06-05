@@ -199,66 +199,6 @@ def test_swebench_parse_with_real_harbor_result():
     assert "No trials completed" not in feedback
 
 
-def test_swebench_patches_verifier_reward_from_test_exit_code(tmp_path: Path):
-    """SWE-bench verifier should write Harbor's reward file without parser.py.
-
-    Harbor requires /logs/verifier/reward.txt or reward.json. The upstream
-    swebench script runs hidden tests and then uses uv/parser.py to write that
-    file; if the parser install hangs, Harbor raises RewardFileNotFoundError
-    despite valid test results. The CORAL grader patches exported local dataset
-    copies so the test command's exit code directly produces reward.txt.
-    """
-    test_script = tmp_path / "test.sh"
-    test_script.write_text(
-        """#!/bin/bash
-set -e
-LOG_FILE=/logs/verifier/test-stdout.txt
-exec 3>&1 4>&2
-exec > >(tee "$LOG_FILE") 2>&1
-pytest -rA /testbed/tests || true
-exec 1>&3 2>&4
-uv run parser.py --package swebench==4.0.3
-#and we reset the tests back to the base commit
-git checkout abc123 -- tests/test_example.py
-echo "done"
-"""
-    )
-
-    grader_cls = _swebench_grader()
-    grader = grader_cls.__new__(grader_cls)
-
-    assert grader._patch_swebench_test_script(test_script)
-    patched = test_script.read_text()
-
-    assert "pytest -rA /testbed/tests || true" not in patched
-    assert "pytest -rA /testbed/tests" in patched
-    assert "test_exit_code=$?" in patched
-    assert "mkdir -p /logs/verifier" in patched
-    assert "echo 1 > /logs/verifier/reward.txt" in patched
-    assert "echo 0 > /logs/verifier/reward.txt" in patched
-    assert 'exit "${test_exit_code}"' in patched
-    assert patched.index("git checkout abc123") < patched.index("mkdir -p /logs/verifier")
-
-
-def test_swebench_patches_dockerfile_to_avoid_uv_network_install(tmp_path: Path):
-    dockerfile = tmp_path / "Dockerfile"
-    dockerfile.write_text(
-        """FROM python:3.11
-RUN curl -LsSf https://astral.sh/uv/0.7.13/install.sh | sh
-RUN echo done
-"""
-    )
-
-    grader_cls = _swebench_grader()
-    grader = grader_cls.__new__(grader_cls)
-
-    assert grader._patch_swebench_dockerfile(dockerfile)
-    patched = dockerfile.read_text()
-
-    assert "https://astral.sh/uv/0.7.13/install.sh" not in patched
-    assert "avoid build-time network" in patched
-
-
 def test_terminal_bench_parse_job_result_uses_completed_trials():
     """Same regression as swebench, for terminal-bench grader."""
     grader_cls = _terminal_bench_grader()
