@@ -69,6 +69,9 @@ task:
     - Consider filtering training data by SN_filter > 0 for higher quality samples (1349 of 2160 pass)
 
 grader:
+  entrypoint: "stanford_covid_vaccine_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 300
   direction: minimize
   args:

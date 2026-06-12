@@ -26,18 +26,41 @@ from coral.hooks.post_commit import submit_eval
 from coral.hub.attempts import read_attempt, read_eval_count, write_attempt
 from coral.types import Attempt
 
-# The fixture below uses the deprecated eval/grader.py loading path on
-# purpose (it's the simplest way to wire a TaskGrader without standing up a
-# real grader venv). Silence the DeprecationWarning for the whole module.
-pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
-
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
+#
+# Instead of standing up a real grader venv (uv venv + installs), the fixture
+# fakes one: `.coral/private/grader_venv/bin/python` is a shell wrapper that
+# execs the test interpreter with PYTHONPATH pointed at a plain-directory
+# grader package under `.coral/private/grader_pkg/`. SubprocessGrader spawns
+# a fresh worker per grade, so rewriting `testgrader.py` between submissions
+# changes grader behavior with no reinstall.
+
+
+def _write_grader(repo: Path, source: str) -> None:
+    """(Re)write the test grader module resolved by entrypoint testgrader:Grader."""
+    pkg_dir = repo / ".coral" / "private" / "grader_pkg"
+    pkg_dir.mkdir(parents=True, exist_ok=True)
+    (pkg_dir / "testgrader.py").write_text(source)
+
+
+def _install_fake_grader_venv(coral_dir: Path) -> None:
+    """Create a wrapper `grader_venv/bin/python` that runs the test interpreter."""
+    pkg_dir = coral_dir / "private" / "grader_pkg"
+    bin_dir = coral_dir / "private" / "grader_venv" / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    wrapper = bin_dir / "python"
+    wrapper.write_text(
+        "#!/bin/sh\n"
+        f'export PYTHONPATH="{pkg_dir}${{PYTHONPATH:+:$PYTHONPATH}}"\n'
+        f'exec "{sys.executable}" "$@"\n'
+    )
+    wrapper.chmod(0o755)
 
 
 def _init_repo_and_coral(base_dir: Path, score: float = 0.5) -> Path:
-    """Create a git repo with .coral/ wired up to a minimal eval/grader.py."""
+    """Create a git repo with .coral/ wired up to a minimal entrypoint grader."""
     repo = base_dir / "repo"
     repo.mkdir()
     subprocess.run(["git", "init", str(repo)], capture_output=True, check=True)
@@ -67,21 +90,23 @@ def _init_repo_and_coral(base_dir: Path, score: float = 0.5) -> Path:
 
     coral_dir = repo / ".coral"
     (coral_dir / "public" / "attempts").mkdir(parents=True)
-    eval_dir = coral_dir / "private" / "eval"
-    eval_dir.mkdir(parents=True)
+    (coral_dir / "private").mkdir(parents=True)
 
     (repo / ".coral_dir").write_text(str(coral_dir.resolve()))
 
-    (eval_dir / "grader.py").write_text(
+    _install_fake_grader_venv(coral_dir)
+    _write_grader(
+        repo,
         "from coral.grader.task_grader import TaskGrader\n"
         "class Grader(TaskGrader):\n"
         "    def evaluate(self):\n"
-        f"        return {score!r}\n"
+        f"        return {score!r}\n",
     )
 
     config = {
         "task": {"name": "daemon_test", "description": "Daemon test"},
         "grader": {
+            "entrypoint": "testgrader:Grader",
             "timeout": 60,
         },
         "agents": {"count": 1},
@@ -271,14 +296,15 @@ def test_grader_sees_committed_code_not_working_tree():
     with tempfile.TemporaryDirectory() as d:
         repo = _init_repo_and_coral(Path(d))
         # Grader reports sentinel = content of main.py at checkout time.
-        (repo / ".coral" / "private" / "eval" / "grader.py").write_text(
+        _write_grader(
+            repo,
             "import os\n"
             "from coral.grader.task_grader import TaskGrader\n"
             "class Grader(TaskGrader):\n"
             "    def evaluate(self):\n"
             "        with open(os.path.join(self.codebase_path, 'main.py')) as f:\n"
             "            content = f.read()\n"
-            "        return 1.0 if 'COMMITTED' in content else 0.0\n"
+            "        return 1.0 if 'COMMITTED' in content else 0.0\n",
         )
         try:
             (repo / "main.py").write_text("# COMMITTED\nprint('x')\n")
@@ -360,11 +386,12 @@ def test_grader_sees_tune_flag_via_self_tune():
         repo = _init_repo_and_coral(Path(d))
         # Grader returns 1.0 in tune mode, 0.0 otherwise — the score
         # is how we observe what self.tune saw.
-        (repo / ".coral" / "private" / "eval" / "grader.py").write_text(
+        _write_grader(
+            repo,
             "from coral.grader.task_grader import TaskGrader\n"
             "class Grader(TaskGrader):\n"
             "    def evaluate(self):\n"
-            "        return 1.0 if self.tune else 0.0\n"
+            "        return 1.0 if self.tune else 0.0\n",
         )
         sys.path.insert(0, str(repo))
         try:
@@ -426,11 +453,12 @@ def test_grader_marks_grader_error_on_exception():
     with tempfile.TemporaryDirectory() as d:
         repo = _init_repo_and_coral(Path(d))
         # Overwrite the grader to raise.
-        (repo / ".coral" / "private" / "eval" / "grader.py").write_text(
+        _write_grader(
+            repo,
             "from coral.grader.task_grader import TaskGrader\n"
             "class Grader(TaskGrader):\n"
             "    def evaluate(self):\n"
-            "        raise RuntimeError('grader-side failure')\n"
+            "        raise RuntimeError('grader-side failure')\n",
         )
         sys.path.insert(0, str(repo))
         try:
@@ -453,13 +481,13 @@ def test_grader_marks_grader_error_on_exception():
 
 
 def test_grader_marks_grader_error_on_timeout():
-    """A grader that hangs past the daemon's safety-net deadline is killed
-    and classified as 'grader_error'.
+    """A grader that hangs past `grader.timeout` is killed and classified
+    as 'grader_error'.
 
-    The hard-kill fires at ``timeout + _TIMEOUT_GRACE_SECONDS`` (see
-    daemon._TIMEOUT_GRACE_SECONDS). The sleep here is well past that so the
-    safety net is the only thing that can end the eval — which is exactly
-    the path this test is meant to cover.
+    SubprocessGrader runs its worker under subprocess.run(timeout=...) and
+    raises TimeoutError when it expires; the daemon turns that into
+    status="timeout" / budget_class="grader_error". The sleep is well past
+    the timeout so the kill is the only thing that can end the eval.
     """
     with tempfile.TemporaryDirectory() as d:
         repo = _init_repo_and_coral(Path(d))
@@ -468,16 +496,14 @@ def test_grader_marks_grader_error_on_timeout():
         config = yaml.safe_load(config_path.read_text())
         config["grader"]["timeout"] = 2
         config_path.write_text(yaml.dump(config))
-        # Sleep must exceed timeout + _TIMEOUT_GRACE_SECONDS so the inner
-        # asyncio.wait_for path can't return a graceful self.fail bundle
-        # before the daemon hard-kills the worker.
-        (repo / ".coral" / "private" / "eval" / "grader.py").write_text(
+        _write_grader(
+            repo,
             "import time\n"
             "from coral.grader.task_grader import TaskGrader\n"
             "class Grader(TaskGrader):\n"
             "    def evaluate(self):\n"
             "        time.sleep(120)\n"
-            "        return 0.5\n"
+            "        return 0.5\n",
         )
         sys.path.insert(0, str(repo))
         try:
@@ -507,13 +533,6 @@ def test_run_daemon_subprocess_grades_pending():
     with tempfile.TemporaryDirectory() as d:
         repo = _init_repo_and_coral(Path(d), score=0.9)
 
-        # Grader module must be importable in the daemon subprocess too.
-        env_shim = repo / "conftest_shim.pth"
-        # Use a .pth-style trick: prepend repo to sys.path via PYTHONPATH env.
-        import os
-
-        sys.path.insert(0, str(repo))
-        os.environ["PYTHONPATH"] = str(repo) + os.pathsep + os.environ.get("PYTHONPATH", "")
         try:
             (repo / "main.py").write_text("print('real daemon')\n")
             pending = submit_eval(
@@ -547,8 +566,7 @@ def test_run_daemon_subprocess_grades_pending():
                     proc.join(timeout=5)
                 proc.close()
         finally:
-            sys.path.pop(0)
-            _ = env_shim  # silence linter
+            pass
 
 
 # --------------------------------------------------------------------------- #
@@ -563,7 +581,7 @@ def test_default_max_workers_is_1():
 
 
 def _install_concurrency_probe_grader(repo: Path, sleep_seconds: float) -> Path:
-    """Overwrite eval/grader.py with one that reports peak concurrent executions.
+    """Overwrite the test grader with one that reports peak concurrent executions.
 
     Each grade increments a shared counter on entry, sleeps, decrements on
     exit. The counter is in a JSON file under private_dir, mutated under
@@ -605,7 +623,7 @@ def _install_concurrency_probe_grader(repo: Path, sleep_seconds: float) -> Path:
         "            _bump(-1)\n"
         "        return 1.0\n"
     )
-    (coral_dir / "private" / "eval" / "grader.py").write_text(grader_src)
+    _write_grader(repo, grader_src)
     return log_path
 
 
@@ -817,7 +835,7 @@ def test_grade_one_finalizes_migrated_pending_attempt_in_current_island(tmp_path
         lambda _repo_dir, _commit_hash, dest: dest.mkdir(parents=True, exist_ok=True),
     )
     monkeypatch.setattr(daemon, "_remove_worktree", lambda _repo_dir, _dest: None)
-    monkeypatch.setattr(daemon, "_run_grader_with_timeout", lambda *args, **kwargs: Bundle())
+    monkeypatch.setattr(daemon, "_run_grader", lambda *args, **kwargs: Bundle())
 
     finalized = daemon._grade_one(queued, config_path, coral_dir, config)
 

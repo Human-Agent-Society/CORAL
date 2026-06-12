@@ -33,6 +33,9 @@ task:
     - Score = your_sum_radii / 2.635977; 1.0 means matching the best known result and the goal is to reach or surpass 1!
 
 grader:
+  entrypoint: "circle_packing_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

@@ -31,6 +31,9 @@ task:
     - Images are flattened 28x28; reshape to (N, 28, 28) or (N, 1, 28, 28) for CNNs
 
 grader:
+  entrypoint: "mnist_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 300
   direction: maximize
   args:

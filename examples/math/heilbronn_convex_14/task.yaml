@@ -21,6 +21,9 @@ task:
     - Consider optimization approaches: simulated annealing, gradient descent, basin-hopping.
 
 grader:
+  entrypoint: "heilbronn_convex_14_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

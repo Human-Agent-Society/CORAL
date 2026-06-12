@@ -27,7 +27,7 @@ my-task/
             └── grader.py                  # class Grader(TaskGrader): ...
 ```
 
-The grader ships as a real Python package so it gets its own isolated venv at run time (created from `grader.setup` in `task.yaml`). This avoids the legacy `eval/grader.py` in-process load and the `DeprecationWarning` that came with it.
+The grader ships as a real Python package so it gets its own isolated venv at run time (created from `grader.setup` in `task.yaml`).
 
 ## 2. Define your task
 
@@ -135,17 +135,3 @@ Each agent autonomously:
 6. Repeats until stopped
 
 Check [Concepts](/concepts) to understand the full architecture, or [CLI Reference](/cli/reference) for all available commands.
-
-## Legacy `eval/grader.py` form
-
-Older tasks under `examples/` (and any task you wrote before this release) use a different layout:
-
-```
-my-task/
-├── task.yaml
-├── eval/
-│   └── grader.py
-└── seed/
-```
-
-CORAL still auto-discovers `eval/grader.py` and loads it in-process — it just emits a `DeprecationWarning`. To migrate an existing task to the packaged form, see [Writing a Custom Grader → Migrating from `eval/grader.py`](/guides/custom-grader). New tasks scaffolded by `coral init` use the packaged form by default.

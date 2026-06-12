@@ -12,6 +12,10 @@ task:
 
     '
 grader:
+  entrypoint: "frontier_cs_research_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+    - "uv pip install git+https://github.com/FrontierCS/Frontier-CS.git"
   timeout: 600
   direction: maximize
   args:

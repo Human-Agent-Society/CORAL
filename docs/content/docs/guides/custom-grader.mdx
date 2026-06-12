@@ -14,10 +14,10 @@ own and from the agent's worktree.
 > Two reusable judge grader packages ship under `examples/` — static and
 > dynamic rubric — and the rest of this page applies unchanged.
 
-## Quick start (deprecated path)
+## Quick start
 
 The fastest way to scaffold a new task — `coral init my-task` — drops a
-`task.yaml` plus an `eval/grader.py` file you can edit:
+`task.yaml` plus a packaged grader stub you can edit:
 
 ```python
 from coral.grader import TaskGrader
@@ -29,13 +29,7 @@ class Grader(TaskGrader):
         return float(result.stdout.strip())
 ```
 
-This auto-discovery path still works but emits a `DeprecationWarning` on
-load. Once your grader is non-trivial, migrate it to a package (next
-section). The same `TaskGrader` API applies in both setups.
-
-## Recommended: package your grader
-
-Wrap your grader in a small Python package so CORAL can install it via
+The grader ships as a small Python package so CORAL can install it via
 `uv pip install` into the grader venv. The repo's `examples/erdos/grader/`
 is a minimal reference.
 
@@ -98,8 +92,7 @@ worktree permission rules — your grader source stays hidden.
 
 ## TaskGrader helpers
 
-`TaskGrader` provides several helper methods. They behave the same whether
-your grader runs from a package or from `eval/grader.py`.
+`TaskGrader` provides several helper methods.
 
 ### `run_program(filename, *args, timeout=300)`
 
@@ -114,8 +107,10 @@ print(result.returncode)  # exit code
 
 ### `read_eval(relative_path)` / `read_eval_path(relative_path)`
 
-These read from the legacy private `eval/` directory. When your grader
-ships as a package, prefer `importlib.resources` to load bundled data:
+These read from the task's `eval/` data directory (copied to
+`.coral/private/eval/` at run setup — useful for test data and answer
+keys). For data that belongs to the grader itself, prefer
+`importlib.resources` to load files bundled inside the package:
 
 ```python
 import importlib.resources

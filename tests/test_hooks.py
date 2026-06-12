@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -14,10 +15,6 @@ from coral.hooks.post_commit import (
     submit_eval,
 )
 from coral.workspace import setup_claude_settings
-
-# These tests deliberately use the deprecated eval/grader.py loading path —
-# silence the warning suite-wide.
-pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
 
 
 def _submit_and_grade(message: str, agent_id: str, workdir: str):
@@ -46,7 +43,12 @@ def _submit_and_grade(message: str, agent_id: str, workdir: str):
 
 
 def _setup_repo_with_config(base_dir: Path) -> Path:
-    """Create a git repo with .coral/config.yaml wired to eval/grader.py."""
+    """Create a git repo with .coral/config.yaml wired to an entrypoint grader.
+
+    No real grader venv: `grader_venv/bin/python` is a shell wrapper around
+    the test interpreter with PYTHONPATH pointing at `private/grader_pkg/`,
+    where the testgrader module lives.
+    """
     repo = base_dir / "repo"
     repo.mkdir()
     subprocess.run(["git", "init", str(repo)], capture_output=True, check=True)
@@ -63,26 +65,35 @@ def _setup_repo_with_config(base_dir: Path) -> Path:
         ["git", "-C", str(repo), "commit", "-m", "Initial"], capture_output=True, check=True
     )
 
-    # Set up .coral directory with config + eval/grader.py
+    # Set up .coral directory with config + entrypoint grader package
     coral_dir = repo / ".coral"
     coral_dir.mkdir()
     (coral_dir / "public" / "attempts").mkdir(parents=True)
-    eval_dir = coral_dir / "private" / "eval"
-    eval_dir.mkdir(parents=True)
 
     # Write .coral_dir breadcrumb (as write_coral_dir does)
     (repo / ".coral_dir").write_text(str(coral_dir.resolve()))
 
-    (eval_dir / "grader.py").write_text(
+    pkg_dir = coral_dir / "private" / "grader_pkg"
+    pkg_dir.mkdir(parents=True)
+    (pkg_dir / "testgrader.py").write_text(
         "from coral.grader.task_grader import TaskGrader\n"
         "class Grader(TaskGrader):\n"
         "    def evaluate(self):\n"
         "        return 0.75\n"
     )
+    bin_dir = coral_dir / "private" / "grader_venv" / "bin"
+    bin_dir.mkdir(parents=True)
+    wrapper = bin_dir / "python"
+    wrapper.write_text(
+        "#!/bin/sh\n"
+        f'export PYTHONPATH="{pkg_dir}${{PYTHONPATH:+:$PYTHONPATH}}"\n'
+        f'exec "{sys.executable}" "$@"\n'
+    )
+    wrapper.chmod(0o755)
 
     config = {
         "task": {"name": "test_task", "description": "A test"},
-        "grader": {},
+        "grader": {"entrypoint": "testgrader:Grader"},
         "agents": {"count": 1},
         "sharing": {"attempts": True, "notes": True, "skills": True},
         "workspace": {"base_dir": str(repo), "repo_path": str(repo)},

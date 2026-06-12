@@ -100,7 +100,8 @@ def clone_or_init_repo(source: Path, dest: Path) -> Path:
 def copy_eval_to_private(task_dir: Path, coral_dir: Path) -> None:
     """Copy task's eval/ directory to .coral/private/eval/ (hidden from agents).
 
-    This is where grader.py and any test data / answer keys live.
+    This is where test data / answer keys / helper modules live; graders read
+    them via TaskGrader.read_eval() / private_dir.
     """
     eval_src = task_dir / "eval"
     if not eval_src.is_dir():

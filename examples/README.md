@@ -8,18 +8,14 @@ To run any example:
 coral start --config examples/<name>/task.yaml
 ```
 
-Tasks marked **packaged grader** below ship the grader as a standalone Python
-package — CORAL bootstraps a fresh venv at `.coral/private/grader_venv/`,
-installs the package via `grader.setup`, and runs evaluation in a worker
-subprocess from there. No extra install step is required for the user.
+Every task ships its grader as a standalone Python package — CORAL
+bootstraps a fresh venv at `.coral/private/grader_venv/`, installs the
+package via `grader.setup`, and runs evaluation in a worker subprocess
+from there. No extra install step is required for the user.
 
 ## Task Structure
 
-Tasks come in two layouts. New tasks should use the **packaged grader**
-form; the **legacy `eval/grader.py`** form still works but emits a
-`DeprecationWarning` on load.
-
-### Packaged grader (recommended)
+All tasks use the **packaged grader** layout:
 
 ```
 my_task/
@@ -31,17 +27,6 @@ my_task/
     └── src/my_task_grader/
         ├── __init__.py
         └── grader.py      # class Grader(TaskGrader): ...
-```
-
-### Legacy (deprecated)
-
-```
-my_task/
-├── task.yaml
-├── eval/
-│   └── grader.py          # auto-discovered by CORAL (deprecated)
-└── seed/
-    └── solution.py
 ```
 
 ### `task.yaml`
@@ -57,7 +42,7 @@ task:
     - Eval timeout is 120s.
 
 grader:
-  entrypoint: "my_task_grader.grader:Grader"   # required (or use legacy eval/grader.py)
+  entrypoint: "my_task_grader.grader:Grader"   # required
   setup:                                        # shell commands run in .coral/private/grader_venv/
     - "uv pip install -e ./grader"
   timeout: 300                       # Max seconds per evaluation (default: 300)
@@ -118,11 +103,13 @@ A standalone Python package consumed by `grader.entrypoint`. Inherits from
 `.coral/private/grader_venv/` so its dependencies stay separate from CORAL's
 and from each agent's worktree env.
 
-### `eval/grader.py` (legacy)
+### `eval/` data assets
 
-Same `TaskGrader` API, but auto-discovered from the task's `eval/`
-directory instead of via an entrypoint. Triggers a `DeprecationWarning`
-on load. New tasks should prefer the packaged form.
+An optional directory for data the grader needs but that shouldn't ship
+inside the package (test data, answer keys, helper modules). It is copied
+to `.coral/private/eval/` at run setup — hidden from agents — and the
+grader reads it via `read_eval()` / `self.private_dir`. Graders are no
+longer discovered from this directory.
 
 ### `seed/`
 
@@ -130,8 +117,8 @@ The starting codebase that gets copied into each agent's git worktree. This is w
 
 ## Migrated examples
 
-The following examples already ship as packaged graders and serve as
-reference implementations:
+These examples serve as reference implementations of the packaged grader
+form:
 
 - `erdos/grader/` — minimal package, single grader file, numpy dep
 - `drug_design/grader/` — package with bundled scorer modules + reference
@@ -245,11 +232,11 @@ Predict mRNA degradation rates at each base position. Scored by Mean Columnwise 
 
 ### frontier_cs_algo
 
-172 algorithmic competition problems. Solutions are self-contained C++17 files compiled with `g++ -std=c++17 -O2`. Each is scored 0-100 across 70 test cases.
+172 algorithmic competition problems. Solutions are self-contained C++17 files compiled with `g++ -std=c++17 -O2`. Each is scored 0-100 across 70 test cases. The grader is shared from `examples/frontier_cs_algo/_grader/` (each task directory carries a copy) and depends on the external `frontier_cs` package, installed in `grader.setup` via `uv pip install git+https://github.com/FrontierCS/Frontier-CS.git`; evaluation additionally requires a local go-judge instance running in Docker.
 
 ### frontier_cs_research
 
-127 research-level CS problems with multiple variants (e.g. scheduling under different availability/deadline/overhead configurations). Solutions in Python with 1800s timeouts.
+127 research-level CS problems with multiple variants (e.g. scheduling under different availability/deadline/overhead configurations). Solutions in Python with 1800s timeouts. The grader is shared from `examples/frontier_cs_research/_grader/` (each task directory carries a copy) and depends on the external `frontier_cs` package, installed in `grader.setup` via `uv pip install git+https://github.com/FrontierCS/Frontier-CS.git`.
 
 ### frontier_eng
 
@@ -303,7 +290,7 @@ Meta-solver optimization: agents improve a `solve.py` that wraps a Terminus2-bas
 The quickest way to scaffold a new task is `coral init my-task`. To do it manually, create the three pieces:
 
 1. **`seed/`** -- starter code with the function signature your grader will call
-2. **`eval/grader.py`** -- a `TaskGrader` subclass that imports and runs the agent's code, then returns a score
-3. **`task.yaml`** -- wire them together with the config above
+2. **`grader/`** -- a Python package whose `grader.py` holds a `TaskGrader` subclass that imports and runs the agent's code, then returns a score
+3. **`task.yaml`** -- wire them together with `grader.entrypoint` + `grader.setup` and the config above
 
 Use `coral validate my-task` to test your grader before launching agents.

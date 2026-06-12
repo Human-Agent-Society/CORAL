@@ -1,7 +1,8 @@
 """TaskGrader base class — the single way to write graders for CORAL tasks.
 
-Task authors create eval/grader.py in their task directory, inheriting from
-TaskGrader and implementing evaluate():
+Task authors ship a small grader package (referenced by ``grader.entrypoint``
+in task.yaml) with a class inheriting from TaskGrader and implementing
+evaluate():
 
     from coral.grader import TaskGrader
 

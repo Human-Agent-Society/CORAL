@@ -62,6 +62,9 @@ task:
 
 
 grader:
+  entrypoint: "llm_sql_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 360
   direction: maximize
   args:

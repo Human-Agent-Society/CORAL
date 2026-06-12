@@ -175,7 +175,9 @@ def test_subprocess_grader_propagates_grader_exception(pythonpath_with: Path) ->
         _grade(grader, str(pythonpath_with))
 
 
-def test_subprocess_grader_timeout_returns_failure_bundle(pythonpath_with: Path) -> None:
+def test_subprocess_grader_timeout_raises_timeout_error(pythonpath_with: Path) -> None:
+    """A hung worker is killed at grader.timeout and surfaces as TimeoutError,
+    which the daemon classifies as status="timeout" / budget_class="grader_error"."""
     _write_fixture_grader(
         pythonpath_with,
         """
@@ -194,9 +196,8 @@ def test_subprocess_grader_timeout_returns_failure_bundle(pythonpath_with: Path)
         config=GraderConfig(timeout=1),
         private_dir=str(pythonpath_with),
     )
-    bundle = _grade(grader, str(pythonpath_with))
-    assert bundle.aggregated is None
-    assert "timed out" in (bundle.feedback or "").lower()
+    with pytest.raises(TimeoutError, match="timed out"):
+        _grade(grader, str(pythonpath_with))
 
 
 def test_subprocess_grader_propagates_island_id(pythonpath_with: Path) -> None:

@@ -54,7 +54,7 @@ class TaskConfig:
 ```python
 @dataclass
 class GraderConfig:
-    entrypoint: str        # "module.path:ClassName" — empty falls back to eval/grader.py (deprecated)
+    entrypoint: str        # "module.path:ClassName" — required, resolved inside the grader venv
     setup: list[str]       # Shell commands run in .coral/private/grader_venv/ at start time
     timeout: int           # Eval timeout in seconds (default: 300)
     args: dict[str, Any]   # Extra grader arguments

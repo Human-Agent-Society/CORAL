@@ -415,7 +415,7 @@ def cmd_start(args: argparse.Namespace) -> None:
         specs = resolve_agent_specs(config)
         print(f"[coral] Config:     {args.config}")
         print(f"[coral] Task:       {config.task.name}")
-        print(f"[coral] Grader:     {config.grader.entrypoint or 'eval/grader.py (deprecated)'}")
+        print(f"[coral] Grader:     {config.grader.entrypoint}")
         if config.agents.assignments:
             print(f"[coral] Agents:     {len(specs)} (mix-and-match)")
             for s in specs:

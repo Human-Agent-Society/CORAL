@@ -40,6 +40,9 @@ task:
     - Minimize data dependencies between consecutive instructions.
 
 grader:
+  entrypoint: "kernel_builder_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 120
   direction: minimize
   args:

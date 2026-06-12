@@ -72,7 +72,7 @@ workspace:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `entrypoint` | string | `""` | Setuptools-style `module.path:ClassName`. Recommended. Empty falls back to the deprecated `eval/grader.py` discovery. |
+| `entrypoint` | string | *required* | Setuptools-style `module.path:ClassName` resolved inside the grader venv. |
 | `setup` | list[string] | `[]` | Shell commands run inside `.coral/private/grader_venv/` at `coral start` / `coral validate` time (typically `uv pip install -e ./grader`). |
 | `timeout` | int | `300` | Eval timeout in seconds (0 = no limit) |
 | `direction` | string | `"maximize"` | `"maximize"` or `"minimize"` — which direction is better |
@@ -85,16 +85,13 @@ Tasks that still set them fail to load with a migration error pointing at
 
 ### Loading your grader
 
-When `grader.entrypoint` is set, CORAL bootstraps a venv at
-`.coral/private/grader_venv/`, runs every command in `grader.setup`
-inside it, and spawns a worker subprocess from that venv whenever an
-attempt needs grading.
+CORAL bootstraps a venv at `.coral/private/grader_venv/`, runs every
+command in `grader.setup` inside it, and spawns a worker subprocess from
+that venv whenever an attempt needs grading.
 
-When `grader.entrypoint` is empty, CORAL falls back to auto-discovering
-`eval/grader.py` from the task directory. This still works but emits a
-`DeprecationWarning` on load — see
-[Writing a Custom Grader](/guides/custom-grader#migrating-from-gradertype--gradermodule)
-for the migration guide.
+`grader.entrypoint` is required — leaving it empty is an error at load
+time. See [Writing a Custom Grader](/guides/custom-grader) for the
+packaged-grader layout.
 
 ## `agents` section
 

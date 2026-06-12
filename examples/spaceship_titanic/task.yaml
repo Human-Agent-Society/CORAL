@@ -70,6 +70,9 @@ task:
     - The eval timeout is 120s — keep training time reasonable
 
 grader:
+  entrypoint: "spaceship_titanic_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 120
   direction: maximize
   args:

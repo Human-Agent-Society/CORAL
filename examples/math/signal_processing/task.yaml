@@ -46,6 +46,9 @@ task:
     - The function must handle arbitrary input signals, not just the test cases.
 
 grader:
+  entrypoint: "signal_processing_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

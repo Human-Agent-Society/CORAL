@@ -34,6 +34,9 @@ task:
     - The search space grows combinatorially -- intelligent pruning is essential.
 
 grader:
+  entrypoint: "sums_diffs_finite_sets_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

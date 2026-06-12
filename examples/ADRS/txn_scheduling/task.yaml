@@ -30,6 +30,9 @@ task:
 
 
 grader:
+  entrypoint: "txn_scheduling_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

@@ -42,6 +42,10 @@ task:
 
     - The problem statement is in statement.txt.'
 grader:
+  entrypoint: "frontier_cs_algo_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+    - "uv pip install git+https://github.com/FrontierCS/Frontier-CS.git"
   timeout: 300
   direction: maximize
   args:

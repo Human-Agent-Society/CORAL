@@ -38,6 +38,9 @@ task:
     - This is a non-convex problem with multiple local optima.
 
 grader:
+  entrypoint: "third_autocorr_ineq_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

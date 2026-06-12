@@ -39,7 +39,7 @@ class GraderConfig:
     """Grader configuration."""
 
     entrypoint: str = (
-        ""  # "module.path:ClassName"; empty = auto-discover from eval/grader.py (deprecated)
+        ""  # "module.path:ClassName" — required; resolved inside .coral/private/grader_venv/
     )
     setup: list[str] = field(
         default_factory=list

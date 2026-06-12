@@ -45,6 +45,9 @@ task:
     - Lower rank is harder but scores higher. Start with a higher rank to verify correctness, then reduce.
 
 grader:
+  entrypoint: "matmul_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

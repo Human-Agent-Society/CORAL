@@ -84,8 +84,8 @@ class Grader(TaskGrader):
 |--------|-------------|
 | `evaluate()` | Abstract — implement this. Return `float` or `ScoreBundle` |
 | `run_program(filename, *args, timeout=300)` | Run a file from the agent's codebase |
-| `read_eval(relative_path)` | Read a file from `eval/` (legacy private directory) |
-| `read_eval_path(relative_path)` | Get absolute path to an eval file (legacy) |
+| `read_eval(relative_path)` | Read a file from the private `eval/` data directory (`.coral/private/eval/`) |
+| `read_eval_path(relative_path)` | Get absolute path to a file in the private `eval/` data directory |
 | `score(value, explanation)` | Return a single-score bundle |
 | `fail(explanation)` | Return a failed evaluation (null score) |
 | `bundle(value, explanation)` | Create a ScoreBundle directly |
@@ -110,7 +110,7 @@ Configured under `grader:` in `task.yaml`.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `entrypoint` | `str` | `""` | Required. Setuptools-style `module.path:ClassName` resolved inside the grader venv. Empty falls back to the deprecated `eval/grader.py` discovery. |
+| `entrypoint` | `str` | `""` | Required. Setuptools-style `module.path:ClassName` resolved inside the grader venv. |
 | `setup` | `list[str]` | `[]` | Shell commands run once in the grader venv at `coral start` / `coral validate` time. Typically a single `uv pip install -e ./grader`. |
 | `timeout` | `int` | `300` | Eval timeout in seconds (`0` = no limit). |
 | `args` | `dict` | `{}` | Free-form kwargs accessible inside the grader as `self.args`. |

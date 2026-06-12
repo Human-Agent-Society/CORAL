@@ -30,6 +30,9 @@ task:
     - Higher ratio values yield higher scores.
 
 grader:
+  entrypoint: "minimizing_max_min_dist_3d_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

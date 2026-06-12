@@ -36,6 +36,9 @@ task:
     - Coefficients are for the input Hermite basis (c1, c2, ..., not including the auto-computed c0).
 
 grader:
+  entrypoint: "uncertainty_ineq_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

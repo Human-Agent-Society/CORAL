@@ -340,52 +340,40 @@ def test_grade_annotates_tune_attempts_when_evaluate_returns_float():
     assert bundle.feedback.startswith("[--tune mode]")
 
 
-def _create_grader_file(directory: Path) -> None:
-    """Create a minimal eval/grader.py for testing the legacy loader path."""
-    eval_dir = directory / "private" / "eval"
-    eval_dir.mkdir(parents=True)
-    grader_py = eval_dir / "grader.py"
-    grader_py.write_text(
-        "from coral.grader.task_grader import TaskGrader\n"
-        "class Grader(TaskGrader):\n"
-        "    def evaluate(self):\n"
-        "        return self.timeout\n"
-    )
-
-
-def test_loader_passes_grader_config():
-    """GraderConfig from task.yaml should be accessible as self.config (legacy path)."""
+def test_loader_passes_grader_config_and_args():
+    """GraderConfig (incl. args) from task.yaml must reach the loaded grader."""
     with tempfile.TemporaryDirectory() as tmpdir:
         coral_dir = Path(tmpdir)
-        _create_grader_file(coral_dir)
+        venv_python = coral_dir / "private" / "grader_venv" / "bin" / "python"
+        venv_python.parent.mkdir(parents=True)
+        venv_python.touch()
+
         config = CoralConfig(task=TaskConfig(name="t", description="d"))
-        config.grader = GraderConfig(timeout=3000)
-        with pytest.warns(DeprecationWarning):
-            grader = load_grader(config, coral_dir)
+        config.grader = GraderConfig(
+            entrypoint="my_pkg.grader:Grader",
+            timeout=3000,
+            args={"program_file": "sol.py"},
+        )
+        grader = load_grader(config, coral_dir)
         assert grader.config is config.grader
         assert grader.timeout == 3000
+        assert grader.config.args["program_file"] == "sol.py"
 
 
-def test_loader_passes_args_separately():
-    """grader.args should reach the loaded grader (legacy path)."""
+def test_loader_rejects_legacy_eval_grader_py():
+    """A leftover eval/grader.py without entrypoint must not be auto-discovered."""
     with tempfile.TemporaryDirectory() as tmpdir:
         coral_dir = Path(tmpdir)
-        _create_grader_file(coral_dir)
+        eval_dir = coral_dir / "private" / "eval"
+        eval_dir.mkdir(parents=True)
+        (eval_dir / "grader.py").write_text(
+            "from coral.grader.task_grader import TaskGrader\n"
+            "class Grader(TaskGrader):\n"
+            "    def evaluate(self):\n"
+            "        return 1.0\n"
+        )
         config = CoralConfig(task=TaskConfig(name="t", description="d"))
-        config.grader = GraderConfig(timeout=3000, args={"program_file": "sol.py"})
-        with pytest.warns(DeprecationWarning):
-            grader = load_grader(config, coral_dir)
-        assert grader.timeout == 3000
-        assert grader.args["program_file"] == "sol.py"
-
-
-def test_loader_eval_grader_py_emits_deprecation_warning():
-    """Loading via eval/grader.py must emit DeprecationWarning."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        coral_dir = Path(tmpdir)
-        _create_grader_file(coral_dir)
-        config = CoralConfig(task=TaskConfig(name="t", description="d"))
-        with pytest.warns(DeprecationWarning, match="eval/grader.py"):
+        with pytest.raises(ValueError, match="entrypoint"):
             load_grader(config, coral_dir)
 
 

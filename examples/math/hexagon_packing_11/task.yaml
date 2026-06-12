@@ -28,6 +28,9 @@ task:
     - Score = (1/your_side_length) / (1/3.930092); 1.0 means matching the best known result.
 
 grader:
+  entrypoint: "hexagon_packing_11_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

@@ -34,6 +34,9 @@ task:
     - Lower C1 values yield higher scores.
 
 grader:
+  entrypoint: "first_autocorr_ineq_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

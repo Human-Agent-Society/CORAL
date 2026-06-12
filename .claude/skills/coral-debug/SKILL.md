@@ -78,7 +78,7 @@ There is no separate type-check step in CI yet; tests cover the contract.
 When you need a throwaway task to exercise a code change:
 ```bash
 uv run coral init /tmp/coral-scratch
-# edit /tmp/coral-scratch/eval/grader.py to return a simple float
+# edit /tmp/coral-scratch/grader/src/coral_scratch_grader/grader.py to return a simple float
 uv run coral validate /tmp/coral-scratch
 uv run coral start -c /tmp/coral-scratch/task.yaml agents.count=1 run.session=local
 ```

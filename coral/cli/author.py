@@ -220,13 +220,11 @@ def cmd_validate(args: argparse.Namespace) -> None:
                 else:
                     shutil.copy2(src, dst)
 
-        # Bootstrap the grader's isolated venv for the entrypoint path. The
-        # legacy eval/grader.py path runs in-process and skips this step.
-        if config.grader.entrypoint:
-            from coral.workspace.grader_env import setup_grader_env
+        # Bootstrap the grader's isolated venv where the entrypoint runs.
+        from coral.workspace.grader_env import setup_grader_env
 
-            print("Setting up grader venv (.coral/private/grader_venv)...")
-            setup_grader_env(coral_dir, config.grader, task_dir)
+        print("Setting up grader venv (.coral/private/grader_venv)...")
+        setup_grader_env(coral_dir, config.grader, task_dir)
 
         from coral.grader.loader import load_grader
         from coral.types import Task

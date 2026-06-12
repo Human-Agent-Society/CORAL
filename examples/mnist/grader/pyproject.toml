@@ -1,0 +1,17 @@
+[project]
+name = "mnist-grader"
+version = "0.1.0"
+description = "CORAL grader for the mnist task."
+requires-python = ">=3.11"
+dependencies = [
+    "coral",
+    "numpy",
+    "scikit-learn",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mnist_grader"]

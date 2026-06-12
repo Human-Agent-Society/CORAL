@@ -20,12 +20,10 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import multiprocessing
 import shutil
 import subprocess
 import threading
 import time
-import traceback
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
@@ -50,20 +48,6 @@ logger = logging.getLogger(__name__)
 
 _POLL_INTERVAL_SEC = 0.5
 
-# Headroom on top of `grader.timeout` before the daemon SIGKILLs the worker.
-# Inner timers (asyncio.wait_for in TaskGrader, subprocess.run(timeout=...) in
-# per-grader code) all use the user-configured `grader.timeout`. Without
-# headroom they race the daemon's outer hard-kill — a kernel that just barely
-# overruns can land as either status="failure"/budget_class="real" (inner
-# timer wins, returns a clean self.fail bundle) or status="timeout"/
-# budget_class="grader_error" (outer wins). Same wall-clock condition, two
-# different leaderboard accountings.
-#
-# Giving the outer timer a grace window means the inner timer is the
-# *intended* one to fire; the daemon hard-kill is the safety net for graders
-# that hang past it (e.g. C extensions or sleeps that ignore cancellation).
-_TIMEOUT_GRACE_SECONDS = 30
-
 # Guards `increment_eval_count` (read-modify-write on .coral/public/eval_count).
 # The daemon is the sole writer; this lock is only needed because pending
 # attempts can be drained in parallel by multiple worker threads.
@@ -71,61 +55,22 @@ _eval_count_lock = threading.Lock()
 
 
 # --------------------------------------------------------------------------- #
-# Subprocess wrapper around the grader (keeps hard-kill semantics on timeout) #
+# Grader invocation                                                           #
 # --------------------------------------------------------------------------- #
 
 
-def _grader_worker(
+def _run_grader(
     config_path: str,
     coral_dir: str,
     codebase_path: str,
     tasks: list,
-    result_queue: Any,
-    island_id: str | int | None = None,
-) -> None:
-    """Run grader.grade() in a child process. Puts result or exception into queue.
-
-    We re-load the grader inside the child to avoid pickling issues with
-    dynamically imported modules (grader.py loaded via importlib.util).
-    """
-    try:
-        config = CoralConfig.from_yaml(config_path)
-        grader = load_grader(config, coral_dir=coral_dir)
-        grade_kwargs: dict[str, Any] = {}
-        if island_id is not None:
-            grade_kwargs["island_id"] = island_id
-        result = asyncio.run(grader.grade(codebase_path, tasks, **grade_kwargs))
-        result_queue.put(("ok", result))
-    except Exception as e:
-        result_queue.put(("error", e, traceback.format_exc()))
-
-
-def _run_grader_with_timeout(
-    config_path: str,
-    coral_dir: str,
-    codebase_path: str,
-    tasks: list,
-    timeout: int,
     island_id: str | int | None = None,
 ) -> Any:
-    """Run grader in a separate process with a hard timeout.
+    """Resolve the entrypoint grader and run one grade() call.
 
-    multiprocessing + SIGKILL is the only reliable way to interrupt
-    synchronous blocking code (numpy, Docker calls, etc.) on timeout.
-    asyncio.wait_for can't.
-
-    The hard-kill fires at ``timeout + _TIMEOUT_GRACE_SECONDS``, not at
-    ``timeout`` exactly. The user-configured ``timeout`` is also threaded
-    through inner timers (TaskGrader.grade's asyncio.wait_for, per-grader
-    subprocess.run(timeout=...)). Without headroom the outer hard-kill races
-    them — see the comment on _TIMEOUT_GRACE_SECONDS for why. Inner timers
-    should fire first and return a clean self.fail bundle; the daemon kill
-    is the safety net.
-
-    For entrypoint-based graders we skip the multiprocessing wrapper —
-    SubprocessGrader already shells out to its own venv and applies the
-    same timeout via subprocess.run, so doubling up would just add a
-    no-op layer.
+    Timeout enforcement lives inside SubprocessGrader — its worker runs under
+    ``subprocess.run(timeout=grader.timeout)``, so a hung grader is killed
+    there and reported back as a clean timed-out bundle.
 
     ``island_id`` is forwarded so the grader can scope hub reads
     (e.g. ``read_attempts(coral_dir, island_id=...)``) to the attempt's
@@ -137,43 +82,8 @@ def _run_grader_with_timeout(
     grade_kwargs: dict[str, Any] = {}
     if island_id is not None:
         grade_kwargs["island_id"] = island_id
-    if config.grader.entrypoint:
-        grader = load_grader(config, coral_dir=coral_dir)
-        return asyncio.run(grader.grade(codebase_path, tasks, **grade_kwargs))
-
-    if timeout <= 0:
-        grader = load_grader(config, coral_dir=coral_dir)
-        return asyncio.run(grader.grade(codebase_path, tasks, **grade_kwargs))
-
-    hard_kill_deadline = timeout + _TIMEOUT_GRACE_SECONDS
-    result_queue: multiprocessing.Queue = multiprocessing.Queue()
-    proc = multiprocessing.Process(
-        target=_grader_worker,
-        args=(config_path, coral_dir, codebase_path, tasks, result_queue, island_id),
-    )
-    try:
-        proc.start()
-        proc.join(timeout=hard_kill_deadline)
-
-        if proc.is_alive():
-            proc.kill()
-            proc.join(timeout=5)
-            raise TimeoutError(
-                f"Grader exceeded {timeout}s + {_TIMEOUT_GRACE_SECONDS}s grace and was killed"
-            )
-
-        if result_queue.empty():
-            raise RuntimeError("Grader process exited without returning a result")
-
-        status, *payload = result_queue.get_nowait()
-        if status == "ok":
-            return payload[0]
-        exc, tb_str = payload
-        raise RuntimeError(f"Grader failed: {exc}\n{tb_str}")
-    finally:
-        result_queue.close()
-        result_queue.join_thread()
-        proc.close()
+    grader = load_grader(config, coral_dir=coral_dir)
+    return asyncio.run(grader.grade(codebase_path, tasks, **grade_kwargs))
 
 
 # --------------------------------------------------------------------------- #
@@ -505,9 +415,8 @@ def _grade_one(
     """Grade a single pending attempt and return the finalized Attempt record."""
     grading_island_id = _attempt_island_id(attempt)
     # Task.metadata is the canonical channel for surfacing per-attempt context
-    # to the user's grader (read via TaskGrader.tune / .budget_class). Both
-    # the in-process and SubprocessGrader paths serialize it, so this works
-    # for either runtime. Final budget_class may flip to "grader_error" below.
+    # to the user's grader (read via TaskGrader.tune / .budget_class).
+    # Final budget_class may flip to "grader_error" below.
     budget_class = get_budget_class(attempt.metadata)
     task = Task(
         id=config.task.name,
@@ -533,12 +442,11 @@ def _grade_one(
     try:
         _add_isolated_worktree(repo_dir, attempt.commit_hash, checkout_path)
         try:
-            bundle = _run_grader_with_timeout(
+            bundle = _run_grader(
                 str(config_path),
                 str(coral_dir),
                 str(checkout_path),
                 [task],
-                timeout,
                 island_id=grading_island_id,
             )
             score = bundle.aggregated
@@ -783,10 +691,9 @@ def run_daemon(coral_dir: str | Path, stop_event: Any = None) -> None:
     """Watch coral_dir/public/attempts/ and grade pending entries.
 
     Loops until `stop_event.is_set()` (multiprocessing.Event) or SIGTERM.
-    Grader instance itself is (re)loaded once per iteration by
-    `_run_grader_with_timeout` in a child process — the expensive bit (Docker
-    init, dataset parsing, etc.) can amortize across evals if the grader
-    exposes module-level caches.
+    The grader is (re)resolved per grade by `_run_grader`; the expensive bit
+    (Docker init, dataset parsing, etc.) can amortize across evals if the
+    grader exposes module-level caches.
     """
     coral_dir = Path(coral_dir).resolve()
     config_path = coral_dir / "config.yaml"

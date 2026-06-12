@@ -34,6 +34,9 @@ task:
     - The integral constraint sum(h)*dx = 1 must be satisfied precisely.
 
 grader:
+  entrypoint: "erdos_min_overlap_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:

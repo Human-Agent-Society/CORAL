@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from coral.config import GraderConfig
-from coral.types import Score, ScoreBundle, Task
+from coral.types import ScoreBundle, Task
 
 logger = logging.getLogger(__name__)
 
@@ -166,18 +166,12 @@ class SubprocessGrader:
                 timeout=self.timeout,
             )
         except subprocess.TimeoutExpired:
-            timeout = self.timeout
-            return ScoreBundle(
-                scores={
-                    "eval": Score(
-                        value=None,
-                        name="eval",
-                        explanation=f"Evaluation timed out after {timeout}s",
-                    )
-                },
-                aggregated=None,
-                feedback=f"Evaluation timed out after {timeout}s",
-            )
+            # Raise instead of returning a fail bundle so the daemon can
+            # classify the attempt as status="timeout" / budget_class=
+            # "grader_error" (a grader-infrastructure overrun, not a real
+            # scored attempt). Graders that want graceful timeout *scores*
+            # should enforce tighter inner timeouts themselves.
+            raise TimeoutError(f"Evaluation timed out after {self.timeout}s") from None
 
         if result.returncode != 0:
             raise RuntimeError(

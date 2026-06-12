@@ -128,6 +128,9 @@ task:
     - You must implement at least part of the operations as a Triton kernel
 
 grader:
+  entrypoint: "trimul_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
   timeout: 1200
   direction: maximize
   args:

@@ -5,7 +5,6 @@ Called automatically by `coral start` and `coral validate`.
 
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 
 from coral.config import CoralConfig
@@ -27,54 +26,34 @@ def validate_task(task_dir: Path) -> list[str]:
         errors.append(f"task.yaml parse error: {e}")
         return errors
 
-    # 2. Either grader.entrypoint is set OR eval/grader.py exists (deprecated path).
-    eval_dir = task_dir / "eval"
-    grader_py = eval_dir / "grader.py"
-    has_eval_grader = grader_py.exists()
-    has_entrypoint = bool(config.grader.entrypoint)
-
-    if not has_eval_grader and not has_entrypoint:
-        errors.append(
-            "No grader configured. Set grader.entrypoint = "
-            "'your_pkg.module:Grader' in task.yaml (and grader.setup to install "
-            "the package), or create eval/grader.py (deprecated)."
-        )
-
-    if has_entrypoint and ":" not in config.grader.entrypoint:
+    # 2. grader.entrypoint is set and well-formed.
+    if not config.grader.entrypoint:
+        if (task_dir / "eval" / "grader.py").exists():
+            errors.append(
+                "eval/grader.py auto-discovery is no longer supported. Package "
+                "the grader (grader/pyproject.toml + src/<pkg>/grader.py) and set "
+                "grader.entrypoint = '<pkg>.grader:Grader' plus grader.setup = "
+                '["uv pip install -e ./grader"] in task.yaml. '
+                "See docs/guides/custom-grader."
+            )
+        else:
+            errors.append(
+                "No grader configured. Set grader.entrypoint = "
+                "'your_pkg.module:Grader' in task.yaml and grader.setup to "
+                "install the package."
+            )
+    elif ":" not in config.grader.entrypoint:
         errors.append(
             f"grader.entrypoint must be 'module.path:ClassName', got {config.grader.entrypoint!r}"
         )
 
-    # 3. grader.py exports a Grader class that inherits from TaskGrader
-    if has_eval_grader:
-        try:
-            spec = importlib.util.spec_from_file_location("task_grader_check", str(grader_py))
-            if spec is None or spec.loader is None:
-                errors.append("Cannot load eval/grader.py")
-            else:
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
-                grader_cls = getattr(module, "Grader", None)
-                if grader_cls is None:
-                    errors.append("eval/grader.py must export a class named 'Grader'")
-                else:
-                    from coral.grader.task_grader import TaskGrader
-
-                    if not issubclass(grader_cls, TaskGrader):
-                        errors.append(
-                            f"Grader class must inherit from TaskGrader, "
-                            f"got bases: {[b.__name__ for b in grader_cls.__bases__]}"
-                        )
-        except Exception as e:
-            errors.append(f"eval/grader.py import error: {e}")
-
-    # 4. direction is valid
+    # 3. direction is valid
     if config.grader.direction not in ("maximize", "minimize"):
         errors.append(
             f"grader.direction must be 'maximize' or 'minimize', got '{config.grader.direction}'"
         )
 
-    # 5. Extra private files exist if specified
+    # 4. Extra private files exist if specified
     for private_path in config.grader.private:
         p = Path(private_path)
         if not p.is_absolute():
