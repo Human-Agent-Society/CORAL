@@ -43,14 +43,3 @@ def test_validate_rejects_malformed_entrypoint():
         task_dir = _make_task(Path(d), "  entrypoint: my_pkg.grader.Grader")
         errors = validate_task(task_dir)
         assert any("module.path:ClassName" in e for e in errors)
-
-
-def test_validate_legacy_eval_grader_gets_migration_error():
-    """A leftover eval/grader.py without entrypoint gets a targeted message."""
-    with tempfile.TemporaryDirectory() as d:
-        task_dir = _make_task(Path(d), "  timeout: 60")
-        eval_dir = task_dir / "eval"
-        eval_dir.mkdir()
-        (eval_dir / "grader.py").write_text("class Grader: ...\n")
-        errors = validate_task(task_dir)
-        assert any("no longer supported" in e for e in errors)

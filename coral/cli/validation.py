@@ -28,20 +28,11 @@ def validate_task(task_dir: Path) -> list[str]:
 
     # 2. grader.entrypoint is set and well-formed.
     if not config.grader.entrypoint:
-        if (task_dir / "eval" / "grader.py").exists():
-            errors.append(
-                "eval/grader.py auto-discovery is no longer supported. Package "
-                "the grader (grader/pyproject.toml + src/<pkg>/grader.py) and set "
-                "grader.entrypoint = '<pkg>.grader:Grader' plus grader.setup = "
-                '["uv pip install -e ./grader"] in task.yaml. '
-                "See docs/guides/custom-grader."
-            )
-        else:
-            errors.append(
-                "No grader configured. Set grader.entrypoint = "
-                "'your_pkg.module:Grader' in task.yaml and grader.setup to "
-                "install the package."
-            )
+        errors.append(
+            "No grader configured. Set grader.entrypoint = "
+            "'your_pkg.module:Grader' in task.yaml and grader.setup to "
+            "install the package."
+        )
     elif ":" not in config.grader.entrypoint:
         errors.append(
             f"grader.entrypoint must be 'module.path:ClassName', got {config.grader.entrypoint!r}"
