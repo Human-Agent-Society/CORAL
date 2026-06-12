@@ -30,6 +30,7 @@
 
 ### 🔥 News
 
+- **[2026-06-13]** 旧版 `eval/grader.py` grader 自动发现已废弃并移除 —— 改用 `grader.entrypoint` 指向打包的 grader。详见 [自定义 Grader 文档](https://docs.coralxyz.com/guides/custom-grader)。
 - **[2026-04-24]** 新增 Rubric 评审 —— 两个开箱即用的 LLM 评审 grader 包，专为开放式任务（报告、备忘、法律分析）设计。详见 [Rubric Judges 文档](https://docs.coralxyz.com/guides/rubric-judge)。
 - **[2026-04-03]** 我们的论文 "CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery" 现已发布！请查看 [Arxiv](https://arxiv.org/abs/2604.01658v1)。
 - **[2026-03-18]** CORAL 正式发布！点击查看 [Blog](https://human-agent-society.github.io/CORAL/)。
@@ -42,7 +43,7 @@
 curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
 ```
 
-通过 `uv tool install` 全局安装 `coral`。如需指定版本，设置 `CORAL_VERSION=v0.5.0`。手动安装、开发模式、前置依赖等详见[安装文档](https://docs.coralxyz.com/getting-started/installation)。
+通过 `uv tool install` 全局安装 `coral`。如需指定版本，设置 `CORAL_VERSION=v0.7.0`。手动安装、开发模式、前置依赖等详见[安装文档](https://docs.coralxyz.com/getting-started/installation)。
 
 ```bash
 coral init my-task                       # 生成任务模板
