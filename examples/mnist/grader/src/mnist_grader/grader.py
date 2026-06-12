@@ -13,8 +13,14 @@ import json
 import os
 import textwrap
 
+from pathlib import Path
+
 from coral.grader import TaskGrader
 from coral.types import ScoreBundle
+
+# Hidden eval data shipped inside this package (works for editable
+# and wheel installs alike — the package is a real directory on disk).
+_TASKDATA = Path(__file__).parent / "taskdata"
 
 
 class Grader(TaskGrader):
@@ -29,7 +35,7 @@ class Grader(TaskGrader):
         program_path = os.path.join(self.codebase_path, program_file)
         train_path = os.path.join(self.codebase_path, train_file)
         test_path = os.path.join(self.codebase_path, test_file)
-        answers_path = str(self.read_eval_path("answers/test_labels.npz"))
+        answers_path = str((_TASKDATA / "answers/test_labels.npz"))
 
         for path, label in [
             (program_path, f"Program file ({program_file})"),

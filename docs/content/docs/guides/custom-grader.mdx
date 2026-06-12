@@ -105,18 +105,23 @@ print(result.stderr)    # captured stderr
 print(result.returncode)  # exit code
 ```
 
-### `read_eval(relative_path)` / `read_eval_path(relative_path)`
+### Hidden data files
 
-These read from the task's `eval/` data directory (copied to
-`.coral/private/eval/` at run setup — useful for test data and answer
-keys). For data that belongs to the grader itself, prefer
-`importlib.resources` to load files bundled inside the package:
+Test data, answer keys, and helper modules ship inside the grader package —
+the convention is a `taskdata/` directory next to `grader.py`:
 
 ```python
-import importlib.resources
+from pathlib import Path
 
-data_dir = str(importlib.resources.files("my_task_grader.data"))
+_TASKDATA = Path(__file__).parent / "taskdata"
+answers = _TASKDATA / "answers" / "test_labels.npz"
 ```
+
+This works for editable and wheel installs alike, and hatchling bundles
+non-Python files under `packages` automatically. For files that can't live
+in the package (very large datasets, files shared across tasks), list them
+under `grader.private` in task.yaml — they are copied to
+`.coral/private/<name>` and readable via `self.private_dir`.
 
 ### `score(value, explanation="")`
 

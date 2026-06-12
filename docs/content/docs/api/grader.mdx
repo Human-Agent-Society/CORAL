@@ -84,8 +84,6 @@ class Grader(TaskGrader):
 |--------|-------------|
 | `evaluate()` | Abstract — implement this. Return `float` or `ScoreBundle` |
 | `run_program(filename, *args, timeout=300)` | Run a file from the agent's codebase |
-| `read_eval(relative_path)` | Read a file from the private `eval/` data directory (`.coral/private/eval/`) |
-| `read_eval_path(relative_path)` | Get absolute path to a file in the private `eval/` data directory |
 | `score(value, explanation)` | Return a single-score bundle |
 | `fail(explanation)` | Return a failed evaluation (null score) |
 | `bundle(value, explanation)` | Create a ScoreBundle directly |

@@ -12,8 +12,14 @@ import json
 import os
 import textwrap
 
+from pathlib import Path
+
 from coral.grader import TaskGrader
 from coral.types import ScoreBundle
+
+# Hidden eval data shipped inside this package (works for editable
+# and wheel installs alike — the package is a real directory on disk).
+_TASKDATA = Path(__file__).parent / "taskdata"
 
 # Performance thresholds (real-mode dimensions: forest_height=10, rounds=16, batch_size=256)
 BASELINE_CYCLES = 147_734
@@ -69,7 +75,7 @@ class Grader(TaskGrader):
         try:
             result = _run_evaluation(
                 program_path,
-                self.read_eval_path("frozen_problem.py"),
+                (_TASKDATA / "frozen_problem.py"),
                 timeout,
                 self.get_python_command(),
                 params,

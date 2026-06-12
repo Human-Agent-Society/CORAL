@@ -205,9 +205,6 @@ def cmd_validate(args: argparse.Namespace) -> None:
         coral_dir = tmpdir / ".coral"
         private_dir = coral_dir / "private"
         private_dir.mkdir(parents=True)
-        eval_src = task_dir / "eval"
-        if eval_src.is_dir():
-            shutil.copytree(eval_src, private_dir / "eval")
 
         for private_path_str in config.grader.private:
             src = Path(private_path_str)

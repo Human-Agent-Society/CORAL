@@ -13,6 +13,10 @@ from pathlib import Path
 from coral.grader import TaskGrader
 from coral.types import ScoreBundle
 
+# Hidden eval data shipped inside this package (works for editable
+# and wheel installs alike — the package is a real directory on disk).
+_TASKDATA = Path(__file__).parent / "taskdata"
+
 
 class Grader(TaskGrader):
     def evaluate(self) -> ScoreBundle:
@@ -22,7 +26,7 @@ class Grader(TaskGrader):
         if not os.path.exists(program_path):
             return self.fail(f"Program file not found: {program_file}")
 
-        eval_dir = str(Path(self.private_dir) / "eval")
+        eval_dir = str(_TASKDATA)
         if eval_dir not in sys.path:
             sys.path.insert(0, eval_dir)
 

@@ -30,7 +30,7 @@ The `.coral/` directory is the central hub for all shared state in a CORAL run. 
 │   └── grader_daemon_heartbeat  # Daemon liveness timestamp (ISO 8601)
 │
 └── private/                 # Hidden from agents
-    ├── eval/                # Grader code and test data
+    ├── grader_venv/         # Isolated venv running the grader entrypoint
     └── grader_checkouts/    # Temporary worktrees for grading (ephemeral)
 ```
 

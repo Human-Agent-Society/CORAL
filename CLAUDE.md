@@ -28,7 +28,7 @@ Key concepts:
 | `coral/gateway/` | Optional LiteLLM gateway (`server.py`, `middleware.py`, `config.py`) for intercepting agent model traffic |
 | `coral/web/` | Starlette web dashboard (`app.py`, `api.py`, `events.py`, `logs.py`, `static/`) |
 | `coral/cli/` | CLI package: `start.py`, `query.py`, `eval.py`, `heartbeat.py`, `ui.py`, `author.py`, `validation.py`, `_helpers.py` |
-| `examples/` | Task configs (circle_packing, swebench-verified, kernel_engineering, mnist, ...) — each is a `task.yaml` + `seed/` + packaged grader (`grader/` referenced by `grader.entrypoint`), with optional `eval/` data assets |
+| `examples/` | Task configs (circle_packing, swebench-verified, kernel_engineering, mnist, ...) — each is a `task.yaml` + `seed/` + packaged grader (`grader/` referenced by `grader.entrypoint`); hidden data ships inside the grader package |
 | `tests/` | Pytest suite (config, grader, hooks, hub, manager reliability, daemon, workspace, ...) |
 
 ## How It Works
@@ -45,7 +45,6 @@ coral start --config task.yaml
     │   │   ├── logs/, eval_logs/, heartbeat/, eval_count
     │   │   └── grader_daemon.pid, grader_daemon_heartbeat
     │   ├── private/
-    │   │   ├── eval/      data assets copied from <task>/eval/ (read via read_eval())
     │   │   ├── grader_venv/   isolated uv venv where the grader entrypoint runs
     │   │   └── ...        anything listed in grader.private (hidden from agents)
     │   ├── config.yaml, config_dir
@@ -140,7 +139,7 @@ uv run ruff format .
 
 2. **`BaseGrader`** with helpers `_make_score()`, `_make_bundle()`, `grade_sync()`. **`TaskGrader`** (`coral/grader/task_grader.py`) is the recommended base for task-specific graders — implement `evaluate()` and use `self.codebase_path`, `self.private_dir`, `self.args`, `self.score(...)`, `self.fail(...)`.
 
-3. **Wiring a grader**: `grader.entrypoint = "module.path:ClassName"` (required) plus `grader.setup: ["uv pip install -e ./grader"]`. The daemon resolves the entrypoint inside `.coral/private/grader_venv/` via `coral.grader.subprocess_grader.SubprocessGrader`. The legacy `eval/grader.py` auto-discovery has been removed; an `eval/` directory now only carries data assets (copied to `.coral/private/eval/`, read via `read_eval()`). `FunctionGrader` exists for wrapping plain callables but is no longer wired through `task.yaml` — ship a thin `TaskGrader` subclass instead.
+3. **Wiring a grader**: `grader.entrypoint = "module.path:ClassName"` (required) plus `grader.setup: ["uv pip install -e ./grader"]`. The daemon resolves the entrypoint inside `.coral/private/grader_venv/` via `coral.grader.subprocess_grader.SubprocessGrader`. The legacy `eval/grader.py` auto-discovery has been removed. Hidden data (answer keys, test fixtures, helper modules) ships inside the grader package (e.g. a `taskdata/` subdir resolved via `Path(__file__).parent`); `grader.private` remains for files that must stay outside the package. `FunctionGrader` exists for wrapping plain callables but is no longer wired through `task.yaml` — ship a thin `TaskGrader` subclass instead.
 
 4. **Eval is async by default**: `coral eval` writes a pending `Attempt` to `.coral/public/attempts/<hash>.json` and the daemon writes the final `ScoreBundle` back. `grader.max_pending_per_agent` (default 1) caps in-flight submissions per agent; `grader.parallel.max_workers` (default 1) controls daemon concurrency — bump only when the grader is concurrency-safe.
 

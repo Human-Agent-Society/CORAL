@@ -97,25 +97,6 @@ def clone_or_init_repo(source: Path, dest: Path) -> Path:
     return dest
 
 
-def copy_eval_to_private(task_dir: Path, coral_dir: Path) -> None:
-    """Copy task's eval/ directory to .coral/private/eval/ (hidden from agents).
-
-    This is where test data / answer keys / helper modules live; graders read
-    them via TaskGrader.read_eval() / private_dir.
-    """
-    eval_src = task_dir / "eval"
-    if not eval_src.is_dir():
-        return
-
-    eval_dst = coral_dir / "private" / "eval"
-    if eval_dst.exists():
-        shutil.rmtree(eval_dst)
-    shutil.copytree(eval_src, eval_dst)
-    logger.info(
-        f"Copied eval/ to .coral/private/eval/ ({sum(1 for _ in eval_dst.rglob('*') if _.is_file())} files)"
-    )
-
-
 def copy_seed_directory(seed_dir: Path, repo_dir: Path) -> None:
     """Copy contents of seed/ directory into the repo root.
 

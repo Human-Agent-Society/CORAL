@@ -57,7 +57,7 @@ results/<task-name>/<timestamp>/
 │   │   ├── grader_daemon.pid  # Daemon process ID
 │   │   └── grader_daemon_heartbeat  # Daemon liveness timestamp
 │   └── private/               # Hidden from agents
-│       ├── eval/              # Grader code and test data
+│       ├── grader_venv/       # Isolated venv running the grader entrypoint
 │       └── grader_checkouts/  # Ephemeral worktrees for grading
 │
 └── agents/

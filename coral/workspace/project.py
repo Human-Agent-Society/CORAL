@@ -15,7 +15,6 @@ from coral.hub._island import island_root
 from coral.hub.checkpoint import init_checkpoint_repo
 from coral.workspace.repo import (
     clone_or_init_repo,
-    copy_eval_to_private,
     copy_private_data,
     copy_seed_directory,
 )
@@ -283,10 +282,6 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
 
     # Resolve task_dir (directory containing task.yaml)
     task_source_dir = config.task_dir or config_dir or Path.cwd()
-
-    # Copy eval/ data assets (test data, answer keys, helper modules) to
-    # .coral/private/eval/ so graders can read them via private_dir/read_eval().
-    copy_eval_to_private(task_source_dir, coral_dir)
 
     # Auto-copy seed/ into repo (if present in task directory)
     seed_dir = task_source_dir / "seed"

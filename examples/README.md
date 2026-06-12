@@ -103,13 +103,11 @@ A standalone Python package consumed by `grader.entrypoint`. Inherits from
 `.coral/private/grader_venv/` so its dependencies stay separate from CORAL's
 and from each agent's worktree env.
 
-### `eval/` data assets
-
-An optional directory for data the grader needs but that shouldn't ship
-inside the package (test data, answer keys, helper modules). It is copied
-to `.coral/private/eval/` at run setup — hidden from agents — and the
-grader reads it via `read_eval()` / `self.private_dir`. Graders are no
-longer discovered from this directory.
+Hidden data the grader needs (test data, answer keys, helper modules)
+ships inside the package — by convention under a `taskdata/` directory next
+to `grader.py`, resolved with `Path(__file__).parent / "taskdata"`. Files
+that can't live in the package can be declared under `grader.private` in
+task.yaml and read via `self.private_dir`.
 
 ### `seed/`
 

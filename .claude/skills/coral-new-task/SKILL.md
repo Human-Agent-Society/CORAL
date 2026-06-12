@@ -1,6 +1,6 @@
 ---
 name: coral-new-task
-description: End-to-end recipe for adding a new task under `examples/` — the three pieces that have to line up (`task.yaml`, `seed/`, and `grader/`), what to put in each, the `TaskGrader` API surface, the `coral validate` → smoke-test loop, and the common mistakes (repo_path pointing at the wrong dir, score direction backwards, hidden answer keys leaking into seed/, grader writing to codebase_path which the daemon force-removes, private-vs-public confusion, missing `run()` signature). Use whenever the user wants to add a new CORAL task, port an existing benchmark into CORAL, or migrate an external task that still uses the removed `eval/grader.py` form to the packaged grader form.
+description: End-to-end recipe for adding a new task under `examples/` — the three pieces that have to line up (`task.yaml`, `seed/`, and `grader/`), what to put in each, the `TaskGrader` API surface, the `coral validate` → smoke-test loop, and the common mistakes (repo_path pointing at the wrong dir, score direction backwards, hidden answer keys leaking into seed/, grader writing to codebase_path which the daemon force-removes, private-vs-public confusion, missing `run()` signature). Use whenever the user wants to add a new CORAL task or port an existing benchmark into CORAL.
 ---
 
 # Creating a new CORAL task
@@ -19,7 +19,7 @@ examples/<task>/
         └── grader.py     # class Grader(TaskGrader): ...
 ```
 
-The packaged form is the only supported form — the legacy `eval/grader.py` auto-discovery path has been removed from the framework. The package gives the grader its own venv and lets it ship data files via `importlib.resources`. A task may still have an `eval/` directory, but only as a data-asset dir (copied to `.coral/private/eval/`, read via `read_eval()`), never as grader code.
+The packaged form is the only supported form. The package gives the grader its own venv and ships everything the eval needs — grader code, helper modules, and hidden data (see "Hidden data" below).
 
 ## Reference implementations
 
@@ -31,7 +31,7 @@ Look at these before writing anything new — copy the closest one and edit:
 | [examples/dna_design/](examples/dna_design/) | Packaged grader with bundled data files (`importlib.resources`) and `[ml]` optional-deps for heavy libs |
 | [examples/swebench-verified/](examples/swebench-verified/) | Tiered eval (different instance counts per tier), private answer keys, harbor integration |
 | [examples/circle_packing/](examples/circle_packing/) | Smallest packaged task end-to-end — single solution file, single grader file |
-| [examples/mnist/](examples/mnist/) | Packaged grader with a hidden answer key kept under `eval/answers/` (data-asset dir) |
+| [examples/mnist/](examples/mnist/) | Packaged grader with a hidden answer key shipped inside the package (`taskdata/answers/`) |
 
 ## 1. The seed
 
@@ -132,9 +132,11 @@ scorer_dir = str(importlib.resources.files("<task>_grader.scorers"))
 
 If the grader wants `torch`, `grelu`, etc., put them in `optional-dependencies` and have the grader fall back gracefully when missing — see [examples/dna_design/grader/pyproject.toml](examples/dna_design/grader/pyproject.toml). Then `grader.setup` becomes `["uv pip install -e ./grader[ml]"]` for the full version.
 
-### The `eval/` data-asset directory
+### Hidden data: ship it inside the package
 
-Hidden answer keys and test data that shouldn't ship inside the package can go under `<task>/eval/<whatever>/` — the directory gets copied into `.coral/private/eval/` automatically and the grader reads it via `read_eval()` / `self.private_dir`. Note that graders are no longer discovered from `eval/`; it is data-only. See [examples/mnist/eval/answers/](examples/mnist/eval/).
+Answer keys, test fixtures, and helper modules live inside the grader package — the convention is a `taskdata/` subdir next to `grader.py`, resolved with `_TASKDATA = Path(__file__).parent / "taskdata"` (works for editable and wheel installs alike; hatchling includes non-Python files under `packages` automatically). See [examples/mnist/grader/src/mnist_grader/taskdata/](examples/mnist/grader/src/mnist_grader/) for a data file and [examples/ADRS/txn_scheduling/](examples/ADRS/txn_scheduling/) for helper modules put on `sys.path`.
+
+For files that genuinely can't live in the package (huge datasets, shared across tasks), list them under `grader.private` in task.yaml — they get copied to `.coral/private/<name>` and the grader reads them via `self.private_dir`.
 
 ## 3. The task.yaml
 
@@ -213,26 +215,10 @@ Add a one-line entry to the table in [examples/README.md](examples/README.md) an
 |---|---|---|
 | `repo_path` points at `examples/<task>/` instead of `examples/<task>/seed/` | Grader sees `task.yaml` and `grader/` in `codebase_path` | Always point `repo_path` at the seed dir. |
 | `direction: maximize` for a loss / `minimize` for a benchmark ratio | Leaderboard ordered backwards | Score = "ratio against benchmark, >1 is better" → `maximize`. Score = "raw error" → `minimize`. |
-| Hidden answer key under `seed/` | Agents can read it and game the score | Move it into the `eval/` data dir / `grader.private`, or bundle it into the grader package via `importlib.resources`. |
+| Hidden answer key under `seed/` | Agents can read it and game the score | Bundle it into the grader package (`taskdata/`), or use `grader.private` for files that can't live in the package. |
 | Grader writes results under `self.codebase_path` and reads them later | Files vanish — daemon force-removes the worktree after each eval | Write under `self.eval_logs_dir`. |
 | Grader uses `sys.executable` to run the agent's program | Misses task-specific deps installed via `workspace.setup` | Use `self.get_python_command()` (it switches to `uv run --project` when the codebase has a `pyproject.toml`). |
 | Heavy deps in main grader `dependencies` | `coral validate` is slow / fails on machines without the GPU stack | Move to `optional-dependencies` and fall back gracefully. See dna_design's `[ml]` extra. |
 | `grader.setup` tries to install task-runtime deps | The grader venv has them but the agent's worktree doesn't | Task-runtime deps go in `workspace.setup`. Grader-only deps go in `grader.setup`. |
 | `parallel.max_workers > 1` with a non-concurrency-safe grader | Sporadic failures when two evals collide on Docker ports / GPU / scratch dirs | Leave at `1` unless the grader is provably safe. |
 | Forgetting `coral validate` | Agents start, fail every eval with the same error | Always validate first. |
-
-## Migrating an old `eval/grader.py` task to packaged
-
-The legacy `eval/grader.py` auto-discovery path has been removed from CORAL — any task still using it must be migrated (all `examples/` tasks already are; these steps apply to external/private tasks):
-
-1. Create `<task>/grader/pyproject.toml` and move `eval/grader.py` to `grader/src/<task>_grader/grader.py`. Keep the `class Grader(TaskGrader)` name.
-2. Move any data files from `eval/` into the package (with `importlib.resources` access) — or, if they really must stay outside the package, leave them under `eval/` and add `private: ["eval/<dir>"]` to `grader`.
-3. Update `task.yaml`:
-   ```yaml
-   grader:
-     entrypoint: "<task>_grader.grader:Grader"
-     setup: ["uv pip install -e ./grader"]
-   ```
-4. Delete the old `eval/grader.py`.
-5. `coral validate` — should produce the same score as before.
-6. The "Migrated examples" section of `examples/README.md` is the place to mention the new entry.

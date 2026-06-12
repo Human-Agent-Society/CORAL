@@ -20,6 +20,10 @@ import yaml
 from coral.grader import TaskGrader
 from coral.types import ScoreBundle
 
+# Hidden eval data shipped inside this package (works for editable
+# and wheel installs alike — the package is a real directory on disk).
+_TASKDATA = Path(__file__).parent / "taskdata"
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,7 +65,7 @@ class Grader(TaskGrader):
             return self.fail("submission.py must define a 'custom_kernel' function")
 
         # Load task config from eval/task.yml
-        task_yml_path = self.read_eval_path("task.yml")
+        task_yml_path = (_TASKDATA / "task.yml")
         with open(task_yml_path) as f:
             task_config = yaml.safe_load(f)
 
@@ -126,7 +130,7 @@ class Grader(TaskGrader):
         ranking_by: str = "geom",
     ) -> dict[str, str]:
         """Run the eval harness for a kernel engineering task."""
-        eval_dir = Path(self.private_dir) / "eval"
+        eval_dir = _TASKDATA
 
         with tempfile.TemporaryDirectory(prefix="coral_kernel_") as tmpdir:
             # Copy harness files from eval/
