@@ -295,6 +295,27 @@ coral checkout <hash> [--workdir DIR]
 coral checkout abc123
 ```
 
+### `coral export`
+
+Export an attempt's commit as a normal git branch in the run's source repo
+(`<run>/repo`), so it can be checked out with a standard git workflow. The
+attempt commits live in the shared object store reachable from every agent
+worktree, so any attempt hash can be exported.
+
+```bash
+coral export <hash> -b <branch> [-f] [--task TASK] [--run RUN]
+```
+
+| Flag | Description |
+|------|-------------|
+| `-b`, `--branch` | Name of the branch to create (required) |
+| `-f`, `--force` | Overwrite the branch if it already exists |
+
+```bash
+coral export abc123 --branch coral/better-scheduler
+# then: cd <run>/repo && git checkout coral/better-scheduler
+```
+
 ### `coral heartbeat`
 
 View or modify per-agent heartbeat configuration.

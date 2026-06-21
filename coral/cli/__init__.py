@@ -58,6 +58,7 @@ _VISIBLE_COMMANDS = [
     "diff",
     "revert",
     "checkout",
+    "export",
     "heartbeat",
 ]
 
@@ -122,6 +123,7 @@ Agent Internals:
   diff            Show uncommitted changes
   revert          Undo the last commit
   checkout        Reset to a previous attempt
+  export          Export an attempt as a git branch
   heartbeat       View/modify per-agent heartbeat actions
 
 Run 'coral <command> --help' for details on any command."""
@@ -451,6 +453,23 @@ Run 'coral <command> --help' for details on any command."""
     p_checkout.add_argument("--workdir", help="Working directory (default: cwd)")
     _add_run_args(p_checkout)
 
+    p_export = sub.add_parser(
+        "export",
+        help="Export an attempt as a git branch",
+        description=(
+            "Create a normal git branch pointing at an attempt's commit in the "
+            "run's source repo, so it can be checked out with a standard git workflow."
+        ),
+        epilog="Examples:\n  coral export abc123 --branch coral/better-scheduler",
+        formatter_class=_CommandHelpFormatter,
+    )
+    p_export.add_argument("hash", help="Commit hash or prefix")
+    p_export.add_argument("-b", "--branch", required=True, help="Name of the branch to create")
+    p_export.add_argument(
+        "-f", "--force", action="store_true", help="Overwrite the branch if it exists"
+    )
+    _add_run_args(p_export)
+
     p_heartbeat = sub.add_parser(
         "heartbeat",
         help="View/modify per-agent heartbeat actions",
@@ -520,7 +539,14 @@ Run 'coral <command> --help' for details on any command."""
 
     # Lazy imports for fast startup
     from coral.cli.author import cmd_init, cmd_validate
-    from coral.cli.eval import cmd_checkout, cmd_diff, cmd_eval, cmd_revert, cmd_wait
+    from coral.cli.eval import (
+        cmd_checkout,
+        cmd_diff,
+        cmd_eval,
+        cmd_export,
+        cmd_revert,
+        cmd_wait,
+    )
     from coral.cli.heartbeat import cmd_heartbeat
     from coral.cli.query import cmd_log, cmd_notes, cmd_runs, cmd_show, cmd_skills
     from coral.cli.start import cmd_resume, cmd_start, cmd_status, cmd_stop
@@ -535,6 +561,7 @@ Run 'coral <command> --help' for details on any command."""
         "wait": cmd_wait,
         "revert": cmd_revert,
         "checkout": cmd_checkout,
+        "export": cmd_export,
         "diff": cmd_diff,
         "heartbeat": cmd_heartbeat,
         "log": cmd_log,

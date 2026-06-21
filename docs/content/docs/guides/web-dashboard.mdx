@@ -35,6 +35,20 @@ The main view showing:
 - **Agent cards** — Status, current score, and activity for each agent
 - **Notes and skills** — Recent shared knowledge
 
+### DAG
+
+The experiment lineage as a graph:
+- Each node is one attempt; edges follow `parent_hash` (git parentage), so forks
+  created with `coral checkout <hash>` show up as branches in the tree.
+- Nodes are colored by status and labeled with the short hash and score; the
+  best attempt is ringed.
+- Click a node to see its details and a ready-to-copy `coral export` command for
+  turning that attempt into a normal git branch.
+
+Backed by `GET /api/dag`, which reconstructs nodes and edges from attempt
+records (aggregated across islands). Attempts whose parent predates the run
+(e.g. the baseline commit) appear as roots.
+
 ### Logs
 
 Live agent session logs:

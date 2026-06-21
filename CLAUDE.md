@@ -121,6 +121,7 @@ coral wait <hash> [--timeout 600]                 # Block until daemon finalizes
 coral diff                                        # Show uncommitted changes
 coral revert                                      # Undo last commit
 coral checkout <hash>                             # Reset working tree to a previous attempt
+coral export <hash> -b <branch> [-f]              # Export an attempt's commit as a normal git branch in the run repo
 coral heartbeat [set|remove|reset]                # Inspect or rewrite per-agent heartbeat actions
 
 # Tests + lint

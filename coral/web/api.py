@@ -90,6 +90,49 @@ async def get_agent_attempts(request: Request) -> JSONResponse:
     return JSONResponse([a.to_dict() for a in attempts])
 
 
+async def get_dag(request: Request) -> JSONResponse:
+    """GET /api/dag — experiment lineage as nodes + edges.
+
+    The DAG is reconstructed from attempt ``parent_hash`` links (which come from
+    git parentage at eval time). Attempts whose parent is not itself an attempt
+    — e.g. the pre-run baseline commit — become roots (``parent: null``).
+    Aggregates across islands so the whole team's lineage is shown.
+    """
+    from coral.hub.attempts import _read_all_island_attempts
+    from coral.hub.attempts import get_leaderboard as _get_leaderboard
+
+    coral_dir = _coral_dir(request)
+    attempts = _read_all_island_attempts(coral_dir)
+    known = {a.commit_hash for a in attempts}
+
+    best_hash: str | None = None
+    top = _get_leaderboard(str(coral_dir), top_n=1, direction=_direction(request))
+    if top:
+        best_hash = top[0].commit_hash
+
+    nodes: list[dict[str, Any]] = []
+    edges: list[dict[str, str]] = []
+    for a in sorted(attempts, key=lambda x: x.timestamp):
+        parent = a.parent_hash if a.parent_hash in known else None
+        nodes.append(
+            {
+                "id": a.commit_hash,
+                "parent": parent,
+                "is_root": parent is None,
+                "agent_id": a.agent_id,
+                "score": a.score,
+                "status": a.status,
+                "title": a.title,
+                "timestamp": a.timestamp,
+                "is_best": a.commit_hash == best_hash,
+            }
+        )
+        if parent is not None:
+            edges.append({"from": parent, "to": a.commit_hash})
+
+    return JSONResponse({"nodes": nodes, "edges": edges})
+
+
 async def get_notes(request: Request) -> JSONResponse:
     """GET /api/notes — return all notes."""
     from coral.hub.notes import list_notes

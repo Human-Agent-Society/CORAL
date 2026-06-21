@@ -97,6 +97,18 @@ Each agent tracks its own best score. Status is determined by comparing the new 
 | Equal to previous best | `baseline` |
 | Worse than previous best | `regressed` |
 
+## Experiment lineage (DAG)
+
+Every attempt records a `parent_hash` taken from git parentage at eval time, so
+the attempts form a DAG: an agent's successive evals are a linear chain, and a
+**fork** appears whenever an agent runs `coral checkout <hash>` and continues
+from an earlier attempt. Nothing extra is stored — the lineage is reconstructed
+from the attempt records (see the dashboard's **DAG** tab and `GET /api/dag`).
+
+Any node can be promoted to an ordinary git branch with
+[`coral export <hash> -b <branch>`](/docs/cli/reference#coral-export), which
+creates the branch in the run's `repo/` clone for a normal git workflow.
+
 ## Feedback
 
 Graders can provide feedback through score explanations:

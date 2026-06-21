@@ -29,6 +29,23 @@ export interface Attempt {
   feedback: string;
 }
 
+export interface DagNode {
+  id: string;
+  parent: string | null;
+  is_root: boolean;
+  agent_id: string;
+  score: number | null;
+  status: string;
+  title: string;
+  timestamp: string;
+  is_best: boolean;
+}
+
+export interface DagResponse {
+  nodes: DagNode[];
+  edges: { from: string; to: string }[];
+}
+
 export interface Note {
   date: string;
   title: string;
@@ -180,6 +197,7 @@ export interface TaskConfig {
 export const api = {
   config: () => get<TaskConfig>("/config"),
   attempts: () => get<Attempt[]>("/attempts"),
+  dag: () => get<DagResponse>("/dag"),
   leaderboard: (top = 20) => get<Attempt[]>(`/leaderboard?top=${top}`),
   attempt: (hash: string) => get<Attempt>(`/attempts/${hash}`),
   agentAttempts: (id: string) => get<Attempt[]>(`/attempts/agent/${id}`),

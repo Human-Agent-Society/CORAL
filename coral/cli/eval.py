@@ -1,4 +1,4 @@
-"""Commands: eval, wait, revert, diff, checkout."""
+"""Commands: eval, wait, revert, diff, checkout, export."""
 
 from __future__ import annotations
 
@@ -278,6 +278,75 @@ def cmd_checkout(args: argparse.Namespace) -> None:
     if result.returncode != 0:
         print(f"Error: git reset failed: {result.stderr}", file=sys.stderr)
         sys.exit(1)
+
+
+def cmd_export(args: argparse.Namespace) -> None:
+    """Export an attempt's commit as a normal git branch in the run's repo.
+
+    The attempt commits live in the shared object store of the run's source
+    clone (``<run>/repo``), reachable from every agent worktree. Exporting
+    creates an ordinary branch there so the user can ``git checkout`` it and
+    continue with a normal git workflow.
+    """
+    target = args.hash
+    branch = args.branch
+
+    coral_dir, island_id = find_coral_dir_and_island(
+        getattr(args, "task", None),
+        getattr(args, "run", None),
+    )
+    attempts_file = _resolve_attempt_file(coral_dir, target, island_id)
+    if attempts_file is None:
+        print(f"Error: No attempt matches '{target}'.", file=sys.stderr)
+        sys.exit(1)
+    target = attempts_file.stem  # normalized 40-char hash
+
+    # coral_dir = <run>/.coral → the source clone is <run>/repo.
+    repo_dir = coral_dir.parent / "repo"
+    if not repo_dir.is_dir():
+        print(f"Error: run repo not found at {repo_dir}.", file=sys.stderr)
+        sys.exit(1)
+
+    # The commit object must be reachable from the repo's object store.
+    if (
+        subprocess.run(
+            ["git", "cat-file", "-t", target],
+            capture_output=True,
+            text=True,
+            cwd=repo_dir,
+        ).returncode
+        != 0
+    ):
+        print(f"Error: commit '{target}' not found in {repo_dir}.", file=sys.stderr)
+        sys.exit(1)
+
+    branch_exists = (
+        subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"],
+            capture_output=True,
+            text=True,
+            cwd=repo_dir,
+        ).returncode
+        == 0
+    )
+    if branch_exists and not args.force:
+        print(
+            f"Error: branch '{branch}' already exists. Use --force to overwrite.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    cmd = ["git", "branch"]
+    if args.force:
+        cmd.append("-f")
+    cmd += [branch, target]
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=repo_dir)
+    if result.returncode != 0:
+        print(f"Error: git branch failed: {result.stderr.strip()}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Exported {target[:12]} → branch '{branch}' in {repo_dir}")
+    print(f"  cd {repo_dir} && git checkout {branch}")
 
 
 def cmd_diff(args: argparse.Namespace) -> None:
