@@ -115,13 +115,16 @@ creates the branch in the run's `repo/` clone for a normal git workflow.
 Dashboard steering is stopped-only. CORAL does not inject instructions into
 live agent processes; instructions reach agents when they start or resume. The
 lineage view queues `continue_from` actions under `.coral/public/steering/`,
-and `coral resume` drains that queue.
+and `coral resume` drains that queue. The CLI uses the same resume-time
+steering path directly: `coral resume --from <hash> -i "..."` resets an agent
+worktree to the selected attempt and injects the instruction without first
+writing a queue entry.
 
-On resume, CORAL assigns at most one queued `continue_from` action to each
-agent worktree, resets that worktree to the selected attempt hash, composes the
-queued instruction with any explicit `coral resume -i ...` text, starts the
-agent, and marks the queue entry applied. Extra actions stay pending for a
-later resume.
+On resume, CORAL assigns at most one steering action to each agent worktree,
+resets that worktree to the selected attempt hash when the action has one,
+composes the steering instruction with any explicit `coral resume -i ...` text,
+starts the agent, and marks queued dashboard entries applied. Extra queued
+actions stay pending for a later resume.
 
 `mark_best` is immediate: it updates the selected attempt's
 `metadata["user_best"]` so the dashboard can ring the user-selected best node

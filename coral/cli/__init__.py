@@ -198,6 +198,13 @@ Run 'coral <command> --help' for details on any command."""
         help="Additional instruction to inject into agents at resume time",
     )
     p_resume.add_argument(
+        "--from",
+        dest="resume_from",
+        type=str,
+        default=None,
+        help="Attempt hash to reset an agent worktree to before resuming",
+    )
+    p_resume.add_argument(
         "overrides",
         nargs="*",
         default=[],

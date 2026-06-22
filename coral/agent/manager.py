@@ -697,6 +697,7 @@ class AgentManager:
         self,
         paths: ProjectPaths,
         instruction: str | None = None,
+        resume_from: str | None = None,
     ) -> list[AgentHandle]:
         """Resume agents into an existing run's worktrees."""
         self._start_time = datetime.now(UTC)
@@ -739,13 +740,16 @@ class AgentManager:
         if instruction:
             fresh_start_prompt += f"\n\n## Additional Instructions\n{instruction}"
 
-        pending_steering = [
+        resume_actions: list[ContinueFromAction] = []
+        if resume_from:
+            resume_actions.append(ContinueFromAction(hash=resume_from, instruction=""))
+        resume_actions.extend(
             action
             for action in read_pending(paths.coral_dir)
             if isinstance(action, ContinueFromAction)
-        ]
+        )
         steering_by_agent: dict[str, ContinueFromAction] = {}
-        for agent_dir, action in zip(agent_dirs, pending_steering, strict=False):
+        for agent_dir, action in zip(agent_dirs, resume_actions, strict=False):
             steering_by_agent[agent_dir.name] = action
 
         handles = []
@@ -791,7 +795,8 @@ class AgentManager:
                     action=steering_action,
                     instruction=instruction,
                 )
-                mark_applied(paths.coral_dir, steering_action.id)
+                if steering_action.id:
+                    mark_applied(paths.coral_dir, steering_action.id)
 
             handle = self._setup_and_start_agent(
                 agent_id,

@@ -87,10 +87,13 @@ coral resume [--task TASK] [--run RUN] [options]
 | `-v, --verbose` | Stream agent output |
 | `--ui` | Also launch the web dashboard |
 | `--no-tmux` | Don't auto-create a tmux session |
+| `-i, --instruction TEXT` | Additional instruction to inject at resume time |
+| `--from HASH` | Reset an agent worktree to an attempt hash before resuming |
 
 ```bash
 coral resume
 coral resume --task my-task --model opus
+coral resume --from abc123 -i "continue this branch with SIMD"
 ```
 
 ### `coral stop`

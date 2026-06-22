@@ -92,6 +92,10 @@ only place queued `continue_from` actions are applied: the manager resets an
 agent worktree to the selected commit, composes the queued instruction with any
 operator-provided resume instruction, and marks the action applied.
 
+The CLI uses the same manager path without the queue: `coral resume --from
+<hash> -i "..."` creates an in-memory resume steering action for the selected
+attempt and composes it with the resume instruction.
+
 This keeps ownership clear. Live agents own their worktrees while running; the
 dashboard only mutates worktrees during resume, after the previous manager has
 stopped.

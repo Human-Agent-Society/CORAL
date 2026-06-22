@@ -58,6 +58,9 @@ manager is alive with `409 stop the run to steer`; use `coral stop`, queue the
 action, then `coral resume`. `GET /api/steer` returns the pending queue so the
 dashboard can show "Queued steering (N) -- applies on resume".
 
+The same behavior is available from the CLI with `coral resume --from <hash>
+-i "..."`; the dashboard differs only by queueing the action to disk first.
+
 ### Logs
 
 Live agent session logs:

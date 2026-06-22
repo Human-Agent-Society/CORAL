@@ -329,6 +329,9 @@ def _resume_in_tmux(args: argparse.Namespace, config: CoralConfig, coral_dir: Pa
     instruction = getattr(args, "instruction", None)
     if instruction:
         cmd.extend(["--instruction", instruction])
+    resume_from = getattr(args, "resume_from", None)
+    if resume_from:
+        cmd.extend(["--from", resume_from])
     # Forward user overrides, then force local (inner process is already in tmux)
     cmd.extend(getattr(args, "overrides", []))
     cmd.append("run.session=local")
@@ -519,6 +522,9 @@ def _resume_in_docker(args: argparse.Namespace, config: CoralConfig, coral_dir: 
     instruction = getattr(args, "instruction", None)
     if instruction:
         docker_cmd.extend(["--instruction", instruction])
+    resume_from = getattr(args, "resume_from", None)
+    if resume_from:
+        docker_cmd.extend(["--from", resume_from])
     docker_cmd.extend(getattr(args, "overrides", []))
 
     _run_docker_container(docker_cmd, container_name)
@@ -628,8 +634,9 @@ def cmd_resume(args: argparse.Namespace) -> None:
         print(f"[coral] Model:   {config.agents.model}")
 
     instruction = getattr(args, "instruction", None)
+    resume_from = getattr(args, "resume_from", None)
     manager = AgentManager(config, verbose=verbose)
-    handles = manager.resume_all(paths, instruction=instruction)
+    handles = manager.resume_all(paths, instruction=instruction, resume_from=resume_from)
 
     print(f"Resumed {len(handles)} agent(s):")
     for h in handles:

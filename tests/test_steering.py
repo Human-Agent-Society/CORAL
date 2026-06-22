@@ -174,3 +174,66 @@ def test_resume_all_drains_continue_from_actions(tmp_path: Path, monkeypatch) ->
     assert "build from this branch" in setup_call["prompt"]
     assert "## Additional Instructions" in setup_call["prompt"]
     assert "also try SIMD" in setup_call["prompt"]
+
+
+def test_resume_all_applies_cli_resume_from_like_queued_steering(
+    tmp_path: Path, monkeypatch
+) -> None:
+    coral_dir = tmp_path / ".coral"
+    agents_dir = tmp_path / "agents"
+    repo_dir = tmp_path / "repo"
+    agent_dir = agents_dir / "agent-1"
+    agent_dir.mkdir(parents=True)
+    repo_dir.mkdir()
+    write_attempt(coral_dir, _attempt("abc123"))
+
+    paths = ProjectPaths(
+        results_dir=tmp_path,
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=agents_dir,
+        repo_dir=repo_dir,
+    )
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "agents": {"count": 1, "runtime": "claude-code"},
+        }
+    )
+    manager = AgentManager(cfg)
+    calls: list[dict] = []
+
+    monkeypatch.setattr(manager, "_start_gateway_if_enabled", lambda: None)
+    monkeypatch.setattr(manager, "_start_grader_daemon", lambda: None)
+    monkeypatch.setattr(manager, "_kill_old_agent_processes", lambda: None)
+    monkeypatch.setattr(manager, "_load_saved_sessions", lambda: {})
+    monkeypatch.setattr("coral.agent.manager._validate_sessions", lambda sessions, coral_dir: {})
+    monkeypatch.setattr(manager, "_write_pid_file", lambda: None)
+    monkeypatch.setattr("atexit.register", lambda fn: None)
+    monkeypatch.setattr(
+        "coral.agent.manager._reset_worktree_to_commit",
+        lambda worktree_path, target_hash: calls.append(
+            {"checkout": target_hash, "worktree": worktree_path}
+        ),
+    )
+
+    def fake_setup(agent_id: str, **kwargs):
+        calls.append({"agent_id": agent_id, **kwargs})
+        return SimpleNamespace(
+            agent_id=agent_id,
+            process=SimpleNamespace(pid=123, poll=lambda: None),
+            worktree_path=agent_dir,
+            log_path=tmp_path / "agent.log",
+            session_id=None,
+        )
+
+    monkeypatch.setattr(manager, "_setup_and_start_agent", fake_setup)
+
+    manager.resume_all(paths, instruction="try SIMD", resume_from="abc123")
+
+    setup_call = next(c for c in calls if c.get("agent_id") == "agent-1")
+    assert calls[0] == {"checkout": "abc123", "worktree": agent_dir}
+    assert "## Continue from Attempt abc123" in setup_call["prompt"]
+    assert "## Additional Instructions" in setup_call["prompt"]
+    assert "try SIMD" in setup_call["prompt"]

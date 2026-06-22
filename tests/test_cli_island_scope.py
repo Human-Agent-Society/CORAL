@@ -571,14 +571,14 @@ def test_resume_from_worktree_subdir_uses_breadcrumb_run(monkeypatch, tmp_path):
     (worktree / ".coral_dir").write_text(str(coral_dir))
     (worktree / ".coral_island").write_text("0")
 
-    resumed: list[Path] = []
+    resumed: list[tuple[Path, str | None, str | None]] = []
 
     class DummyManager:
         def __init__(self, *_args, **_kwargs):
             pass
 
-        def resume_all(self, paths, instruction=None):
-            resumed.append(paths.coral_dir)
+        def resume_all(self, paths, instruction=None, resume_from=None):
+            resumed.append((paths.coral_dir, instruction, resume_from))
             return [argparse.Namespace(agent_id="0-agent-1", process=None, session_id=None)]
 
         def monitor_loop(self):
@@ -588,9 +588,17 @@ def test_resume_from_worktree_subdir_uses_breadcrumb_run(monkeypatch, tmp_path):
     monkeypatch.setattr(manager_module, "AgentManager", DummyManager)
 
     with _chdir(subdir), pytest.raises(StopIteration):
-        start_module.cmd_resume(argparse.Namespace(task=None, run=None, overrides=[]))
+        start_module.cmd_resume(
+            argparse.Namespace(
+                task=None,
+                run=None,
+                overrides=[],
+                instruction="try SIMD",
+                resume_from="abc123",
+            )
+        )
 
-    assert resumed == [coral_dir.resolve()]
+    assert resumed == [(coral_dir.resolve(), "try SIMD", "abc123")]
 
 
 def test_status_default_hides_tune_attempts(monkeypatch, tmp_path, capsys):
