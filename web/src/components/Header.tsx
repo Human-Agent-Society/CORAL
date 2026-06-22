@@ -12,7 +12,7 @@ interface Props {
 
 const tabs: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
-  { key: "dag", label: "DAG" },
+  { key: "dag", label: "Lineage" },
   { key: "knowledge", label: "Knowledge" },
   { key: "logs", label: "Logs" },
 ];

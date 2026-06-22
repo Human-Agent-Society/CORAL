@@ -103,7 +103,8 @@ Every attempt records a `parent_hash` taken from git parentage at eval time, so
 the attempts form a DAG: an agent's successive evals are a linear chain, and a
 **fork** appears whenever an agent runs `coral checkout <hash>` and continues
 from an earlier attempt. Nothing extra is stored — the lineage is reconstructed
-from the attempt records (see the dashboard's **DAG** tab and `GET /api/dag`).
+from the attempt records (see the dashboard's **Lineage** tab and
+`GET /api/dag`).
 
 Any node can be promoted to an ordinary git branch with
 [`coral export <hash> -b <branch>`](/docs/cli/reference#coral-export), which
