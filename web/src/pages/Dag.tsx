@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, type DagNode, type DagResponse } from "../lib/api";
+import { api, type DagNode, type DagResponse, type RunStatus, type SteeringResponse } from "../lib/api";
 import { useSSE } from "../hooks/useSSE";
 
 /* Status → fill color (Tailwind utility classes on SVG elements). */
@@ -71,10 +71,16 @@ function layout(data: DagResponse): { placed: Placed[]; width: number; height: n
 
 export default function Dag() {
   const [data, setData] = useState<DagResponse>({ nodes: [], edges: [] });
+  const [status, setStatus] = useState<RunStatus | null>(null);
+  const [steering, setSteering] = useState<SteeringResponse>({ actions: [], pending_count: 0 });
   const [selected, setSelected] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   const refresh = () => {
     api.dag().then(setData).catch(() => {});
+    api.status().then(setStatus).catch(() => {});
+    api.steering().then(setSteering).catch(() => {});
   };
   useEffect(refresh, []);
   useSSE({ "attempt:new": refresh, "attempt:update": refresh });
@@ -142,8 +148,47 @@ export default function Dag() {
 
       {/* detail panel */}
       <aside className="w-80 shrink-0 border-l border-border p-5 overflow-y-auto">
+        {steering.pending_count > 0 && (
+          <div className="mb-4 border border-border bg-muted/50 px-3 py-2 text-xs">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-muted-fg">
+              Queued steering
+            </div>
+            <div className="mt-1">{steering.pending_count} pending, applies on resume.</div>
+          </div>
+        )}
+        {message && <div className="mb-4 text-xs text-muted-fg">{message}</div>}
         {sel ? (
-          <NodeDetail node={sel} />
+          <NodeDetail
+            node={sel}
+            running={Boolean(status?.manager_alive)}
+            busy={busy === sel.id}
+            onContinue={async () => {
+              setBusy(sel.id);
+              setMessage(null);
+              try {
+                await api.steer({ kind: "continue_from", hash: sel.id, instruction: "" });
+                await api.steering().then(setSteering);
+                setMessage("Queued. Stop the run, then resume to apply it.");
+              } catch (err) {
+                setMessage(err instanceof Error ? err.message : "Unable to queue steering.");
+              } finally {
+                setBusy(null);
+              }
+            }}
+            onMarkBest={async () => {
+              setBusy(sel.id);
+              setMessage(null);
+              try {
+                await api.steer({ kind: "mark_best", hash: sel.id });
+                await api.dag().then(setData);
+                setMessage("Marked as best.");
+              } catch (err) {
+                setMessage(err instanceof Error ? err.message : "Unable to mark best.");
+              } finally {
+                setBusy(null);
+              }
+            }}
+          />
         ) : (
           <div className="text-muted-fg text-sm">Select an experiment to see details.</div>
         )}
@@ -152,7 +197,20 @@ export default function Dag() {
   );
 }
 
-function NodeDetail({ node }: { node: Placed }) {
+function NodeDetail({
+  node,
+  running,
+  busy,
+  onContinue,
+  onMarkBest,
+}: {
+  node: Placed;
+  running: boolean;
+  busy: boolean;
+  onContinue: () => void;
+  onMarkBest: () => void;
+}) {
+  const disabled = running || busy;
   return (
     <div className="space-y-4">
       <div>
@@ -163,10 +221,29 @@ function NodeDetail({ node }: { node: Placed }) {
         <Row k="agent" v={node.agent_id} />
         <Row k="status" v={node.status} />
         <Row k="score" v={node.score != null ? node.score.toFixed(4) : "—"} />
-        <Row k="best" v={node.is_best ? "yes" : "no"} />
+        <Row k="best" v={node.user_best ? "user" : node.is_best ? "score" : "no"} />
         <Row k="parent" v={node.parent ? node.parent.slice(0, 12) : "(root)"} />
         <Row k="time" v={node.timestamp} />
       </dl>
+      <div className="space-y-2">
+        {running && <div className="text-xs text-muted-fg">Stop the run to steer.</div>}
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onContinue}
+          className="w-full border border-border px-3 py-2 text-left font-mono text-[11px] uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted transition-colors"
+        >
+          Continue from here
+        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onMarkBest}
+          className="w-full border border-border px-3 py-2 text-left font-mono text-[11px] uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed hover:bg-muted transition-colors"
+        >
+          Mark as best
+        </button>
+      </div>
       <div>
         <div className="text-xs text-muted-fg mb-1">Export as a git branch</div>
         <code className="block bg-muted rounded-lg p-2.5 text-[11px] font-mono break-all">

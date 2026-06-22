@@ -28,6 +28,8 @@ from coral.web.api import (
     get_skill_detail,
     get_skills,
     get_status,
+    get_steering,
+    post_steer,
     switch_run,
 )
 from coral.web.events import FileWatcher, sse_endpoint
@@ -88,6 +90,8 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
         Route("/api/logs", get_logs_list),
         Route("/api/logs/{agent_id}", get_logs),
         Route("/api/status", get_status),
+        Route("/api/steer", get_steering),
+        Route("/api/steer", post_steer, methods=["POST"]),
         Route("/api/runs", get_runs),
         Route("/api/runs/switch", switch_run, methods=["POST"]),
         Route("/api/events", sse_endpoint),

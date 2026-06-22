@@ -55,3 +55,20 @@ async def test_dag_builds_nodes_edges_and_roots(tmp_path):
     # Highest score (maximize default) is flagged best.
     assert nodes["exp3"]["is_best"] is True
     assert nodes["exp1"]["is_best"] is False
+
+
+async def test_dag_marks_user_best_from_metadata(tmp_path):
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public" / "attempts").mkdir(parents=True)
+    chosen = _attempt("exp1", None, 0.5)
+    chosen.metadata["user_best"] = True
+    write_attempt(coral_dir, chosen)
+    write_attempt(coral_dir, _attempt("exp2", None, 0.9))
+
+    response = await get_dag(_request(coral_dir))
+    payload = json.loads(response.body)
+
+    nodes = {n["id"]: n for n in payload["nodes"]}
+    assert nodes["exp1"]["is_best"] is True
+    assert nodes["exp1"]["user_best"] is True
+    assert nodes["exp2"]["is_best"] is False

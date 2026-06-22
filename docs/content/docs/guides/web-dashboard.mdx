@@ -44,10 +44,19 @@ The experiment lineage as a graph:
   best attempt is ringed.
 - Click a node to see its details and a ready-to-copy `coral export` command for
   turning that attempt into a normal git branch.
+- When the run is stopped, click **Continue from here** to queue a fork from
+  that attempt. The queued action applies on the next `coral resume`.
+- Click **Mark as best** to set the user-selected best attempt. This writes
+  `metadata["user_best"] = true` on that attempt and rings the node.
 
 Backed by `GET /api/dag`, which reconstructs a DAG of nodes and edges from
 attempt records (aggregated across islands). Attempts whose parent predates the
 run (e.g. the baseline commit) appear as roots.
+
+Steering writes go through `POST /api/steer`. CORAL rejects writes while a
+manager is alive with `409 stop the run to steer`; use `coral stop`, queue the
+action, then `coral resume`. `GET /api/steer` returns the pending queue so the
+dashboard can show "Queued steering (N) -- applies on resume".
 
 ### Logs
 

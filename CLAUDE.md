@@ -150,6 +150,7 @@ uv run ruff format .
    - `skills.py` — `SKILL.md` discovery
    - `checkpoint.py` — `git init` + lock-protected commits inside `.coral/public/` so agents can browse the history of shared state
    - `heartbeat.py` — per-agent action storage
+   - `steering.py` — stopped-run dashboard steering queue drained by `coral resume`
 
 6. **Heartbeat actions** (`coral/agent/heartbeat.py`): each agent has a list of `HeartbeatAction`s with `trigger ∈ {"interval", "plateau"}`. Defaults: `reflect` every 1 eval, `consolidate` every 10 (global), `pivot` after 5 plateau evals, `lint_wiki` every 10 (global). Edit at runtime with `coral heartbeat set/remove/reset`.
 

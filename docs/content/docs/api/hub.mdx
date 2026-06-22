@@ -20,6 +20,7 @@ Module: `coral.hub.attempts`
 | `get_leaderboard(coral_dir, top_n=20, direction="maximize")` | Top N attempts sorted by score |
 | `get_recent(coral_dir, n=10)` | Most recent attempts by timestamp |
 | `search_attempts(coral_dir, query)` | Full-text search across attempt titles and feedback |
+| `set_user_best(coral_dir, commit_hash)` | Mark one attempt as the user-selected best and clear prior marks |
 | `format_leaderboard(attempts)` | Format attempts as a markdown table |
 | `format_status_summary(coral_dir, direction)` | Summary string with per-agent stats |
 
@@ -46,6 +47,28 @@ attempt = Attempt(
 )
 write_attempt("/path/to/.coral", attempt)
 ```
+
+## Steering
+
+Module: `coral.hub.steering`
+
+Steering actions are JSON files in `.coral/public/steering/`. They are written
+with tmp-file + rename and read by `coral resume`.
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `enqueue(coral_dir, action)` | Write a pending steering action |
+| `read_pending(coral_dir)` | Read unapplied actions sorted by creation time |
+| `mark_applied(coral_dir, id)` | Mark one action applied |
+
+### Action kinds
+
+| Kind | Description |
+|------|-------------|
+| `continue_from` | Reset an agent worktree to `hash` on resume and inject `instruction` |
+| `mark_best` | User-best selection; the web API applies this immediately via attempt metadata |
 
 ## Notes
 

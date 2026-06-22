@@ -53,6 +53,7 @@ results/<task-name>/<timestamp>/
 │   │   ├── skills/            # Reusable tools/scripts
 │   │   ├── logs/              # Agent session logs
 │   │   ├── heartbeat/         # Heartbeat action configs
+│   │   ├── steering/          # Stopped-run dashboard steering queue
 │   │   ├── eval_count         # Global eval counter
 │   │   ├── grader_daemon.pid  # Daemon process ID
 │   │   └── grader_daemon_heartbeat  # Daemon liveness timestamp
@@ -81,3 +82,16 @@ results/<task-name>/<timestamp>/
 | Agent runtimes | Claude Code, Codex, OpenCode |
 | Web dashboard | Starlette (backend) + React/Vite (frontend) |
 | Key dependency | PyYAML |
+
+## Dashboard steering
+
+The dashboard can steer a stopped run through `.coral/public/steering/`.
+`POST /api/steer` validates that the manager is not alive, then either queues a
+`continue_from` action or marks an attempt as user-best. `coral resume` is the
+only place queued `continue_from` actions are applied: the manager resets an
+agent worktree to the selected commit, composes the queued instruction with any
+operator-provided resume instruction, and marks the action applied.
+
+This keeps ownership clear. Live agents own their worktrees while running; the
+dashboard only mutates worktrees during resume, after the previous manager has
+stopped.

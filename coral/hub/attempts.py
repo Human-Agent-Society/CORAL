@@ -68,6 +68,49 @@ def read_attempt(
         return None
 
 
+def set_user_best(coral_dir: str | Path, commit_hash: str) -> Attempt | None:
+    """Mark one attempt as the user-selected best and clear prior marks."""
+    from coral.hub._island import all_view_roots
+
+    target: Attempt | None = None
+    for view_root in all_view_roots(coral_dir):
+        attempts_dir = view_root / "attempts"
+        if not attempts_dir.is_dir():
+            continue
+        for path in sorted(attempts_dir.glob("*.json")):
+            try:
+                attempt = Attempt.from_dict(json.loads(path.read_text()))
+            except (json.JSONDecodeError, KeyError, OSError):
+                continue
+            is_target = attempt.commit_hash == commit_hash
+            if is_target:
+                attempt.metadata["user_best"] = True
+                target = attempt
+            elif attempt.metadata.get("user_best") is True:
+                attempt.metadata.pop("user_best", None)
+            else:
+                continue
+            payload = json.dumps(attempt.to_dict(), indent=2)
+            fd, tmp_path = tempfile.mkstemp(
+                prefix=f".{attempt.commit_hash}.",
+                suffix=".json.tmp",
+                dir=path.parent,
+            )
+            try:
+                with os.fdopen(fd, "w") as f:
+                    f.write(payload)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp_path, path)
+            except Exception:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+                raise
+    return target
+
+
 def _global_eval_count_path(coral_dir: str | Path) -> Path:
     """Global counter: coral_dir/eval_count in multi-island, public/eval_count in single."""
     coral_dir = Path(coral_dir)

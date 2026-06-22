@@ -143,6 +143,14 @@ attempt = Attempt(
 | `parent_hash` | `str \| None` | Previous commit hash |
 | `timestamp` | `str` | ISO 8601 timestamp |
 | `feedback` | `str` | Grader feedback |
+| `metadata` | `dict[str, Any]` | Extra data such as `budget_class` and `user_best` |
+
+### Metadata keys
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `budget_class` | `str` | `"real"`, `"tune"`, or `"grader_error"`; controls leaderboard and heartbeat accounting |
+| `user_best` | `bool` | Set to `true` when the operator marks this attempt as best in the dashboard |
 
 ### Methods
 

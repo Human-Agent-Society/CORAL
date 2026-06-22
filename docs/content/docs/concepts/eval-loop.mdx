@@ -110,6 +110,23 @@ Any node can be promoted to an ordinary git branch with
 [`coral export <hash> -b <branch>`](/docs/cli/reference#coral-export), which
 creates the branch in the run's `repo/` clone for a normal git workflow.
 
+## Steer-on-resume
+
+Dashboard steering is stopped-only. CORAL does not inject instructions into
+live agent processes; instructions reach agents when they start or resume. The
+lineage view queues `continue_from` actions under `.coral/public/steering/`,
+and `coral resume` drains that queue.
+
+On resume, CORAL assigns at most one queued `continue_from` action to each
+agent worktree, resets that worktree to the selected attempt hash, composes the
+queued instruction with any explicit `coral resume -i ...` text, starts the
+agent, and marks the queue entry applied. Extra actions stay pending for a
+later resume.
+
+`mark_best` is immediate: it updates the selected attempt's
+`metadata["user_best"]` so the dashboard can ring the user-selected best node
+independently of the score-derived best.
+
 ## Feedback
 
 Graders can provide feedback through score explanations:

@@ -10,6 +10,7 @@ import os
 import random
 import shutil
 import signal
+import subprocess
 import threading
 import time
 from collections import deque
@@ -62,6 +63,7 @@ from coral.hub.heartbeat import (
     write_agent_heartbeat,
     write_global_heartbeat,
 )
+from coral.hub.steering import ContinueFromAction, mark_applied, read_pending
 from coral.template.coral_md import generate_coral_md
 from coral.types import BUDGET_CLASS_REAL, get_budget_class
 from coral.workspace import (
@@ -734,14 +736,23 @@ class AgentManager:
             "5. Inspect top attempts with `coral show <hash>` to understand what's been tried\n\n"
             "Build on what worked. Don't duplicate prior efforts."
         )
-
         if instruction:
             fresh_start_prompt += f"\n\n## Additional Instructions\n{instruction}"
+
+        pending_steering = [
+            action
+            for action in read_pending(paths.coral_dir)
+            if isinstance(action, ContinueFromAction)
+        ]
+        steering_by_agent: dict[str, ContinueFromAction] = {}
+        for agent_dir, action in zip(agent_dirs, pending_steering, strict=False):
+            steering_by_agent[agent_dir.name] = action
 
         handles = []
         for agent_dir in agent_dirs:
             agent_id = agent_dir.name
             session_id = validated_sessions.get(agent_id)
+            steering_action = steering_by_agent.get(agent_id)
 
             # Recover island_id from .coral_island breadcrumb if present
             island_bc = agent_dir / ".coral_island"
@@ -772,6 +783,15 @@ class AgentManager:
             else:
                 logger.info(f"Starting {agent_id} fresh (no session to resume)")
                 prompt = fresh_start_prompt
+
+            if steering_action is not None:
+                _reset_worktree_to_commit(agent_dir, steering_action.hash)
+                prompt = _compose_resume_instruction(
+                    base_prompt=prompt,
+                    action=steering_action,
+                    instruction=instruction,
+                )
+                mark_applied(paths.coral_dir, steering_action.id)
 
             handle = self._setup_and_start_agent(
                 agent_id,
@@ -2491,6 +2511,50 @@ def _write_arrival_note(coral_dir: Path, candidate: MigrationCandidate) -> None:
     )
     fname = f"migration_{fname_ts}_{candidate.agent_id}.md"
     (notes_dir / fname).write_text(body)
+
+
+def _reset_worktree_to_commit(worktree_path: Path, target_hash: str) -> None:
+    """Reset an agent worktree to a queued steering target."""
+    result = subprocess.run(
+        ["git", "cat-file", "-t", target_hash],
+        capture_output=True,
+        text=True,
+        cwd=worktree_path,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"Steering target commit '{target_hash}' not found")
+
+    result = subprocess.run(
+        ["git", "reset", "--hard", target_hash],
+        capture_output=True,
+        text=True,
+        cwd=worktree_path,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"Steering checkout failed for '{target_hash}': {result.stderr}")
+
+
+def _compose_resume_instruction(
+    *,
+    base_prompt: str | None,
+    action: ContinueFromAction,
+    instruction: str | None,
+) -> str:
+    """Compose queued steering with explicit `coral resume -i` text."""
+    sections: list[str] = []
+    if base_prompt:
+        sections.append(base_prompt)
+    sections.append(
+        "## Continue from Attempt "
+        f"{action.hash}\n\n"
+        "Your worktree has been reset to this attempt before resume. "
+        "Build from this code state instead of the previous HEAD."
+    )
+    if action.instruction:
+        sections.append(f"## Steering Instructions\n{action.instruction}")
+    if instruction and (base_prompt is None or instruction not in base_prompt):
+        sections.append(f"## Additional Instructions\n{instruction}")
+    return "\n\n".join(sections)
 
 
 def _build_migration_prompt(candidate: MigrationCandidate, *, shared_dir: str) -> str:
