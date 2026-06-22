@@ -582,9 +582,7 @@ Run 'coral <command> --help' for details on any command."""
         metavar="KEY=VALUE",
         help="Runtime option (repeatable)",
     )
-    sp_agent.add_argument(
-        "--default", action="store_true", help="Make this the default binding"
-    )
+    sp_agent.add_argument("--default", action="store_true", help="Make this the default binding")
     sp_agent.add_argument(
         "--non-interactive",
         action="store_true",
