@@ -44,6 +44,58 @@ coral validate my-task
 
 ---
 
+## User Setup
+
+User-level **agent bindings** are machine-local presets (runtime, command,
+model, runtime options, role seed) stored in `~/.config/coral/agents.yaml`.
+Tasks reference them by name with `agents.binding` instead of repeating runtime
+details. See the [Agent Bindings guide](/docs/guides/agent-bindings) for the full
+model. No credentials are ever stored.
+
+### `coral setup agent`
+
+Create or update a named agent binding. Runs interactively when no flags are
+given; otherwise reads everything from flags.
+
+```bash
+coral setup agent [--name NAME] [--runtime RUNTIME] [--command PATH]
+                  [--model MODEL] [--role-file FILE] [--option KEY=VALUE]...
+                  [--default] [--non-interactive]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--name` | Binding name (e.g. `claude-opus`) |
+| `--runtime` | Runtime: `claude_code`, `codex`, `opencode`, `cursor_agent`, `kiro`, `pi`, or a `module.path:ClassName` entrypoint |
+| `--command` | CLI binary (defaults to the runtime's command) |
+| `--model` | Default model for this binding |
+| `--role-file` | Path to a role seed `.md` file |
+| `--option` | Runtime option as `KEY=VALUE` (repeatable) |
+| `--default` | Make this the default binding |
+| `--non-interactive` | Never prompt; require values via flags |
+
+```bash
+coral setup agent --name claude-opus --runtime claude_code --model opus
+coral setup agent --name codex-high --runtime codex --option model_reasoning_effort=high
+```
+
+### `coral agents`
+
+List, inspect, validate, and delete bindings.
+
+```bash
+coral agents list                 # all bindings (default marked)
+coral agents show <name>          # one binding's resolved fields
+coral agents doctor [name]        # validate all bindings (or one)
+coral agents remove <name>        # delete a binding
+```
+
+`coral agents doctor` runs non-invasive checks only: the binding resolves to a
+valid agent spec, the CLI is found and reports `--version`, and any role file
+exists. Authentication is deferred to the runtime-native login flow.
+
+---
+
 ## Running Agents
 
 ### `coral start`

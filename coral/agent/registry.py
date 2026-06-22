@@ -44,6 +44,18 @@ _DEFAULT_MODELS: dict[str, str] = {
     "pi": "zai/glm-5.1",
 }
 
+# Default CLI command (binary) each runtime invokes. Used by `coral setup agent`
+# and `coral agents doctor` to detect/validate the installed CLI; not all
+# runtimes accept a custom command path at spawn time.
+_RUNTIME_COMMANDS: dict[str, str] = {
+    "claude_code": "claude",
+    "codex": "codex",
+    "cursor_agent": "cursor-agent",
+    "kiro": "kiro-cli",
+    "opencode": "opencode",
+    "pi": "pi",
+}
+
 
 def _is_entrypoint(name: str) -> bool:
     return ":" in name
@@ -112,6 +124,29 @@ def default_model_for_runtime(name: str) -> str | None:
     if _is_entrypoint(canonical):
         return None
     return _DEFAULT_MODELS.get(canonical)
+
+
+def default_command_for_runtime(name: str) -> str | None:
+    """Return the default CLI command for a runtime, or None if unknown.
+
+    Returns None for custom entrypoint runtimes (``module.path:ClassName``),
+    which have no associated CLI binary.
+    """
+    canonical = _ALIASES.get(name, name)
+    if _is_entrypoint(canonical):
+        return None
+    return _RUNTIME_COMMANDS.get(canonical)
+
+
+def known_runtimes() -> list[str]:
+    """Return the canonical runtime names, sorted."""
+    return sorted(_RUNTIMES.keys())
+
+
+def is_known_runtime(name: str) -> bool:
+    """True if ``name`` is a canonical runtime, an alias, or a custom entrypoint."""
+    canonical = _ALIASES.get(name, name)
+    return canonical in _RUNTIMES or _is_entrypoint(canonical)
 
 
 def register_runtime(name: str, cls: type, default_model: str | None = None) -> None:

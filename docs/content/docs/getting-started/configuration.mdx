@@ -98,6 +98,7 @@ packaged-grader layout.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `count` | int | `1` | Number of agents to spawn |
+| `binding` | string | – | Name of a user-level [agent binding](/docs/guides/agent-bindings) to expand into `runtime`/`model`/`runtime_options`. Explicit fields here override the binding. |
 | `runtime` | string | `"claude_code"` | Agent runtime: `claude_code`, `codex`, `opencode` |
 | `model` | string | `"sonnet"` | Model to use (e.g. `opus`, `sonnet`, `haiku`, or full model ID) |
 | `max_turns` | int | `200` | Maximum conversation turns per agent |

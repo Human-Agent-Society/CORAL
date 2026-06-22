@@ -366,6 +366,88 @@ class CoralConfig:
         return cfg
 
 
+def _apply_binding(entry: dict[str, Any], binding: Any) -> None:
+    """Fill an agents/assignment dict's empty fields from a binding, in place.
+
+    Precedence: explicit task fields win over binding fields; binding fields
+    win over runtime defaults (which are filled later in ``_preprocess``).
+    """
+    from coral.agent.registry import default_command_for_runtime
+
+    if not entry.get("runtime"):
+        entry["runtime"] = binding.runtime
+    if not entry.get("model") and binding.model:
+        entry["model"] = binding.model
+
+    # runtime_options: binding provides the base, explicit task options override.
+    merged: dict[str, Any] = dict(binding.runtime_options or {})
+    merged.update(entry.get("runtime_options") or {})
+
+    # A binding role seed compiles into runtime_options.role_file, unless the
+    # task already pinned one explicitly.
+    if binding.role_file and "role_file" not in merged:
+        merged["role_file"] = binding.role_file
+
+    # Forward a custom CLI command only when it diverges from the runtime's
+    # default binary. Runtimes that honor a command path (e.g. cursor_agent)
+    # pick it up; the common default case stays out of runtime_options.
+    if binding.command and "command" not in merged:
+        default_cmd = default_command_for_runtime(binding.runtime)
+        if binding.command != default_cmd:
+            merged["command"] = binding.command
+
+    if merged:
+        entry["runtime_options"] = merged
+
+
+def _expand_bindings(agents_data: dict[str, Any]) -> None:
+    """Resolve ``agents.binding`` and ``agents.assignments[].binding`` in place.
+
+    Bindings are looked up in the user-level bindings file. The ``binding`` key
+    is removed after expansion so it never reaches the structured schema.
+    """
+    assignments = agents_data.get("assignments")
+    top_binding = agents_data.get("binding")
+    assignment_bindings = (
+        [a.get("binding") for a in assignments if isinstance(a, dict)]
+        if isinstance(assignments, list)
+        else []
+    )
+
+    if top_binding is None and not any(assignment_bindings):
+        # Nothing references a binding — don't touch the file at all so configs
+        # and tests that never opt in are completely unaffected.
+        agents_data.pop("binding", None)
+        return
+
+    from coral.user_agents import load_store
+
+    store = load_store()
+
+    def _lookup(name: str) -> Any:
+        binding = store.get(name)
+        if binding is None:
+            available = ", ".join(sorted(store.bindings)) or "(none defined)"
+            raise ValueError(
+                f"agents.binding {name!r} is not defined in {store.path}. "
+                f"Available bindings: {available}. "
+                f"Create one with `coral setup agent --name {name}`."
+            )
+        return binding
+
+    if top_binding is not None:
+        agents_data.pop("binding", None)
+        _apply_binding(agents_data, _lookup(str(top_binding)))
+
+    if isinstance(assignments, list):
+        for entry in assignments:
+            if not isinstance(entry, dict):
+                continue
+            name = entry.pop("binding", None)
+            if name is not None:
+                _apply_binding(entry, _lookup(str(name)))
+
+
 def _preprocess(data: dict[str, Any]) -> dict[str, Any]:
     """Transform legacy keys and normalize heartbeat config before OmegaConf merge."""
     # Reject removed grader.type / grader.module fields with migration guidance.
@@ -385,6 +467,12 @@ def _preprocess(data: dict[str, Any]) -> dict[str, Any]:
 
     # Make a copy so we don't mutate the original
     agents_data = dict(agents_data)
+
+    # Expand user-level agent bindings (agents.binding / assignments[].binding)
+    # into concrete runtime / model / runtime_options fields before anything
+    # else looks at them. This keeps bindings a pure preset layer over the
+    # existing runtime/model/assignment system.
+    _expand_bindings(agents_data)
 
     heartbeat_raw = agents_data.pop("heartbeat", None)
     old_reflect = agents_data.pop("reflect_every", None)

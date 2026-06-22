@@ -1,0 +1,153 @@
+---
+title: Agent Bindings
+description: Register local agent runtimes once with `coral setup agent`, then reference them by name from any task.
+---
+
+A **binding** is a machine-local preset that bundles an agent runtime, its CLI
+command, a default model, runtime options, and an optional role seed under a
+short name. Tasks reference a binding by name instead of repeating those
+details in every `task.yaml`.
+
+This separates two concerns that the plain `agents.runtime` / `agents.model`
+fields conflate:
+
+- **Task / research topology** — how many agents, which roles, which islands.
+  This belongs in `task.yaml` and should stay portable across machines.
+- **Local machine setup** — which CLIs are installed, where they live, which
+  model defaults and runtime-specific options *this user* wants. This belongs
+  in a user-level file and never has to be committed.
+
+Bindings are an *additive* shorthand. They are **not** a replacement for
+`agents.runtime`, `agents.model`, or `agents.assignments` — they expand into
+exactly those fields at config-load time, and the manager only ever consumes
+resolved agent specs. Existing task configs keep working unchanged.
+
+<Callout type="warn">
+Bindings never store API keys, OAuth tokens, or provider credentials. Runtime
+authentication is owned by the runtime-native login flows (`claude`, `codex`,
+`cursor-agent login`, `kiro-cli` setup). `coral setup agent` only records
+runtime / command / model metadata.
+</Callout>
+
+## Where bindings live
+
+```text
+~/.config/coral/agents.yaml
+```
+
+The location honors `$XDG_CONFIG_HOME` (so it follows your XDG setup) and can
+be overridden wholesale with `$CORAL_AGENTS_CONFIG` (mainly for testing).
+
+```yaml title="~/.config/coral/agents.yaml"
+default: claude-opus
+
+agents:
+  claude-opus:
+    runtime: claude_code
+    command: claude
+    model: opus
+    role_file: ~/.config/coral/roles/generalist.md
+
+  codex-high:
+    runtime: codex
+    command: codex
+    model: gpt-5.4
+    runtime_options:
+      model_reasoning_effort: high
+```
+
+## Creating a binding
+
+Run the interactive wizard:
+
+```bash
+coral setup agent
+```
+
+…or set everything via flags (also used for scripting and CI):
+
+```bash
+coral setup agent --name claude-opus --runtime claude_code --model opus
+coral setup agent --name codex-high  --runtime codex \
+  --option model_reasoning_effort=high
+```
+
+Each `coral setup agent` finishes with a lightweight `doctor` pass (see below).
+The first binding you create becomes the default; pass `--default` to change it.
+
+## Inspecting and managing bindings
+
+```bash
+coral agents list                 # all bindings (default is marked)
+coral agents show claude-opus     # one binding's resolved fields
+coral agents doctor               # validate every binding
+coral agents doctor claude-opus   # validate one
+coral agents remove claude-opus   # delete one
+```
+
+`coral agents doctor` runs only non-invasive checks:
+
+- the binding resolves to a valid agent spec,
+- the CLI is found on `PATH` (or at the configured `command` path),
+- the CLI's `--version` works, and
+- the role file exists, if one is set.
+
+Authentication is **not** probed. When `doctor` reports a problem it points you
+at the runtime-native login command rather than guessing.
+
+## Using a binding in a task
+
+Single runtime:
+
+```yaml title="task.yaml"
+agents:
+  binding: claude-opus
+  count: 4
+```
+
+Mixed team — one binding per assignment:
+
+```yaml title="task.yaml"
+agents:
+  assignments:
+    - binding: researcher
+      count: 1
+    - binding: implementer
+      count: 3
+```
+
+## Precedence
+
+When a binding is expanded, fields resolve in this order:
+
+1. **Explicit task fields win.** Anything you write in `task.yaml` overrides the
+   binding.
+2. **Binding fields win over runtime defaults.**
+3. **Runtime defaults** fill any remaining gaps (e.g. the default model for a
+   runtime).
+
+So this uses the `claude-opus` binding's runtime and options but overrides the
+model:
+
+```yaml title="task.yaml"
+agents:
+  binding: claude-opus
+  model: sonnet   # wins over the binding's opus
+```
+
+## Role seeds
+
+A binding may carry an initial `role_file`. At expansion time it compiles into
+`runtime_options.role_file`, which CORAL copies into the run at agent setup.
+This is **idempotent on resume**: an agent's evolved role file is never
+overwritten, so a binding's role seed only ever applies to a fresh agent. A
+task that sets its own `runtime_options.role_file` keeps it — the binding seed
+is only used as a fallback.
+
+## How it fits together
+
+`agents.binding` (and `assignments[].binding`) is resolved during config
+normalization, before agent specs are built. After expansion the `binding` key
+is gone — the run's stored `config.yaml` contains only concrete
+runtime / model / runtime_options fields, so resumes and the dashboard never
+depend on your local bindings file.

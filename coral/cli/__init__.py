@@ -60,6 +60,8 @@ _VISIBLE_COMMANDS = [
     "checkout",
     "export",
     "heartbeat",
+    "setup",
+    "agents",
 ]
 
 
@@ -113,6 +115,10 @@ Inspecting Results:
   notes           Browse shared notes
   skills          Browse shared skills
   runs            List runs (active only; --all for stopped)
+
+User Setup:
+  setup           Configure user-level agent bindings (setup agent)
+  agents          List, inspect, and validate agent bindings
 
 Dashboard:
   ui              Launch the web dashboard
@@ -536,6 +542,82 @@ Run 'coral <command> --help' for details on any command."""
     hb_reset = hb_sub.add_parser("reset", help="Reset to task YAML defaults")
     _add_run_args(hb_reset)
 
+    # --- User Setup: agent bindings ---
+
+    p_setup = sub.add_parser(
+        "setup",
+        help="Configure user-level agent bindings",
+        description=(
+            "Configure machine-local agent bindings. A binding bundles a runtime, "
+            "CLI command, model, runtime options, and an optional role seed so tasks "
+            "can reference it by name instead of repeating those details."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  coral setup agent                         Interactive wizard\n"
+            "  coral setup agent --name claude-opus --runtime claude_code --model opus\n"
+            "  coral setup agent --name codex-high --runtime codex --option model_reasoning_effort=high"
+        ),
+        formatter_class=_CommandHelpFormatter,
+    )
+    setup_sub = p_setup.add_subparsers(dest="setup_command")
+    sp_agent = setup_sub.add_parser(
+        "agent",
+        help="Create or update a named agent binding",
+        formatter_class=_CommandHelpFormatter,
+    )
+    sp_agent.add_argument("--name", help="Binding name (e.g. claude-opus)")
+    sp_agent.add_argument("--runtime", help="Runtime (claude_code, codex, opencode, ...)")
+    sp_agent.add_argument(
+        "--command",
+        dest="command_path",
+        help="CLI binary (defaults to the runtime's command)",
+    )
+    sp_agent.add_argument("--model", help="Default model for this binding")
+    sp_agent.add_argument("--role-file", dest="role_file", help="Path to a role seed .md file")
+    sp_agent.add_argument(
+        "--option",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="Runtime option (repeatable)",
+    )
+    sp_agent.add_argument(
+        "--default", action="store_true", help="Make this the default binding"
+    )
+    sp_agent.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Never prompt; require values via flags",
+    )
+    sp_agent.add_argument("--config", help="Path to the user bindings file (advanced)")
+
+    p_agents = sub.add_parser(
+        "agents",
+        help="List, inspect, and validate agent bindings",
+        description="Manage user-level agent bindings stored in ~/.config/coral/agents.yaml.",
+        epilog=(
+            "Examples:\n"
+            "  coral agents list                 List all bindings\n"
+            "  coral agents show claude-opus     Inspect one binding\n"
+            "  coral agents doctor               Validate all bindings\n"
+            "  coral agents remove claude-opus   Delete a binding"
+        ),
+        formatter_class=_CommandHelpFormatter,
+    )
+    ag_sub = p_agents.add_subparsers(dest="agents_command")
+    ag_list = ag_sub.add_parser("list", help="List all bindings")
+    ag_list.add_argument("--config", help="Path to the user bindings file (advanced)")
+    ag_show = ag_sub.add_parser("show", help="Show one binding")
+    ag_show.add_argument("name", help="Binding name")
+    ag_show.add_argument("--config", help="Path to the user bindings file (advanced)")
+    ag_remove = ag_sub.add_parser("remove", help="Delete a binding")
+    ag_remove.add_argument("name", help="Binding name")
+    ag_remove.add_argument("--config", help="Path to the user bindings file (advanced)")
+    ag_doctor = ag_sub.add_parser("doctor", help="Validate bindings")
+    ag_doctor.add_argument("name", nargs="?", help="Binding to check (default: all)")
+    ag_doctor.add_argument("--config", help="Path to the user bindings file (advanced)")
+
     # --- Parse and dispatch ---
 
     args = parser.parse_args()
@@ -545,6 +627,7 @@ Run 'coral <command> --help' for details on any command."""
         sys.exit(0)
 
     # Lazy imports for fast startup
+    from coral.cli.agents import cmd_agents, cmd_setup
     from coral.cli.author import cmd_init, cmd_validate
     from coral.cli.eval import (
         cmd_checkout,
@@ -578,6 +661,8 @@ Run 'coral <command> --help' for details on any command."""
         "runs": cmd_runs,
         "init": cmd_init,
         "validate": cmd_validate,
+        "setup": cmd_setup,
+        "agents": cmd_agents,
         "ui": cmd_ui,
         # Hidden aliases for backward compatibility
         "attempts": _cmd_attempts_compat,

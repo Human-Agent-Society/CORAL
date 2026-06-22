@@ -27,7 +27,8 @@ Key concepts:
 | `coral/template/` | `coral_md.py` + `coral.md.template` / `coral_single.md.template`; bundled `agents/` (deep-researcher, librarian) and `skills/` (deep-research, organize-files, skill-creator) seeded into every run |
 | `coral/gateway/` | Optional LiteLLM gateway (`server.py`, `middleware.py`, `config.py`) for intercepting agent model traffic |
 | `coral/web/` | Starlette web dashboard (`app.py`, `api.py`, `events.py`, `logs.py`, `static/`) |
-| `coral/cli/` | CLI package: `start.py`, `query.py`, `eval.py`, `heartbeat.py`, `ui.py`, `author.py`, `validation.py`, `_helpers.py` |
+| `coral/cli/` | CLI package: `start.py`, `query.py`, `eval.py`, `heartbeat.py`, `agents.py` (user-level bindings), `ui.py`, `author.py`, `validation.py`, `_helpers.py` |
+| `coral/user_agents.py` | User-level agent bindings: load/save `~/.config/coral/agents.yaml`, expanded into concrete agent fields by `config._expand_bindings` |
 | `examples/` | Task configs (circle_packing, swebench-verified, kernel_engineering, mnist, ...) — each is a `task.yaml` + `seed/` + packaged grader (`grader/` referenced by `grader.entrypoint`); hidden data ships inside the grader package |
 | `tests/` | Pytest suite (config, grader, hooks, hub, manager reliability, daemon, workspace, ...) |
 
@@ -91,6 +92,14 @@ uv sync --all-extras       # Everything
 # Authoring
 coral init my-task                                # Scaffold task.yaml + grader/ package + seed/
 coral validate my-task                            # Type-check task structure and dry-run grader against seed/
+
+# User-level agent bindings (~/.config/coral/agents.yaml)
+coral setup agent --name claude-opus --runtime claude_code --model opus   # Create/update a binding
+coral agents list                                 # List bindings (default marked)
+coral agents show <name>                          # Inspect a binding
+coral agents doctor [name]                        # Validate bindings (CLI present, resolves to a spec)
+coral agents remove <name>                        # Delete a binding
+# In task.yaml: `agents.binding: claude-opus` (or `agents.assignments[].binding`) expands into runtime/model/runtime_options
 
 # Running agents
 coral start -c task.yaml                          # Launch agents (auto-tmux)
@@ -183,7 +192,7 @@ uv run ruff format .
 | `coral/agent/heartbeat.py` | `HeartbeatAction` / `HeartbeatRunner` (interval + plateau triggers) |
 | `coral/hooks/post_commit.py` | `submit_eval()` — git add/commit + write pending attempt + optional poll |
 | `coral/template/coral_md.py` | Renders the CORAL.md each agent reads |
-| `coral/cli/__init__.py` | Top-level argparse + dispatch (18 commands) |
+| `coral/cli/__init__.py` | Top-level argparse + dispatch (incl. `setup` / `agents` binding commands) |
 
 ## Developer Workflows
 
