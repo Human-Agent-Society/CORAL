@@ -531,6 +531,21 @@ def _resume_in_docker(args: argparse.Namespace, config: CoralConfig, coral_dir: 
     save_docker_container_name(host_run_dir, container_name)
 
 
+def _resolve_resume_from(coral_dir: Path, resume_from: str | None) -> str | None:
+    """Resolve `coral resume --from` with no hash to the latest attempt."""
+    if resume_from != "latest":
+        return resume_from
+
+    from coral.hub.attempts import _read_all_island_attempts
+
+    attempts = _read_all_island_attempts(coral_dir)
+    if not attempts:
+        print("Error: --from was provided but this run has no attempts.", file=sys.stderr)
+        sys.exit(1)
+    attempts.sort(key=lambda attempt: attempt.timestamp, reverse=True)
+    return attempts[0].commit_hash
+
+
 def cmd_resume(args: argparse.Namespace) -> None:
     """Resume a previous CORAL run."""
     from coral.agent.manager import AgentManager
@@ -634,7 +649,7 @@ def cmd_resume(args: argparse.Namespace) -> None:
         print(f"[coral] Model:   {config.agents.model}")
 
     instruction = getattr(args, "instruction", None)
-    resume_from = getattr(args, "resume_from", None)
+    resume_from = _resolve_resume_from(coral_dir, getattr(args, "resume_from", None))
     manager = AgentManager(config, verbose=verbose)
     handles = manager.resume_all(paths, instruction=instruction, resume_from=resume_from)
 

@@ -118,7 +118,8 @@ lineage view queues `continue_from` actions under `.coral/public/steering/`,
 and `coral resume` drains that queue. The CLI uses the same resume-time
 steering path directly: `coral resume --from <hash> -i "..."` resets an agent
 worktree to the selected attempt and injects the instruction without first
-writing a queue entry.
+writing a queue entry. `coral resume --from` without a hash uses the latest
+attempt in the run.
 
 On resume, CORAL assigns at most one steering action to each agent worktree,
 resets that worktree to the selected attempt hash when the action has one,
