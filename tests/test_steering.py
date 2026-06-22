@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -20,6 +21,24 @@ from coral.hub.steering import (
 from coral.types import Attempt
 from coral.web.api import get_steering, post_steer
 from coral.workspace import ProjectPaths
+
+
+def _git(repo: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def _commit_file(repo: Path, name: str, content: str, message: str) -> str:
+    (repo / name).write_text(content)
+    _git(repo, "add", name)
+    _git(repo, "commit", "-m", message)
+    return _git(repo, "rev-parse", "HEAD")
 
 
 def _attempt(commit: str, score: float = 0.5) -> Attempt:
@@ -237,3 +256,65 @@ def test_resume_all_applies_cli_resume_from_like_queued_steering(
     assert "## Continue from Attempt abc123" in setup_call["prompt"]
     assert "## Additional Instructions" in setup_call["prompt"]
     assert "try SIMD" in setup_call["prompt"]
+
+
+def test_resume_from_resets_real_worktree_head(tmp_path: Path, monkeypatch) -> None:
+    coral_dir = tmp_path / ".coral"
+    agents_dir = tmp_path / "agents"
+    repo_dir = tmp_path / "repo"
+    agent_dir = agents_dir / "agent-1"
+    agent_dir.mkdir(parents=True)
+
+    _git(agent_dir, "init")
+    _git(agent_dir, "config", "user.email", "test@example.com")
+    _git(agent_dir, "config", "user.name", "Test User")
+    target_hash = _commit_file(agent_dir, "solution.txt", "target\n", "target attempt")
+    latest_hash = _commit_file(agent_dir, "solution.txt", "latest\n", "latest attempt")
+    assert latest_hash != target_hash
+    assert _git(agent_dir, "rev-parse", "HEAD") == latest_hash
+
+    repo_dir.mkdir()
+    write_attempt(coral_dir, _attempt(target_hash))
+
+    paths = ProjectPaths(
+        results_dir=tmp_path,
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=agents_dir,
+        repo_dir=repo_dir,
+    )
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "agents": {"count": 1, "runtime": "claude-code"},
+        }
+    )
+    manager = AgentManager(cfg)
+    prompts: list[str | None] = []
+
+    monkeypatch.setattr(manager, "_start_gateway_if_enabled", lambda: None)
+    monkeypatch.setattr(manager, "_start_grader_daemon", lambda: None)
+    monkeypatch.setattr(manager, "_kill_old_agent_processes", lambda: None)
+    monkeypatch.setattr(manager, "_load_saved_sessions", lambda: {})
+    monkeypatch.setattr("coral.agent.manager._validate_sessions", lambda sessions, coral_dir: {})
+    monkeypatch.setattr(manager, "_write_pid_file", lambda: None)
+    monkeypatch.setattr("atexit.register", lambda fn: None)
+
+    def fake_setup(agent_id: str, **kwargs):
+        prompts.append(kwargs.get("prompt"))
+        return SimpleNamespace(
+            agent_id=agent_id,
+            process=SimpleNamespace(pid=123, poll=lambda: None),
+            worktree_path=agent_dir,
+            log_path=tmp_path / "agent.log",
+            session_id=None,
+        )
+
+    monkeypatch.setattr(manager, "_setup_and_start_agent", fake_setup)
+
+    manager.resume_all(paths, instruction="continue here", resume_from=target_hash)
+
+    assert _git(agent_dir, "rev-parse", "HEAD") == target_hash
+    assert (agent_dir / "solution.txt").read_text() == "target\n"
+    assert prompts and f"## Continue from Attempt {target_hash}" in prompts[0]
