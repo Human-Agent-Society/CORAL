@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import shutil
 
 from coral.agent.builtin.claude_code import ClaudeCodeRuntime
 from coral.agent.builtin.codex import CodexRuntime
@@ -154,3 +155,30 @@ def register_runtime(name: str, cls: type, default_model: str | None = None) -> 
     _RUNTIMES[name] = cls
     if default_model:
         _DEFAULT_MODELS[name] = default_model
+
+
+def detect_available_runtimes() -> list[dict]:
+    """Scan ``PATH`` for the CLI binary of each canonical runtime.
+
+    Returns one row per known runtime (sorted by name), with keys:
+
+    - ``runtime``: canonical runtime name (e.g. ``"claude_code"``)
+    - ``command``: the default CLI binary the runtime invokes (e.g. ``"claude"``)
+    - ``resolved``: absolute path to the binary on PATH, or ``None`` if not found
+    - ``model``: the runtime's default model, or ``None``
+
+    Both found and not-found runtimes are included so callers can render a
+    complete report. Pure side-effect-free; no version probing.
+    """
+    rows: list[dict] = []
+    for name in sorted(_RUNTIMES.keys()):
+        cmd = _RUNTIME_COMMANDS.get(name)
+        rows.append(
+            {
+                "runtime": name,
+                "command": cmd or "",
+                "resolved": shutil.which(cmd) if cmd else None,
+                "model": _DEFAULT_MODELS.get(name),
+            }
+        )
+    return rows

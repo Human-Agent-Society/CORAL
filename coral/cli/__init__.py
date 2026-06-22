@@ -117,7 +117,7 @@ Inspecting Results:
   runs            List runs (active only; --all for stopped)
 
 User Setup:
-  setup           Configure user-level agent bindings (setup agent)
+  setup           Detect installed agent runtimes + configure bindings
   agents          List, inspect, and validate agent bindings
 
 Dashboard:
@@ -546,20 +546,30 @@ Run 'coral <command> --help' for details on any command."""
 
     p_setup = sub.add_parser(
         "setup",
-        help="Configure user-level agent bindings",
+        help="Detect agent runtimes / configure user-level agent bindings",
         description=(
-            "Configure machine-local agent bindings. A binding bundles a runtime, "
-            "CLI command, model, runtime options, and an optional role seed so tasks "
-            "can reference it by name instead of repeating those details."
+            "With no subcommand, scan PATH for installed agent runtime CLIs and "
+            "offer to create a binding for each one (interactive). With "
+            "`coral setup agent`, create or update a named binding non-interactively. "
+            "A binding bundles a runtime, CLI command, model, runtime options, and "
+            "optional role seed so tasks can reference it by name."
         ),
         epilog=(
             "Examples:\n"
-            "  coral setup agent                         Interactive wizard\n"
+            "  coral setup                               Detect runtimes + wizard\n"
+            "  coral setup --non-interactive             Just print the detection report\n"
+            "  coral setup agent                         Interactive single-binding setup\n"
             "  coral setup agent --name claude-opus --runtime claude_code --model opus\n"
             "  coral setup agent --name codex-high --runtime codex --option model_reasoning_effort=high"
         ),
         formatter_class=_CommandHelpFormatter,
     )
+    p_setup.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="Never prompt; just print the detection report and exit",
+    )
+    p_setup.add_argument("--config", help="Path to the user bindings file (advanced)")
     setup_sub = p_setup.add_subparsers(dest="setup_command")
     sp_agent = setup_sub.add_parser(
         "agent",
@@ -609,12 +619,61 @@ Run 'coral <command> --help' for details on any command."""
     ag_show = ag_sub.add_parser("show", help="Show one binding")
     ag_show.add_argument("name", help="Binding name")
     ag_show.add_argument("--config", help="Path to the user bindings file (advanced)")
-    ag_remove = ag_sub.add_parser("remove", help="Delete a binding")
-    ag_remove.add_argument("name", help="Binding name")
+    ag_remove = ag_sub.add_parser(
+        "remove",
+        help="Delete one or more bindings (interactive when no names given)",
+        description=(
+            "Delete bindings. Pass one or more names to remove them directly, or "
+            "pass no name to launch an interactive numbered-selection wizard."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  coral agents remove                        Interactive selection\n"
+            "  coral agents remove claude-opus            Remove one binding\n"
+            "  coral agents remove claude-opus codex-high Remove several at once"
+        ),
+        formatter_class=_CommandHelpFormatter,
+    )
+    ag_remove.add_argument(
+        "names",
+        nargs="*",
+        help="Binding name(s); omit for interactive selection",
+    )
     ag_remove.add_argument("--config", help="Path to the user bindings file (advanced)")
-    ag_doctor = ag_sub.add_parser("doctor", help="Validate bindings")
+    ag_doctor = ag_sub.add_parser(
+        "doctor",
+        help="Validate bindings (includes a live hello-ping by default)",
+        description=(
+            "Validate bindings. By default this includes a live hello-ping that "
+            "spawns the runtime CLI, sends a tiny prompt, and waits for output — "
+            "useful for catching auth failures and stale installs, but every ping "
+            "is one LLM round-trip per binding. Pass --no-live for the cheap, "
+            "metadata-only checks (resolves to AgentSpec / CLI present / "
+            "--version works / role_file exists)."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  coral agents doctor                 Validate all bindings (with live ping)\n"
+            "  coral agents doctor claude-opus     Validate one binding\n"
+            "  coral agents doctor --no-live       Skip the LLM round-trip (CI / quick check)\n"
+            "  coral agents doctor --timeout 60    Allow up to 60s per ping"
+        ),
+        formatter_class=_CommandHelpFormatter,
+    )
     ag_doctor.add_argument("name", nargs="?", help="Binding to check (default: all)")
     ag_doctor.add_argument("--config", help="Path to the user bindings file (advanced)")
+    ag_doctor.add_argument(
+        "--no-live",
+        dest="no_live",
+        action="store_true",
+        help="Skip the live hello-ping (only run cheap metadata checks)",
+    )
+    ag_doctor.add_argument(
+        "--timeout",
+        type=float,
+        default=30.0,
+        help="Per-binding ping timeout in seconds (default: 30)",
+    )
 
     # --- Parse and dispatch ---
 

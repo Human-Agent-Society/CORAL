@@ -58,7 +58,38 @@ agents:
 
 ## Creating a binding
 
-Run the interactive wizard:
+The fastest path is `coral setup` with no subcommand — it scans `PATH` for
+every supported runtime CLI (`claude`, `codex`, `cursor-agent`, `opencode`,
+`kiro-cli`, `pi`) and offers an interactive numbered-selection wizard:
+
+```bash
+coral setup
+# Scanning PATH for agent runtimes (~/.config/coral/agents.yaml):
+#
+#   ✓ claude_code   claude        /opt/homebrew/bin/claude
+#     codex         codex         not found
+#   ✓ cursor_agent  cursor-agent  /Users/me/.local/bin/cursor-agent
+#
+# 2 detected runtime(s):
+#
+#   [1] claude_code   (claude, model sonnet)
+#   [2] cursor_agent  (cursor-agent, model auto)
+#
+# Select runtimes to bind [1-2, comma/space-separated, 'all', or Enter to skip]: 1
+```
+
+For each pick the wizard asks for binding name, model, and an optional
+**role seed file** (press Enter to skip; an unreadable path is accepted but
+flagged by `coral agents doctor`). After the binding is created you'll be
+asked **"Add another binding for X? [y/N]"** — say yes to create a second
+binding for the same runtime, e.g. `claude-opus` and `claude-sonnet` both
+pointing at `claude_code` with different models. Already-bound runtimes stay
+in the list (annotated with `[N existing binding]`) so you can extend them
+whenever you like.
+
+Pass `--non-interactive` to just print the detection report (good for CI or
+piping to a file). For more control over a single binding — e.g. setting a
+custom command path, model, or role file — use `coral setup agent`:
 
 ```bash
 coral setup agent
@@ -78,22 +109,29 @@ The first binding you create becomes the default; pass `--default` to change it.
 ## Inspecting and managing bindings
 
 ```bash
-coral agents list                 # all bindings (default is marked)
-coral agents show claude-opus     # one binding's resolved fields
-coral agents doctor               # validate every binding
-coral agents doctor claude-opus   # validate one
-coral agents remove claude-opus   # delete one
+coral agents list                       # numbered list (default is marked)
+coral agents show claude-opus           # one binding's resolved fields
+coral agents doctor                     # validate every binding
+coral agents doctor claude-opus         # validate one
+coral agents remove                     # interactive numbered-selection wizard
+coral agents remove claude-opus codex-high   # delete one or more by name
 ```
 
-`coral agents doctor` runs only non-invasive checks:
+`coral agents doctor` runs five checks per binding:
 
 - the binding resolves to a valid agent spec,
 - the CLI is found on `PATH` (or at the configured `command` path),
-- the CLI's `--version` works, and
-- the role file exists, if one is set.
+- the CLI's `--version` works,
+- the role file exists, if one is set, and
+- (by default) a **live hello-ping** — spawns the runtime CLI with a
+  one-word prompt and waits for a reply.
 
-Authentication is **not** probed. When `doctor` reports a problem it points you
-at the runtime-native login command rather than guessing.
+The live ping catches the failure modes the cheap checks miss: expired auth,
+broken provider credentials, network issues, model name typos. It costs one
+LLM round-trip per binding, so pass `--no-live` to skip it in CI or quick
+sanity checks, and `--timeout SECS` to adjust the per-ping wait (default
+30s). Authentication is still owned by the runtime-native login flow — when
+the ping fails, `doctor` points you at it rather than asking for credentials.
 
 ## Using a binding in a task
 

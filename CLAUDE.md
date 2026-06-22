@@ -94,11 +94,14 @@ coral init my-task                                # Scaffold task.yaml + grader/
 coral validate my-task                            # Type-check task structure and dry-run grader against seed/
 
 # User-level agent bindings (~/.config/coral/agents.yaml)
-coral setup agent --name claude-opus --runtime claude_code --model opus   # Create/update a binding
-coral agents list                                 # List bindings (default marked)
+coral setup                                       # Scan PATH + numbered wizard (one runtime can yield N bindings)
+coral setup --non-interactive                     # Just print the detection report (no prompts)
+coral setup agent --name claude-opus --runtime claude_code --model opus   # Create/update a single binding
+coral agents list                                 # List bindings (numbered, default marked)
 coral agents show <name>                          # Inspect a binding
-coral agents doctor [name]                        # Validate bindings (CLI present, resolves to a spec)
-coral agents remove <name>                        # Delete a binding
+coral agents doctor [name] [--no-live] [--timeout 30]  # Validate bindings (incl. live hello-ping unless --no-live)
+coral agents remove                               # Interactive numbered-selection wizard
+coral agents remove <name> [<name>...]            # Delete one or more by name
 # In task.yaml: `agents.binding: claude-opus` (or `agents.assignments[].binding`) expands into runtime/model/runtime_options
 
 # Running agents

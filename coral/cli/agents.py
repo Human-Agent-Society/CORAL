@@ -11,12 +11,15 @@ import argparse
 import shutil
 import subprocess
 import sys
+import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from coral.agent.registry import (
     default_command_for_runtime,
     default_model_for_runtime,
+    detect_available_runtimes,
     is_known_runtime,
     known_runtimes,
 )
@@ -69,13 +72,205 @@ def _prompt(label: str, default: str = "") -> str:
 
 
 def cmd_setup(args: argparse.Namespace) -> None:
-    """Dispatch `coral setup <subcommand>`."""
+    """Dispatch `coral setup <subcommand>`.
+
+    With no subcommand, scan PATH for available agent runtime CLIs and, in an
+    interactive terminal, offer a numbered selection wizard for creating
+    bindings. One runtime can produce multiple bindings (e.g. ``claude-opus``
+    and ``claude-sonnet`` both bound to ``claude_code``) via an "add another?"
+    prompt after each successful creation. With ``--non-interactive`` the
+    detection report is printed and the command exits without prompting.
+    """
     sub = getattr(args, "setup_command", None)
     if sub == "agent":
         _setup_agent(args)
     else:
-        print("Usage: coral setup agent [--name NAME] ...", file=sys.stderr)
-        sys.exit(2)
+        _setup_detect(args)
+
+
+def _setup_detect(args: argparse.Namespace) -> None:
+    """Scan PATH for agent CLIs and (interactively) offer bindings.
+
+    A single runtime can carry multiple bindings (e.g. ``claude-opus`` and
+    ``claude-sonnet`` both pointing at ``claude_code``). The selection list
+    therefore always shows every detected runtime — bound or not — and after
+    each successful binding we ask whether to create another for the same
+    runtime.
+    """
+    rows = detect_available_runtimes()
+    found = [r for r in rows if r["resolved"]]
+
+    path = _store_path(args)
+    store = load_store(path)
+    bind_count: dict[str, int] = {}
+    for b in store.bindings.values():
+        bind_count[b.runtime] = bind_count.get(b.runtime, 0) + 1
+
+    print(f"Scanning PATH for agent runtimes ({store.path}):\n")
+    name_w = max((len(r["runtime"]) for r in rows), default=8)
+    cmd_w = max((len(r["command"]) for r in rows), default=8)
+    for r in rows:
+        mark = "✓" if r["resolved"] else " "
+        status = r["resolved"] or "not found"
+        existing = bind_count.get(r["runtime"], 0)
+        suffix = f"  ({existing} binding{'s' if existing != 1 else ''})" if existing else ""
+        cmd = r["command"] or "-"
+        print(f"  {mark} {r['runtime']:<{name_w}}  {cmd:<{cmd_w}}  {status}{suffix}")
+    print()
+
+    if not found:
+        print("No agent CLIs found on PATH.")
+        print(
+            "Install one of the supported runtimes "
+            "(claude, codex, cursor-agent, opencode, kiro-cli, pi) and re-run."
+        )
+        print(
+            "For a custom runtime, use: "
+            "coral setup agent --runtime 'module.path:ClassName' --name <NAME>"
+        )
+        return
+
+    interactive = not getattr(args, "non_interactive", False) and sys.stdin.isatty()
+
+    if not interactive:
+        print(f"{len(found)} runtime(s) detected, {sum(bind_count.values())} binding(s) defined.")
+        names = ", ".join(r["runtime"] for r in found)
+        print(
+            "Create bindings interactively: `coral setup` (in a TTY) "
+            f"or `coral setup agent --name <NAME> --runtime <{names}>`."
+        )
+        return
+
+    print(f"{len(found)} detected runtime(s):\n")
+    num_w = len(str(len(found)))
+    rt_w = max(len(r["runtime"]) for r in found)
+    for idx, r in enumerate(found, start=1):
+        existing = bind_count.get(r["runtime"], 0)
+        suffix = (
+            f"  [{existing} existing binding{'s' if existing != 1 else ''}]" if existing else ""
+        )
+        print(
+            f"  [{idx:>{num_w}}] {r['runtime']:<{rt_w}}  ({r['command']}"
+            f", model {r['model'] or '-'}){suffix}"
+        )
+    print()
+
+    selected = _prompt_selection(len(found))
+    if not selected:
+        print("No bindings created.")
+        return
+
+    print()
+    created = 0
+    for idx in selected:
+        r = found[idx - 1]
+        runtime = r["runtime"]
+        while True:
+            print(f"Setting up {runtime}:")
+            if not _create_one_binding(r, store):
+                break
+            created += 1
+            more = _prompt(f"Add another binding for {runtime}? [y/N]", default="n").strip().lower()
+            if more not in ("y", "yes"):
+                break
+
+    if created:
+        written = save_store(store, path)
+        print(f"Saved {created} binding(s) to {written}.")
+        print("Inspect with `coral agents list`, validate with `coral agents doctor`.")
+    else:
+        print("No bindings created.")
+
+
+def _create_one_binding(row: dict, store) -> bool:  # noqa: ANN001 - BindingStore forward ref
+    """Prompt for binding name + model, mutate ``store``. Return True on success."""
+    runtime = row["runtime"]
+    default_name = runtime.replace("_", "-")
+    suggest = default_name
+    i = 2
+    while suggest in store.bindings:
+        suggest = f"{default_name}-{i}"
+        i += 1
+    name = _prompt("  Binding name", default=suggest).strip()
+    if not name:
+        print(f"  skipping {runtime} — empty binding name")
+        print()
+        return False
+    if name in store.bindings:
+        print(f"  skipping — a binding named {name!r} already exists")
+        print()
+        return False
+    model = _prompt("  Model", default=row["model"] or "").strip()
+    role_file = _prompt(
+        "  Role seed file path (optional, e.g. ~/roles/generalist.md, Enter to skip)",
+        default="",
+    ).strip()
+    if role_file and not Path(role_file).expanduser().is_file():
+        print(f"  note: no file at {role_file} yet — `coral agents doctor` will flag this.")
+
+    binding = AgentBinding(
+        name=name,
+        runtime=runtime,
+        command=row["command"],
+        model=model,
+        runtime_options={},
+        role_file=role_file,
+    )
+    store.bindings[name] = binding
+    if store.default is None:
+        store.default = name
+    print(f"  ✓ created binding {name!r}")
+    print()
+    return True
+
+
+def _parse_selection(raw: str, count: int) -> list[int] | None:
+    """Parse a selection string like '1,3', '1-3', or 'all' into 1-based indices.
+
+    Returns ``[]`` for empty / skip input, a sorted list of indices for a valid
+    selection, or ``None`` when the input is malformed (caller should re-prompt).
+    """
+    s = raw.strip().lower()
+    if not s or s in ("q", "quit", "n", "no", "none", "skip"):
+        return []
+    if s == "all":
+        return list(range(1, count + 1))
+    selected: set[int] = set()
+    for tok in s.replace(",", " ").split():
+        if "-" in tok:
+            lo, _, hi = tok.partition("-")
+            try:
+                start, end = int(lo), int(hi)
+            except ValueError:
+                return None
+            if start > end:
+                start, end = end, start
+            for i in range(start, end + 1):
+                if not 1 <= i <= count:
+                    return None
+                selected.add(i)
+        else:
+            try:
+                i = int(tok)
+            except ValueError:
+                return None
+            if not 1 <= i <= count:
+                return None
+            selected.add(i)
+    return sorted(selected)
+
+
+def _prompt_selection(count: int, attempts: int = 3) -> list[int]:
+    """Prompt for a numbered selection; re-prompt on malformed input."""
+    label = f"Select runtimes to bind [1-{count}, comma/space-separated, 'all', or Enter to skip]"
+    for _ in range(attempts):
+        raw = _prompt(label, default="").strip()
+        picked = _parse_selection(raw, count)
+        if picked is not None:
+            return picked
+        print(f"  '{raw}' is not a valid selection. Use e.g. '1', '1,3', '1-3', or 'all'.")
+    print("  too many invalid attempts — skipping.")
+    return []
 
 
 def _setup_agent(args: argparse.Namespace) -> None:
@@ -144,7 +339,7 @@ def _setup_agent(args: argparse.Namespace) -> None:
     role_file = args.role_file
     if role_file is None and interactive:
         role_file = _prompt(
-            "Role seed file (optional)",
+            "Role seed file path (optional, e.g. ~/roles/generalist.md)",
             default=(existing.role_file if existing else ""),
         )
     if role_file is None:
@@ -200,19 +395,23 @@ def _agents_list(args: argparse.Namespace) -> None:
     store = load_store(_store_path(args))
     if not store.bindings:
         print(f"No agent bindings defined ({store.path}).")
-        print("Create one with `coral setup agent`.")
+        print("Create one with `coral setup` or `coral setup agent`.")
         return
+    names = sorted(store.bindings)
+    num_w = len(str(len(names)))
     print(f"Agent bindings ({store.path}):\n")
-    for name in sorted(store.bindings):
+    for idx, name in enumerate(names, start=1):
         b = store.bindings[name]
         marker = " (default)" if store.default == name else ""
         model = b.model or default_model_for_runtime(b.runtime) or "?"
-        print(f"  {name}{marker}")
+        print(f"  [{idx:>{num_w}}] {name}{marker}")
         print(f"      runtime: {b.runtime}    model: {model}    command: {b.command or '-'}")
         if b.role_file:
             print(f"      role_file: {b.role_file}")
         if b.runtime_options:
             print(f"      runtime_options: {b.runtime_options}")
+    print()
+    print("Remove with `coral agents remove` (interactive) or `coral agents remove <name>`.")
 
 
 def _agents_show(args: argparse.Namespace) -> None:
@@ -227,14 +426,61 @@ def _agents_show(args: argparse.Namespace) -> None:
 def _agents_remove(args: argparse.Namespace) -> None:
     path = _store_path(args)
     store = load_store(path)
-    if args.name not in store.bindings:
-        print(f"Error: no binding named {args.name!r} in {store.path}", file=sys.stderr)
+    if not store.bindings:
+        print(f"No agent bindings defined ({store.path}).")
+        return
+
+    names = getattr(args, "names", None) or []
+
+    if not names:
+        names = _interactive_remove_picker(store)
+        if not names:
+            return
+
+    # Pre-validate: any unknown name aborts the whole removal.
+    unknown = [n for n in names if n not in store.bindings]
+    if unknown:
+        print(
+            f"Error: no such binding(s) in {store.path}: {', '.join(repr(n) for n in unknown)}",
+            file=sys.stderr,
+        )
         sys.exit(1)
-    del store.bindings[args.name]
-    if store.default == args.name:
+
+    for n in names:
+        del store.bindings[n]
+        print(f"  ✓ removed '{n}'")
+    if store.default in (None, *names):
         store.default = next(iter(sorted(store.bindings)), None)
+        if store.default:
+            print(f"New default: {store.default}")
     save_store(store, path)
-    print(f"Removed agent binding '{args.name}'.")
+
+
+def _interactive_remove_picker(store) -> list[str]:  # noqa: ANN001 - BindingStore forward ref
+    """Print a numbered list of bindings and prompt the user to pick names to remove."""
+    names = sorted(store.bindings)
+    num_w = len(str(len(names)))
+    print(f"Agent bindings ({store.path}):\n")
+    for idx, n in enumerate(names, start=1):
+        marker = " (default)" if store.default == n else ""
+        b = store.bindings[n]
+        print(f"  [{idx:>{num_w}}] {n}{marker}    ({b.runtime}, model {b.model or '-'})")
+    print()
+
+    selected = _prompt_selection(len(names))
+    if not selected:
+        print("No bindings removed.")
+        return []
+
+    picked = [names[i - 1] for i in selected]
+    label = ", ".join(picked)
+    confirm = (
+        _prompt(f"Remove {len(picked)} binding(s): {label}? [y/N]", default="n").strip().lower()
+    )
+    if confirm not in ("y", "yes"):
+        print("No bindings removed.")
+        return []
+    return picked
 
 
 def _agents_doctor(args: argparse.Namespace) -> None:
@@ -252,9 +498,12 @@ def _agents_doctor(args: argparse.Namespace) -> None:
     else:
         targets = [store.bindings[n] for n in sorted(store.bindings)]
 
+    live = not getattr(args, "no_live", False)
+    timeout = float(getattr(args, "timeout", None) or 30.0)
+
     any_fail = False
     for binding in targets:
-        issues = _validate_binding(binding)
+        issues = _validate_binding(binding, live=live, ping_timeout=timeout)
         ok = _print_doctor(binding, issues)
         any_fail = any_fail or not ok
     sys.exit(1 if any_fail else 0)
@@ -273,12 +522,24 @@ def _print_binding(binding: AgentBinding, is_default: bool = False) -> None:
     print(f"  runtime_options: {binding.runtime_options or '{}'}")
 
 
-def _validate_binding(binding: AgentBinding) -> list[tuple[str, bool, str]]:
-    """Run lightweight, non-invasive checks. Returns (label, ok, detail) rows.
+def _validate_binding(
+    binding: AgentBinding,
+    *,
+    live: bool = False,
+    ping_timeout: float = 30.0,
+) -> list[tuple[str, bool, str]]:
+    """Run validation checks. Returns (label, ok, detail) rows.
 
-    Checks never store or transmit credentials. Authentication is not probed
-    invasively — when it cannot be checked safely we say so and defer to the
-    runtime-native login flow.
+    With ``live=False`` (default) only lightweight metadata checks run — fast
+    and free, no LLM round-trip. The ``coral setup agent`` auto-doctor pass
+    uses this mode.
+
+    With ``live=True``, after the metadata checks pass, this also spawns the
+    runtime CLI with a one-word prompt and waits ``ping_timeout`` seconds for
+    a reply. Costs one LLM round-trip per call. ``coral agents doctor`` uses
+    this mode by default; pass ``--no-live`` to skip.
+
+    Checks never store or transmit credentials.
     """
     rows: list[tuple[str, bool, str]] = []
 
@@ -338,6 +599,13 @@ def _validate_binding(binding: AgentBinding) -> list[tuple[str, bool, str]]:
             )
         )
 
+    # 5. Live hello-ping (opt-in). Skipped silently when the CLI was missing —
+    #    the CLI-found row already flagged it.
+    if live and cli_ok and resolved:
+        model = binding.model or default_model_for_runtime(binding.runtime) or ""
+        ok, detail = _try_ping(binding.runtime, resolved, model, ping_timeout)
+        rows.append(("live ping", ok, detail))
+
     return rows
 
 
@@ -356,6 +624,69 @@ def _try_version(command: str) -> tuple[bool, str]:
             out = (proc.stdout or proc.stderr).strip().splitlines()
             return True, out[0] if out else "ok"
     return False, "no working --version flag (auth check deferred to runtime login)"
+
+
+# A short, deterministic prompt that should produce minimal tokens across
+# every runtime. Kept identical for all runtimes so logs from different
+# runtimes are directly comparable.
+_PING_PROMPT = "Reply with just the word: ok"
+
+
+# Per-runtime non-interactive invocation. None ⇒ runtime has no clean
+# non-interactive mode; ping is skipped with "not implemented".
+_RUNTIME_PING_CMD: dict[str, Callable[[str, str], list[str]]] = {
+    "claude_code": lambda cmd, model: [cmd, "-p", _PING_PROMPT, "--model", model],
+    "codex": lambda cmd, _model: [cmd, "exec", _PING_PROMPT],
+    "cursor_agent": lambda cmd, _model: [cmd, "--print", _PING_PROMPT],
+    "opencode": lambda cmd, model: [cmd, "run", "--model", model, _PING_PROMPT],
+    "pi": lambda cmd, _model: [cmd, "--print", _PING_PROMPT],
+    # kiro intentionally absent — no documented non-interactive mode.
+}
+
+
+def _try_ping(runtime: str, command: str, model: str, timeout: float) -> tuple[bool, str]:
+    """Spawn the runtime CLI with a one-word prompt; return (ok, detail).
+
+    Success criterion: exit code 0 AND non-empty stdout within ``timeout`` seconds.
+    Failure modes (each surfaced in ``detail``): unsupported runtime, missing
+    command/model, timeout, non-zero exit, empty stdout.
+    """
+    builder = _RUNTIME_PING_CMD.get(runtime)
+    if builder is None:
+        return False, f"live ping not implemented for runtime {runtime!r}"
+    if not command:
+        return False, "no CLI command resolved"
+    # Some runtimes embed the model in the command; missing model is fatal there.
+    needs_model = runtime in ("claude_code", "opencode")
+    if needs_model and not model:
+        return False, "no model configured for this binding"
+
+    argv = builder(command, model)
+    t0 = time.monotonic()
+    try:
+        proc = subprocess.run(
+            argv,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return False, f"timed out after {timeout:g}s — CLI did not reply"
+    except OSError as e:
+        return False, f"could not invoke {command}: {e}"
+    elapsed = time.monotonic() - t0
+
+    out = (proc.stdout or "").strip()
+    if proc.returncode != 0:
+        err = (proc.stderr or "").strip().splitlines()
+        snippet = err[0] if err else "no stderr"
+        return False, f"exit {proc.returncode} in {elapsed:.1f}s: {snippet[:120]}"
+    if not out:
+        return False, f"empty stdout (exit 0 in {elapsed:.1f}s)"
+
+    first_line = out.splitlines()[0]
+    truncated = first_line if len(first_line) <= 60 else first_line[:60] + "…"
+    return True, f"reply received in {elapsed:.1f}s ({truncated!r})"
 
 
 def _print_doctor(binding: AgentBinding, rows: list[tuple[str, bool, str]]) -> bool:

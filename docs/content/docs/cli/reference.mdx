@@ -52,9 +52,32 @@ Tasks reference them by name with `agents.binding` instead of repeating runtime
 details. See the [Agent Bindings guide](/docs/guides/agent-bindings) for the full
 model. No credentials are ever stored.
 
+### `coral setup`
+
+Scan `PATH` for installed agent runtime CLIs (`claude`, `codex`,
+`cursor-agent`, `opencode`, `kiro-cli`, `pi`) and, in an interactive terminal,
+launch a numbered-selection wizard to create bindings. Pick one or more
+runtimes (`1`, `1,3`, `1-3`, or `all`) and the wizard prompts for binding
+name + model per pick. After each successful binding it asks **"Add another
+binding for X? [y/N]"**, so one runtime can carry many bindings (e.g.
+`claude-opus` and `claude-sonnet` both bound to `claude_code`).
+
+```bash
+coral setup [--non-interactive] [--config PATH]
+```
+
+```bash
+coral setup                       # detect + interactive wizard
+coral setup --non-interactive     # detection report only (good for CI / piped output)
+```
+
+The detection report lists every canonical runtime: `✓` next to the resolved
+absolute path when the CLI is on `PATH`, `not found` otherwise, plus a
+`(N binding)` marker for runtimes that already have bindings.
+
 ### `coral setup agent`
 
-Create or update a named agent binding. Runs interactively when no flags are
+Create or update one named agent binding. Runs interactively when no flags are
 given; otherwise reads everything from flags.
 
 ```bash
@@ -84,15 +107,28 @@ coral setup agent --name codex-high --runtime codex --option model_reasoning_eff
 List, inspect, validate, and delete bindings.
 
 ```bash
-coral agents list                 # all bindings (default marked)
-coral agents show <name>          # one binding's resolved fields
-coral agents doctor [name]        # validate all bindings (or one)
-coral agents remove <name>        # delete a binding
+coral agents list                       # all bindings (numbered, default marked)
+coral agents show <name>                # one binding's resolved fields
+coral agents doctor [name]              # validate all bindings (or one)
+coral agents remove                     # interactive numbered-selection wizard
+coral agents remove <name> [<name>...]  # delete one or more by name
 ```
 
-`coral agents doctor` runs non-invasive checks only: the binding resolves to a
-valid agent spec, the CLI is found and reports `--version`, and any role file
-exists. Authentication is deferred to the runtime-native login flow.
+`coral agents remove` is variadic and interactive: pass any number of binding
+names to remove them directly (unknown names abort before any deletion
+happens), or pass none to get a numbered-selection prompt mirroring
+`coral setup`'s wizard, then a `[y/N]` confirmation. Removing the default
+binding reassigns the default to the next alphabetical entry.
+
+`coral agents doctor` runs four checks per binding: (1) the binding resolves
+to a valid agent spec, (2) the CLI is found, (3) the CLI reports `--version`,
+and (4) by default a **live hello-ping** — spawns the runtime CLI with a
+one-word prompt and waits for a reply. The live ping costs one LLM
+round-trip per binding and surfaces auth issues (no API key, expired login)
+that the cheap checks miss. Pass `--no-live` to skip it, `--timeout SECS` to
+adjust the per-ping wait (default 30s). The ping is also skipped silently
+for runtimes without a documented non-interactive mode (currently `kiro`).
+A role file is checked separately when one is configured.
 
 ---
 
