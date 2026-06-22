@@ -12,6 +12,7 @@ your workflow counts, it does — read on.
 > - A human author must read every changed line and be able to defend the design end-to-end.
 > - No drive-by mechanical PRs (lone typo fixes, single-line style nits, batch reformat across the repo).
 > - Don't open duplicate PRs against the same issue. Check first.
+> - Keep AGENTS.md in sync with CLAUDE.md when project guidance changes.
 > - Don't dump raw agent transcripts into the PR description. Summarize.
 
 ## 1. Human accountability
@@ -58,7 +59,19 @@ If an open PR is already in flight:
 - If your approach is materially different, file an issue (or comment on the
   existing one) explaining the difference before submitting.
 
-## 4. Disclosure in PR descriptions
+## 4. Keep agent guidance synchronized
+
+`CLAUDE.md` is the detailed project guide used by Claude Code, and
+`AGENTS.md` is the cross-agent contribution guide. Keep them consistent:
+
+- If you update `CLAUDE.md` with project structure, workflow, command,
+  testing, PR, or agent-specific guidance, check whether `AGENTS.md` needs the
+  same rule or a tool-agnostic version of it.
+- If you update `AGENTS.md` with contribution rules that should affect Claude
+  Code sessions, check whether `CLAUDE.md` needs the corresponding detail.
+- If only one file should change, say why in the PR description.
+
+## 5. Disclosure in PR descriptions
 
 If an agent did the bulk of the writing, say so plainly. We don't penalize
 agent-assisted PRs — we just want the review framed correctly.
@@ -86,7 +99,7 @@ What **not** to do:
 - Don't fabricate test results. If you didn't run it, don't claim you did.
 - Don't link to private agent sessions. Reviewers can't follow those.
 
-## 5. CORAL-specific gotchas for agents
+## 6. CORAL-specific gotchas for agents
 
 These tend to bite AI-generated PRs in this repo specifically:
 
@@ -111,7 +124,7 @@ walks through these in detail. For framework-level changes, see
 [`coral-extend`](.claude/skills/coral-extend/SKILL.md); for debugging,
 [`coral-debug`](.claude/skills/coral-debug/SKILL.md).
 
-## 6. Reviewer guidance
+## 7. Reviewer guidance
 
 Reviewers should:
 
