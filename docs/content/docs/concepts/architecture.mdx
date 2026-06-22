@@ -88,8 +88,9 @@ results/<task-name>/<timestamp>/
 The dashboard can steer a stopped run through `.coral/public/steering/`.
 `POST /api/steer` validates that the manager is not alive, then either queues a
 `continue_from` action or marks an attempt as user-best. `coral resume` is the
-only place queued `continue_from` actions are applied: the manager resets an
-agent worktree to the selected commit, composes the queued instruction with any
+only place queued `continue_from` actions are applied: the manager finds every
+agent worktree whose current HEAD descends from the selected commit, resets
+those worktrees to the selected commit, composes the queued instruction with any
 operator-provided resume instruction, and marks the action applied.
 
 The CLI uses the same manager path without the queue: `coral resume --from

@@ -41,6 +41,35 @@ def _commit_file(repo: Path, name: str, content: str, message: str) -> str:
     return _git(repo, "rev-parse", "HEAD")
 
 
+def _stub_manager_for_resume(
+    manager: AgentManager, monkeypatch, agent_dirs: dict[str, Path]
+) -> list:
+    handles = []
+
+    monkeypatch.setattr(manager, "_start_gateway_if_enabled", lambda: None)
+    monkeypatch.setattr(manager, "_start_grader_daemon", lambda: None)
+    monkeypatch.setattr(manager, "_kill_old_agent_processes", lambda: None)
+    monkeypatch.setattr(manager, "_load_saved_sessions", lambda: {})
+    monkeypatch.setattr("coral.agent.manager._validate_sessions", lambda sessions, coral_dir: {})
+    monkeypatch.setattr(manager, "_write_pid_file", lambda: None)
+    monkeypatch.setattr("atexit.register", lambda fn: None)
+
+    def fake_setup(agent_id: str, **kwargs):
+        handle = SimpleNamespace(
+            agent_id=agent_id,
+            process=SimpleNamespace(pid=123, poll=lambda: None),
+            worktree_path=agent_dirs[agent_id],
+            log_path=agent_dirs[agent_id] / "agent.log",
+            session_id=None,
+            prompt=kwargs.get("prompt"),
+        )
+        handles.append(handle)
+        return handle
+
+    monkeypatch.setattr(manager, "_setup_and_start_agent", fake_setup)
+    return handles
+
+
 def _attempt(commit: str, score: float = 0.5) -> Attempt:
     return Attempt(
         commit_hash=commit,
@@ -169,6 +198,10 @@ def test_resume_all_drains_continue_from_actions(tmp_path: Path, monkeypatch) ->
     def fake_checkout(worktree_path: Path, target_hash: str) -> None:
         calls.append({"checkout": target_hash, "worktree": worktree_path})
 
+    monkeypatch.setattr(
+        "coral.agent.manager._worktree_head_descends_from",
+        lambda worktree_path, target_hash: True,
+    )
     monkeypatch.setattr("coral.agent.manager._reset_worktree_to_commit", fake_checkout)
 
     def fake_setup(agent_id: str, **kwargs):
@@ -235,6 +268,10 @@ def test_resume_all_applies_cli_resume_from_like_queued_steering(
         lambda worktree_path, target_hash: calls.append(
             {"checkout": target_hash, "worktree": worktree_path}
         ),
+    )
+    monkeypatch.setattr(
+        "coral.agent.manager._worktree_head_descends_from",
+        lambda worktree_path, target_hash: True,
     )
 
     def fake_setup(agent_id: str, **kwargs):
@@ -318,3 +355,64 @@ def test_resume_from_resets_real_worktree_head(tmp_path: Path, monkeypatch) -> N
     assert _git(agent_dir, "rev-parse", "HEAD") == target_hash
     assert (agent_dir / "solution.txt").read_text() == "target\n"
     assert prompts and f"## Continue from Attempt {target_hash}" in prompts[0]
+
+
+def test_resume_from_resets_all_descendant_agent_worktrees(tmp_path: Path, monkeypatch) -> None:
+    coral_dir = tmp_path / ".coral"
+    agents_dir = tmp_path / "agents"
+    repo_dir = tmp_path / "repo"
+    agents_dir.mkdir()
+    repo_dir.mkdir()
+
+    base_repo = tmp_path / "base"
+    base_repo.mkdir()
+    _git(base_repo, "init")
+    _git(base_repo, "config", "user.email", "test@example.com")
+    _git(base_repo, "config", "user.name", "Test User")
+    target_hash = _commit_file(base_repo, "solution.txt", "target\n", "target attempt")
+    descendant_one = _commit_file(base_repo, "agent1.txt", "child\n", "agent 1 descendant")
+    _git(base_repo, "checkout", "-b", "agent-2-branch", target_hash)
+    descendant_two = _commit_file(base_repo, "agent2.txt", "child\n", "agent 2 descendant")
+    _git(base_repo, "checkout", "--orphan", "unrelated")
+    _git(base_repo, "rm", "-rf", ".")
+    unrelated_hash = _commit_file(base_repo, "unrelated.txt", "other\n", "unrelated root")
+
+    agent_dirs: dict[str, Path] = {}
+    for agent_id, commit_hash in {
+        "agent-1": descendant_one,
+        "agent-2": descendant_two,
+        "agent-3": unrelated_hash,
+    }.items():
+        agent_dir = agents_dir / agent_id
+        _git(tmp_path, "clone", str(base_repo), str(agent_dir))
+        _git(agent_dir, "checkout", "--detach", commit_hash)
+        agent_dirs[agent_id] = agent_dir
+
+    write_attempt(coral_dir, _attempt(target_hash))
+    paths = ProjectPaths(
+        results_dir=tmp_path,
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=agents_dir,
+        repo_dir=repo_dir,
+    )
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "agents": {"count": 3, "runtime": "claude-code"},
+        }
+    )
+    manager = AgentManager(cfg)
+    handles = _stub_manager_for_resume(manager, monkeypatch, agent_dirs)
+
+    manager.resume_all(paths, instruction="revisit this branch", resume_from=target_hash)
+
+    assert _git(agent_dirs["agent-1"], "rev-parse", "HEAD") == target_hash
+    assert _git(agent_dirs["agent-2"], "rev-parse", "HEAD") == target_hash
+    assert _git(agent_dirs["agent-3"], "rev-parse", "HEAD") == unrelated_hash
+
+    prompts = {h.agent_id: h.prompt for h in handles}
+    assert f"## Continue from Attempt {target_hash}" in prompts["agent-1"]
+    assert f"## Continue from Attempt {target_hash}" in prompts["agent-2"]
+    assert f"## Continue from Attempt {target_hash}" not in prompts["agent-3"]

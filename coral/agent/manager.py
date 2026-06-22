@@ -749,8 +749,19 @@ class AgentManager:
             if isinstance(action, ContinueFromAction)
         )
         steering_by_agent: dict[str, ContinueFromAction] = {}
-        for agent_dir, action in zip(agent_dirs, resume_actions, strict=False):
-            steering_by_agent[agent_dir.name] = action
+        applied_actions: set[str] = set()
+        for action in resume_actions:
+            matched = [
+                agent_dir
+                for agent_dir in agent_dirs
+                if _worktree_head_descends_from(agent_dir, action.hash)
+            ]
+            if not matched:
+                continue
+            for agent_dir in matched:
+                steering_by_agent[agent_dir.name] = action
+            if action.id:
+                applied_actions.add(action.id)
 
         handles = []
         for agent_dir in agent_dirs:
@@ -795,7 +806,7 @@ class AgentManager:
                     action=steering_action,
                     instruction=instruction,
                 )
-                if steering_action.id:
+                if steering_action.id and steering_action.id in applied_actions:
                     mark_applied(paths.coral_dir, steering_action.id)
 
             handle = self._setup_and_start_agent(
@@ -2537,6 +2548,17 @@ def _reset_worktree_to_commit(worktree_path: Path, target_hash: str) -> None:
     )
     if result.returncode != 0:
         raise RuntimeError(f"Steering checkout failed for '{target_hash}': {result.stderr}")
+
+
+def _worktree_head_descends_from(worktree_path: Path, target_hash: str) -> bool:
+    """Return True when the worktree HEAD has target_hash as an ancestor."""
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", target_hash, "HEAD"],
+        capture_output=True,
+        text=True,
+        cwd=worktree_path,
+    )
+    return result.returncode == 0
 
 
 def _compose_resume_instruction(
