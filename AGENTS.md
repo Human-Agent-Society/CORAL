@@ -63,6 +63,17 @@ If an open PR is already in flight:
 If an agent did the bulk of the writing, say so plainly. We don't penalize
 agent-assisted PRs — we just want the review framed correctly.
 
+Use `.github/PULL_REQUEST_TEMPLATE.md` as-is. Do not replace it with a custom
+short summary. In particular:
+
+- Keep the `Motivation`, `Changes`, `Test plan`, `Affected areas`, and
+  `Checklist` sections.
+- Tick every affected area that applies.
+- Tick checklist items only when they are true. If the full-suite template
+  commands were not run, leave those boxes unchecked and list the narrower
+  commands you did run in `Test plan`.
+- Reference issues in the body (`Closes #123`) when applicable.
+
 A minimal disclosure looks like:
 
 > *Authored with assistance from \<tool\>. I read every changed line, ran the
