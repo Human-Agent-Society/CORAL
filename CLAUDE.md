@@ -99,7 +99,7 @@ coral start -c task.yaml run.verbose=true run.ui=true           # Verbose + dash
 coral start -c task.yaml run.session=local                      # No tmux session
 coral resume                                      # Resume latest run (sessions restored)
 coral resume -i "Try greedy approaches"           # Inject an instruction at resume
-coral resume --from [hash] -i "Continue this fork" # Reset an agent to an attempt (latest if omitted), then inject instruction
+coral resume --from <hash> -i "Continue this fork" # Reset an agent to an attempt, then inject instruction
 coral stop [--all]                                # Stop one or all active runs
 coral status                                      # Agent health + leaderboard
 

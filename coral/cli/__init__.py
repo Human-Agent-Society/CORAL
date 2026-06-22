@@ -200,11 +200,9 @@ Run 'coral <command> --help' for details on any command."""
     p_resume.add_argument(
         "--from",
         dest="resume_from",
-        nargs="?",
-        const="latest",
         type=str,
         default=None,
-        help="Attempt hash to reset an agent worktree to before resuming; omit HASH to use the latest attempt",
+        help="Attempt hash to reset an agent worktree to before resuming",
     )
     p_resume.add_argument(
         "overrides",
