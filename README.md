@@ -36,7 +36,7 @@
 curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
 ```
 
-Installs `coral` globally via `uv tool install`. Pin a version with `CORAL_VERSION=v0.7.0`. See [Installation docs](https://docs.coralxyz.com/getting-started/installation) for manual install, dev setup, and prerequisites.
+Installs the **latest `coral` release** globally via `uv tool install`. Pin a specific release with `CORAL_VERSION=<tag>` if you need to. See [Installation docs](https://docs.coralxyz.com/getting-started/installation) for manual install, dev setup, and prerequisites.
 
 ```bash
 coral init my-task                       # scaffold a task

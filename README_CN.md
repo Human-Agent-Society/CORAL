@@ -43,7 +43,7 @@
 curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
 ```
 
-通过 `uv tool install` 全局安装 `coral`。如需指定版本，设置 `CORAL_VERSION=v0.7.0`。手动安装、开发模式、前置依赖等详见[安装文档](https://docs.coralxyz.com/getting-started/installation)。
+通过 `uv tool install` 全局安装**最新版 `coral`**。如确需指定版本，设置 `CORAL_VERSION=<tag>`。手动安装、开发模式、前置依赖等详见[安装文档](https://docs.coralxyz.com/getting-started/installation)。
 
 ```bash
 coral init my-task                       # 生成任务模板

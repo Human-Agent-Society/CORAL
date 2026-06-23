@@ -1,61 +1,93 @@
 ---
 name: coral-quickstart
-description: What CORAL is, when to reach for it, and how to install the `coral` CLI. Use when the user asks "what is coral", "should I use coral for this", or when `coral` isn't installed yet and needs to be set up. Hands off to `creating-a-coral-task` (authoring) and `running-coral-experiments` (operating) for the actual work.
+description: The fast path from zero to a running CORAL experiment — what CORAL is and when to reach for it, installing the `coral` CLI, registering a runtime with `coral setup`, and the `.coral_workspace/` convention for pointing CORAL at code you already have and want optimized. Use this whenever the user asks "what is coral", "should I use coral for this", wants to install or get coral set up, hits a "command not found" for coral or doesn't have it installed yet, or says "use coral to optimize / speed up / improve this code" and you need the end-to-end onboarding from install to a launched run. Hands off to `setting-up-coral` (runtime bindings), `creating-a-coral-task` (grader authoring), and `running-coral-experiments` (operating a run) for depth.
 ---
 
 # CORAL quickstart
 
-**CORAL** is infrastructure for autonomous coding agents: you give it a codebase (`seed/`) and a grader, and it spawns agents in isolated git worktrees that edit code, submit commits, and get scored on a shared leaderboard — looping to improve the score.
+**CORAL** is infrastructure for autonomous coding agents: you give it a codebase (`seed/`) and a grader (turns a commit into a number), and it spawns agents in isolated git worktrees that edit code, submit commits, and get scored on a shared leaderboard — looping to push the score up. The agents *are* the optimizer; your grader defines "better".
 
 ## When to reach for CORAL
 
-Good fit:
-- You can express success as a **number** (a grader: accuracy, runtime ratio, pass rate, a rubric-judge score).
-- The work is **iterative search** — many attempts at one well-scoped problem (kernel optimization, algorithm design, benchmark solving, prompt/program tuning).
+**Good fit:**
+- You can express success as a **number** — accuracy, runtime ratio, pass rate, or a rubric-judge score for open-ended work.
+- The work is **iterative search**: many attempts at one well-scoped problem (kernel/algorithm optimization, benchmark solving, prompt/program tuning, "make this function faster").
 - You want **parallel agents** exploring independently and sharing what works.
 
-Not a fit:
+**Not a fit:**
 - One-shot tasks with no measurable objective.
-- Work that can't be scored without a human in the loop on every attempt (use a rubric-judge grader if a model *can* score it).
+- Work that needs a human judging every attempt (use a rubric-judge grader if a *model* can score it).
 
-## Install
+## How a run is shaped
+
+```
+you provide:   seed/ (starter code)  +  a grader (commit → number)
+coral spawns:  N agents, each in its own git worktree
+each agent:    edit code → `coral eval` → grader scores it → read leaderboard → repeat
+shared state:  attempts, notes, and skills are visible across agents in real time
+```
+
+Two things you build (`seed/` + grader) and one thing you tune (how many agents, which model). Worktrees, scoring daemon, shared state, and restarts are handled for you.
+
+## Get running — four steps
+
+### 1. Install the CLI
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
-# or, with uv:
-uv tool install coral
+# or, if you have uv:  uv tool install coral
+coral --help      # verify
 ```
 
-Pin a version with `CORAL_VERSION=v0.7.0` before the curl. Verify:
+The installer grabs the **latest `coral` release** by default — that's what you want. (Only pin a specific release with `CORAL_VERSION=<tag>` before the curl if you have a reason to.)
+
+### 2. Register a runtime (`coral setup`)
+
+`coral` shells out to a coding-agent CLI (Claude Code, Codex, Cursor, Kiro, OpenCode) — each installed and authenticated separately. Tell coral which to use:
 
 ```bash
-coral --help
+coral setup            # scans PATH, wizard to create named runtime bindings
+coral agents doctor    # validates them, incl. a live auth ping
 ```
 
-Each agent runtime you want to use (Claude Code, Codex, Cursor, Kiro, OpenCode) must be installed and authenticated separately — `coral` shells out to them. Next, register them with coral so it knows which to launch (the `setting-up-coral` skill):
+If `doctor`'s live ping fails (expired auth, model typo, "runtime not found" at start) → the `setting-up-coral` skill has the full troubleshooting matrix.
+
+### 3. Build a task — use a `.coral_workspace/`
+
+When the user wants CORAL to optimize **code they already have**, keep every bit of CORAL scaffolding (task config, seed, grader, results) inside a `.coral_workspace/` directory at the root of their project. This keeps coral out of their actual source tree and is trivially gitignored:
 
 ```bash
-coral setup                 # detect installed runtimes + create named bindings
-coral agents doctor         # validate them (incl. a live auth ping)
+# from the user's project root
+echo ".coral_workspace/" >> .gitignore
+mkdir -p .coral_workspace && cd .coral_workspace
+
+coral init optimize        # scaffolds task.yaml + seed/ + grader/ package
+cd optimize
+
+# put the code to optimize into the seed (copy the module/file the user wants improved)
+cp ../../path/to/their_module.py seed/solution.py
 ```
 
-## The workflows
+Then make the task fit the user's goal — two edits:
+- **`task.yaml`** → set `task.description` to what the agents should optimize and the program file's contract (e.g. "`solution.py` must define `run()` and stay correct; we score speedup").
+- **the grader** → score the user's actual metric (speedup vs baseline, accuracy on a held-out set, pass rate, …). This is the heart of it → the `creating-a-coral-task` skill walks through grader patterns and the `TaskGrader` API.
+
+### 4. Validate, then launch
+
+```bash
+coral validate .                 # confirms the grader scores the seed — the one checkpoint that matters
+coral start -c task.yaml         # launch agents (results stay under .coral_workspace/)
+coral status                     # watch the leaderboard
+```
+
+If `coral validate` succeeds, the grader can score the seed; most "agents are stuck" reports trace to a grader that crashes here. Driving the run from here — monitoring, steering, stopping — is the `running-coral-experiments` skill.
+
+## The workflows (where to go next)
 
 | You want to... | Skill | Commands |
 |---|---|---|
-| **Set up** runtimes (one-time, after install) | `setting-up-coral` | `coral setup`, `coral agents doctor` |
-| **Author** a task (write a grader + seed) | `creating-a-coral-task` | `coral init`, `coral validate` |
+| **Set up** runtimes (one-time) | `setting-up-coral` | `coral setup`, `coral agents doctor` |
+| **Author** a task / write a grader | `creating-a-coral-task` | `coral init`, `coral validate` |
 | **Run / manage** experiments | `running-coral-experiments` | `coral start / status / log / show / resume / stop` |
 
-## 60-second path
-
-```bash
-coral init my-task          # scaffold task.yaml + seed/ + grader package
-cd my-task
-# edit seed/solution.py and grader/src/.../grader.py for your problem
-coral validate .            # confirm the grader scores the seed
-coral start -c task.yaml    # launch agents
-coral status                # watch the leaderboard
-```
-
-The eval loop *inside* a run (`coral eval -m "..."` → score → iterate) is documented in the `CORAL.md` every in-run agent reads automatically — you don't drive that by hand. Docs: https://docs.coralxyz.com/
+The eval loop *inside* a run (`coral eval -m "..."` → score → iterate) is driven by the agents themselves — they read it from the `CORAL.md` CORAL generates, so you never run it by hand. Docs: https://docs.coralxyz.com/

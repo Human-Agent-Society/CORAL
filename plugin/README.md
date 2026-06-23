@@ -14,7 +14,9 @@ plugin/                         # this directory IS the plugin
 │   ├── coral-quickstart/       # what is coral / when to use / install
 │   ├── setting-up-coral/       # register runtimes as bindings (coral setup / agents doctor)
 │   ├── creating-a-coral-task/  # author task.yaml + seed/ + grader package
+│   │   └── references/         #   grader-api, cookbook, rubric-judges, task-yaml (loaded on demand)
 │   └── running-coral-experiments/  # start / status / log / show / resume / stop
+│       └── references/         #   steering (resume/fork/heartbeat), scaling-and-ops
 ├── hooks/
 │   ├── hooks.json              # Claude Code SessionStart
 │   ├── hooks-codex.json        # Codex SessionStart

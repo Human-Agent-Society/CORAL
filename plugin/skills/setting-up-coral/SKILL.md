@@ -58,6 +58,32 @@ coral agents remove                       # interactive numbered wizard
 coral agents remove claude-opus codex-high   # delete one or more by name
 ```
 
+### Reading a doctor failure
+
+`doctor` tells you *which* of the five checks failed — match it to the fix:
+
+| Failed check | What it means | Fix |
+|---|---|---|
+| binding resolves | `agents.yaml` entry is malformed or names an unknown runtime | `coral agents show <name>`; recreate with `coral setup agent --name ... --runtime ...`. |
+| CLI on PATH | the runtime binary isn't found | install the runtime, or point the binding at it with `--command /abs/path`. |
+| `--version` works | binary found but won't run | reinstall the runtime; check it runs standalone. |
+| role file exists | a configured role-seed file was moved/deleted | fix the path or drop the role file from the binding. |
+| **live hello-ping** | binary runs but the model call fails | **almost always auth or a model typo** — log in via the runtime (table below) and check the model name. Re-run; add `--no-live` only to skip the check, not to fix it. |
+
+## Per-runtime authentication
+
+Bindings store **no credentials** — each runtime owns its own login. The hello-ping failing means you log in *here*, not in coral:
+
+| Runtime | `--runtime` | Log in with |
+|---|---|---|
+| Claude Code | `claude_code` | `claude` (interactive login) |
+| Codex | `codex` | `codex` login flow |
+| Cursor Agent | `cursor_agent` | `cursor-agent login` |
+| Kiro | `kiro` | `kiro-cli` setup |
+| OpenCode | `opencode` | `opencode` auth |
+
+Codex reasoning effort is a runtime option, not a model: `coral setup agent --name codex-high --runtime codex --option model_reasoning_effort=high`. For custom or self-hosted models across runtimes, route through the LiteLLM gateway (`agents.gateway` in `task.yaml`): https://docs.coralxyz.com/guides/gateway
+
 ## 4. Use a binding in a task
 
 Single runtime:
