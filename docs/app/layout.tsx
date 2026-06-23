@@ -1,4 +1,5 @@
 import { RootProvider } from 'fumadocs-ui/provider/next';
+import { Analytics } from '@vercel/analytics/next';
 import type { ReactNode } from 'react';
 import './global.css';
 
@@ -31,6 +32,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
       >
         <RootProvider theme={{ enabled: false }}>{children}</RootProvider>
+        <Analytics />
       </body>
     </html>
   );
