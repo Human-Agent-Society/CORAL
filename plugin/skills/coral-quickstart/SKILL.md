@@ -56,7 +56,13 @@ If `doctor`'s live ping fails (expired auth, model typo, "runtime not found" at 
 
 When the user wants CORAL to optimize **code they already have**, keep every bit of CORAL scaffolding (task config, seed, grader, results) inside a `.coral_workspace/` directory at the root of their project. This keeps coral out of their actual source tree and is trivially gitignored.
 
-> **Act — don't hand the user a menu.** When someone says "use coral to optimize this" and there's no task scaffold yet, that is *not* an ambiguity to resolve with a 1/2/3 question. The intent is clear: build a CORAL task from the current repo. So **default to doing exactly that** — explore the repo to infer the most likely optimization target and the metric that defines "better", scaffold the workspace, write the grader, and run `coral validate`, *then* report the assumptions you made so the user can correct course. The only thing genuinely unknown is the metric, and you infer it rather than interrogating for it. Ask a single focused question **only** if, after actually reading the repo, you cannot find or construct any measurable objective at all. On Claude Code, delegate this whole grind to the `coral-task-author` subagent.
+> **Act — never answer "optimize this" with a menu.** "use coral to optimize this" / "帮我优化这个" is a build instruction, not a question. The failure mode to avoid is a process menu like *"1. point me to a task  2. create one  3. optimize outside coral"* — **do not produce that.** A repo with no `task.yaml` isn't ambiguous; it just means you build the task from the current repo. So:
+> 1. **Dig for what's already measurable.** Research/framework repos (like SAGA) almost always ship an eval/benchmark script, a test suite, or a headline metric in the README/paper. Find it — that's your optimization target and metric.
+> 2. **If no single number is obvious, construct one** by wrapping the repo's existing evaluation. Don't give up and ask just because there's no CORAL scaffold.
+> 3. **Scaffold the most plausible target and start building** — a `.coral_workspace/` + draft grader is cheap and reversible. State your assumption in one line ("Optimizing SAGA's <metric> from <script> — building it now; redirect me if you meant something else") and proceed.
+> 4. **Last resort only:** if you've actually read the repo and it exposes nothing scorable, propose 2-3 **concrete** targets you found (each with a metric), pick the most likely, and scaffold it — still not a process menu.
+>
+> Stop before `coral start` (a paid run); everything up to a validated task is autonomous. On Claude Code, delegate this whole grind to the `coral-task-author` subagent.
 
 The mechanical boilerplate (gitignore + `coral init` + copy the code into `seed/`) is bundled as a script — run it from the project root:
 
