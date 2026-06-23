@@ -61,7 +61,17 @@ codex plugin marketplace add Human-Agent-Society/CORAL
 codex plugin add coral@coral-marketplace
 ```
 
-Both pull from this repo's marketplace manifests; the plugin lives under [`plugin/`](plugin/). Skills: `coral-quickstart`, `setting-up-coral`, `creating-a-coral-task`, `running-coral-experiments`. See the [Harness Plugin guide](https://docs.coralxyz.com/guides/plugin) or [`plugin/README.md`](plugin/README.md) for the skills-dir alternative and other harnesses.
+Both pull from this repo's marketplace manifests; the plugin lives under [`plugin/`](plugin/).
+
+**Quickstart — point CORAL at code you already have.** Once installed, open the repo whose code you want to optimize and just ask:
+
+```
+use coral to optimize this — make sample() in saga/decode.py faster without changing its output
+```
+
+The plugin scaffolds a gitignored `.coral_workspace/`, drops your code into a `seed/`, writes a grader for your metric, and loops `coral validate` until the task is launch-ready — then hands you the `coral start` command. On Claude Code a `coral-task-author` subagent does the whole grind autonomously (and a `coral-run-doctor` triages a stuck run); on any harness the bundled skills walk the same path.
+
+Skills: `coral-quickstart` (install → setup → `.coral_workspace/`), `setting-up-coral` (runtime bindings), `creating-a-coral-task` (grader authoring), `running-coral-experiments` (operate a run). See the [Harness Plugin guide](https://docs.coralxyz.com/guides/plugin) or [`plugin/README.md`](plugin/README.md) for agents, the skills-dir alternative, and other harnesses.
 
 ### Supported Agents
 

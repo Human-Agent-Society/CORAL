@@ -68,7 +68,17 @@ codex plugin marketplace add Human-Agent-Society/CORAL
 codex plugin add coral@coral-marketplace
 ```
 
-两者都从本仓库的 marketplace 清单拉取；插件位于 [`plugin/`](plugin/)。包含的 skill：`coral-quickstart`、`setting-up-coral`、`creating-a-coral-task`、`running-coral-experiments`。skill 目录手动安装方式及其他 harness，见[插件指南](https://docs.coralxyz.com/guides/plugin)或 [`plugin/README.md`](plugin/README.md)。
+两者都从本仓库的 marketplace 清单拉取；插件位于 [`plugin/`](plugin/)。
+
+**快速上手——让 CORAL 优化你已有的代码。** 装好后，打开你想优化的代码仓库，直接说一句：
+
+```
+用 coral 优化这个 —— 在不改变输出的前提下让 saga/decode.py 里的 sample() 更快
+```
+
+插件会自动开一个被 gitignore 的 `.coral_workspace/`，把你的代码放进 `seed/`，按你的指标写好 grader，并反复跑 `coral validate` 直到任务可启动——最后把 `coral start` 命令交给你。在 Claude Code 上，`coral-task-author` 子 agent 会自主完成整个搭建过程（另有 `coral-run-doctor` 负责诊断卡住的 run）；在其他 harness 上，打包的 skill 会带你走同样的流程。
+
+包含的 skill：`coral-quickstart`（安装 → setup → `.coral_workspace/`）、`setting-up-coral`（运行时绑定）、`creating-a-coral-task`（编写 grader）、`running-coral-experiments`（运维一个 run）。子 agent、skill 目录手动安装方式及其他 harness，见[插件指南](https://docs.coralxyz.com/guides/plugin)或 [`plugin/README.md`](plugin/README.md)。
 
 ### 支持的 Agent
 
