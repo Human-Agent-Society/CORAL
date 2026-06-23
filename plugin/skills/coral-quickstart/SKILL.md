@@ -54,18 +54,22 @@ If `doctor`'s live ping fails (expired auth, model typo, "runtime not found" at 
 
 ### 3. Build a task — use a `.coral_workspace/`
 
-When the user wants CORAL to optimize **code they already have**, keep every bit of CORAL scaffolding (task config, seed, grader, results) inside a `.coral_workspace/` directory at the root of their project. This keeps coral out of their actual source tree and is trivially gitignored:
+When the user wants CORAL to optimize **code they already have**, keep every bit of CORAL scaffolding (task config, seed, grader, results) inside a `.coral_workspace/` directory at the root of their project. This keeps coral out of their actual source tree and is trivially gitignored.
+
+The mechanical boilerplate (gitignore + `coral init` + copy the code into `seed/`) is bundled as a script — run it from the project root:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/skills/coral-quickstart/scripts/new-coral-workspace.sh" optimize path/to/their_module.py
+```
+
+It scaffolds `.coral_workspace/optimize/` and copies the file into `seed/solution.py`, leaving only the grader for you to write. (Equivalent by hand:)
 
 ```bash
 # from the user's project root
 echo ".coral_workspace/" >> .gitignore
 mkdir -p .coral_workspace && cd .coral_workspace
-
-coral init optimize        # scaffolds task.yaml + seed/ + grader/ package
-cd optimize
-
-# put the code to optimize into the seed (copy the module/file the user wants improved)
-cp ../../path/to/their_module.py seed/solution.py
+coral init optimize && cd optimize
+cp ../../path/to/their_module.py seed/solution.py   # the code to optimize
 ```
 
 Then make the task fit the user's goal — two edits:

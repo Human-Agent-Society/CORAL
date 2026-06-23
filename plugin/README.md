@@ -11,12 +11,16 @@ plugin/                         # this directory IS the plugin
 ├── .claude-plugin/plugin.json  # Claude Code manifest  → skills/ + hooks/hooks.json
 ├── .codex-plugin/plugin.json   # Codex manifest        → skills/ + hooks/hooks-codex.json
 ├── skills/                     # one shared copy, consumed by every harness
-│   ├── coral-quickstart/       # what is coral / when to use / install
+│   ├── coral-quickstart/       # what is coral / when to use / install / .coral_workspace flow
+│   │   └── scripts/            #   new-coral-workspace.sh (scaffold boilerplate)
 │   ├── setting-up-coral/       # register runtimes as bindings (coral setup / agents doctor)
 │   ├── creating-a-coral-task/  # author task.yaml + seed/ + grader package
 │   │   └── references/         #   grader-api, cookbook, rubric-judges, task-yaml (loaded on demand)
 │   └── running-coral-experiments/  # start / status / log / show / resume / stop
 │       └── references/         #   steering (resume/fork/heartbeat), scaling-and-ops
+├── agents/                     # Claude Code subagents (auto-discovered; Codex doesn't consume these)
+│   ├── coral-task-author.md    # code + goal → a validated task in .coral_workspace/
+│   └── coral-run-doctor.md     # diagnose a stuck/plateaued run, recommend fixes
 ├── hooks/
 │   ├── hooks.json              # Claude Code SessionStart
 │   ├── hooks-codex.json        # Codex SessionStart
@@ -38,6 +42,17 @@ plugin/                         # this directory IS the plugin
 | `running-coral-experiments` | run/manage a run — `coral start / status / log / show / resume / stop` |
 
 The **in-run eval loop** (`coral eval`) is deliberately *not* a skill — every in-run agent already reads it from the generated `CORAL.md`, so a skill would duplicate it. `coral-quickstart` folds in the thin pointer.
+
+## Agents (Claude Code)
+
+Two subagents wrap the two grindy, multi-step jobs so the main agent can delegate them and keep its context clean. They're auto-discovered from `agents/`; **Claude Code only** — Codex plugins don't consume subagents, but the same workflows are covered by the skills there.
+
+| Subagent | Delegate when |
+|---|---|
+| `coral-task-author` | the user wants CORAL pointed at existing code — it scaffolds `.coral_workspace/`, writes the grader, and loops `coral validate` until the seed scores cleanly |
+| `coral-run-doctor` | a run is restarting / failing every eval / plateaued — it triages with read-only `coral` commands and returns ranked fixes (it recommends, never restarts/stops) |
+
+The agents lean on the skills above (`creating-a-coral-task`, `running-coral-experiments`) rather than restating them.
 
 ## Install — Claude Code
 
