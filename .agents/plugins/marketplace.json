@@ -8,8 +8,7 @@
       "name": "coral",
       "description": "Author and run CORAL tasks from Codex — skills for setup, authoring, and running experiments, plus a SessionStart install check.",
       "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/Human-Agent-Society/CORAL.git",
+        "source": "local",
         "path": "./plugin"
       },
       "policy": {
