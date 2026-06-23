@@ -22,6 +22,8 @@ my-task/
 The packaged grader is the **only supported form** — it gives the grader an isolated venv and bundles everything the eval needs (grader code, helpers, hidden answer keys). There is no `eval/grader.py` auto-discovery anymore.
 
 > **Optimizing code the user already has?** Scaffold inside a `.coral_workspace/` at the root of their project (gitignored), and copy the code to optimize into `seed/` — keeps CORAL's task/results out of their source tree. The `coral-quickstart` skill has the end-to-end `.coral_workspace/` flow; this skill covers the grader you'll write once the code is in `seed/`.
+>
+> **Don't stall on a disambiguation menu.** If the user asked to "optimize this with coral" and there's no task yet, the default is unambiguous: build a task from the current repo. Read the repo, infer the optimization target + metric, scaffold, write the grader, and validate — then surface what you assumed. Only ask if you genuinely can't find any measurable objective after looking.
 
 ## The loop
 

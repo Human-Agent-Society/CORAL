@@ -56,6 +56,8 @@ If `doctor`'s live ping fails (expired auth, model typo, "runtime not found" at 
 
 When the user wants CORAL to optimize **code they already have**, keep every bit of CORAL scaffolding (task config, seed, grader, results) inside a `.coral_workspace/` directory at the root of their project. This keeps coral out of their actual source tree and is trivially gitignored.
 
+> **Act — don't hand the user a menu.** When someone says "use coral to optimize this" and there's no task scaffold yet, that is *not* an ambiguity to resolve with a 1/2/3 question. The intent is clear: build a CORAL task from the current repo. So **default to doing exactly that** — explore the repo to infer the most likely optimization target and the metric that defines "better", scaffold the workspace, write the grader, and run `coral validate`, *then* report the assumptions you made so the user can correct course. The only thing genuinely unknown is the metric, and you infer it rather than interrogating for it. Ask a single focused question **only** if, after actually reading the repo, you cannot find or construct any measurable objective at all. On Claude Code, delegate this whole grind to the `coral-task-author` subagent.
+
 The mechanical boilerplate (gitignore + `coral init` + copy the code into `seed/`) is bundled as a script — run it from the project root:
 
 ```bash
