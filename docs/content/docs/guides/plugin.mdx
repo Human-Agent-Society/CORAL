@@ -25,7 +25,7 @@ These are for people in **their own** harness who want to drive CORAL. They are 
 
 ```
 /plugin marketplace add Human-Agent-Society/CORAL
-/plugin install coral@coral
+/plugin install coral@coral-marketplace
 ```
 
 Or from a local checkout: `/plugin marketplace add .` then the same install. On session start the hook checks `coral` is on PATH and injects a short context block — an install hint if it's missing, or which-skill-for-what if it's present. Validate the manifest locally with `claude plugin validate ./plugin`.

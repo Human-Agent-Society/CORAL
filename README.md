@@ -51,7 +51,7 @@ Prefer to author and run CORAL tasks from inside **your own** Claude Code or Cod
 
 ```
 /plugin marketplace add Human-Agent-Society/CORAL
-/plugin install coral@coral
+/plugin install coral@coral-marketplace
 ```
 
 **Codex** (v0.117.0+):

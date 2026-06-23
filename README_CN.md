@@ -58,7 +58,7 @@ cd my-task && coral start -c task.yaml   # 启动 Agent
 
 ```
 /plugin marketplace add Human-Agent-Society/CORAL
-/plugin install coral@coral
+/plugin install coral@coral-marketplace
 ```
 
 **Codex**（v0.117.0+）：

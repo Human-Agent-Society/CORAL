@@ -43,14 +43,14 @@ The marketplace manifest lives at the **repo root** (`.claude-plugin/marketplace
 
 ```
 /plugin marketplace add Human-Agent-Society/CORAL
-/plugin install coral@coral
+/plugin install coral@coral-marketplace
 ```
 
 Or from a local checkout:
 
 ```
 /plugin marketplace add .
-/plugin install coral@coral
+/plugin install coral@coral-marketplace
 ```
 
 On session start the hook checks `coral` is on PATH and injects a short context block — an install hint if missing, which-skill-for-what if present. Validate the manifest with `claude plugin validate ./plugin`.
@@ -87,7 +87,7 @@ Cursor, OpenCode, and Kimi follow the same shared-`skills/` + per-harness-manife
 
 ```
 /plugin marketplace add Human-Agent-Society/CORAL
-/plugin install coral@coral
+/plugin install coral@coral-marketplace
 ```
 
 This works even though the plugin lives in a subdir: the marketplace entry's `"source": "./plugin"` resolves relative to the marketplace root (the repo root) after Claude clones the repo.
