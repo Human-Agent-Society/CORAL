@@ -10,5 +10,7 @@
   "homepage": "https://docs.coralxyz.com/",
   "repository": "https://github.com/Human-Agent-Society/CORAL",
   "license": "Apache-2.0",
-  "keywords": ["coral", "agents", "evaluation", "benchmarks", "orchestration", "autonomous-coding"]
+  "keywords": ["coral", "agents", "evaluation", "benchmarks", "orchestration", "autonomous-coding"],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
 }

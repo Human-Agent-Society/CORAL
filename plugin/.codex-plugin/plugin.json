@@ -1,0 +1,16 @@
+{
+  "name": "coral",
+  "displayName": "CORAL",
+  "description": "Author and run CORAL tasks from Codex. Teaches the coral CLI workflow (init/validate, start/status/resume/log/show) and checks coral is installed on session start.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Human-Agent-Society",
+    "url": "https://github.com/Human-Agent-Society/CORAL"
+  },
+  "homepage": "https://docs.coralxyz.com/",
+  "repository": "https://github.com/Human-Agent-Society/CORAL",
+  "license": "Apache-2.0",
+  "keywords": ["coral", "agents", "evaluation", "benchmarks", "orchestration", "autonomous-coding"],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks-codex.json"
+}

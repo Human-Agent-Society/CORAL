@@ -1,27 +1,27 @@
 # CORAL plugin
 
-Drive [CORAL](https://github.com/Human-Agent-Society/CORAL) from your own agent harness without memorizing the CLI. **Skills-first, multi-harness, no MCP** (the capability is text guidance + a `coral` Bash call — the agent can already run `coral`; the plugin teaches it *when and how*).
+Drive [CORAL](https://github.com/Human-Agent-Society/CORAL) from your own agent harness without memorizing the CLI. **Skills-first, multi-harness, no MCP** — the capability is text guidance plus a `coral` Bash call, mirroring [obra/superpowers](https://github.com/obra/superpowers). Layout follows the same convention: one shared `skills/` directory, a per-harness manifest (`.claude-plugin/`, `.codex-plugin/`), and per-harness hook configs.
 
 This targets people in **their own** Claude Code / Codex who want to author or run CORAL tasks — not contributors editing the CORAL repo (those skills live in the repo's `.claude/skills/`).
 
-## What's here
+## Layout
 
 ```
-plugin/
-├── .claude-plugin/marketplace.json   # Claude Code marketplace listing the plugin
-├── coral-plugin/                     # the Claude Code plugin
-│   ├── .claude-plugin/plugin.json
-│   ├── skills/
-│   │   ├── coral-quickstart/         # what is coral / when to use / install
-│   │   ├── creating-a-coral-task/    # author task.yaml + seed/ + grader package
-│   │   └── running-coral-experiments/# start / status / log / show / resume / stop
-│   └── hooks/
-│       ├── hooks.json                # SessionStart → session_start.py
-│       └── session_start.py          # install check + context injection
-└── codex/                            # Codex distribution (same skills as prompts)
-    ├── prompts/*.md                  # ~/.codex/prompts/ custom prompts
-    ├── AGENTS.md                     # snippet to paste into your AGENTS.md
-    └── install.sh                    # copies prompts into ~/.codex/prompts/
+plugin/                         # this directory IS the plugin
+├── .claude-plugin/plugin.json  # Claude Code manifest  → skills/ + hooks/hooks.json
+├── .codex-plugin/plugin.json   # Codex manifest        → skills/ + hooks/hooks-codex.json
+├── skills/                     # one shared copy, consumed by every harness
+│   ├── coral-quickstart/       # what is coral / when to use / install
+│   ├── creating-a-coral-task/  # author task.yaml + seed/ + grader package
+│   └── running-coral-experiments/  # start / status / log / show / resume / stop
+├── hooks/
+│   ├── hooks.json              # Claude Code SessionStart
+│   ├── hooks-codex.json        # Codex SessionStart
+│   └── session-start.py        # shared: install check + context injection
+└── AGENTS.md                   # optional snippet for harnesses without plugin install
+
+# at the repo root (required for `owner/repo` marketplace discovery):
+.claude-plugin/marketplace.json # lists this plugin with source "./plugin"
 ```
 
 ## Skills
@@ -36,30 +36,26 @@ The **in-run eval loop** (`coral eval`) is deliberately *not* a skill — every 
 
 ## Install — Claude Code
 
-The marketplace and plugin are both in this directory. From a checkout of the CORAL repo:
-
-```
-/plugin marketplace add ./plugin
-/plugin install coral@coral
-```
-
-Or point at the GitHub repo (subpath support depends on your Claude Code version):
+The marketplace manifest lives at the **repo root** (`.claude-plugin/marketplace.json`), so `owner/repo` discovery works:
 
 ```
 /plugin marketplace add Human-Agent-Society/CORAL
 /plugin install coral@coral
 ```
 
-On session start the hook checks `coral` is on PATH and injects a short context block (install hint if missing, which-skill-for-what if present). Validate the manifest with `claude plugin validate ./plugin/coral-plugin`.
+Or from a local checkout:
+
+```
+/plugin marketplace add .
+/plugin install coral@coral
+```
+
+On session start the hook checks `coral` is on PATH and injects a short context block — an install hint if missing, which-skill-for-what if present. Validate the manifest with `claude plugin validate ./plugin`.
 
 ## Install — Codex
 
-```bash
-sh plugin/codex/install.sh           # copies prompts into ~/.codex/prompts/
-```
-
-Then `/coral-quickstart`, `/creating-a-coral-task`, `/running-coral-experiments` are available in Codex. Paste `plugin/codex/AGENTS.md` into your project (or `~/.codex/`) `AGENTS.md` so Codex reaches for them automatically.
+Codex reads the same `skills/` via `.codex-plugin/plugin.json`. Point Codex at this plugin per its plugin-install flow, or drop `plugin/skills/` into a Codex skills directory (`.agents/skills/` in a repo, or `~/.agents/skills/`) — the `SKILL.md` frontmatter is harness-agnostic. The `AGENTS.md` snippet is an alternative for surfacing CORAL without installing the plugin.
 
 ## Other harnesses
 
-Cursor / OpenCode / Kimi follow the same skills-first layout (Superpowers-style) — the skill text is harness-agnostic. Add per-harness manifests under `plugin/<harness>/` as support lands.
+Cursor, OpenCode, and Kimi follow the same shared-`skills/` + per-harness-manifest layout. Add a `.cursor-plugin/` / `.opencode/` / `.kimi-plugin/` manifest pointing at `./skills/` as support lands — no skill content changes needed.
