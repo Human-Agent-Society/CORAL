@@ -12,6 +12,7 @@ plugin/                         # this directory IS the plugin
 ├── .codex-plugin/plugin.json   # Codex manifest        → skills/ + hooks/hooks-codex.json
 ├── skills/                     # one shared copy, consumed by every harness
 │   ├── coral-quickstart/       # what is coral / when to use / install
+│   ├── setting-up-coral/       # register runtimes as bindings (coral setup / agents doctor)
 │   ├── creating-a-coral-task/  # author task.yaml + seed/ + grader package
 │   └── running-coral-experiments/  # start / status / log / show / resume / stop
 ├── hooks/
@@ -29,6 +30,7 @@ plugin/                         # this directory IS the plugin
 | Skill | Use when |
 |---|---|
 | `coral-quickstart` | "what is coral?", "should I use coral?", or `coral` isn't installed yet |
+| `setting-up-coral` | one-time machine setup — register runtimes as bindings (`coral setup`, `coral agents doctor`) |
 | `creating-a-coral-task` | author a task — `coral init` → edit grader/seed → `coral validate` |
 | `running-coral-experiments` | run/manage a run — `coral start / status / log / show / resume / stop` |
 

@@ -32,12 +32,18 @@ Pin a version with `CORAL_VERSION=v0.7.0` before the curl. Verify:
 coral --help
 ```
 
-Each agent runtime you want to use (Claude Code, Codex, Cursor, Kiro, OpenCode) must be installed and authenticated separately — `coral` shells out to them.
+Each agent runtime you want to use (Claude Code, Codex, Cursor, Kiro, OpenCode) must be installed and authenticated separately — `coral` shells out to them. Next, register them with coral so it knows which to launch (the `setting-up-coral` skill):
 
-## The two workflows
+```bash
+coral setup                 # detect installed runtimes + create named bindings
+coral agents doctor         # validate them (incl. a live auth ping)
+```
+
+## The workflows
 
 | You want to... | Skill | Commands |
 |---|---|---|
+| **Set up** runtimes (one-time, after install) | `setting-up-coral` | `coral setup`, `coral agents doctor` |
 | **Author** a task (write a grader + seed) | `creating-a-coral-task` | `coral init`, `coral validate` |
 | **Run / manage** experiments | `running-coral-experiments` | `coral start / status / log / show / resume / stop` |
 
