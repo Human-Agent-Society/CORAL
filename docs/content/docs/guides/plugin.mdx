@@ -32,14 +32,16 @@ Or from a local checkout: `/plugin marketplace add .` then the same install. On 
 
 ## Install — Codex
 
-Codex has no marketplace-style install — it discovers skills from filesystem directories and follows symlinks. Point a Codex skills dir at the repo's `skills/`:
+Codex (v0.117.0+) has a git-backed plugin marketplace, mirroring Claude Code. The repo ships a Codex marketplace at `.agents/plugins/marketplace.json`:
 
-```bash
-mkdir -p ~/.agents/skills
-ln -s /abs/path/to/CORAL/plugin/skills/* ~/.agents/skills/
+```
+codex plugin marketplace add Human-Agent-Society/CORAL
+codex plugin install coral
 ```
 
-Use `.agents/skills/` inside a project instead for repo-scoped skills. Invoke with `$coral-quickstart` (etc.) or let Codex match by description. The SessionStart hook is bound to Codex's plugin packaging path, not loose skills, so paste `plugin/AGENTS.md` into your `AGENTS.md` as the lightweight substitute.
+The plugin's `.codex-plugin/plugin.json` wires the shared `skills/` and the Codex SessionStart hook. Invoke skills with `$coral-quickstart` or let Codex match by description.
+
+As a lighter alternative without the marketplace, Codex also discovers skills from filesystem dirs (it follows symlinks): `ln -s /abs/path/to/CORAL/plugin/skills/* ~/.agents/skills/`. That route skips the hook — paste `plugin/AGENTS.md` into your `AGENTS.md` instead.
 
 ## Other harnesses
 
@@ -51,4 +53,4 @@ Cursor, OpenCode, and Kimi follow the same shared-`skills/` + per-harness-manife
 
 To list in the **community marketplace** (`@claude-community`), submit through the in-app form (claude.ai directory submissions, or the Console form for individuals) after `claude plugin validate ./plugin` passes; approved plugins are pinned to a commit SHA and synced nightly. The separate `claude-plugins-official` marketplace is curated by Anthropic with no submission process.
 
-Codex, Cursor, Kimi, and OpenCode have no public plugin registry yet — distribute via the filesystem routes above. Nothing publishes automatically: pushing to the repo does not register the plugin anywhere; a user adds the marketplace, or you submit to the community one.
+Codex (v0.117.0+) has its own git-backed marketplace (`.agents/plugins/marketplace.json`), so the plugin is installable today with `codex plugin marketplace add Human-Agent-Society/CORAL`; self-serve publishing to the official Codex Plugin Directory is "coming soon" per OpenAI. Cursor, Kimi, and OpenCode have no public registry yet — distribute via filesystem routes. Nothing publishes automatically: pushing to the repo does not register the plugin anywhere; a user adds the marketplace, or you submit to a directory.

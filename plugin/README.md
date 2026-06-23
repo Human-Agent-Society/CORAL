@@ -21,8 +21,9 @@ plugin/                         # this directory IS the plugin
 │   └── session-start.py        # shared: install check + context injection
 └── AGENTS.md                   # optional snippet for harnesses without plugin install
 
-# at the repo root (required for `owner/repo` marketplace discovery):
-.claude-plugin/marketplace.json # lists this plugin with source "./plugin"
+# at the repo root (each harness reads its marketplace from a fixed path):
+.claude-plugin/marketplace.json     # Claude Code  — source "./plugin"
+.agents/plugins/marketplace.json    # Codex        — git-subdir source, path "./plugin"
 ```
 
 ## Skills
@@ -56,19 +57,23 @@ On session start the hook checks `coral` is on PATH and injects a short context 
 
 ## Install — Codex
 
-Codex has no marketplace-style install. It discovers skills from filesystem directories, and follows symlinks — so point a Codex skills dir at this repo's `skills/`:
+Codex (v0.117.0+) has a git-backed plugin marketplace, mirroring Claude Code. The repo ships a Codex marketplace at `.agents/plugins/marketplace.json` (repo root) listing this plugin via a `git-subdir` source pointing at `./plugin`:
 
-```bash
-# user-level (available in every project)
-mkdir -p ~/.agents/skills
-ln -s "$(pwd)/plugin/skills/"* ~/.agents/skills/
-
-# or repo-level (scoped to one project, run from that project root)
-mkdir -p .agents/skills
-ln -s /abs/path/to/CORAL/plugin/skills/* .agents/skills/
+```
+codex plugin marketplace add Human-Agent-Society/CORAL
+codex plugin install coral
 ```
 
-Invoke with `$coral-quickstart` (etc.), or let Codex pick by description match. The SessionStart install-check hook is bound to Codex's *plugin* packaging path, not loose skills, so it won't run via the skills-dir route — paste `AGENTS.md` into your project (or `~/.codex/`) `AGENTS.md` as the lightweight substitute. The `.codex-plugin/plugin.json` manifest is a placeholder for when Codex exposes a plugin-install flow that consumes it; nothing reads it today.
+The plugin's `.codex-plugin/plugin.json` wires the shared `skills/` and `hooks/hooks-codex.json` (SessionStart install check). Invoke skills with `$coral-quickstart` (etc.) or let Codex match by description.
+
+**Lighter alternative (no marketplace):** Codex also discovers skills from filesystem dirs and follows symlinks, so you can point a skills dir straight at the repo:
+
+```bash
+mkdir -p ~/.agents/skills
+ln -s /abs/path/to/CORAL/plugin/skills/* ~/.agents/skills/   # or .agents/skills/ for repo scope
+```
+
+The skills-dir route skips the SessionStart hook (it's bound to plugin packaging); paste `AGENTS.md` into your `AGENTS.md` as the substitute.
 
 ## Other harnesses
 
@@ -89,6 +94,8 @@ This works even though the plugin lives in a subdir: the marketplace entry's `"s
 
 **Claude Code — community marketplace (optional, review-gated).** To list in `anthropics/claude-plugins-community` so users install via `@claude-community`, submit through the in-app form (claude.ai directory submissions, or the Console form for individuals). Run `claude plugin validate ./plugin` first — the review pipeline runs the same check plus safety screening. Approved plugins are pinned to a commit SHA in the community catalog (their CI handles the subdir via a `git-subdir` source), and the public catalog syncs nightly. Anthropic curates the separate `claude-plugins-official` marketplace at its discretion — there's no submission for it.
 
-**Codex / Cursor / Kimi / OpenCode.** No public plugin registry exists yet. Distribute via the filesystem routes above (e.g. the Codex skills-dir symlink) until those ecosystems ship a registry. This is the same way superpowers reaches non-Claude harnesses — being a standalone repo wouldn't change it.
+**Codex — self-host (works now).** Codex's git-backed marketplace (`.agents/plugins/marketplace.json`) makes the plugin installable today via `codex plugin marketplace add Human-Agent-Society/CORAL` + `codex plugin install coral`. Self-serve publishing to the *official* Codex Plugin Directory is "coming soon" per OpenAI — until then, the git-backed marketplace above is the distribution path (same model as Claude self-host).
+
+**Cursor / Kimi / OpenCode.** No public plugin registry yet — distribute via the filesystem routes (e.g. the skills-dir symlink). Being a standalone repo wouldn't change this.
 
 Note: nothing here is automatic. Pushing to this repo does not publish anything; a user must add the marketplace, or you must submit to the community marketplace. Once a user has added the marketplace, new commits update their copy only if auto-update is on.

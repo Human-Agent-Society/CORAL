@@ -30,7 +30,7 @@ Key concepts:
 | `coral/cli/` | CLI package: `start.py`, `query.py`, `eval.py`, `heartbeat.py`, `agents.py` (user-level bindings), `ui.py`, `author.py`, `validation.py`, `_helpers.py` |
 | `coral/user_agents.py` | User-level agent bindings: load/save `~/.config/coral/agents.yaml`, expanded into concrete agent fields by `config._expand_bindings` |
 | `examples/` | Task configs (circle_packing, swebench-verified, kernel_engineering, mnist, ...) — each is a `task.yaml` + `seed/` + packaged grader (`grader/` referenced by `grader.entrypoint`); hidden data ships inside the grader package |
-| `plugin/` | Skills-first, multi-harness plugin for driving `coral` from another harness (Superpowers-style: one shared `skills/`, per-harness `.claude-plugin/` + `.codex-plugin/` manifests, per-harness `hooks/` with a SessionStart install check). The marketplace manifest is at the repo root (`.claude-plugin/marketplace.json`) for `owner/repo` discovery. No MCP. See `plugin/README.md`. |
+| `plugin/` | Skills-first, multi-harness plugin for driving `coral` from another harness (Superpowers-style: one shared `skills/`, per-harness `.claude-plugin/` + `.codex-plugin/` manifests, per-harness `hooks/` with a SessionStart install check). Per-harness marketplace manifests at the repo root — `.claude-plugin/marketplace.json` (Claude) and `.agents/plugins/marketplace.json` (Codex git-backed, `git-subdir` → `./plugin`) — for `owner/repo` discovery. No MCP. See `plugin/README.md`. |
 | `tests/` | Pytest suite (config, grader, hooks, hub, manager reliability, daemon, workspace, ...) |
 
 ## How It Works

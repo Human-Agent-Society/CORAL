@@ -1,0 +1,22 @@
+{
+  "name": "coral",
+  "interface": {
+    "displayName": "CORAL"
+  },
+  "plugins": [
+    {
+      "name": "coral",
+      "description": "Author and run CORAL tasks from Codex — skills for setup, authoring, and running experiments, plus a SessionStart install check.",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/Human-Agent-Society/CORAL.git",
+        "path": "./plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_FIRST_USE"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
