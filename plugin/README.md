@@ -56,8 +56,39 @@ On session start the hook checks `coral` is on PATH and injects a short context 
 
 ## Install — Codex
 
-Codex reads the same `skills/` via `.codex-plugin/plugin.json`. Point Codex at this plugin per its plugin-install flow, or drop `plugin/skills/` into a Codex skills directory (`.agents/skills/` in a repo, or `~/.agents/skills/`) — the `SKILL.md` frontmatter is harness-agnostic. The `AGENTS.md` snippet is an alternative for surfacing CORAL without installing the plugin.
+Codex has no marketplace-style install. It discovers skills from filesystem directories, and follows symlinks — so point a Codex skills dir at this repo's `skills/`:
+
+```bash
+# user-level (available in every project)
+mkdir -p ~/.agents/skills
+ln -s "$(pwd)/plugin/skills/"* ~/.agents/skills/
+
+# or repo-level (scoped to one project, run from that project root)
+mkdir -p .agents/skills
+ln -s /abs/path/to/CORAL/plugin/skills/* .agents/skills/
+```
+
+Invoke with `$coral-quickstart` (etc.), or let Codex pick by description match. The SessionStart install-check hook is bound to Codex's *plugin* packaging path, not loose skills, so it won't run via the skills-dir route — paste `AGENTS.md` into your project (or `~/.codex/`) `AGENTS.md` as the lightweight substitute. The `.codex-plugin/plugin.json` manifest is a placeholder for when Codex exposes a plugin-install flow that consumes it; nothing reads it today.
 
 ## Other harnesses
 
 Cursor, OpenCode, and Kimi follow the same shared-`skills/` + per-harness-manifest layout. Add a `.cursor-plugin/` / `.opencode/` / `.kimi-plugin/` manifest pointing at `./skills/` as support lands — no skill content changes needed.
+
+## Publishing
+
+"Published" is per-harness, and only Claude Code has a public target today.
+
+**Claude Code — self-host (works now).** The root `.claude-plugin/marketplace.json` makes the plugin discoverable; anyone can:
+
+```
+/plugin marketplace add Human-Agent-Society/CORAL
+/plugin install coral@coral
+```
+
+This works even though the plugin lives in a subdir: the marketplace entry's `"source": "./plugin"` resolves relative to the marketplace root (the repo root) after Claude clones the repo.
+
+**Claude Code — community marketplace (optional, review-gated).** To list in `anthropics/claude-plugins-community` so users install via `@claude-community`, submit through the in-app form (claude.ai directory submissions, or the Console form for individuals). Run `claude plugin validate ./plugin` first — the review pipeline runs the same check plus safety screening. Approved plugins are pinned to a commit SHA in the community catalog (their CI handles the subdir via a `git-subdir` source), and the public catalog syncs nightly. Anthropic curates the separate `claude-plugins-official` marketplace at its discretion — there's no submission for it.
+
+**Codex / Cursor / Kimi / OpenCode.** No public plugin registry exists yet. Distribute via the filesystem routes above (e.g. the Codex skills-dir symlink) until those ecosystems ship a registry. This is the same way superpowers reaches non-Claude harnesses — being a standalone repo wouldn't change it.
+
+Note: nothing here is automatic. Pushing to this repo does not publish anything; a user must add the marketplace, or you must submit to the community marketplace. Once a user has added the marketplace, new commits update their copy only if auto-update is on.

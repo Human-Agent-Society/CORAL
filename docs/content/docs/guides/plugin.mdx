@@ -32,8 +32,23 @@ Or from a local checkout: `/plugin marketplace add .` then the same install. On 
 
 ## Install — Codex
 
-Codex reads the same `skills/` through `.codex-plugin/plugin.json`. Point Codex at the plugin per its plugin-install flow, or drop `plugin/skills/` into a Codex skills directory (`.agents/skills/` in a repo, or `~/.agents/skills/`) — the `SKILL.md` frontmatter is harness-agnostic. The `plugin/AGENTS.md` snippet is a lightweight alternative for surfacing CORAL without installing the plugin.
+Codex has no marketplace-style install — it discovers skills from filesystem directories and follows symlinks. Point a Codex skills dir at the repo's `skills/`:
+
+```bash
+mkdir -p ~/.agents/skills
+ln -s /abs/path/to/CORAL/plugin/skills/* ~/.agents/skills/
+```
+
+Use `.agents/skills/` inside a project instead for repo-scoped skills. Invoke with `$coral-quickstart` (etc.) or let Codex match by description. The SessionStart hook is bound to Codex's plugin packaging path, not loose skills, so paste `plugin/AGENTS.md` into your `AGENTS.md` as the lightweight substitute.
 
 ## Other harnesses
 
 Cursor, OpenCode, and Kimi follow the same shared-`skills/` + per-harness-manifest layout — the skill text is harness-agnostic. Add a `.cursor-plugin/` / `.opencode/` / `.kimi-plugin/` manifest pointing at `./skills/` as support grows; no skill content changes needed.
+
+## Publishing
+
+"Published" is per-harness, and only Claude Code has a public target today. **Self-hosting works now** with no submission: anyone can `/plugin marketplace add Human-Agent-Society/CORAL` and install. The relative `"source": "./plugin"` resolves against the repo root after Claude clones it, so the subdirectory layout publishes fine.
+
+To list in the **community marketplace** (`@claude-community`), submit through the in-app form (claude.ai directory submissions, or the Console form for individuals) after `claude plugin validate ./plugin` passes; approved plugins are pinned to a commit SHA and synced nightly. The separate `claude-plugins-official` marketplace is curated by Anthropic with no submission process.
+
+Codex, Cursor, Kimi, and OpenCode have no public plugin registry yet — distribute via the filesystem routes above. Nothing publishes automatically: pushing to the repo does not register the plugin anywhere; a user adds the marketplace, or you submit to the community one.
