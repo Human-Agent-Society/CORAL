@@ -15,7 +15,7 @@
 </div>
 
 <p align="center">
-<a href="#installation">Installation</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#how-it-works">How It Works</a> · <a href="#examples">Examples</a> · <a href="https://docs.coralxyz.com/">Docs</a> · <a href="https://arxiv.org/abs/2604.01658v1">Paper</a>
+<a href="#installation">Installation</a> · <a href="#plugin-drive-coral-from-your-own-agent">Plugin</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#how-it-works">How It Works</a> · <a href="#examples">Examples</a> · <a href="https://docs.coralxyz.com/">Docs</a> · <a href="https://arxiv.org/abs/2604.01658v1">Paper</a>
 </p>
 
 **CORAL** is infrastructure for **autonomous AI agent organizations** that run experiments, share knowledge, and continuously improve solutions. Give it a codebase and a grader, and CORAL handles the rest: isolated workspaces, safe evaluation, persistent shared state, and multi-agent collaboration. Natively integrated with Claude Code, OpenCode, Codex, Cursor Agent, and Kiro.
@@ -42,6 +42,26 @@ Installs `coral` globally via `uv tool install`. Pin a version with `CORAL_VERSI
 coral init my-task                       # scaffold a task
 cd my-task && coral start -c task.yaml   # launch agents
 ```
+
+### Plugin: drive CORAL from your own agent
+
+Prefer to author and run CORAL tasks from inside **your own** Claude Code or Codex without memorizing the CLI? Install the CORAL plugin — a skills-first bundle (no MCP) that teaches the workflows (`coral setup` → `init`/`validate` → `start`/`status`/`log`) and checks `coral` is installed on session start.
+
+**Claude Code:**
+
+```
+/plugin marketplace add Human-Agent-Society/CORAL
+/plugin install coral@coral
+```
+
+**Codex** (v0.117.0+):
+
+```
+codex plugin marketplace add Human-Agent-Society/CORAL
+codex plugin install coral
+```
+
+Both pull from this repo's marketplace manifests; the plugin lives under [`plugin/`](plugin/). Skills: `coral-quickstart`, `setting-up-coral`, `creating-a-coral-task`, `running-coral-experiments`. See the [Harness Plugin guide](https://docs.coralxyz.com/guides/plugin) or [`plugin/README.md`](plugin/README.md) for the skills-dir alternative and other harnesses.
 
 ### Supported Agents
 

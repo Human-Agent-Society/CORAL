@@ -23,7 +23,7 @@
 </div>
 
 <p align="center">
-<a href="#安装">安装</a> · <a href="#支持的-agent">支持的 Agent</a> · <a href="#工作原理">工作原理</a> · <a href="#示例">示例</a> · <a href="https://docs.coralxyz.com/">文档</a> · <a href="https://arxiv.org/abs/2604.01658v1">论文</a>
+<a href="#安装">安装</a> · <a href="#插件在你自己的-agent-里使用-coral">插件</a> · <a href="#支持的-agent">支持的 Agent</a> · <a href="#工作原理">工作原理</a> · <a href="#示例">示例</a> · <a href="https://docs.coralxyz.com/">文档</a> · <a href="https://arxiv.org/abs/2604.01658v1">论文</a>
 </p>
 
 **CORAL** 是用于构建**自主 AI Agent 组织**的基础设施 —— Agent 持续运行实验、共享知识、不断进化。只需提供代码库和评分脚本，CORAL 负责其余的一切：隔离工作空间、安全评估、持久共享状态、多 Agent 协作。原生集成 Claude Code、OpenCode、Codex、Cursor Agent、Kiro。
@@ -49,6 +49,26 @@ curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/inst
 coral init my-task                       # 生成任务模板
 cd my-task && coral start -c task.yaml   # 启动 Agent
 ```
+
+### 插件：在你自己的 Agent 里使用 CORAL
+
+想在**你自己的** Claude Code 或 Codex 里编写、运行 CORAL 任务，又不想记 CLI？安装 CORAL 插件——一个以 skill 为主的包（不含 MCP），教会 Agent 整套流程（`coral setup` → `init`/`validate` → `start`/`status`/`log`），并在会话开始时检查 `coral` 是否已安装。
+
+**Claude Code：**
+
+```
+/plugin marketplace add Human-Agent-Society/CORAL
+/plugin install coral@coral
+```
+
+**Codex**（v0.117.0+）：
+
+```
+codex plugin marketplace add Human-Agent-Society/CORAL
+codex plugin install coral
+```
+
+两者都从本仓库的 marketplace 清单拉取；插件位于 [`plugin/`](plugin/)。包含的 skill：`coral-quickstart`、`setting-up-coral`、`creating-a-coral-task`、`running-coral-experiments`。skill 目录手动安装方式及其他 harness，见[插件指南](https://docs.coralxyz.com/guides/plugin)或 [`plugin/README.md`](plugin/README.md)。
 
 ### 支持的 Agent
 
