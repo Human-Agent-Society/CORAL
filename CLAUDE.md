@@ -30,6 +30,7 @@ Key concepts:
 | `coral/cli/` | CLI package: `start.py`, `query.py`, `eval.py`, `heartbeat.py`, `agents.py` (user-level bindings), `ui.py`, `author.py`, `validation.py`, `_helpers.py` |
 | `coral/user_agents.py` | User-level agent bindings: load/save `~/.config/coral/agents.yaml`, expanded into concrete agent fields by `config._expand_bindings` |
 | `examples/` | Task configs (circle_packing, swebench-verified, kernel_engineering, mnist, ...) — each is a `task.yaml` + `seed/` + packaged grader (`grader/` referenced by `grader.entrypoint`); hidden data ships inside the grader package |
+| `plugin/` | Skills-first, multi-harness distribution for driving `coral` from another harness — Claude Code plugin (`coral-plugin/`: skills + SessionStart install-check hook), `.claude-plugin/marketplace.json`, and a Codex distribution (`codex/`: `~/.codex/prompts/` templates + AGENTS.md snippet). No MCP. See `plugin/README.md`. |
 | `tests/` | Pytest suite (config, grader, hooks, hub, manager reliability, daemon, workspace, ...) |
 
 ## How It Works

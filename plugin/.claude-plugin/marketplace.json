@@ -1,0 +1,19 @@
+{
+  "name": "coral",
+  "owner": {
+    "name": "Human-Agent-Society",
+    "url": "https://github.com/Human-Agent-Society/CORAL"
+  },
+  "metadata": {
+    "description": "CORAL — multi-agent autonomous coding infrastructure. Skills for authoring and running CORAL tasks from your own harness.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "coral",
+      "source": "./coral-plugin",
+      "description": "Author and run CORAL tasks (init/validate, start/status/resume/log/show) from Claude Code. Skills + a SessionStart install check.",
+      "keywords": ["coral", "agents", "evaluation", "benchmarks", "orchestration"]
+    }
+  ]
+}
