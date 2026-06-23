@@ -58,7 +58,7 @@ Prefer to author and run CORAL tasks from inside **your own** Claude Code or Cod
 
 ```
 codex plugin marketplace add Human-Agent-Society/CORAL
-codex plugin install coral
+codex plugin add coral@coral-marketplace
 ```
 
 Both pull from this repo's marketplace manifests; the plugin lives under [`plugin/`](plugin/). Skills: `coral-quickstart`, `setting-up-coral`, `creating-a-coral-task`, `running-coral-experiments`. See the [Harness Plugin guide](https://docs.coralxyz.com/guides/plugin) or [`plugin/README.md`](plugin/README.md) for the skills-dir alternative and other harnesses.

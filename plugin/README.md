@@ -61,7 +61,7 @@ Codex (v0.117.0+) has a git-backed plugin marketplace, mirroring Claude Code. Th
 
 ```
 codex plugin marketplace add Human-Agent-Society/CORAL
-codex plugin install coral
+codex plugin add coral@coral-marketplace
 ```
 
 The plugin's `.codex-plugin/plugin.json` wires the shared `skills/` and `hooks/hooks-codex.json` (SessionStart install check). Invoke skills with `$coral-quickstart` (etc.) or let Codex match by description.
@@ -94,7 +94,7 @@ This works even though the plugin lives in a subdir: the marketplace entry's `"s
 
 **Claude Code — community marketplace (optional, review-gated).** To list in `anthropics/claude-plugins-community` so users install via `@claude-community`, submit through the in-app form (claude.ai directory submissions, or the Console form for individuals). Run `claude plugin validate ./plugin` first — the review pipeline runs the same check plus safety screening. Approved plugins are pinned to a commit SHA in the community catalog (their CI handles the subdir via a `git-subdir` source), and the public catalog syncs nightly. Anthropic curates the separate `claude-plugins-official` marketplace at its discretion — there's no submission for it.
 
-**Codex — self-host (works now).** Codex's git-backed marketplace (`.agents/plugins/marketplace.json`) makes the plugin installable today via `codex plugin marketplace add Human-Agent-Society/CORAL` + `codex plugin install coral`. Self-serve publishing to the *official* Codex Plugin Directory is "coming soon" per OpenAI — until then, the git-backed marketplace above is the distribution path (same model as Claude self-host).
+**Codex — self-host (works now).** Codex's git-backed marketplace (`.agents/plugins/marketplace.json`) makes the plugin installable today via `codex plugin marketplace add Human-Agent-Society/CORAL` + `codex plugin add coral@coral-marketplace`. Self-serve publishing to the *official* Codex Plugin Directory is "coming soon" per OpenAI — until then, the git-backed marketplace above is the distribution path (same model as Claude self-host).
 
 **Cursor / Kimi / OpenCode.** No public plugin registry yet — distribute via the filesystem routes (e.g. the skills-dir symlink). Being a standalone repo wouldn't change this.
 

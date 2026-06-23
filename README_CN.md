@@ -65,7 +65,7 @@ cd my-task && coral start -c task.yaml   # 启动 Agent
 
 ```
 codex plugin marketplace add Human-Agent-Society/CORAL
-codex plugin install coral
+codex plugin add coral@coral-marketplace
 ```
 
 两者都从本仓库的 marketplace 清单拉取；插件位于 [`plugin/`](plugin/)。包含的 skill：`coral-quickstart`、`setting-up-coral`、`creating-a-coral-task`、`running-coral-experiments`。skill 目录手动安装方式及其他 harness，见[插件指南](https://docs.coralxyz.com/guides/plugin)或 [`plugin/README.md`](plugin/README.md)。
