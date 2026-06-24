@@ -97,7 +97,7 @@ def test_auto_stop_counts_only_terminal_real_attempts(tmp_path: Path) -> None:
     mgr = _manager(tmp_path, stop={"score_threshold": 0.8, "max_real_attempts": 2})
     _attempt(mgr, "c" * 40, score=0.99, budget_class=BUDGET_CLASS_TUNE, seconds=1)
     _attempt(mgr, "d" * 40, score=0.99, budget_class=BUDGET_CLASS_GRADER_ERROR, seconds=2)
-    _attempt(mgr, "e" * 40, score=0.99, status="pending", seconds=3)
+    _attempt(mgr, "e" * 40, score=None, status="pending", seconds=3)
     _attempt(mgr, "f" * 40, score=None, status="crashed", seconds=4)
     latest_real = _attempt(mgr, "1" * 40, score=0.2, seconds=5)
 
