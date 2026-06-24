@@ -595,9 +595,7 @@ class AgentManager:
         # OS-user isolation: chown agent-facing paths to the unprivileged user
         # and lock .coral/private/ to root, then run the agent subprocess as
         # that user. Manager/grader stay root. No-op when isolate_user is unset.
-        run_as_user = self._apply_user_isolation(
-            worktree_path, island_id, shared_dir_name
-        )
+        run_as_user = self._apply_user_isolation(worktree_path, island_id, shared_dir_name)
 
         # Start agent
         if island_id is not None:
