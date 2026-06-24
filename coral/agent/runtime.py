@@ -35,6 +35,7 @@ class AgentRuntime(Protocol):
         task_description: str | None = None,
         gateway_url: str | None = None,
         gateway_api_key: str | None = None,
+        run_as_user: dict[str, Any] | None = None,
     ) -> AgentHandle: ...
 
     def extract_session_id(self, log_path: Path) -> str | None: ...
@@ -52,6 +53,25 @@ class AgentRuntime(Protocol):
         config/skill discovery: `.claude`, `.codex`, `.opencode`, etc.
         """
         ...
+
+
+def apply_run_as_user(env: dict[str, str], run_as_user: dict[str, Any] | None) -> dict[str, Any]:
+    """Translate a ``run_as_user`` spec into Popen kwargs, adjusting ``env``.
+
+    ``run_as_user`` is ``{"uid", "gid", "home"}`` from the manager's
+    OS-user-isolation path (or None). When set, the child is launched as that
+    uid/gid (Popen drops privileges before exec — requires a root parent) and
+    its HOME/USER are pointed at the agent's home so the runtime CLI finds its
+    credentials there. Returns kwargs to splat into ``subprocess.Popen(...)``;
+    empty dict when isolation is off.
+    """
+    if not run_as_user:
+        return {}
+    home = run_as_user.get("home")
+    if home:
+        env["HOME"] = home
+        env["USER"] = env["LOGNAME"] = run_as_user.get("name", "agent")
+    return {"user": run_as_user["uid"], "group": run_as_user["gid"]}
 
 
 @dataclass

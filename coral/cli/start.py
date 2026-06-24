@@ -14,6 +14,7 @@ from pathlib import Path
 from coral.agent.state import read_agent_state
 from coral.cli._helpers import (
     docker_cmd,
+    docker_private_volume_name,
     find_coral_dir,
     find_coral_dir_and_island,
     find_tmux_session,
@@ -178,12 +179,23 @@ def _build_docker_cmd(
         "-d",
         "--name",
         container_name,
+        # Task dir (incl. grader source) under a container-local 700-root dir
+        # baked into the image, so the unprivileged agent user cannot traverse
+        # to the grader source — even on macOS where the host share fakes
+        # ownership. Only root (setup, building the grader venv) reads it.
         "-v",
-        f"{config_dir}:/task:ro",
+        f"{config_dir}:/coral-setup/task:ro",
         "-v",
         f"{host_run_dir}:/app/run:rw",
         "-v",
         f"{repo_path}:/repo:rw",
+        # Back .coral/private/ with a named Docker volume (container-local Linux
+        # fs) instead of the host bind mount, so its root:root 700 perms are
+        # actually enforced — the host share (macOS Docker Desktop "fakeowner")
+        # does not enforce uid/gid, which would otherwise leak the grader venv +
+        # answer keys to the agent. Keyed to the run dir so it survives resume.
+        "-v",
+        f"{docker_private_volume_name(host_run_dir)}:/app/run/.coral/private",
     ]
 
     # Mount runtime-specific credentials
@@ -277,10 +289,15 @@ def _start_in_docker(args: argparse.Namespace, config: CoralConfig) -> None:
         [
             "start",
             "--config",
-            f"/task/{config_path.name}",
+            f"/coral-setup/task/{config_path.name}",
             "workspace.run_dir=/app/run",
             "workspace.repo_path=/repo",
             "run.session=local",
+            # Secure-by-default in Docker: run the agent as the image's
+            # unprivileged `agent` user so it cannot read root-owned
+            # .coral/private/. Listed before user overrides, so an explicit
+            # `agents.isolate_user=` (empty) on the CLI opts back out.
+            "agents.isolate_user=agent",
         ]
     )
     docker_cmd.extend(getattr(args, "overrides", []))

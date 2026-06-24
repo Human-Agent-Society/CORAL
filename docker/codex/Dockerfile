@@ -45,6 +45,16 @@ if [ -d /app/.venv/bin ]; then\n\
     PATH="/app/.venv/bin:$PATH"\n\
 fi\n' > /etc/profile.d/coral-venv.sh && chmod +x /etc/profile.d/coral-venv.sh
 
+# Unprivileged user for OS-isolated agents (agents.isolate_user=agent).
+# The manager/grader stay root; only the agent subprocess drops to this user,
+# which cannot read root-owned .coral/private/ (grader venv, answer keys).
+RUN useradd -m -s /bin/bash agent
+
+# Container-local 700-root dir holding the bind-mounted task/grader source.
+# The agent user cannot traverse it (overlay perms are enforced even when the
+# host share fakes ownership), so grader source/answer keys stay hidden.
+RUN mkdir -p /coral-setup && chmod 700 /coral-setup
+
 ENV CORAL_IN_DOCKER=1
 COPY docker/codex/entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh

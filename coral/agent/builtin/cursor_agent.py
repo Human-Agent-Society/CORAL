@@ -24,7 +24,7 @@ from typing import Any
 
 from coral.agent.exit_classifier import classify_by_uptime
 from coral.agent.process import open_agent_stderr_for_log_dir
-from coral.agent.runtime import AgentHandle, write_coral_log_entry
+from coral.agent.runtime import AgentHandle, apply_run_as_user, write_coral_log_entry
 from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)
@@ -132,6 +132,7 @@ class CursorAgentRuntime:
         # kwargs so the manager can keep a uniform call signature.
         gateway_url: str | None = None,
         gateway_api_key: str | None = None,
+        run_as_user: dict[str, Any] | None = None,
     ) -> AgentHandle:
         agent_id_file = worktree_path / ".coral_agent_id"
         agent_id = agent_id_file.read_text().strip() if agent_id_file.exists() else "unknown"
@@ -194,6 +195,11 @@ class CursorAgentRuntime:
         venv_bin = str(worktree_path / ".venv" / "bin")
         agent_env["PATH"] = venv_bin + ":" + agent_env.get("PATH", "")
 
+        # OS-user isolation: drop the agent subprocess to the unprivileged
+        # user (no-op when run_as_user is None). Sets HOME so the CLI finds
+        # its creds in the agent's home; returns Popen user=/group= kwargs.
+        user_kwargs = apply_run_as_user(agent_env, run_as_user)
+
         log_file = open(log_path, "w", buffering=1)
 
         err_path: Path | None = None
@@ -222,6 +228,7 @@ class CursorAgentRuntime:
                 stderr=stderr_target,
                 start_new_session=True,
                 env=agent_env,
+                **user_kwargs,
             )
 
             def _tee_output(proc: subprocess.Popen, log_f, agent: str) -> None:
@@ -258,6 +265,7 @@ class CursorAgentRuntime:
                 stderr=stderr_target,
                 start_new_session=True,
                 env=agent_env,
+                **user_kwargs,
             )
             log_file_ref = log_file
 

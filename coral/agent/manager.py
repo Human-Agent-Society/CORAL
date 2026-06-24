@@ -592,6 +592,13 @@ class AgentManager:
         )
         (worktree_path / instruction_file).write_text(coral_md)
 
+        # OS-user isolation: chown agent-facing paths to the unprivileged user
+        # and lock .coral/private/ to root, then run the agent subprocess as
+        # that user. Manager/grader stay root. No-op when isolate_user is unset.
+        run_as_user = self._apply_user_isolation(
+            worktree_path, island_id, shared_dir_name
+        )
+
         # Start agent
         if island_id is not None:
             log_dir = self.paths.coral_dir / "islands" / str(island_id) / "logs"
@@ -613,10 +620,44 @@ class AgentManager:
             task_description=self.config.task.description,
             gateway_url=gateway_url,
             gateway_api_key=gateway_api_key,
+            run_as_user=run_as_user,
         )
         # Record fresh process start time for the exit-classifier uptime check.
         self._started_at[agent_id] = time.time()
         return handle
+
+    def _apply_user_isolation(
+        self,
+        worktree_path: Path,
+        island_id: str | int | None,
+        shared_dir_name: str,
+    ) -> dict | None:
+        """Apply the OS-user isolation ownership model and return spawn creds.
+
+        Returns ``{"uid", "gid", "home"}`` for the runtime to drop the agent
+        subprocess to, or None when ``agents.isolate_user`` is unset.
+        """
+        from coral.workspace import user_isolation as ui
+
+        isolate_user = getattr(self.config.agents, "isolate_user", "")
+        if not ui.is_enabled(isolate_user):
+            return None
+
+        spec = ui.resolve(isolate_user)  # raises if not root / user missing
+        ui.apply_ownership(
+            worktree_path,
+            self.paths.coral_dir,
+            self.paths.repo_dir,
+            spec,
+            island_id=island_id,
+        )
+        home = ui.provision_home_state(spec, shared_dir_name)
+        logger.info(
+            "Agent workspace isolated as user %s (uid=%d); private/ locked to root",
+            spec.name,
+            spec.uid,
+        )
+        return {"name": spec.name, "uid": spec.uid, "gid": spec.gid, "home": home}
 
     def _restart_agent(
         self,

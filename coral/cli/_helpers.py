@@ -228,6 +228,20 @@ def save_docker_container_name(save_dir: Path, container_name: str) -> None:
     marker.write_text(container_name)
 
 
+def docker_private_volume_name(host_run_dir: Path) -> str:
+    """Stable Docker volume name backing this run's ``.coral/private/``.
+
+    Keyed to the run dir so it survives start→resume of the same run. The volume
+    holds the grader venv + answer keys on a container-local Linux fs (not the
+    host bind mount), so its root:root 700 permissions are enforced even where
+    the host share fakes ownership (macOS Docker Desktop).
+    """
+    import hashlib
+
+    digest = hashlib.md5(str(host_run_dir.resolve()).encode()).hexdigest()[:12]
+    return f"coral-priv-{digest}"
+
+
 def kill_docker_container(coral_dir: Path) -> None:
     """Stop and remove the Docker container associated with this run."""
     for search_dir in [coral_dir / "public", coral_dir.parent]:
@@ -249,6 +263,12 @@ def kill_docker_container(coral_dir: Path) -> None:
                 )
                 if stopped:
                     print(f"Stopped Docker container: {container_name}")
+            # Remove the private-state volume backing this run (best-effort;
+            # absent on non-isolated / older runs).
+            subprocess.run(
+                [*docker_cmd(), "volume", "rm", docker_private_volume_name(coral_dir.parent)],
+                capture_output=True,
+            )
             marker.unlink(missing_ok=True)
             return
 

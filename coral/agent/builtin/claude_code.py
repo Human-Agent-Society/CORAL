@@ -15,7 +15,7 @@ from coral.agent.exit_classifier import (
     claude_code_log_has_session_error,
 )
 from coral.agent.process import open_agent_stderr_for_log_dir
-from coral.agent.runtime import AgentHandle, write_coral_log_entry
+from coral.agent.runtime import AgentHandle, apply_run_as_user, write_coral_log_entry
 from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)
@@ -112,6 +112,7 @@ class ClaudeCodeRuntime:
         task_description: str | None = None,
         gateway_url: str | None = None,
         gateway_api_key: str | None = None,
+        run_as_user: dict[str, Any] | None = None,
     ) -> AgentHandle:
         """Start a Claude Code agent in the given worktree."""
         agent_id_file = worktree_path / ".coral_agent_id"
@@ -183,6 +184,11 @@ class ClaudeCodeRuntime:
         if gateway_api_key:
             agent_env["ANTHROPIC_API_KEY"] = gateway_api_key
 
+        # OS-user isolation: drop the agent subprocess to the unprivileged user
+        # (no-op when run_as_user is None). Adjusts HOME so Claude Code finds its
+        # creds/session in the agent's home; returns Popen user=/group= kwargs.
+        user_kwargs = apply_run_as_user(agent_env, run_as_user)
+
         log_file = open(log_path, "w", buffering=1)  # line-buffered
 
         # Open per-agent stderr capture under public/diagnostics/<agent_id>/agent.err
@@ -218,6 +224,7 @@ class ClaudeCodeRuntime:
                 stderr=stderr_target,
                 start_new_session=True,  # own process group for clean SIGINT
                 env=agent_env,
+                **user_kwargs,
             )
 
             def _tee_output(proc: subprocess.Popen, log_f, agent: str) -> None:
@@ -255,6 +262,7 @@ class ClaudeCodeRuntime:
                 stderr=stderr_target,
                 start_new_session=True,  # own process group for clean SIGINT
                 env=agent_env,
+                **user_kwargs,
             )
             log_file_ref = log_file
 

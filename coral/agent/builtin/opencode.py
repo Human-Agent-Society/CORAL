@@ -12,7 +12,7 @@ from typing import Any
 
 from coral.agent.exit_classifier import classify_by_uptime
 from coral.agent.process import open_agent_stderr_for_log_dir
-from coral.agent.runtime import AgentHandle, write_coral_log_entry
+from coral.agent.runtime import AgentHandle, apply_run_as_user, write_coral_log_entry
 from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)
@@ -91,6 +91,7 @@ class OpenCodeRuntime:
         task_description: str | None = None,
         gateway_url: str | None = None,
         gateway_api_key: str | None = None,
+        run_as_user: dict[str, Any] | None = None,
     ) -> AgentHandle:
         """Start an OpenCode agent in the given worktree."""
         agent_id_file = worktree_path / ".coral_agent_id"
@@ -150,6 +151,11 @@ class OpenCodeRuntime:
         if gateway_api_key:
             agent_env["OPENAI_API_KEY"] = gateway_api_key
 
+        # OS-user isolation: drop the agent subprocess to the unprivileged
+        # user (no-op when run_as_user is None). Sets HOME so the CLI finds
+        # its creds in the agent's home; returns Popen user=/group= kwargs.
+        user_kwargs = apply_run_as_user(agent_env, run_as_user)
+
         log_file = open(log_path, "w", buffering=1)
 
         # Per-agent stderr capture under public/diagnostics/<agent_id>/agent.err.
@@ -179,6 +185,7 @@ class OpenCodeRuntime:
                 stderr=stderr_target,
                 start_new_session=True,
                 env=agent_env,
+                **user_kwargs,
             )
 
             def _tee_output(proc: subprocess.Popen, log_f, agent: str) -> None:
@@ -215,6 +222,7 @@ class OpenCodeRuntime:
                 stderr=stderr_target,
                 start_new_session=True,
                 env=agent_env,
+                **user_kwargs,
             )
             log_file_ref = log_file
 

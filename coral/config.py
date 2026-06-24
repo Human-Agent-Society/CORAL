@@ -146,6 +146,14 @@ class AgentConfig:
     gateway: GatewayConfig = field(default_factory=GatewayConfig)
     warmstart: WarmStartConfig = field(default_factory=WarmStartConfig)
     runtime_options: dict[str, Any] = field(default_factory=dict)
+    # OS-user isolation: when set (e.g. "agent"), the agent subprocess is run as
+    # this unprivileged user while the manager/grader stay root. The agent's
+    # worktree + shared state + repo are chowned to it; ``.coral/private/``
+    # (grader venv, answer keys) is kept root-owned mode 700 so the agent
+    # cannot read it even via Bash. Requires CORAL to run as root (the Docker
+    # session does); empty = no isolation (current behavior). The Docker image
+    # provides the ``agent`` user.
+    isolate_user: str = ""
     # Mix-and-match: when non-empty, each entry spawns its own runtime/model
     # combo. ``agents.count`` is ignored (total = sum of assignment counts).
     # Empty fields on an assignment inherit the agents.* defaults below.
