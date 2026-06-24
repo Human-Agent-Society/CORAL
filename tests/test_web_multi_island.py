@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 from coral.hub.attempts import write_attempt
 from coral.types import Attempt
-from coral.web.api import get_skill_detail, get_status
+from coral.web.api import get_runs, get_skill_detail, get_status
 from coral.web.events import FileWatcher
 from coral.web.logs import list_log_files
 
@@ -34,7 +34,12 @@ def _make_multi_island(coral_dir: Path) -> None:
 
 def _request(coral_dir: Path, **path_params):
     return SimpleNamespace(
-        app=SimpleNamespace(state=SimpleNamespace(coral_dir=coral_dir)),
+        app=SimpleNamespace(
+            state=SimpleNamespace(
+                coral_dir=coral_dir,
+                results_dir=coral_dir.resolve().parent.parent.parent,
+            )
+        ),
         path_params=path_params,
     )
 
@@ -65,6 +70,23 @@ async def test_status_uses_global_eval_count_and_island_logs(tmp_path):
     payload = json.loads(response.body)
     assert payload["eval_count"] == 7
     assert [a["agent_id"] for a in payload["agents"]] == ["1-agent-1"]
+
+
+async def test_runs_treats_unqueryable_docker_as_stopped(tmp_path, monkeypatch):
+    results_dir = tmp_path / "results"
+    coral_dir = results_dir / "task" / "run-1" / ".coral"
+    _make_multi_island(coral_dir)
+    (coral_dir.parent / ".coral_docker_container").write_text("coral-test")
+
+    from coral.cli import _helpers
+
+    monkeypatch.setattr(_helpers, "_probe_docker_sudo", lambda: None)
+
+    response = await get_runs(_request(coral_dir))
+
+    assert response.status_code == 200
+    payload = json.loads(response.body)
+    assert payload["tasks"][0]["runs"][0]["status"] == "stopped"
 
 
 async def test_skill_detail_finds_island_skill(tmp_path):

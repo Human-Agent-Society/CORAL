@@ -121,6 +121,50 @@ def test_setup_grader_env_rebuild_recreates_venv(tmp_path: Path) -> None:
     assert not marker.exists()
 
 
+def test_setup_grader_env_sets_uv_http_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Grader setup should tolerate large dependency downloads by default."""
+    from coral.workspace import grader_env
+
+    coral_dir = tmp_path / ".coral"
+    coral_dir.mkdir()
+    config_dir = tmp_path / "task"
+    config_dir.mkdir()
+    venv_dir = grader_venv_path(coral_dir)
+    python_path = grader_python_path(coral_dir)
+    python_path.parent.mkdir(parents=True)
+    python_path.write_text("")
+
+    captured_envs: list[dict[str, str] | None] = []
+    monkeypatch.delenv("UV_HTTP_TIMEOUT", raising=False)
+    monkeypatch.setattr(grader_env, "_coral_install_origin", lambda: {})
+    monkeypatch.setattr(grader_env, "_coral_install_command", lambda origin: "install-coral")
+
+    def fake_run_setup_commands(
+        commands: list[str],
+        cwd: Path,
+        extra_env: dict[str, str] | None = None,
+    ) -> None:
+        captured_envs.append(extra_env)
+
+    monkeypatch.setattr(grader_env, "run_setup_commands", fake_run_setup_commands)
+
+    setup_grader_env(coral_dir, GraderConfig(setup=[]), config_dir)
+
+    assert captured_envs[0] is not None
+    assert captured_envs[0]["VIRTUAL_ENV"] == str(venv_dir)
+    assert captured_envs[0]["UV_HTTP_TIMEOUT"] == grader_env.DEFAULT_UV_HTTP_TIMEOUT
+
+    captured_envs.clear()
+    monkeypatch.setenv("UV_HTTP_TIMEOUT", "60")
+
+    setup_grader_env(coral_dir, GraderConfig(setup=[]), config_dir)
+
+    assert captured_envs[0] is not None
+    assert captured_envs[0]["UV_HTTP_TIMEOUT"] == "60"
+
+
 def test_coral_install_command_editable() -> None:
     """direct_url.json with `dir_info.editable` -> `uv pip install -e <path>`."""
     from coral.workspace.grader_env import _coral_install_command

@@ -139,12 +139,11 @@ def has_docker() -> bool:
     return shutil.which("docker") is not None
 
 
-def _docker_needs_sudo() -> bool:
-    """Return True if docker requires sudo to run.
+def _probe_docker_sudo() -> bool | None:
+    """Return Docker sudo mode, or None if Docker cannot be queried.
 
-    Returns False if docker works without sudo. Returns True if docker
-    requires sudo and passwordless sudo is available. Exits with an error
-    if docker requires sudo but sudo needs a password.
+    Returns False if docker works without sudo. Returns True if Docker
+    requires sudo and passwordless sudo is available.
     """
     try:
         result = subprocess.run(
@@ -169,6 +168,19 @@ def _docker_needs_sudo() -> bool:
     except (subprocess.SubprocessError, FileNotFoundError):
         pass
 
+    return None
+
+
+def _docker_needs_sudo() -> bool:
+    """Return True if docker requires sudo to run.
+
+    Exits with an error if Docker cannot be queried without an interactive
+    sudo password.
+    """
+    needs_sudo = _probe_docker_sudo()
+    if needs_sudo is not None:
+        return needs_sudo
+
     print(
         "Error: Docker requires sudo, but sudo requires a password.\n"
         "Either run with passwordless sudo or add your user to the docker group:\n"
@@ -182,6 +194,16 @@ def _docker_needs_sudo() -> bool:
 def docker_cmd() -> list[str]:
     """Return the base docker command, prefixed with sudo if needed."""
     if _docker_needs_sudo():
+        return ["sudo", "docker"]
+    return ["docker"]
+
+
+def docker_cmd_or_none() -> list[str] | None:
+    """Return the Docker command if usable without interaction, else None."""
+    needs_sudo = _probe_docker_sudo()
+    if needs_sudo is None:
+        return None
+    if needs_sudo:
         return ["sudo", "docker"]
     return ["docker"]
 
@@ -204,10 +226,13 @@ def in_coral_docker_session() -> bool:
     return os.environ.get("CORAL_IN_DOCKER") == "1"
 
 
-def is_docker_container_running(container_name: str) -> bool:
+def is_docker_container_running(container_name: str, *, quiet: bool = False) -> bool:
     """Check if a Docker container is currently running."""
+    cmd = docker_cmd_or_none() if quiet else docker_cmd()
+    if cmd is None:
+        return False
     result = subprocess.run(
-        [*docker_cmd(), "inspect", "-f", "{{.State.Running}}", container_name],
+        [*cmd, "inspect", "-f", "{{.State.Running}}", container_name],
         capture_output=True,
         text=True,
     )
@@ -222,14 +247,14 @@ def has_docker_marker(coral_dir: Path) -> bool:
     return False
 
 
-def is_docker_run_alive(coral_dir: Path) -> bool:
+def is_docker_run_alive(coral_dir: Path, *, quiet: bool = False) -> bool:
     """Check if this run is managed by a live Docker container."""
     run_dir = coral_dir.resolve().parent
     marker = run_dir / ".coral_docker_container"
     if marker.exists():
         name = marker.read_text().strip()
         if name:
-            return is_docker_container_running(name)
+            return is_docker_container_running(name, quiet=quiet)
     return False
 
 

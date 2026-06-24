@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import socket
 import subprocess
 import sys
 from pathlib import Path
 
 from coral.cli._helpers import find_coral_dir
+
+DEFAULT_UI_PORT = 8420
+UI_PORT_SEARCH_LIMIT = 20
 
 
 def _ensure_ui_built() -> None:
@@ -103,7 +107,45 @@ def _ensure_ui_deps() -> None:
         print("[coral] UI dependencies installed.")
 
 
-def start_ui_background(coral_dir: Path, port: int = 8420, host: str = "127.0.0.1") -> None:
+def _port_available(host: str, port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind((host, port))
+        except OSError:
+            return False
+    return True
+
+
+def _find_available_port(host: str, preferred: int = DEFAULT_UI_PORT) -> int:
+    for port in range(preferred, preferred + UI_PORT_SEARCH_LIMIT):
+        if _port_available(host, port):
+            return port
+    raise RuntimeError(
+        f"No available dashboard port found on {host} in "
+        f"{preferred}-{preferred + UI_PORT_SEARCH_LIMIT - 1}."
+    )
+
+
+def _resolve_ui_port(host: str, requested_port: int | None) -> int:
+    if requested_port is not None:
+        if _port_available(host, requested_port):
+            return requested_port
+        raise RuntimeError(
+            f"Dashboard port {requested_port} is already in use on {host}. "
+            f"Run `coral ui --port {requested_port + 1}` or stop the process using that port."
+        )
+
+    port = _find_available_port(host, DEFAULT_UI_PORT)
+    if port != DEFAULT_UI_PORT:
+        print(f"[coral] Dashboard port {DEFAULT_UI_PORT} is in use; using {port}.")
+    return port
+
+
+def start_ui_background(
+    coral_dir: Path,
+    port: int = DEFAULT_UI_PORT,
+    host: str = "127.0.0.1",
+) -> None:
     """Start the web dashboard in a background thread."""
     _ensure_ui_deps()
     try:
@@ -123,6 +165,10 @@ def start_ui_background(coral_dir: Path, port: int = 8420, host: str = "127.0.0.
 
     results_dir = coral_dir.resolve().parent.parent.parent
     app = create_app(coral_dir, results_dir=results_dir)
+    if not _port_available(host, port):
+        fallback_port = _find_available_port(host, port + 1)
+        print(f"[coral] Dashboard port {port} is in use; using {fallback_port}.")
+        port = fallback_port
     url = f"http://{host}:{port}"
 
     config = uvicorn.Config(app, host=host, port=port, log_level="warning")
@@ -151,12 +197,17 @@ def cmd_ui(args: argparse.Namespace) -> None:
     _ensure_ui_built()
 
     coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
+    try:
+        port = _resolve_ui_port(args.host, args.port)
+    except RuntimeError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
 
     from coral.web import create_app
 
     results_dir = coral_dir.resolve().parent.parent.parent
     app = create_app(coral_dir, results_dir=results_dir)
-    url = f"http://{args.host}:{args.port}"
+    url = f"http://{args.host}:{port}"
     print(f"CORAL Dashboard: {url}")
     print(f"Serving data from: {coral_dir}")
 
@@ -175,6 +226,6 @@ def cmd_ui(args: argparse.Namespace) -> None:
     print("Stop with: coral stop\n")
 
     try:
-        uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
+        uvicorn.run(app, host=args.host, port=port, log_level="warning")
     finally:
         pid_file.unlink(missing_ok=True)

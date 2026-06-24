@@ -366,7 +366,7 @@ Run 'coral <command> --help' for details on any command."""
         epilog="Examples:\n  coral ui\n  coral ui --port 9000",
         formatter_class=_CommandHelpFormatter,
     )
-    p_ui.add_argument("--port", type=int, default=8420, help="Port (default: 8420)")
+    p_ui.add_argument("--port", type=int, default=None, help="Port (default: 8420)")
     p_ui.add_argument("--host", default="127.0.0.1", help="Host (default: 127.0.0.1)")
     _add_run_args(p_ui)
     p_ui.add_argument("--no-open", action="store_true", help="Don't auto-open browser")

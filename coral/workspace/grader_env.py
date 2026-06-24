@@ -38,6 +38,8 @@ from coral.workspace.repo import _clean_env, run_setup_commands
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_UV_HTTP_TIMEOUT = "180"
+
 
 def _coral_install_origin() -> dict:
     """Return the PEP 610 install origin recorded in coral's dist-info.
@@ -158,6 +160,7 @@ def setup_grader_env(
     extra_env = {
         "VIRTUAL_ENV": str(venv_dir),
         "PATH": f"{venv_dir / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}",
+        "UV_HTTP_TIMEOUT": os.environ.get("UV_HTTP_TIMEOUT", DEFAULT_UV_HTTP_TIMEOUT),
     }
 
     coral_install_cmd = _coral_install_command(_coral_install_origin())

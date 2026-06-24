@@ -27,7 +27,7 @@ def _run_is_alive(coral_dir: Path) -> bool:
             return True
         except (ProcessLookupError, PermissionError, ValueError):
             pass
-    return is_docker_run_alive(coral_dir)
+    return is_docker_run_alive(coral_dir, quiet=True)
 
 
 async def get_config(request: Request) -> JSONResponse:
@@ -481,7 +481,7 @@ async def get_status(request: Request) -> JSONResponse:
             manager_alive = True
         except (ProcessLookupError, PermissionError, ValueError):
             pass
-    is_docker = not manager_alive and is_docker_run_alive(coral_dir)
+    is_docker = not manager_alive and is_docker_run_alive(coral_dir, quiet=True)
     if is_docker:
         manager_alive = True
 
