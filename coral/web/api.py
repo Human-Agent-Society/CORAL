@@ -212,6 +212,13 @@ async def get_notes(request: Request) -> JSONResponse:
     return JSONResponse(entries)
 
 
+async def get_notes_graph(request: Request) -> JSONResponse:
+    """GET /api/notes/graph — notes as a connection graph (nodes + edges)."""
+    from coral.hub.notes import notes_graph
+
+    return JSONResponse(notes_graph(str(_coral_dir(request))))
+
+
 async def get_skills(request: Request) -> JSONResponse:
     """GET /api/skills — return all skills."""
     from coral.hub.skills import list_skills
