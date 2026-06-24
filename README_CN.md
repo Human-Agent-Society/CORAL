@@ -30,6 +30,7 @@
 
 ### 🔥 News
 
+- **[2026-06-24]** Docker 会话支持隔离 agent 与 grader：设置 `agents.isolate_user=agent` 即可让每个 agent 以非特权用户运行（manager 与 grader 仍为 root），agent 将无法读取 `.coral/private/`（grader 虚拟环境、答案 key）—— 即使通过 Bash 也不行。
 - **[2026-06-13]** 旧版 `eval/grader.py` grader 自动发现已废弃并移除 —— 改用 `grader.entrypoint` 指向打包的 grader。详见 [自定义 Grader 文档](https://docs.coralxyz.com/guides/custom-grader)。
 - **[2026-04-24]** 新增 Rubric 评审 —— 两个开箱即用的 LLM 评审 grader 包，专为开放式任务（报告、备忘、法律分析）设计。详见 [Rubric Judges 文档](https://docs.coralxyz.com/guides/rubric-judge)。
 - **[2026-04-03]** 我们的论文 "CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery" 现已发布！请查看 [Arxiv](https://arxiv.org/abs/2604.01658v1)。

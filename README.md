@@ -22,6 +22,7 @@
 
 ### 🔥 News
 
+- **[2026-06-24]** Docker session can now isolate the agent from the grader: set `agents.isolate_user=agent` to run each agent as an unprivileged user (manager and grader stay root), so agents can no longer read `.coral/private/` (grader venv, answer keys) — not even via Bash.
 - **[2026-06-13]** Legacy `eval/grader.py` grader auto-discovery is deprecated and removed — wire graders via `grader.entrypoint` pointing at a packaged grader. See the [custom grader guide](https://docs.coralxyz.com/guides/custom-grader).
 - **[2026-06-06]** CORAL v0.6.0 adds multi-island runs: partition agents into isolated islands with scoped attempts, notes, skills, heartbeat state, and migration between islands for broader exploration.
 - **[2026-04-24]** Rubric judges — two reusable LLM-judge grader packages for open-ended tasks (reports, memos, legal analysis). See the [Rubric Judges guide](https://docs.coralxyz.com/guides/rubric-judge).
