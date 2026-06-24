@@ -75,6 +75,35 @@ export interface Note {
   relative_path?: string;
   category?: string;
   index: number;
+  // Structured-trace fields (optional; present when the note carries the schema).
+  type?: string;
+  status?: string;
+  confidence?: number;
+  based_on?: string;
+  touched?: string[] | string;
+}
+
+export interface NoteGraphNode {
+  id: string;
+  title: string;
+  type: string;
+  status?: string | null;
+  confidence?: number | null;
+  creator: string;
+  island_id?: string | null;
+  date: string;
+  based_on?: string | null;
+}
+
+export interface NoteGraphEdge {
+  from: string;
+  to: string;
+  kind: "supersedes" | "refutes" | "references";
+}
+
+export interface NotesGraphResponse {
+  nodes: NoteGraphNode[];
+  edges: NoteGraphEdge[];
 }
 
 export interface Skill {
@@ -239,6 +268,7 @@ export const api = {
   attempt: (hash: string) => get<Attempt>(`/attempts/${hash}`),
   agentAttempts: (id: string) => get<Attempt[]>(`/attempts/agent/${id}`),
   notes: () => get<Note[]>("/notes"),
+  notesGraph: () => get<NotesGraphResponse>("/notes/graph"),
   skills: () => get<Skill[]>("/skills"),
   skill: (name: string) => get<SkillDetail>(`/skills/${name}`),
   logs: (agentId: string, signal?: AbortSignal) => get<LogData>(`/logs/${agentId}`, signal),
