@@ -40,6 +40,7 @@ from coral.cli.query import (
 )
 from coral.cli.start import cmd_status
 from coral.hub.attempts import write_attempt
+from coral.hub.auto_stop import write_auto_stop
 from coral.hub.heartbeat import (
     write_global_heartbeat,
 )
@@ -649,6 +650,38 @@ def test_status_default_hides_tune_attempts(monkeypatch, tmp_path, capsys):
     assert "tune-attempt-island-0" not in out
     assert "tune-attempt-island-1" not in out
     assert "## Leaderboard" not in out
+
+
+def test_status_shows_auto_stop_reason(monkeypatch, tmp_path, capsys):
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public" / "attempts").mkdir(parents=True)
+    write_auto_stop(
+        coral_dir,
+        {
+            "reason": "max_real_attempts",
+            "timestamp": "2026-06-24T00:00:00+00:00",
+            "attempt_id": "abc",
+            "agent_id": "agent-1",
+            "score": 0.4,
+            "score_threshold": None,
+            "direction": "maximize",
+            "real_attempt_count": 30,
+            "max_real_attempts": 30,
+        },
+    )
+    monkeypatch.setattr(start_module, "pick_run", lambda: coral_dir)
+    monkeypatch.setattr(
+        start_module,
+        "find_coral_dir_and_island",
+        lambda task=None, run=None: (coral_dir, None),
+    )
+
+    cmd_status(argparse.Namespace(task=None, run=None, all=False))
+
+    out = capsys.readouterr().out
+    assert "Auto-stop: max real attempts reached" in out
+    assert "real_attempts=30" in out
+    assert "max=30" in out
 
 
 def test_status_all_shows_tune_attempts(monkeypatch, tmp_path, capsys):

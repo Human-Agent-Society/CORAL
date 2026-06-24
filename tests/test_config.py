@@ -9,6 +9,7 @@ from coral.config import (
     CoralConfig,
     GraderConfig,
     RunConfig,
+    RunStopConfig,
     TaskConfig,
     WarmStartConfig,
     WorkspaceConfig,
@@ -198,6 +199,8 @@ def test_run_config_defaults():
     assert config.run.verbose is False
     assert config.run.ui is False
     assert config.run.session == "tmux"
+    assert config.run.stop.score_threshold is None
+    assert config.run.stop.max_real_attempts is None
 
 
 def test_run_config_dotlist_override():
@@ -223,6 +226,42 @@ def test_run_config_roundtrip():
     assert restored.run.verbose is True
     assert restored.run.ui is True
     assert restored.run.session == "docker"
+
+
+def test_run_stop_config_roundtrip():
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+        run=RunConfig(stop=RunStopConfig(score_threshold=0.8, max_real_attempts=30)),
+    )
+
+    with tempfile.NamedTemporaryFile(suffix=".yaml", mode="w", delete=False) as f:
+        config.to_yaml(f.name)
+        restored = CoralConfig.from_yaml(f.name)
+
+    assert restored.run.stop.score_threshold == 0.8
+    assert restored.run.stop.max_real_attempts == 30
+
+
+def test_run_stop_dotlist_override():
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+    )
+    merged = CoralConfig.merge_dotlist(
+        config,
+        ["run.stop.score_threshold=0.8", "run.stop.max_real_attempts=30"],
+    )
+    assert merged.run.stop.score_threshold == 0.8
+    assert merged.run.stop.max_real_attempts == 30
+
+
+def test_run_stop_max_real_attempts_validation():
+    with pytest.raises(ValueError, match="run.stop.max_real_attempts must be > 0"):
+        CoralConfig.from_dict(
+            {
+                "task": {"name": "t", "description": "d"},
+                "run": {"stop": {"max_real_attempts": 0}},
+            }
+        )
 
 
 def test_to_dict_excludes_task_dir():

@@ -27,6 +27,7 @@ config = CoralConfig.from_yaml("task.yaml")
 | `agents` | `AgentConfig` | Agent spawning config |
 | `sharing` | `SharingConfig` | Shared state toggles |
 | `workspace` | `WorkspaceConfig` | Workspace layout |
+| `run` | `RunConfig` | Runtime/session flags and run-level stop conditions |
 
 ### Methods
 
@@ -103,4 +104,38 @@ class SharingConfig:
 class WorkspaceConfig:
     results_dir: str       # Where to store results (default: "./results")
     repo_path: str         # Git repository root (default: ".")
+```
+
+## RunConfig
+
+```python
+@dataclass
+class RunConfig:
+    verbose: bool          # Print verbose manager output (default: False)
+    ui: bool               # Start the web dashboard (default: False)
+    session: str           # "local", "tmux", or "docker"
+    docker_image: str      # Docker image override
+    stop: RunStopConfig    # Optional run-level auto-stop conditions
+```
+
+## RunStopConfig
+
+```python
+@dataclass
+class RunStopConfig:
+    score_threshold: float | None     # Stop when best real score reaches this threshold
+    max_real_attempts: int | None     # Stop after this many finalized real attempts
+```
+
+`run.stop.score_threshold` is direction-aware: maximize tasks stop when a
+finalized real attempt has `score >= score_threshold`; minimize tasks stop when
+`score <= score_threshold`. `run.stop.max_real_attempts` counts only finalized
+attempts with `budget_class="real"` across the whole run. Pending attempts,
+`tune` attempts, and `grader_error` attempts do not count.
+
+Examples:
+
+```bash
+coral start -c task.yaml run.stop.score_threshold=0.8
+coral start -c task.yaml run.stop.max_real_attempts=30
 ```

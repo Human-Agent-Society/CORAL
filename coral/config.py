@@ -253,6 +253,20 @@ class WorkspaceConfig:
 
 
 @dataclass
+class RunStopConfig:
+    """Optional run-level auto-stop conditions."""
+
+    score_threshold: float | None = None
+    max_real_attempts: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.max_real_attempts is not None and self.max_real_attempts <= 0:
+            raise ValueError(
+                f"run.stop.max_real_attempts must be > 0, got {self.max_real_attempts}"
+            )
+
+
+@dataclass
 class RunConfig:
     """Runtime flags for a CORAL session."""
 
@@ -260,6 +274,11 @@ class RunConfig:
     ui: bool = False
     session: str = "tmux"  # "local", "tmux", or "docker"
     docker_image: str = ""  # empty = auto-build from project Dockerfile
+    stop: RunStopConfig = field(default_factory=RunStopConfig)
+
+    def __post_init__(self) -> None:
+        if isinstance(self.stop, dict):
+            self.stop = RunStopConfig(**self.stop)
 
 
 @dataclass

@@ -36,6 +36,7 @@ from coral.cli._helpers import (
     setup_logging,
 )
 from coral.config import CoralConfig
+from coral.hub.auto_stop import read_auto_stop
 from coral.workspace.project import slugify
 
 
@@ -77,6 +78,27 @@ def _build_coral_command(args: argparse.Namespace) -> list[str]:
     cmd.extend(getattr(args, "overrides", []))
     cmd.append("run.session=local")
     return cmd
+
+
+def _format_auto_stop_summary(state: dict[str, object]) -> str:
+    """Format a persisted auto-stop reason for `coral status`."""
+    reason = state.get("reason") or "unknown"
+    timestamp = state.get("timestamp") or "unknown time"
+    score = state.get("score")
+    real_attempt_count = state.get("real_attempt_count")
+    if reason == "score_threshold":
+        return (
+            "Auto-stop: score threshold reached "
+            f"(score={score}, threshold={state.get('score_threshold')}, "
+            f"direction={state.get('direction')}, at={timestamp})"
+        )
+    if reason == "max_real_attempts":
+        return (
+            "Auto-stop: max real attempts reached "
+            f"(real_attempts={real_attempt_count}, "
+            f"max={state.get('max_real_attempts')}, at={timestamp})"
+        )
+    return f"Auto-stop: {reason} (at={timestamp})"
 
 
 def _start_in_tmux(args: argparse.Namespace, config: CoralConfig) -> None:
@@ -847,6 +869,10 @@ def cmd_status(args: argparse.Namespace) -> None:
             print("Manager: NOT RUNNING (stale PID file)")
         else:
             print("Manager: not running")
+
+    auto_stop = read_auto_stop(coral_dir)
+    if auto_stop:
+        print(_format_auto_stop_summary(auto_stop))
 
     # Agent liveness follows the same scope as attempts/leaderboards. In
     # multi-island mode logs live in islands/<id>/logs/ — public/logs is

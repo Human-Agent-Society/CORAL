@@ -53,6 +53,7 @@ from coral.hub.attempts import (
     read_attempts,
     read_eval_count,
 )
+from coral.hub.auto_stop import write_auto_stop
 from coral.hub.heartbeat import (
     DEFAULT_PROMPTS,
     DEFAULT_TRIGGER,
@@ -65,7 +66,7 @@ from coral.hub.heartbeat import (
 )
 from coral.hub.steering import ContinueFromAction, mark_applied, read_pending
 from coral.template.coral_md import generate_coral_md
-from coral.types import BUDGET_CLASS_REAL, get_budget_class
+from coral.types import BUDGET_CLASS_REAL, Attempt, get_budget_class
 from coral.workspace import (
     ProjectPaths,
     apply_runtime_mounts,
@@ -1076,6 +1077,10 @@ class AgentManager:
         selection intentionally ignores those, so using the raw counter can
         consume a cycle before any source island has eligible real signal.
         """
+        return self._get_finalized_real_attempt_count()
+
+    def _read_all_run_attempts(self) -> list[Attempt]:
+        """Read attempts across the whole run, spanning islands when present."""
         assert self.paths is not None
         coral_dir = self.paths.coral_dir
         if (coral_dir / "islands").exists():
@@ -1083,13 +1088,160 @@ class AgentManager:
             for island_dir in sorted((coral_dir / "islands").iterdir()):
                 if island_dir.is_dir():
                     attempts.extend(read_attempts(coral_dir, island_id=island_dir.name))
-        else:
-            attempts = read_attempts(coral_dir)
+            return attempts
+        return read_attempts(coral_dir)
+
+    def _get_finalized_real_attempt_count(self) -> int:
+        """Count run-wide terminal real attempts."""
+        attempts = self._read_all_run_attempts()
         return sum(
             1
             for attempt in attempts
             if attempt.status != "pending" and attempt.budget_class == BUDGET_CLASS_REAL
         )
+
+    def _latest_finalized_real_attempt(self) -> Attempt | None:
+        """Return the newest terminal real attempt, if any."""
+        attempts = [
+            a
+            for a in self._read_all_run_attempts()
+            if a.status != "pending" and a.budget_class == BUDGET_CLASS_REAL
+        ]
+        if not attempts:
+            return None
+        return max(attempts, key=lambda a: a.timestamp or "")
+
+    def _attempt_dict_for_auto_stop(
+        self, attempt: Attempt | dict[str, Any] | None
+    ) -> dict[str, Any]:
+        if attempt is None:
+            return {
+                "attempt_id": None,
+                "agent_id": None,
+                "score": None,
+                "budget_class": None,
+            }
+        if isinstance(attempt, dict):
+            return {
+                "attempt_id": attempt.get("commit_hash"),
+                "agent_id": attempt.get("agent_id"),
+                "score": attempt.get("score"),
+                "budget_class": get_budget_class(attempt.get("metadata")),
+            }
+        return {
+            "attempt_id": attempt.commit_hash,
+            "agent_id": attempt.agent_id,
+            "score": attempt.score,
+            "budget_class": attempt.budget_class,
+        }
+
+    def _score_meets_auto_stop_threshold(self, score: float | int | None, threshold: float) -> bool:
+        if score is None:
+            return False
+        value = float(score)
+        if self.config.grader.direction == "minimize":
+            return value <= threshold
+        return value >= threshold
+
+    def _auto_stop_reason_from_attempt(self, attempt_data: dict[str, Any]) -> dict[str, Any] | None:
+        """Return the auto-stop reason for a newly finalized attempt, if any."""
+        stop_config = self.config.run.stop
+        if stop_config.score_threshold is None and stop_config.max_real_attempts is None:
+            return None
+
+        attempt_info = self._attempt_dict_for_auto_stop(attempt_data)
+        if attempt_info["budget_class"] != BUDGET_CLASS_REAL:
+            return None
+
+        real_attempt_count = self._get_finalized_real_attempt_count()
+        threshold = stop_config.score_threshold
+        if threshold is not None and self._score_meets_auto_stop_threshold(
+            attempt_info["score"], threshold
+        ):
+            return self._build_auto_stop_reason(
+                "score_threshold",
+                attempt_info,
+                real_attempt_count,
+            )
+
+        max_real_attempts = stop_config.max_real_attempts
+        if max_real_attempts is not None and real_attempt_count >= max_real_attempts:
+            return self._build_auto_stop_reason(
+                "max_real_attempts",
+                attempt_info,
+                real_attempt_count,
+            )
+        return None
+
+    def _auto_stop_reason_from_current_state(self) -> dict[str, Any] | None:
+        """Return a restart-time auto-stop reason from persisted attempts, if reached."""
+        stop_config = self.config.run.stop
+        if stop_config.score_threshold is None and stop_config.max_real_attempts is None:
+            return None
+
+        real_attempt_count = self._get_finalized_real_attempt_count()
+        threshold = stop_config.score_threshold
+        if threshold is not None:
+            assert self.paths is not None
+            best = get_leaderboard(
+                self.paths.coral_dir,
+                top_n=1,
+                direction=self.config.grader.direction,
+                include_tune=False,
+            )
+            if best and self._score_meets_auto_stop_threshold(best[0].score, threshold):
+                return self._build_auto_stop_reason(
+                    "score_threshold",
+                    self._attempt_dict_for_auto_stop(best[0]),
+                    real_attempt_count,
+                )
+
+        max_real_attempts = stop_config.max_real_attempts
+        if max_real_attempts is not None and real_attempt_count >= max_real_attempts:
+            return self._build_auto_stop_reason(
+                "max_real_attempts",
+                self._attempt_dict_for_auto_stop(self._latest_finalized_real_attempt()),
+                real_attempt_count,
+            )
+        return None
+
+    def _build_auto_stop_reason(
+        self,
+        reason: str,
+        attempt_info: dict[str, Any],
+        real_attempt_count: int,
+    ) -> dict[str, Any]:
+        stop_config = self.config.run.stop
+        return {
+            "reason": reason,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "attempt_id": attempt_info["attempt_id"],
+            "agent_id": attempt_info["agent_id"],
+            "score": attempt_info["score"],
+            "score_threshold": stop_config.score_threshold,
+            "direction": self.config.grader.direction,
+            "real_attempt_count": real_attempt_count,
+            "max_real_attempts": stop_config.max_real_attempts,
+        }
+
+    def _auto_stop(self, reason: dict[str, Any]) -> None:
+        """Record the auto-stop reason and gracefully stop the run."""
+        assert self.paths is not None
+        write_auto_stop(self.paths.coral_dir, reason)
+        logger.info(
+            "Auto-stop triggered: %s (score=%s, real_attempts=%s)",
+            reason["reason"],
+            reason["score"],
+            reason["real_attempt_count"],
+        )
+        if self.verbose:
+            print(
+                "[coral] Auto-stop: "
+                f"{reason['reason']} "
+                f"(score={reason['score']}, "
+                f"real_attempts={reason['real_attempt_count']})"
+            )
+        self.stop_all()
 
     def _get_heartbeat_runner(self, agent_id: str) -> HeartbeatRunner:
         """Build a HeartbeatRunner by merging local + global heartbeat configs."""
@@ -1925,6 +2077,11 @@ class AgentManager:
         # interrupt-and-resume cycle for the rest of the run.
         seen_attempts = self._filter_scored(self._get_seen_attempts())
 
+        startup_auto_stop = self._auto_stop_reason_from_current_state()
+        if startup_auto_stop is not None:
+            self._auto_stop(startup_auto_stop)
+            return
+
         logger.info(f"Monitoring {len(self.handles)} agent(s) (check every {check_interval}s)...")
 
         while self._running:
@@ -1982,6 +2139,14 @@ class AgentManager:
                         # Append to score history (None for broken evals — they
                         # apply plateau pressure without resetting any anchor).
                         self._agent_score_history.setdefault(committing_agent_id, []).append(score)
+
+                    auto_stop_reason = (
+                        self._auto_stop_reason_from_attempt(attempt_data)
+                        or self._auto_stop_reason_from_current_state()
+                    )
+                    if auto_stop_reason is not None:
+                        self._auto_stop(auto_stop_reason)
+                        break
 
                     score_history = self._agent_score_history.get(committing_agent_id, [])
 

@@ -109,6 +109,7 @@ coral agents remove <name> [<name>...]            # Delete one or more by name
 coral start -c task.yaml                          # Launch agents (auto-tmux)
 coral start -c task.yaml agents.count=4 agents.model=opus       # Dotlist overrides
 coral start -c task.yaml run.verbose=true run.ui=true           # Verbose + dashboard
+coral start -c task.yaml run.stop.max_real_attempts=30          # Stop after 30 finalized real attempts
 coral start -c task.yaml run.session=local                      # No tmux session
 coral resume                                      # Resume latest run (sessions restored)
 coral resume -i "Try greedy approaches"           # Inject an instruction at resume
