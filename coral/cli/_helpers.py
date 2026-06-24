@@ -193,6 +193,17 @@ def in_docker() -> bool:
     return Path("/.dockerenv").exists()
 
 
+def in_coral_docker_session() -> bool:
+    """True only inside CORAL's own Docker session, not any container.
+
+    Set by ``_build_docker_cmd`` via ``-e CORAL_IN_DOCKER=1``. Unlike
+    ``in_docker()``, this excludes generic containers (a plain ``/.dockerenv``)
+    that lack the baked-in ``agent`` user — so mandatory OS-user isolation is
+    forced only where the image guarantees it can be honored.
+    """
+    return os.environ.get("CORAL_IN_DOCKER") == "1"
+
+
 def is_docker_container_running(container_name: str) -> bool:
     """Check if a Docker container is currently running."""
     result = subprocess.run(

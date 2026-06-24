@@ -22,6 +22,7 @@ from coral.cli._helpers import (
     has_docker,
     has_docker_marker,
     has_tmux,
+    in_coral_docker_session,
     in_docker,
     in_tmux,
     is_docker_run_alive,
@@ -67,6 +68,22 @@ def _tmux_env() -> dict[str, str]:
     env = dict(os.environ)
     env.pop("TMUX", None)  # Allow creating sessions even if nested
     return env
+
+
+def _enforce_docker_isolation(config: CoralConfig) -> None:
+    """Apply OS-user isolation inside CORAL's Docker session.
+
+    The agent must not be able to read root-owned ``.coral/private/`` (grader
+    venv, answer keys), so inside the container ``agents.isolate_user`` is set to
+    the image's unprivileged user, overriding any config or CLI value. No-op
+    everywhere else; on the host ``agents.isolate_user`` stays opt-in. The image
+    guarantees the unprivileged user exists and the manager runs as root.
+    """
+    if not in_coral_docker_session():
+        return
+    from coral.workspace.user_isolation import DOCKER_ISOLATION_USER
+
+    config.agents.isolate_user = DOCKER_ISOLATION_USER
 
 
 def _build_coral_command(args: argparse.Namespace) -> list[str]:
@@ -293,14 +310,12 @@ def _start_in_docker(args: argparse.Namespace, config: CoralConfig) -> None:
             "workspace.run_dir=/app/run",
             "workspace.repo_path=/repo",
             "run.session=local",
-            # Secure-by-default in Docker: run the agent as the image's
-            # unprivileged `agent` user so it cannot read root-owned
-            # .coral/private/. Listed before user overrides, so an explicit
-            # `agents.isolate_user=` (empty) on the CLI opts back out.
-            "agents.isolate_user=agent",
         ]
     )
     docker_cmd.extend(getattr(args, "overrides", []))
+    # OS-user isolation is forced on inside the container by
+    # _enforce_docker_isolation (mandatory, non-overridable); no need to (and no
+    # way to) pass it as a removable CLI override here.
 
     _run_docker_container(docker_cmd, container_name)
 
@@ -413,6 +428,9 @@ def cmd_start(args: argparse.Namespace) -> None:
         config.run.session = "tmux"
     elif in_docker():
         config.run.session = "docker"
+
+    # Mandatory in the Docker session: the agent always runs isolated.
+    _enforce_docker_isolation(config)
 
     from coral.agent.manager import AgentManager
     from coral.cli.validation import validate_task
@@ -649,6 +667,12 @@ def cmd_resume(args: argparse.Namespace) -> None:
         print(f"[coral] Resuming run: {paths.run_dir}")
         print(f"[coral] Task:    {config.task.name}")
         print(f"[coral] Model:   {config.agents.model}")
+
+    # Mandatory in the Docker session: re-assert isolation on every resume so an
+    # override (or a config from before this was enforced) can never disable it.
+    _enforce_docker_isolation(config)
+    if in_coral_docker_session():
+        config.to_yaml(config_path)
 
     instruction = getattr(args, "instruction", None)
     resume_from = getattr(args, "resume_from", None)

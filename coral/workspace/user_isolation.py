@@ -29,6 +29,11 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# The unprivileged user baked into the Docker images. The Docker session runs
+# the agent as this user; on the host, ``agents.isolate_user`` stays opt-in
+# (empty = no isolation).
+DOCKER_ISOLATION_USER = "agent"
+
 
 @dataclass(frozen=True)
 class UserSpec:

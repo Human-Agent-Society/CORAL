@@ -150,9 +150,10 @@ class AgentConfig:
     # this unprivileged user while the manager/grader stay root. The agent's
     # worktree + shared state + repo are chowned to it; ``.coral/private/``
     # (grader venv, answer keys) is kept root-owned mode 700 so the agent
-    # cannot read it even via Bash. Requires CORAL to run as root (the Docker
-    # session does); empty = no isolation (current behavior). The Docker image
-    # provides the ``agent`` user.
+    # cannot read it even via Bash. Requires CORAL to run as root.
+    # This field is the HOST opt-in (empty = no isolation). In CORAL's Docker
+    # session this value is forced to the image's ``agent`` user regardless of
+    # what is set here.
     isolate_user: str = ""
     # Mix-and-match: when non-empty, each entry spawns its own runtime/model
     # combo. ``agents.count`` is ignored (total = sum of assignment counts).
