@@ -45,6 +45,8 @@ grader:
     - "uv pip install -e ./grader"
   timeout: 120
   direction: minimize
+  private:
+    - "taskdata"   # hidden grader fixtures → .coral/private/taskdata (read via self.private_dir)
   args:
     program_file: "kernel_builder.py"
 

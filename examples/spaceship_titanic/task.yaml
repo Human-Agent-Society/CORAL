@@ -75,6 +75,8 @@ grader:
     - "uv pip install -e ./grader"
   timeout: 120
   direction: maximize
+  private:
+    - "taskdata"   # hidden answer key → .coral/private/taskdata (read via self.private_dir)
   args:
     program_file: "solution.py"
     train_file: "data/train.csv"

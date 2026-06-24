@@ -18,10 +18,6 @@ from pathlib import Path
 from coral.grader import TaskGrader
 from coral.types import ScoreBundle
 
-# Hidden eval data shipped inside this package (works for editable
-# and wheel installs alike — the package is a real directory on disk).
-_TASKDATA = Path(__file__).parent / "taskdata"
-
 
 class Grader(TaskGrader):
     """Grader for the MNIST digit classification task."""
@@ -32,10 +28,14 @@ class Grader(TaskGrader):
         test_file = self.args.get("test_file", "data/test.npz")
         timeout = self.timeout
 
+        # Hidden eval data lives under grader.private (copied to
+        # .coral/private/, denied to agent worktrees), read via private_dir.
+        taskdata = Path(self.private_dir) / "taskdata"
+
         program_path = os.path.join(self.codebase_path, program_file)
         train_path = os.path.join(self.codebase_path, train_file)
         test_path = os.path.join(self.codebase_path, test_file)
-        answers_path = str((_TASKDATA / "answers/test_labels.npz"))
+        answers_path = str((taskdata / "answers/test_labels.npz"))
 
         for path, label in [
             (program_path, f"Program file ({program_file})"),

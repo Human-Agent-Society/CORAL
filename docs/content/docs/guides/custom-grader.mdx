@@ -107,21 +107,33 @@ print(result.returncode)  # exit code
 
 ### Hidden data files
 
-Test data, answer keys, and helper modules ship inside the grader package —
-the convention is a `taskdata/` directory next to `grader.py`:
+Put answer keys, hidden test fixtures, and any data the agent must **not**
+see under `grader.private` in task.yaml. CORAL copies those paths into
+`.coral/private/`, which every agent runtime is denied read access to, and
+the grader reads them back via `self.private_dir`:
+
+```yaml
+grader:
+  private:
+    - "grader/taskdata"   # copied to .coral/private/taskdata
+```
 
 ```python
 from pathlib import Path
 
-_TASKDATA = Path(__file__).parent / "taskdata"
+_TASKDATA = Path(self.private_dir) / "taskdata"
 answers = _TASKDATA / "answers" / "test_labels.npz"
 ```
 
-This works for editable and wheel installs alike, and hatchling bundles
-non-Python files under `packages` automatically. For files that can't live
-in the package (very large datasets, files shared across tasks), list them
-under `grader.private` in task.yaml — they are copied to
-`.coral/private/<name>` and readable via `self.private_dir`.
+<Callout type="warn">
+Do **not** rely on a packaged `taskdata/` dir resolved with
+`Path(__file__).parent / "taskdata"` to hide answer keys. Graders are usually
+installed editable (`uv pip install -e ./grader`), so the package source stays
+in the task tree and agents can read it by absolute path — `taskdata/` is
+bundled with the grader, but it is **not** hidden. Reserve `Path(__file__).parent`
+for grader code and non-secret helper data only; route every secret through
+`grader.private` + `self.private_dir`.
+</Callout>
 
 ### `score(value, explanation="")`
 

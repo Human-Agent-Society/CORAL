@@ -35,6 +35,8 @@ grader:
     - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
+  private:
+    - "taskdata"   # hidden workloads/evaluator/simulator → .coral/private/taskdata (read via self.private_dir)
   args:
     program_file: "initial_program.py"
 

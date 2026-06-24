@@ -35,14 +35,14 @@ def evaluate(self) -> float | ScoreBundle:
 
 ## 2. Test pass-rate against a hidden test set
 
-Ship the tests inside the grader package (so agents can't read them), copy them next to the agent's code, run pytest, score the pass fraction. `direction: maximize`.
+Ship the tests under `grader.private` (so agents can't read them — list e.g. `grader/taskdata` and read via `self.private_dir`), copy them next to the agent's code, run pytest, score the pass fraction. `direction: maximize`.
 
 ```python
 import json, shutil
 from pathlib import Path
 
 def evaluate(self) -> float | ScoreBundle:
-    tests = Path(__file__).parent / "taskdata" / "test_hidden.py"
+    tests = Path(self.private_dir) / "taskdata" / "test_hidden.py"
     dest = Path(self.codebase_path) / "test_hidden.py"
     shutil.copy(tests, dest)   # codebase_path is force-removed after, so this is safe + temporary
 
@@ -134,13 +134,19 @@ If you do nothing, tune evals are identical to real ones (the default `describe_
 
 ---
 
-## Hidden data — always inside the package
+## Hidden data — always under `grader.private`
 
-Answer keys, fixtures, helper modules live in a `taskdata/` dir next to `grader.py`, resolved at runtime:
+Answer keys, hidden fixtures, and any secret the agent must not see go under `grader.private` in `task.yaml`. CORAL copies those paths into `.coral/private/` (denied to every agent runtime) and the grader reads them from `self.private_dir`:
+
+```yaml
+grader:
+  private:
+    - "grader/taskdata"   # → .coral/private/taskdata
+```
 
 ```python
 from pathlib import Path
-_TASKDATA = Path(__file__).parent / "taskdata"
+_TASKDATA = Path(self.private_dir) / "taskdata"
 ```
 
-This works for editable (`pip install -e`) and wheel installs alike. For files too large to package (multi-GB datasets), list them under `grader.private` in `task.yaml` and read them from `self.private_dir`. Never put answer keys under `seed/` — agents read `seed/`.
+Do **not** use a packaged `taskdata/` dir (`Path(__file__).parent / "taskdata"`) for secrets: graders install editable (`pip install -e ./grader`), so the package source stays in the task tree and agents read it by absolute path — bundled, but not hidden. Reserve `Path(__file__).parent` for grader code / non-secret helper data. Never put answer keys under `seed/` either — agents read `seed/`.

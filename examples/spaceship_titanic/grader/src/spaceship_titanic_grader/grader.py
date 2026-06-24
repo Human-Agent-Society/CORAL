@@ -18,10 +18,6 @@ from pathlib import Path
 from coral.grader import TaskGrader
 from coral.types import ScoreBundle
 
-# Hidden eval data shipped inside this package (works for editable
-# and wheel installs alike — the package is a real directory on disk).
-_TASKDATA = Path(__file__).parent / "taskdata"
-
 
 class Grader(TaskGrader):
     """Grader for the Spaceship Titanic classification task."""
@@ -35,7 +31,8 @@ class Grader(TaskGrader):
         program_path = os.path.join(self.codebase_path, program_file)
         train_path = os.path.join(self.codebase_path, train_file)
         test_path = os.path.join(self.codebase_path, test_file)
-        answers_path = str((_TASKDATA / "answers/test.csv"))
+        taskdata = Path(self.private_dir) / "taskdata"
+        answers_path = str((taskdata / "answers/test.csv"))
 
         # Check required files exist
         for path, label in [

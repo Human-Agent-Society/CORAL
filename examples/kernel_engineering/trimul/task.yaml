@@ -133,6 +133,8 @@ grader:
     - "uv pip install -e ./grader"
   timeout: 1200
   direction: maximize
+  private:
+    - "taskdata"   # hidden reference/eval fixtures → .coral/private/taskdata (read via self.private_dir)
   args:
     task_name: trimul
 

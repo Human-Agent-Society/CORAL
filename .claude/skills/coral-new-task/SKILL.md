@@ -31,7 +31,7 @@ Look at these before writing anything new — copy the closest one and edit:
 | [examples/dna_design/](examples/dna_design/) | Packaged grader with bundled data files (`importlib.resources`) and `[ml]` optional-deps for heavy libs |
 | [examples/swebench-verified/](examples/swebench-verified/) | Tiered eval (different instance counts per tier), private answer keys, harbor integration |
 | [examples/circle_packing/](examples/circle_packing/) | Smallest packaged task end-to-end — single solution file, single grader file |
-| [examples/mnist/](examples/mnist/) | Packaged grader with a hidden answer key shipped inside the package (`taskdata/answers/`) |
+| [examples/mnist/](examples/mnist/) | Packaged grader with a hidden answer key (note: secret data belongs under `grader.private`, not a readable packaged `taskdata/`) |
 
 ## 1. The seed
 
@@ -132,11 +132,17 @@ scorer_dir = str(importlib.resources.files("<task>_grader.scorers"))
 
 If the grader wants `torch`, `grelu`, etc., put them in `optional-dependencies` and have the grader fall back gracefully when missing — see [examples/dna_design/grader/pyproject.toml](examples/dna_design/grader/pyproject.toml). Then `grader.setup` becomes `["uv pip install -e ./grader[ml]"]` for the full version.
 
-### Hidden data: ship it inside the package
+### Hidden data: put secrets under `grader.private`
 
-Answer keys, test fixtures, and helper modules live inside the grader package — the convention is a `taskdata/` subdir next to `grader.py`, resolved with `_TASKDATA = Path(__file__).parent / "taskdata"` (works for editable and wheel installs alike; hatchling includes non-Python files under `packages` automatically). See [examples/mnist/grader/src/mnist_grader/taskdata/](examples/mnist/grader/src/mnist_grader/) for a data file and [examples/ADRS/txn_scheduling/](examples/ADRS/txn_scheduling/) for helper modules put on `sys.path`.
+Answer keys, hidden test fixtures, and anything the agent must **not** see go under `grader.private` in task.yaml — CORAL copies those paths into `.coral/private/<name>` (which every agent runtime is denied read access to) and the grader reads them via `self.private_dir`:
 
-For files that genuinely can't live in the package (huge datasets, shared across tasks), list them under `grader.private` in task.yaml — they get copied to `.coral/private/<name>` and the grader reads them via `self.private_dir`.
+```yaml
+grader:
+  private:
+    - "grader/taskdata"   # → .coral/private/taskdata, read via Path(self.private_dir) / "taskdata"
+```
+
+Do **not** rely on a packaged `taskdata/` dir (`Path(__file__).parent / "taskdata"`) to hide secrets. Graders install editable (`uv pip install -e ./grader`), so the package source stays in the task tree and agents can read it by absolute path — it's bundled with the grader, but **not** hidden. Reserve `Path(__file__).parent` for grader code and **non-secret** helper data only — e.g. [examples/ADRS/txn_scheduling/](examples/ADRS/txn_scheduling/) puts helper modules on `sys.path` that way.
 
 ## 3. The task.yaml
 
@@ -215,7 +221,7 @@ Add a one-line entry to the table in [examples/README.md](examples/README.md) an
 |---|---|---|
 | `repo_path` points at `examples/<task>/` instead of `examples/<task>/seed/` | Grader sees `task.yaml` and `grader/` in `codebase_path` | Always point `repo_path` at the seed dir. |
 | `direction: maximize` for a loss / `minimize` for a benchmark ratio | Leaderboard ordered backwards | Score = "ratio against benchmark, >1 is better" → `maximize`. Score = "raw error" → `minimize`. |
-| Hidden answer key under `seed/` | Agents can read it and game the score | Bundle it into the grader package (`taskdata/`), or use `grader.private` for files that can't live in the package. |
+| Hidden answer key under `seed/` or a packaged `taskdata/` | Agents read it (editable installs leave `taskdata/` readable from worktrees) and game the score | Put it under `grader.private`, read via `self.private_dir`. |
 | Grader writes results under `self.codebase_path` and reads them later | Files vanish — daemon force-removes the worktree after each eval | Write under `self.eval_logs_dir`. |
 | Grader uses `sys.executable` to run the agent's program | Misses task-specific deps installed via `workspace.setup` | Use `self.get_python_command()` (it switches to `uv run --project` when the codebase has a `pyproject.toml`). |
 | Heavy deps in main grader `dependencies` | `coral validate` is slow / fails on machines without the GPU stack | Move to `optional-dependencies` and fall back gracefully. See dna_design's `[ml]` extra. |

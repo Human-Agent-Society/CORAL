@@ -1,11 +1,11 @@
 """CORAL grader for the EPLB (Expert Parallelism Load Balancer) task.
 
 Wraps the skydiscover evaluator. Expects expert-load.json to be present
-alongside this file in the eval/ directory.
+alongside evaluator.py in the hidden taskdata/ directory.
 
 Setup:
     wget https://huggingface.co/datasets/abmfy/eplb-openevolve/resolve/main/expert-load.json
-    cp expert-load.json examples/ADRS/eplb/eval/expert-load.json
+    cp expert-load.json examples/ADRS/eplb/taskdata/expert-load.json
 """
 
 from __future__ import annotations
@@ -17,10 +17,6 @@ from pathlib import Path
 from coral.grader import TaskGrader
 from coral.types import ScoreBundle
 
-# Hidden eval data shipped inside this package (works for editable
-# and wheel installs alike — the package is a real directory on disk).
-_TASKDATA = Path(__file__).parent / "taskdata"
-
 
 class Grader(TaskGrader):
     def evaluate(self) -> ScoreBundle:
@@ -30,9 +26,11 @@ class Grader(TaskGrader):
         if not os.path.exists(program_path):
             return self.fail(f"Program file not found: {program_file}")
 
-        # The evaluator uses __file__ to locate expert-load.json, so it must
-        # be imported from its actual location in .coral/private/eval/.
-        eval_dir = str(_TASKDATA)
+        # Hidden eval data lives under grader.private (copied to .coral/private/,
+        # denied to agent worktrees), read via private_dir. The evaluator uses
+        # __file__ to locate expert-load.json, so it is imported from its actual
+        # location in .coral/private/taskdata/.
+        eval_dir = str(Path(self.private_dir) / "taskdata")
         if eval_dir not in sys.path:
             sys.path.insert(0, eval_dir)
 
@@ -40,7 +38,7 @@ class Grader(TaskGrader):
         if not data_file.exists():
             return self.fail(
                 "expert-load.json not found. Download it and place it in "
-                "examples/ADRS/eplb/eval/expert-load.json:\n"
+                "examples/ADRS/eplb/taskdata/expert-load.json:\n"
                 "  wget https://huggingface.co/datasets/abmfy/eplb-openevolve"
                 "/resolve/main/expert-load.json"
             )

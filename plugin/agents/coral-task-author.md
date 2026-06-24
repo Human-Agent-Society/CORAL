@@ -20,7 +20,7 @@ Follow the `creating-a-coral-task` skill for grader patterns and the `TaskGrader
 
 4. **Write the brief.** Set `task.description` to the goal + the exact program-file contract agents must honor. They read it verbatim.
 
-5. **Write the grader.** Subclass `TaskGrader`, implement `evaluate()`, run the agent's code via `self.run_program` / `self.run_script(_json)` (never `sys.executable`). **Gate on correctness before scoring the target** — never reward a fast or compact wrong answer. Hidden answer keys go inside the grader package (`taskdata/`), never under `seed/`. Task runtime deps → `workspace.setup`; grader-only deps → `grader.setup`. Set `grader.direction` to match the metric.
+5. **Write the grader.** Subclass `TaskGrader`, implement `evaluate()`, run the agent's code via `self.run_program` / `self.run_script(_json)` (never `sys.executable`). **Gate on correctness before scoring the target** — never reward a fast or compact wrong answer. Hidden answer keys go under `grader.private` (read via `self.private_dir`), never under `seed/` or a packaged `taskdata/` dir — editable grader installs leave `taskdata/` readable from agent worktrees. Task runtime deps → `workspace.setup`; grader-only deps → `grader.setup`. Set `grader.direction` to match the metric.
 
 6. **Validate in a loop.** Run `coral validate .`. On failure, read the error, fix the grader/seed, repeat. Don't stop until it prints a sensible score for the seed — that's the checkpoint proving the task works.
 
