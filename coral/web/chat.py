@@ -1,20 +1,20 @@
-"""Chat routes — start a session, send messages, stream frames over SSE.
+"""Chat routes — scaffold a workspace, start a session, stream frames over SSE.
 
-P1 of the chat module (``design/chat-module.md``). Workspace path-gating
-(P2) and the ``coral start`` approval hook (P3) land later; for now the
-workspace is only checked to exist and be a directory.
+P1+P2 of the chat module (``design/chat-module.md``). Workspaces are
+path-gated via ``coral.chat.workspace.validate_local_path`` and new tasks
+scaffolded via ``coral init``. The ``coral start`` approval hook is P3.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
-from pathlib import Path
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from coral.chat.session import CLOSED_FRAME_TYPE, ChatSessionManager
+from coral.chat.workspace import LocalPathError, scaffold_task, validate_local_path
 
 _SSE_HEADERS = {
     "Cache-Control": "no-cache",
@@ -36,11 +36,30 @@ async def post_chat_session(request: Request) -> Response:
     workdir = body.get("workdir")
     if not workdir:
         return JSONResponse({"error": "workdir is required"}, status_code=400)
-    wd = Path(workdir).expanduser()
-    if not wd.is_dir():
-        return JSONResponse({"error": f"not a directory: {wd}"}, status_code=400)
+    try:
+        wd = validate_local_path(workdir)
+    except LocalPathError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
     session = _manager(request).create(workdir=wd, model=body.get("model"))
     return JSONResponse({"session_id": session.session_id, "workdir": str(wd)})
+
+
+async def post_chat_workspace(request: Request) -> Response:
+    """POST /api/chat/workspaces {parent, name} → scaffold a task via `coral init`."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    parent = body.get("parent")
+    name = body.get("name")
+    if not parent or not name:
+        return JSONResponse({"error": "parent and name are required"}, status_code=400)
+    try:
+        # scaffold_task runs `coral init` (subprocess) — keep it off the loop.
+        dest = await asyncio.get_running_loop().run_in_executor(None, scaffold_task, parent, name)
+    except LocalPathError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return JSONResponse({"workdir": str(dest)})
 
 
 async def post_chat_message(request: Request) -> Response:

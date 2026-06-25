@@ -39,6 +39,7 @@ from coral.web.chat import (
     delete_chat_session,
     post_chat_message,
     post_chat_session,
+    post_chat_workspace,
 )
 from coral.web.events import FileWatcher, sse_endpoint
 
@@ -107,6 +108,7 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
         Route("/api/runs/switch", switch_run, methods=["POST"]),
         Route("/api/events", sse_endpoint),
         # Chat module (design/chat-module.md)
+        Route("/api/chat/workspaces", post_chat_workspace, methods=["POST"]),
         Route("/api/chat/sessions", post_chat_session, methods=["POST"]),
         Route("/api/chat/{sid}/message", post_chat_message, methods=["POST"]),
         Route("/api/chat/{sid}/events", chat_events),
