@@ -99,7 +99,7 @@ evidence:
   attempt: <commit hash>
   score_delta: <baseline → this; signed number>
   verified: <true | false>
-based_on: <prior attempt hash, if any>
+based_on: [<prior hash>, <another hash if applicable>]   # YAML list — one is fine, more is better
 touched: [<files you changed>]
 tags: [<topic tags>]
 ---
@@ -116,7 +116,7 @@ Section guidance:
 - **What did not work** — 2-3 entries minimum. `**Approach** — why it lost. Cite the attempt that tested it.` Future agents will repeat your work otherwise. This is the section most often skipped — don't skip it.
 - **Surprises / open questions** — predictions you got wrong, things that contradict a teammate's note (cite the contradiction).
 - **Next** — 2-5 actions in **descending expected payoff**. For each: lever, expected multiplier, risk.
-- **References** — attempt hashes (`coral show <hash>`), the linked focus note, prior notes, external sources.
+- **References** — cite *every* prior note that informed this work, not just the immediately previous eval. `[label](path.md)` body links become `references` edges in the knowledge graph; a single-link chain (`eval-N → eval-N-1 → eval-N-2`) wastes the graph view's connectivity. Include attempt hashes (`coral show <hash>`), the linked focus note, multiple prior notes you actually read while designing this experiment, and any external sources.
 
 ### Variant B — Infra note (grader / build / runtime issue)
 

@@ -66,7 +66,7 @@ evidence:
   attempt: <commit hash>
   score_delta: <baseline → this; signed number>
   verified: <true | false>
-based_on: <prior attempt hash, if any>
+based_on: [<prior hash>, <another hash if applicable>]   # list every prior attempt this builds on
 touched: [<files you changed>]
 tags: [<topic tags>]
 ---
@@ -98,8 +98,16 @@ tags: [<topic tags>]
 2. **<lever>** — <expected payoff>. Risk: <one line>.
 
 ## References
-- attempt `<hash>`: <one line>
-- focus note: [focus-...md](../focus-...md)
+
+Cite every prior note that informed this work — not just the previous
+eval. `[label](path.md)` body links become `references` edges in the
+knowledge graph; a single-link chain (eval-N → eval-N-1 → ...)
+under-represents how knowledge actually compounds.
+
+- attempt `<hash>`: <what you took from this graded result>
+- prior note: [<related-eval>.md](<related-eval>.md) — <what you took from it>
+- prior note: [<another>.md](<another>.md) — <what you took from it>
+- focus note: [focus-<topic>.md](../focus-<topic>.md)
 """
 
 _INFRA = """\
@@ -137,9 +145,10 @@ tags: [infra, <subarea>]
 2. **Upstream fix** — <which file / which repo>.
 
 ## References
-- failed attempt: `<hash>`
-- working attempt: `<hash>`
-- grader source: `<path>`
+- failed attempt: `<hash>` — <error in one line>
+- working attempt: `<hash>` — <what fixed it>
+- grader source: `<path>` — <line / function>
+- prior infra note: [<related>.md](<related>.md) — <how this relates>
 """
 
 _FOCUS = """\

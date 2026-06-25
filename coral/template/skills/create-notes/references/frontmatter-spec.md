@@ -22,7 +22,7 @@ mapping is in the table near the end of this file.
 | `claim` | string | one testable sentence | The thing this note asserts. Not a title — a falsifiable statement. | future search / aggregation; lint enforces presence per-variant |
 | `status` | enum | `confirmed \| refuted \| untested` | Whether the claim has been verified. | knowledge-graph node color; consolidate filters |
 | `confidence` | enum | `low \| medium \| high` | How confident the team should be in this claim. Discrete on purpose — LLM-written floats aren't calibrated, and a 3-bucket vocabulary is what agents agree on across runs. | knowledge-graph node size; sort order in synthesis views |
-| `based_on` | string | attempt hash | The graded artifact this builds on. Provenance, not consumption. | knowledge-graph `based_on` edge (planned), attempt → note crosslink |
+| `based_on` | string OR list[string] | attempt hash(es) | The graded artifact(s) this builds on. Use a YAML list when this work draws on more than one prior attempt — single-prior is the common case but not the only one. | knowledge-graph `based_on` edge (planned), attempt → note crosslink |
 | `evidence` | dict | `{attempt, score_delta, verified}` | The graded artifact behind the claim. `attempt` is a hash, `score_delta` a signed number (`+328` = baseline→this), `verified: true` when the result has been replicated. | `status: confirmed` is only meaningful with `evidence.verified: true` — lint warns on the inconsistency |
 | `supersedes` | list[string] | note paths or slugs | Prior notes this one replaces. Use this instead of overwriting — the graph then carries the lineage. | knowledge-graph `supersedes` edges (typed) |
 | `refutes` | list[string] | note paths or slugs | Prior notes whose claim this one disproves. | knowledge-graph `refutes` edges (typed) |
@@ -65,6 +65,7 @@ Why no numerics: LLM-written floats (`0.7`, `0.83`) aren't calibrated — the di
 - **`confidence:` is grounded in evidence, not enthusiasm** — a focus note declaring `high` on day one without evidence is a signal you haven't actually tested anything. Default to `medium` and earn `high` with verified results.
 - **Use `supersedes:` instead of overwriting**: write a new synthesis note that points at the old one. The graph then shows the lineage; the old claim isn't silently lost.
 - **Body links count too**: a free-text note that writes `Based on [eval-12](experiments/eval-12-simd.md)` already shows up as a `references` edge in the graph. The trace schema is for typed edges (`supersedes` / `refutes`); free-text links are for everything else.
+- **Link every prior that informed the work, not just the immediately previous eval.** The default failure mode is a chain (`eval-N → eval-N-1 → eval-N-2`) — every note refers to one parent, the graph is just a line, and a reader who lands on eval-5 has no idea that eval-2's mechanism was also load-bearing. Ask: "what notes did I actually read while designing this experiment?" — list each one in the body `## References` section as a `[label](path.md)` link. For `based_on:` in the frontmatter, prefer a YAML list with every prior attempt this work draws on, even if one is dominant.
 
 ## Sentinel: `creator: unknown`
 
