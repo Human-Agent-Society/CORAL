@@ -23,7 +23,14 @@ from coral.hub.heartbeat import (
     write_agent_heartbeat,
     write_global_heartbeat,
 )
-from coral.hub.notes import get_recent_notes, list_notes, notes_by
+from coral.hub.notes import (
+    UNATTRIBUTED_CREATOR,
+    format_notes_list,
+    get_recent_notes,
+    list_notes,
+    notes_by,
+    notes_unattributed,
+)
 from coral.hub.skills import list_skills, skills_by
 from coral.types import Attempt
 
@@ -216,6 +223,44 @@ def test_notes_by_matches_in_subdirectory():
         (sub / "deep.md").write_text("---\ncreator: agent-3\n---\nbody\n")
         matched = notes_by(coral_dir, island_id="0", agent_id="agent-3")
         assert [p.name for p in matched] == ["deep.md"]
+
+
+def test_missing_creator_surfaces_sentinel():
+    """A note without a `creator:` field shows the ``unknown`` sentinel in
+    list_notes / format_notes_list / notes_unattributed — never an empty
+    string that hides the gap. The sentinel must not collide with a real
+    agent_id when notes_by is queried."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        notes = coral_dir / "islands" / "0" / "notes"
+        notes.mkdir(parents=True)
+        (notes / "with-creator.md").write_text(
+            "---\ncreator: 0-agent-1\ncreated: 2026-06-25T00:00:00Z\n---\n# Stamped\nbody\n"
+        )
+        (notes / "no-frontmatter.md").write_text("# Bare\nbody\n")
+        (notes / "blank-creator.md").write_text(
+            "---\ncreator:\ncreated: 2026-06-25T00:00:00Z\n---\n# Empty\nbody\n"
+        )
+
+        entries = {e["filename"]: e for e in list_notes(coral_dir, island_id="0")}
+        assert entries["with-creator.md"]["creator"] == "0-agent-1"
+        assert entries["no-frontmatter.md"]["creator"] == UNATTRIBUTED_CREATOR
+        assert entries["blank-creator.md"]["creator"] == UNATTRIBUTED_CREATOR
+
+        formatted = format_notes_list(list(entries.values()))
+        assert f"({UNATTRIBUTED_CREATOR})" in formatted
+        assert "(0-agent-1)" in formatted
+
+        unattributed = {p.name for p in notes_unattributed(coral_dir, island_id="0")}
+        assert unattributed == {"no-frontmatter.md", "blank-creator.md"}
+
+        # The sentinel must never match a stamped note: querying notes_by with
+        # the sentinel string returns nothing, because notes_by re-parses raw
+        # frontmatter and only matches files that actually wrote `creator:`.
+        assert notes_by(coral_dir, island_id="0", agent_id=UNATTRIBUTED_CREATOR) == []
+        assert [p.name for p in notes_by(coral_dir, island_id="0", agent_id="0-agent-1")] == [
+            "with-creator.md"
+        ]
 
 
 def test_notes_by_skips_malformed_files():

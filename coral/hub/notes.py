@@ -23,8 +23,12 @@ relate, and verify them:
     # Title of the note
     Body text with findings, numbers, conclusions...
 
-All fields are optional — a bare ``creator``/``created`` note still parses, and
-the legacy single ``notes.md`` (## headings) format is also supported.
+All fields are optional at parse time so legacy data still loads. Missing
+``creator`` is surfaced explicitly as the sentinel ``unknown`` (see
+``UNATTRIBUTED_CREATOR``) so it shows up loudly in list views instead of being
+silently filtered out of team aggregations; :func:`notes_unattributed` lists
+the offending files for audit / lint. The legacy single ``notes.md`` (##
+headings) format is also supported.
 """
 
 from __future__ import annotations
@@ -38,6 +42,14 @@ from typing import Any
 import yaml
 
 from coral.hub._island import island_root
+
+# Sentinel surfaced when a note has no parseable ``creator:`` field. Kept
+# distinct from the empty string so the absence is loud — the dashboard, the
+# `coral notes` CLI, and the consolidate roster all show ``unknown`` next to
+# such notes instead of rendering them as anonymous-but-present. The string
+# matches the convention already used by ``coral.hub.skills`` so the two
+# subsystems agree on how to spell "no author."
+UNATTRIBUTED_CREATOR = "unknown"
 
 # Structured-trace frontmatter fields surfaced (beyond creator/created) so the
 # API/UI and aggregation/verification passes can act on them.
@@ -147,7 +159,7 @@ def _parse_legacy_entries(text: str) -> list[dict[str, Any]]:
                 "date": date,
                 "title": title,
                 "body": body,
-                "creator": "",
+                "creator": UNATTRIBUTED_CREATOR,
                 "filename": "notes.md",
             }
         )
@@ -167,11 +179,12 @@ def _parse_note_file(path: Path) -> dict[str, Any]:
             title = line[2:].strip()
             break
 
+    creator_raw = str(meta.get("creator", "") or "").strip()
     entry: dict[str, Any] = {
         "date": str(meta.get("created", "") or ""),
         "title": title,
         "body": body,
-        "creator": str(meta.get("creator", "") or ""),
+        "creator": creator_raw or UNATTRIBUTED_CREATOR,
         "filename": path.name,
         "_mtime": os.path.getmtime(path),
         "_path": path,  # full path, used to compute relative path later
@@ -329,14 +342,20 @@ def get_recent_notes(
 
 
 def format_notes_list(entries: list[dict[str, Any]]) -> str:
-    """Format note entries for terminal display."""
+    """Format note entries for terminal display.
+
+    The ``creator`` field is always rendered — notes without a ``creator:``
+    frontmatter field display as ``(unknown)`` so an agent who forgot the
+    field sees the gap in `coral notes` output immediately instead of
+    discovering it later via silent exclusion from team-level views.
+    """
     if not entries:
         return "No notes yet."
     lines = []
     for i, e in enumerate(entries, 1):
         date_str = f"[{e['date']}] " if e.get("date") else ""
-        creator_str = f" ({e['creator']})" if e.get("creator") else ""
-        lines.append(f"  {i}. {date_str}{e['title']}{creator_str}")
+        creator = e.get("creator") or UNATTRIBUTED_CREATOR
+        lines.append(f"  {i}. {date_str}{e['title']} ({creator})")
     return "\n".join(lines)
 
 
@@ -376,7 +395,9 @@ def notes_by(
 
     Notes without a `creator:` field (e.g. legacy notes, the bundled
     notes.md) are excluded — they cannot be safely attributed and should
-    stay on the source island when their author migrates.
+    stay on the source island when their author migrates. Use
+    :func:`notes_unattributed` to surface them explicitly for audit /
+    lint passes.
     """
     notes_dir = _notes_dir(coral_dir, island_id)
     matched: list[Path] = []
@@ -391,6 +412,34 @@ def notes_by(
         if meta.get("creator") == agent_id:
             matched.append(md_file)
     return matched
+
+
+def notes_unattributed(
+    coral_dir: str | Path,
+    island_id: str | int | None,
+) -> list[Path]:
+    """Return absolute paths of user-authored notes missing a ``creator:`` field.
+
+    A note that lands here is invisible to every team-level process that
+    filters by author (``notes_by``, the consolidate roster, the librarian
+    subagent, migration attribution). The list view still shows the file —
+    tagged ``(unknown)`` via :func:`format_notes_list` — so the gap can be
+    fixed by appending a ``creator:`` line to the file's frontmatter.
+    """
+    notes_dir = _notes_dir(coral_dir, island_id)
+    missing: list[Path] = []
+    for md_file in sorted(notes_dir.rglob("*.md")):
+        if not _is_user_note(md_file):
+            continue
+        try:
+            text = md_file.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        meta, _ = _parse_frontmatter(text)
+        creator = str(meta.get("creator", "") or "").strip()
+        if not creator:
+            missing.append(md_file)
+    return missing
 
 
 # --------------------------------------------------------------------------- #
@@ -470,7 +519,7 @@ def notes_graph(
                 "type": e.get("type") or e.get("category") or "note",
                 "status": e.get("status"),
                 "confidence": e.get("confidence"),
-                "creator": e.get("creator", ""),
+                "creator": e.get("creator") or UNATTRIBUTED_CREATOR,
                 "island_id": e.get("island_id"),
                 "date": e.get("date", ""),
                 "based_on": e.get("based_on"),
