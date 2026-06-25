@@ -1,6 +1,6 @@
 ---
 name: create-notes
-description: "Write a note to {shared_dir}/notes/ that future agents can actually act on. Use after every coral eval, when a heartbeat (reflect / consolidate / pivot) asks for a note, or when you discover a grader / build / runtime issue that future agents will hit. Covers 4 note variants (experiment / infra / focus / synthesis), required frontmatter with the team-level `creator:` filter, the self-audit checklist (backfilled predictions, abandoned paths, sourced magic numbers, cross-links), and the shell-escaping gotchas that silently strip markdown content. Trigger this skill whenever you are about to Write a file under notes/ — even if the prompt didn't say 'write a note'."
+description: "Write a note to {shared_dir}/notes/ that future agents can actually act on. Use after every coral eval, when a heartbeat (reflect / consolidate / pivot) asks for a note, or when you discover a grader / build / runtime issue that future agents will hit. Covers 4 note variants (experiment / infra / focus / synthesis), required frontmatter with the team-level `creator:` filter, the optional structured-trace schema (`type` / `claim` / `status` / `confidence` / `based_on` / `evidence` / `supersedes` / `refutes` / `touched`) that populates the dashboard knowledge graph, the self-audit checklist (backfilled predictions, abandoned paths, sourced magic numbers, cross-links), and the shell-escaping gotchas that silently strip markdown content. Trigger this skill whenever you are about to Write a file under notes/ — even if the prompt didn't say 'write a note'."
 ---
 
 # Create Notes
@@ -60,6 +60,17 @@ This is the default for per-eval reflection. Use for any note describing what yo
 creator: <your agent_id, from .coral_agent_id>
 created: <ISO-8601 timestamp>
 commit: <the coral eval commit hash this note describes, or "n/a">
+type: experiment
+claim: "<one testable sentence — e.g. 'u8 SIMD widening doubles QPS at recall ≥ 0.97'>"
+status: confirmed       # confirmed | refuted | untested
+confidence: 0.8         # 0.0 - 1.0
+evidence:
+  attempt: <commit hash>
+  score_delta: +328     # baseline → this attempt
+  verified: true
+based_on: <prior attempt hash, if any>
+touched: [<files you changed>]
+tags: [<topic tags>]
 ---
 
 # <Verbed noun phrase>: <one-line top-line result>
@@ -126,6 +137,11 @@ Same shape as an experiment note but framed for diagnosis + workaround. Use the 
 creator: <agent_id>
 created: <ISO-8601>
 commit: n/a
+type: experiment
+claim: "<the workaround — e.g. 'touch the bench binary before every eval clears the mtime drift'>"
+status: confirmed       # or: untested if you haven't proven the workaround yet
+touched: [<files/paths an agent needs to know about>]
+tags: [infra, <subarea>]
 ---
 
 # <Infra area>: <one-line symptom>
@@ -169,6 +185,11 @@ This is the contract you make with the team when you change direction. It is a p
 creator: <agent_id>
 created: <ISO-8601>
 generation: 1  # bump when direction meaningfully shifts
+type: hypothesis
+claim: "<your bet — e.g. 'u8 SIMD widening will close the bandwidth-bound gap'>"
+status: untested
+confidence: 0.6     # your prior before any evidence; revisit on abandon-if
+tags: [<lane tags>]
 ---
 
 # Focus: <short topic>
@@ -210,6 +231,12 @@ Three different output shapes, all under the consolidate trigger. Pick the one t
 ---
 creator: <agent_id>
 created: <ISO-8601>
+type: synthesis
+claim: "<one-sentence team belief, conditions included>"
+status: confirmed       # team consensus from evidence; downgrade if counter-evidence is strong
+confidence: 0.8         # weighted by evidence strength
+supersedes: [<prior synthesis path, if any>]
+tags: [<topic>]
 ---
 
 # <Topic>: <one-line conclusion>
@@ -300,12 +327,62 @@ Add these when applicable:
 
 A note that does not name its author becomes invisible to the team's coordination layer. That is the highest-cost mistake you can make when writing a note — higher than any missing section.
 
+The hub now surfaces the gap loudly instead of silently filtering: a `creator:`-less note shows as `(unknown)` in `coral notes`, lands in `notes_unattributed()` for audit / lint, and renders with `creator: unknown` in the knowledge-graph node. If you see your own note tagged `(unknown)`, edit the file and add a `creator:` line — the team-level views still won't pick it up until you do.
+
+## Structured trace (expected for every new note)
+
+Beyond `creator:` and `created:`, frontmatter carries a *structured-trace* schema that the dashboard's **Knowledge → Graph** view consumes (served from `GET /api/notes/graph`). Nodes are sized by `confidence`, colored by `status`, and typed edges come from `supersedes:` / `refutes:` plus any markdown (`[label](path.md)`) and wiki (`[[note-name]]`) links in the body. The framework uses these fields to filter, relate, and verify notes — a free-text note without them is a dot floating in the graph, invisible to every team-level process that filters by claim / status / confidence.
+
+Treat the applicable fields **per variant** as required when writing a new note (see the per-variant template defaults below). The parser leaves every field optional only so legacy notes from earlier runs still load — that's a backward-compat concession for old data, not a license to skip them when you write something new.
+
+```yaml
+---
+creator: 0-agent-1
+created: 2026-06-25T14:32:00Z
+type: experiment           # experiment | hypothesis | dead_end | open_question | synthesis
+claim: "u8 SIMD widening doubles QPS at recall ≥ 0.97"
+status: confirmed          # confirmed | refuted | untested
+confidence: 0.8            # 0.0 - 1.0
+based_on: a3f9c2           # attempt hash this builds on (provenance)
+evidence:
+  attempt: 7b1e4d          # the graded artifact behind the claim
+  score_delta: +328        # 923 → 1251
+  verified: true
+supersedes: [_synthesis/u8-storage-v1.md]   # paths or note slugs you replace
+refutes:    [experiments/eval-09-f64.md]    # paths or note slugs you disprove
+touched:    [src/ivf.rs, src/simd.rs]
+tags:       [simd, u8, ivf]
+next:
+  - "Rayon-parallelize the 64-probe scan"
+  - "Tune nlist downward once recall headroom appears"
+---
+```
+
+How each variant maps (bold = required for that variant; the rest are add-when-applicable):
+
+| Variant | `type:` | Required trace fields | Add when applicable |
+|---|---|---|---|
+| A — experiment | `experiment` | **`claim`**, **`status`**, **`confidence`**, **`evidence`** (`attempt` + `verified`) | `based_on`, `touched`, `next`, `tags` |
+| B — infra (diagnostic) | `experiment` | **`claim`** (the workaround/fix), **`status`**, **`touched`** | `next`, `tags` |
+| C — focus | `hypothesis` | **`claim`** (your bet), **`status: untested`**, **`confidence`** (your prior) | `based_on`, `tags` |
+| D.1 — synthesis | `synthesis` | **`claim`**, **`status`**, **`confidence`** | `supersedes` (prior synthesis you replace), `refutes`, `tags` |
+| D.3 — if promoted to a standalone file | `open_question` | **`claim`** (the question) | `based_on`, `tags` |
+| Dead end you want flagged for the team | `dead_end` | **`claim`** (what doesn't work), **`refutes`** (the note that proposed it) | `evidence`, `tags` |
+
+Rules of thumb:
+- **`claim:` is one testable sentence**, not a title — "matmul tile=32 improves score" beats "matmul experiments."
+- **`status:` follows the evidence**: `confirmed` only with `evidence.verified: true`; downgrade to `untested` if the grader hasn't seen it.
+- **`confidence:` is a number, not a vibe** — under 0.5 means "I'd bet against this." A focus note declaring `confidence: 0.9` on day one is a signal you haven't actually tested anything.
+- **Use `supersedes:` instead of overwriting**: write a new synthesis note that points at the old one. The graph then shows the lineage; the old claim isn't silently lost.
+- **Body links count too**: a free-text note that writes `Based on [eval-12](experiments/eval-12-simd.md)` already shows up as a `references` edge in the graph. You don't need the trace schema to contribute — but you get richer typed edges with it.
+
 ## Self-Audit Checklist (run before saving)
 
 Open the draft and verify each item. If any answer is "no" or "I don't know," fix the note before writing it. This is the step that distinguishes a useful note from a wall of headings.
 
 **For all variants:**
 - [ ] **Frontmatter is complete.** `creator:` is your agent_id, `created:` is ISO-8601.
+- [ ] **Structured trace where it costs nothing.** If your note has a claim, set `type:`, `claim:`, `status:`, and (when you have a graded artifact) `evidence.attempt` + `evidence.verified`. A `confirmed` status without an `evidence` field is a red flag in the graph view.
 - [ ] **Index updated.** A new one-line entry in `notes/index.md` under the right section.
 - [ ] **Filepath uses kebab-case**, lowercase, no agent id (except for per-agent artifacts).
 
@@ -320,8 +397,9 @@ Open the draft and verify each item. If any answer is "no" or "I don't know," fi
 
 **For synthesis (Variant D.1) notes:**
 - [ ] **At least 3 attempt hashes are cited as evidence.**
-- [ ] **A confidence level + conditions are stated.**
+- [ ] **A confidence level + conditions are stated.** Mirror it in the frontmatter `confidence:` (0.0-1.0) so the graph view sizes the node correctly.
 - [ ] **Counter-evidence is named**, even if "no counter-evidence found yet."
+- [ ] **If this replaces a prior synthesis, `supersedes:` points at it.** Don't silently overwrite — write a new file and let the graph carry the lineage.
 
 **For focus (Variant C) notes:**
 - [ ] **Abandon-if gate is concrete and testable** (specific score / recall / failure mode, not a vibe).
