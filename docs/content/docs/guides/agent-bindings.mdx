@@ -56,6 +56,25 @@ agents:
       model_reasoning_effort: high
 ```
 
+On WSL, `coral setup` treats a Windows `/mnt/c/.../codex` shim as missing for
+the default Codex runtime and prefers the native Linux binary at
+`~/.local/bin/codex`. Install it with:
+
+```bash
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+codex login
+codex login status
+sudo apt install bubblewrap
+```
+
+If your Codex binary lives somewhere else, record it explicitly:
+
+```bash
+coral setup agent --name codex-high --runtime codex \
+  --command /absolute/path/to/codex \
+  --option model_reasoning_effort=high
+```
+
 ## Creating a binding
 
 The fastest path is `coral setup` with no subcommand — it scans `PATH` for

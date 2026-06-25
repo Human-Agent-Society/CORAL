@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -24,6 +25,12 @@ from pathlib import Path
 from typing import Any
 
 from coral.config import GraderConfig
+from coral.sandbox.bwrap import (
+    SubmittedCodeSandboxSpec,
+    build_submitted_code_bwrap_command,
+    resolve_submitted_code_sandbox,
+    sanitize_submitted_code_env,
+)
 from coral.types import BUDGET_CLASS_TUNE, Score, ScoreBundle, Task, get_budget_class
 
 DEFAULT_TUNE_DESCRIPTION = (
@@ -169,12 +176,13 @@ class TaskGrader(ABC):
         filepath = Path(self.codebase_path) / filename
         if not filepath.exists():
             raise FileNotFoundError(f"{filename} not found in codebase")
-        return subprocess.run(
-            [*self.get_python_command(), str(filepath), *cmd_args],
-            capture_output=True,
-            text=True,
-            cwd=self.codebase_path,
+        sandbox_spec = self._submitted_code_sandbox_spec()
+        python_cmd = self._submitted_python_command(sandboxed=sandbox_spec is not None)
+        return self._run_submitted_command(
+            [*python_cmd, str(filepath), *cmd_args],
             timeout=self.timeout,
+            sandbox_spec=sandbox_spec,
+            legacy_cwd=self.codebase_path,
         )
 
     def run_script(
@@ -184,11 +192,12 @@ class TaskGrader(ABC):
         timeout: int = 300,
     ) -> subprocess.CompletedProcess[str]:
         """Run an inline Python script using the correct interpreter."""
-        return subprocess.run(
-            [*self.get_python_command(), "-c", script],
-            capture_output=True,
-            text=True,
+        sandbox_spec = self._submitted_code_sandbox_spec()
+        python_cmd = self._submitted_python_command(sandboxed=sandbox_spec is not None)
+        return self._run_submitted_command(
+            [*python_cmd, "-c", script],
             timeout=timeout,
+            sandbox_spec=sandbox_spec,
         )
 
     def run_script_json(
@@ -229,6 +238,41 @@ class TaskGrader(ABC):
             f"stdout (last 500): {stdout[-500:]}\n"
             f"stderr (last 500): {result.stderr.strip()[-500:]}"
         )
+
+    def _submitted_code_sandbox_spec(self) -> SubmittedCodeSandboxSpec | None:
+        return resolve_submitted_code_sandbox(
+            self.config,
+            codebase_path=self.codebase_path,
+            private_dir=self.private_dir,
+            eval_logs_dir=self.eval_logs_dir,
+        )
+
+    def _submitted_python_command(self, *, sandboxed: bool) -> list[str]:
+        command = self.get_python_command()
+        if sandboxed and command == [sys.executable]:
+            return ["python3"]
+        return command
+
+    def _run_submitted_command(
+        self,
+        cmd: list[str],
+        *,
+        timeout: int | None,
+        sandbox_spec: SubmittedCodeSandboxSpec | None,
+        legacy_cwd: str | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        kwargs: dict[str, Any] = {
+            "capture_output": True,
+            "text": True,
+            "timeout": timeout,
+        }
+        if sandbox_spec is None:
+            if legacy_cwd is not None:
+                kwargs["cwd"] = legacy_cwd
+        else:
+            cmd = build_submitted_code_bwrap_command(cmd, sandbox_spec)
+            kwargs["env"] = sanitize_submitted_code_env(dict(os.environ))
+        return subprocess.run(cmd, **kwargs)
 
     def score(
         self,

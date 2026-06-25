@@ -7,10 +7,13 @@ import logging
 import os
 import signal
 import subprocess
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO, Any, Protocol, runtime_checkable
+
+from coral.sandbox.bwrap import AgentSandboxSpec, build_agent_bwrap_command, sanitize_agent_env
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +39,7 @@ class AgentRuntime(Protocol):
         gateway_url: str | None = None,
         gateway_api_key: str | None = None,
         run_as_user: dict[str, Any] | None = None,
+        sandbox_spec: AgentSandboxSpec | None = None,
     ) -> AgentHandle: ...
 
     def extract_session_id(self, log_path: Path) -> str | None: ...
@@ -72,6 +76,23 @@ def apply_run_as_user(env: dict[str, str], run_as_user: dict[str, Any] | None) -
         env["HOME"] = home
         env["USER"] = env["LOGNAME"] = run_as_user.get("name", "agent")
     return {"user": run_as_user["uid"], "group": run_as_user["gid"]}
+
+
+def apply_agent_sandbox(
+    cmd: list[str],
+    env: dict[str, str],
+    sandbox_spec: AgentSandboxSpec | None,
+    *,
+    extra_allowed_env_keys: Iterable[str] = (),
+) -> list[str]:
+    """Wrap a runtime command in bwrap and strip host env when requested."""
+
+    if sandbox_spec is None:
+        return cmd
+    filtered = sanitize_agent_env(env, extra_allowed_keys=extra_allowed_env_keys)
+    env.clear()
+    env.update(filtered)
+    return build_agent_bwrap_command(cmd, sandbox_spec)
 
 
 @dataclass

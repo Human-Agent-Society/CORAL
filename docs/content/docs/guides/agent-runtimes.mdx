@@ -1,6 +1,6 @@
 ---
 title: Agent Runtimes
-description: Configure OpenCode, Cursor Agent, and Kiro as CORAL agent runtimes.
+description: Configure Codex, OpenCode, Cursor Agent, and Kiro as CORAL agent runtimes.
 ---
 
 
@@ -13,6 +13,43 @@ CORAL works with any coding agent that can run as a subprocess. Pick the runtime
 | OpenCode        | `opencode`                     | `opencode.json` in seed   |
 | Cursor Agent    | `cursor` (alias: `cursor_agent`) | `cursor-agent login` once |
 | Kiro            | `kiro`                         | `kiro-cli` setup          |
+
+## Codex
+
+Install and authenticate the Codex CLI in the same Linux/WSL environment where
+you run `coral`:
+
+```bash
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+codex login
+codex login status
+```
+
+On Windows, install Codex inside WSL even if the Windows Codex app or npm shim
+already exists. CORAL's local/tmux private-safe mode uses `bwrap`, and a
+`/mnt/c/.../codex` shim is not a reliable executable inside that sandbox. If
+you need to pin the command explicitly, put it in a binding or `task.yaml`:
+
+```bash
+coral setup agent --name codex-high --runtime codex \
+  --command /home/<you>/.local/bin/codex \
+  --option model_reasoning_effort=high
+coral agents doctor codex-high
+```
+
+```yaml
+agents:
+  runtime: codex
+  runtime_options:
+    command: /home/<you>/.local/bin/codex
+    model_reasoning_effort: high
+```
+
+For local/tmux private-safe runs on Linux/WSL, also install the sandbox backend:
+
+```bash
+sudo apt install bubblewrap
+```
 
 ## OpenCode
 

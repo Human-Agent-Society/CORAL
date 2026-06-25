@@ -103,7 +103,7 @@ def test_cmd_start_forces_isolation_despite_override(monkeypatch, tmp_path):
     base.run.session = "local"  # inner-process mode; skip the docker/tmux dispatch
     monkeypatch.setattr(start_mod.CoralConfig, "from_yaml", classmethod(lambda cls, path: base))
     monkeypatch.setattr(start_mod, "in_tmux", lambda: False)
-    monkeypatch.setattr("coral.cli.validation.validate_task", lambda task_dir: [])
+    monkeypatch.setattr("coral.cli.validation.validate_task", lambda task_dir, **kwargs: [])
 
     captured = {}
 

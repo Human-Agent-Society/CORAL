@@ -10,14 +10,22 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from coral.agent.cli_resolver import resolve_runtime_cli
 from coral.agent.exit_classifier import classify_by_uptime
 from coral.agent.process import open_agent_stderr_for_log_dir
-from coral.agent.runtime import AgentHandle, apply_run_as_user, write_coral_log_entry
+from coral.agent.runtime import (
+    AgentHandle,
+    apply_agent_sandbox,
+    apply_run_as_user,
+    write_coral_log_entry,
+)
+from coral.sandbox.bwrap import AgentSandboxSpec
 from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)
 
 _CODEX_RUNTIME_OPTION_KEYS = {
+    "command",
     "model_reasoning_effort",
     "fast_mode",
     "personality",
@@ -95,6 +103,7 @@ class CodexRuntime:
         gateway_url: str | None = None,
         gateway_api_key: str | None = None,
         run_as_user: dict[str, Any] | None = None,
+        sandbox_spec: AgentSandboxSpec | None = None,
     ) -> AgentHandle:
         """Start a Codex agent in the given worktree.
 
@@ -118,12 +127,13 @@ class CodexRuntime:
             else:
                 prompt = "Begin working on your task and iterating on the seed solution. There is no user in the loop — make decisions, run evals, accumulate knowledge, and iterate without waiting for input."
 
+        binary = _codex_binary(runtime_options)
         option_args = _build_codex_runtime_option_args(runtime_options)
 
         if resume_session_id:
             # codex exec resume <session_id> "follow-up prompt"
             cmd = [
-                "codex",
+                binary,
                 "exec",
                 "resume",
                 resume_session_id,
@@ -137,7 +147,7 @@ class CodexRuntime:
         else:
             # codex exec "prompt"
             cmd = [
-                "codex",
+                binary,
                 "exec",
                 prompt,
                 "--dangerously-bypass-approvals-and-sandbox",
@@ -171,6 +181,12 @@ class CodexRuntime:
         # (no-op when run_as_user is None). Adjusts HOME so codex finds its creds
         # in the agent's home; returns Popen user=/group= kwargs.
         user_kwargs = apply_run_as_user(agent_env, run_as_user)
+        cmd = apply_agent_sandbox(
+            cmd,
+            agent_env,
+            sandbox_spec,
+            extra_allowed_env_keys={"OPENAI_API_KEY", "OPENAI_BASE_URL"},
+        )
 
         log_file = open(log_path, "w", buffering=1)
 
@@ -265,6 +281,13 @@ def _toml_literal(value: Any) -> str:
     return json.dumps(str(value))
 
 
+def _codex_binary(runtime_options: dict[str, Any] | None) -> str:
+    opts = runtime_options or {}
+    if opts.get("command"):
+        return str(opts["command"])
+    return resolve_runtime_cli("codex", "codex") or "codex"
+
+
 def _build_codex_runtime_option_args(runtime_options: dict[str, Any] | None) -> list[str]:
     """Translate runtime options into `codex exec -c key=value` arguments."""
     if not runtime_options:
@@ -272,6 +295,8 @@ def _build_codex_runtime_option_args(runtime_options: dict[str, Any] | None) -> 
 
     args: list[str] = []
     for key in sorted(runtime_options):
+        if key == "command":
+            continue
         if key not in _CODEX_RUNTIME_OPTION_KEYS:
             logger.warning(f"Ignoring unsupported Codex runtime option: {key}")
             continue

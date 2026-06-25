@@ -39,6 +39,10 @@ curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/inst
 
 Installs the **latest `coral` release** globally via `uv tool install`. Pin a specific release with `CORAL_VERSION=<tag>` if you need to. See [Installation docs](https://docs.coralxyz.com/getting-started/installation) for manual install, dev setup, and prerequisites.
 
+For WSL + Codex local runs, also install the native Codex CLI inside WSL
+(`curl -fsSL https://chatgpt.com/codex/install.sh | sh`, then `codex login`)
+and `bubblewrap` (`sudo apt install bubblewrap`) before `coral setup`.
+
 ```bash
 coral init my-task                       # scaffold a task
 cd my-task && coral start -c task.yaml   # launch agents

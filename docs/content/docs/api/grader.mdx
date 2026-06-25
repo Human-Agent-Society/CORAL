@@ -84,9 +84,15 @@ class Grader(TaskGrader):
 |--------|-------------|
 | `evaluate()` | Abstract — implement this. Return `float` or `ScoreBundle` |
 | `run_program(filename, *args, timeout=300)` | Run a file from the agent's codebase |
+| `run_script(script, timeout=300)` | Run inline Python against the agent's codebase |
 | `score(value, explanation)` | Return a single-score bundle |
 | `fail(explanation)` | Return a failed evaluation (null score) |
 | `bundle(value, explanation)` | Create a ScoreBundle directly |
+
+Use `run_program()` / `run_script()` for untrusted submitted code instead of
+direct `subprocess.run`. When `bubblewrap` is available, these helpers run the
+child process in a reduced `/workspace` view; when `grader.private` is set, the
+helpers fail closed if no submitted-code sandbox is available.
 
 ### Attributes
 
@@ -114,6 +120,7 @@ Configured under `grader:` in `task.yaml`.
 | `args` | `dict` | `{}` | Free-form kwargs accessible inside the grader as `self.args`. |
 | `private` | `list[str]` | `[]` | Extra files / directories copied to `.coral/private/` (hidden from agents). |
 | `direction` | `str` | `"maximize"` | `"maximize"` or `"minimize"` — which direction makes a score better. |
+| `sandbox` | `dict` | `auto` | Submitted-code helper subprocess sandbox policy (`mode`, `backend`, `profile`). |
 
 The legacy `grader.type` and `grader.module` fields have been removed. See
 the [migration section](/docs/guides/custom-grader#migrating-from-gradertype--gradermodule)

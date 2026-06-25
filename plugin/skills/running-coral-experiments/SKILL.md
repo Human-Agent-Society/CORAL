@@ -20,6 +20,14 @@ coral start -c task.yaml run.session=local                # foreground, no tmux
 
 - **Dotlist overrides** (`key.subkey=value`) beat `task.yaml` for this run only — the clean way to sweep count/model without editing the file.
 - `run.session`: `tmux` (default, detachable) · `local` (foreground) · `docker`.
+- `run.sandbox`: `auto` by default. On Linux/WSL, CORAL uses `bwrap` for
+  full-access local/tmux agent processes when it is available. If a task sets
+  `grader.private`, CORAL fails closed without a sandbox; install `bubblewrap`
+  or use `run.session=docker`. `run.sandbox.mode=off` is only for non-private
+  compatibility runs.
+- Codex on Windows must be installed inside WSL (`curl -fsSL
+  https://chatgpt.com/codex/install.sh | sh`, then `codex login`). A Windows
+  `/mnt/c/.../codex` shim is not enough for bwrap-backed local/tmux runs.
 - Each run lands in `results/<task-slug>/<timestamp>/`; agents work in isolated git worktrees and the grader daemon scores their commits.
 
 ## 2. Monitor

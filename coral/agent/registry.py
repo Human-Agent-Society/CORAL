@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib
-import shutil
 
 from coral.agent.builtin.claude_code import ClaudeCodeRuntime
 from coral.agent.builtin.codex import CodexRuntime
@@ -11,6 +10,7 @@ from coral.agent.builtin.cursor_agent import CursorAgentRuntime
 from coral.agent.builtin.kiro import KiroRuntime
 from coral.agent.builtin.opencode import OpenCodeRuntime
 from coral.agent.builtin.pi_agent import PiAgentRuntime
+from coral.agent.cli_resolver import resolve_runtime_cli
 from coral.agent.runtime import AgentRuntime
 
 _RUNTIMES: dict[str, type] = {
@@ -177,7 +177,7 @@ def detect_available_runtimes() -> list[dict]:
             {
                 "runtime": name,
                 "command": cmd or "",
-                "resolved": shutil.which(cmd) if cmd else None,
+                "resolved": resolve_runtime_cli(name, cmd) if cmd else None,
                 "model": _DEFAULT_MODELS.get(name),
             }
         )

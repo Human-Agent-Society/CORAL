@@ -3,6 +3,7 @@ FROM python:3.12-slim
 # System deps: git, Node.js (for opencode npm package)
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
+        bubblewrap \
         curl \
         ca-certificates \
         gnupg \

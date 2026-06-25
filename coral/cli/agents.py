@@ -8,7 +8,6 @@ for how they expand into concrete runtime/model fields at load time.
 from __future__ import annotations
 
 import argparse
-import shutil
 import subprocess
 import sys
 import time
@@ -16,6 +15,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from coral.agent.cli_resolver import resolve_runtime_cli
 from coral.agent.registry import (
     default_command_for_runtime,
     default_model_for_runtime,
@@ -24,6 +24,15 @@ from coral.agent.registry import (
     known_runtimes,
 )
 from coral.user_agents import AgentBinding, load_store, save_store
+
+_CODEX_INSTALL_HINT = (
+    "Codex on Linux/WSL:\n"
+    "  curl -fsSL https://chatgpt.com/codex/install.sh | sh\n"
+    "  codex login\n"
+    "  codex login status\n"
+)
+
+_BWRAP_INSTALL_HINT = "Local private-safe sandbox on Ubuntu/WSL:\n  sudo apt install bubblewrap\n"
 
 
 def _store_path(args: argparse.Namespace) -> Path | None:
@@ -124,6 +133,9 @@ def _setup_detect(args: argparse.Namespace) -> None:
             "Install one of the supported runtimes "
             "(claude, codex, cursor-agent, opencode, kiro-cli, pi) and re-run."
         )
+        print()
+        print(_CODEX_INSTALL_HINT, end="")
+        print(_BWRAP_INSTALL_HINT, end="")
         print(
             "For a custom runtime, use: "
             "coral setup agent --runtime 'module.path:ClassName' --name <NAME>"
@@ -567,11 +579,7 @@ def _validate_binding(
     command = binding.command or default_command_for_runtime(binding.runtime) or ""
     resolved = None
     if command:
-        cand = Path(command).expanduser()
-        if cand.is_absolute() or "/" in command:
-            resolved = str(cand) if cand.exists() else None
-        else:
-            resolved = shutil.which(command)
+        resolved = resolve_runtime_cli(binding.runtime, command)
     cli_ok = resolved is not None
     rows.append(
         (
@@ -702,4 +710,13 @@ def _print_doctor(binding: AgentBinding, rows: list[tuple[str, bool, str]]) -> b
             f"  note: if authentication is the issue, run the runtime-native "
             f"login flow (e.g. `{cmd} login`)."
         )
+        hint = _runtime_repair_hint(binding.runtime)
+        if hint:
+            print(hint, end="" if hint.endswith("\n") else "\n")
     return all_ok
+
+
+def _runtime_repair_hint(runtime: str) -> str:
+    if runtime == "codex":
+        return _CODEX_INSTALL_HINT
+    return ""

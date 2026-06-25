@@ -83,6 +83,21 @@ codex plugin add coral@coral-marketplace
 
 The plugin's `.codex-plugin/plugin.json` wires the shared `skills/` and `hooks/hooks-codex.json` (SessionStart install check). Invoke skills with `$coral-quickstart` (etc.) or let Codex match by description.
 
+For Windows users, install and run the Codex CLI inside WSL for CORAL runs:
+
+```bash
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+codex login
+codex login status
+sudo apt install bubblewrap
+coral setup
+coral agents doctor
+```
+
+A Windows `/mnt/c/.../codex` shim is not enough for bwrap-backed local/tmux
+runs; use the native WSL binary or bind its absolute path with
+`coral setup agent --runtime codex --command /home/<you>/.local/bin/codex`.
+
 **Lighter alternative (no marketplace):** Codex also discovers skills from filesystem dirs and follows symlinks, so you can point a skills dir straight at the repo:
 
 ```bash

@@ -14,7 +14,13 @@ from typing import Any
 
 from coral.agent.exit_classifier import classify_by_uptime
 from coral.agent.process import open_agent_stderr_for_log_dir
-from coral.agent.runtime import AgentHandle, apply_run_as_user, write_coral_log_entry
+from coral.agent.runtime import (
+    AgentHandle,
+    apply_agent_sandbox,
+    apply_run_as_user,
+    write_coral_log_entry,
+)
+from coral.sandbox.bwrap import AgentSandboxSpec
 from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)
@@ -114,6 +120,7 @@ class PiAgentRuntime:
         gateway_url: str | None = None,
         gateway_api_key: str | None = None,
         run_as_user: dict[str, Any] | None = None,
+        sandbox_spec: AgentSandboxSpec | None = None,
     ) -> AgentHandle:
         """Start a Pi agent in the given worktree."""
         agent_id_file = worktree_path / ".coral_agent_id"
@@ -179,6 +186,12 @@ class PiAgentRuntime:
         # user (no-op when run_as_user is None). Sets HOME so the CLI finds
         # its creds in the agent's home; returns Popen user=/group= kwargs.
         user_kwargs = apply_run_as_user(agent_env, run_as_user)
+        cmd = apply_agent_sandbox(
+            cmd,
+            agent_env,
+            sandbox_spec,
+            extra_allowed_env_keys={"OPENAI_API_KEY", "OPENAI_BASE_URL"},
+        )
 
         log_file = open(log_path, "w", buffering=1)
 

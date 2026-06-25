@@ -15,6 +15,21 @@ Tasks then reference a binding by name (`agents.binding: claude-opus`) instead o
 
 > Bindings store **no credentials.** Authentication stays with each runtime's native login (`claude`, `codex`, `cursor-agent login`, `kiro-cli` setup). `coral setup` only records runtime/command/model metadata. If a run fails to auth, fix it via the runtime's own login, not coral.
 
+On Windows with Codex Desktop, do this setup inside WSL: install/authenticate
+the runtime CLI there and install `bubblewrap`. A Windows Codex app or npm shim
+under `/mnt/c/...` is not the native WSL CLI CORAL needs for bwrap:
+
+```bash
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+codex login
+codex login status
+sudo apt install bubblewrap
+```
+
+CORAL's local/tmux sandbox uses WSL `bwrap` by default for full-access
+runtimes; Docker is still available with `run.session=docker` when you want the
+container path.
+
 ## 1. Detect + create bindings (the fast path)
 
 ```bash
@@ -51,7 +66,7 @@ coral agents doctor claude-opus   # validate one
 - `--no-live` — skip the hello-ping (CI / quick sanity check; costs one LLM round-trip per binding otherwise).
 - `--timeout SECS` — per-ping wait (default 30s).
 
-When the ping fails, `doctor` points you at the runtime's login flow rather than asking for credentials.
+When the ping fails, `doctor` points you at the runtime's login flow rather than asking for credentials. `doctor` validates runtime auth; private-safe sandbox availability is checked by `coral validate` / `coral start` because it depends on the task's `grader.private` and run mode.
 
 ```bash
 coral agents remove                       # interactive numbered wizard
@@ -77,7 +92,7 @@ Bindings store **no credentials** — each runtime owns its own login. The hello
 | Runtime | `--runtime` | Log in with |
 |---|---|---|
 | Claude Code | `claude_code` | `claude` (interactive login) |
-| Codex | `codex` | `codex` login flow |
+| Codex | `codex` | `codex login` (`codex login status` to verify) |
 | Cursor Agent | `cursor_agent` | `cursor-agent login` |
 | Kiro | `kiro` | `kiro-cli` setup |
 | OpenCode | `opencode` | `opencode` auth |

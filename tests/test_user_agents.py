@@ -387,12 +387,12 @@ def test_doctor_live_ping_nonzero_exit(bindings_file, monkeypatch, capsys):
 
 
 def test_doctor_live_ping_unsupported_runtime(bindings_file, monkeypatch, capsys):
-    """kiro has no documented non-interactive mode → ping reports
+    """kiro has no documented non-interactive mode ↁEping reports
     'not implemented' rather than spawning the CLI."""
     from coral.cli.agents import cmd_agents
 
     _seed_real_path_binding("ki", runtime="kiro")
-    # Any subprocess.run beyond --version would be wrong — verify it's NOT called
+    # Any subprocess.run beyond --version would be wrong  Everify it's NOT called
     # for ping. We do this by making the fake intentionally fail any non-version
     # call and asserting the doctor row says 'not implemented' instead.
     sentinel_called = {"ping": False}
@@ -424,7 +424,7 @@ def test_doctor_live_ping_unsupported_runtime(bindings_file, monkeypatch, capsys
 
 def test_setup_agent_auto_doctor_does_not_ping(bindings_file, monkeypatch, capsys):
     """The auto-doctor pass at the end of `coral setup agent` is metadata-only
-    by design — it must NOT trigger an LLM round-trip."""
+    by design  Eit must NOT trigger an LLM round-trip."""
     from coral.cli.agents import cmd_setup
 
     called = {"ping": False}
@@ -482,9 +482,41 @@ def test_cli_doctor_reports_missing_cli(bindings_file, capsys):
     assert "CLI found" in out
 
 
+def test_cli_doctor_missing_codex_reports_native_install_hint(
+    bindings_file, tmp_path, monkeypatch, capsys
+):
+    from coral.cli.agents import cmd_agents, cmd_setup
+
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", lambda cmd: None)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    cmd_setup(
+        _ns(
+            setup_command="agent",
+            name="codex-high",
+            runtime="codex",
+            command_path="codex",
+            model="gpt-5.4",
+            role_file=None,
+            option=[],
+            default=False,
+            non_interactive=True,
+            config=None,
+        )
+    )
+    capsys.readouterr()
+
+    with pytest.raises(SystemExit) as exc:
+        cmd_agents(_ns(agents_command="doctor", name="codex-high", config=None))
+
+    assert exc.value.code == 1
+    out = capsys.readouterr().out
+    assert "https://chatgpt.com/codex/install.sh" in out
+    assert "codex login" in out
+
+
 def test_config_without_bindings_does_not_touch_file(monkeypatch, tmp_path):
     # Even if a (broken) file exists, configs that don't reference a binding
-    # must load fine — the file is only read when a binding is referenced.
+    # must load fine  Ethe file is only read when a binding is referenced.
     bad = tmp_path / "agents.yaml"
     bad.write_text("this: [is, not, valid: structure")
     monkeypatch.setenv("CORAL_AGENTS_CONFIG", str(bad))
@@ -650,7 +682,7 @@ def test_cli_agents_remove_rejects_unknown_name_without_changes(bindings_file, c
     capsys.readouterr()
     with pytest.raises(SystemExit):
         cmd_agents(_ns(agents_command="remove", names=["a1", "ghost"], config=None))
-    # Pre-validation aborts BEFORE any removal — both bindings still exist.
+    # Pre-validation aborts BEFORE any removal  Eboth bindings still exist.
     assert set(load_store().bindings) == {"a1", "a2"}
 
 
@@ -670,7 +702,7 @@ def test_cli_agents_remove_interactive_picker(bindings_file, monkeypatch, capsys
     out = capsys.readouterr().out
     # `input()`'s prompt text isn't captured (the mock discards it); just
     # verify the success line emitted by the command itself.
-    assert "✓ removed 'a1'" in out
+    assert "removed 'a1'" in out
 
 
 def test_cli_agents_remove_interactive_confirm_no_aborts(bindings_file, monkeypatch, capsys):
@@ -705,7 +737,7 @@ def test_cli_agents_remove_reassigns_default(bindings_file, monkeypatch, capsys)
     from coral.cli.agents import cmd_agents
 
     _seed_two_bindings(bindings_file)
-    # a1 was first → it's the default.
+    # a1 was first ↁEit's the default.
     assert load_store().default == "a1"
     capsys.readouterr()
 
@@ -727,12 +759,13 @@ def test_cli_agents_remove_with_empty_store(bindings_file, capsys):
 # --- runtime auto-detection ---------------------------------------------------
 
 
-def test_detect_available_runtimes_includes_all_canonical(monkeypatch):
+def test_detect_available_runtimes_includes_all_canonical(tmp_path, monkeypatch):
     """Detection returns one row per canonical runtime, found or not."""
     from coral.agent.registry import detect_available_runtimes, known_runtimes
 
     # Force shutil.which to always succeed so we can verify the schema.
-    monkeypatch.setattr("coral.agent.registry.shutil.which", lambda cmd: f"/fake/bin/{cmd}")
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", lambda cmd: f"/fake/bin/{cmd}")
+    monkeypatch.setenv("HOME", str(tmp_path))
     rows = detect_available_runtimes()
     assert [r["runtime"] for r in rows] == known_runtimes()
     for r in rows:
@@ -740,26 +773,67 @@ def test_detect_available_runtimes_includes_all_canonical(monkeypatch):
         assert r["resolved"] == f"/fake/bin/{r['command']}"
 
 
-def test_detect_marks_missing_runtimes(monkeypatch):
+def test_detect_available_runtimes_prefers_wsl_native_codex_over_windows_shim(
+    tmp_path, monkeypatch
+):
+    """On WSL, PATH can see the Windows npm shim before native Linux Codex."""
+    from coral.agent.registry import detect_available_runtimes
+
+    native = tmp_path / ".local" / "bin" / "codex"
+    native.parent.mkdir(parents=True)
+    native.write_text("#!/bin/sh\n")
+
+    def fake_which(cmd):
+        if cmd == "codex":
+            return "/mnt/c/Users/me/AppData/Roaming/npm/codex"
+        return None
+
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", fake_which)
+
+    rows = detect_available_runtimes()
+    codex = next(r for r in rows if r["runtime"] == "codex")
+
+    assert codex["resolved"] == str(native)
+
+
+def test_detect_marks_missing_runtimes(tmp_path, monkeypatch):
     """When a CLI is not on PATH, resolved is None."""
     from coral.agent.registry import detect_available_runtimes
 
-    monkeypatch.setattr("coral.agent.registry.shutil.which", lambda cmd: None)
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", lambda cmd: None)
+    monkeypatch.setenv("HOME", str(tmp_path))
     rows = detect_available_runtimes()
     assert rows  # has rows
     assert all(r["resolved"] is None for r in rows)
 
 
-def test_setup_detect_reports_when_no_cli_found(bindings_file, monkeypatch, capsys):
+def test_setup_detect_reports_when_no_cli_found(bindings_file, tmp_path, monkeypatch, capsys):
     """`coral setup` with nothing on PATH prints guidance and exits cleanly."""
     from coral.cli.agents import cmd_setup
 
-    monkeypatch.setattr("coral.agent.registry.shutil.which", lambda cmd: None)
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", lambda cmd: None)
+    monkeypatch.setenv("HOME", str(tmp_path))
     cmd_setup(_ns(setup_command=None, non_interactive=True, config=None))
     out = capsys.readouterr().out
     assert "Scanning PATH" in out
     assert "not found" in out
     assert "No agent CLIs found on PATH" in out
+
+
+def test_setup_detect_reports_codex_and_bwrap_install_hints_when_no_cli_found(
+    bindings_file, tmp_path, monkeypatch, capsys
+):
+    from coral.cli.agents import cmd_setup
+
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", lambda cmd: None)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    cmd_setup(_ns(setup_command=None, non_interactive=True, config=None))
+    out = capsys.readouterr().out
+
+    assert "https://chatgpt.com/codex/install.sh" in out
+    assert "codex login" in out
+    assert "sudo apt install bubblewrap" in out
 
 
 def test_setup_detect_non_interactive_lists_detected(bindings_file, monkeypatch, capsys):
@@ -770,7 +844,7 @@ def test_setup_detect_non_interactive_lists_detected(bindings_file, monkeypatch,
     def fake_which(cmd):
         return "/usr/local/bin/claude" if cmd == "claude" else None
 
-    monkeypatch.setattr("coral.agent.registry.shutil.which", fake_which)
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", fake_which)
     cmd_setup(_ns(setup_command=None, non_interactive=True, config=None))
     out = capsys.readouterr().out
     assert "claude_code" in out
@@ -788,7 +862,7 @@ def test_setup_detect_interactive_creates_binding(bindings_file, monkeypatch, ca
     def fake_which(cmd):
         return "/usr/local/bin/claude" if cmd == "claude" else None
 
-    monkeypatch.setattr("coral.agent.registry.shutil.which", fake_which)
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", fake_which)
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
 
     # Pick runtime #1, accept default name, accept default model, skip role_file, 'n' to "add another?"
@@ -817,7 +891,7 @@ def test_setup_detect_multiple_bindings_per_runtime(bindings_file, monkeypatch, 
     def fake_which(cmd):
         return "/usr/local/bin/claude" if cmd == "claude" else None
 
-    monkeypatch.setattr("coral.agent.registry.shutil.which", fake_which)
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", fake_which)
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
 
     answers = iter(
@@ -855,7 +929,7 @@ def test_setup_detect_records_role_file(bindings_file, tmp_path, monkeypatch, ca
     role.write_text("# generalist\n")
 
     monkeypatch.setattr(
-        "coral.agent.registry.shutil.which",
+        "coral.agent.cli_resolver.shutil.which",
         lambda cmd: "/usr/local/bin/claude" if cmd == "claude" else None,
     )
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
@@ -874,7 +948,7 @@ def test_setup_detect_warns_on_missing_role_file(bindings_file, monkeypatch, cap
     from coral.cli.agents import cmd_setup
 
     monkeypatch.setattr(
-        "coral.agent.registry.shutil.which",
+        "coral.agent.cli_resolver.shutil.which",
         lambda cmd: "/usr/local/bin/claude" if cmd == "claude" else None,
     )
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
@@ -896,7 +970,7 @@ def test_setup_detect_select_multiple_with_comma(bindings_file, monkeypatch, cap
     def fake_which(cmd):
         return f"/usr/local/bin/{cmd}" if cmd in ("claude", "codex") else None
 
-    monkeypatch.setattr("coral.agent.registry.shutil.which", fake_which)
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", fake_which)
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
 
     # Pick #1 (claude_code) and #2 (codex). For each: name, model, role_file (skip), 'n' to "add another?"
@@ -919,7 +993,7 @@ def test_setup_detect_select_all_keyword(bindings_file, monkeypatch, capsys):
     def fake_which(cmd):
         return f"/usr/local/bin/{cmd}" if cmd in ("claude", "codex") else None
 
-    monkeypatch.setattr("coral.agent.registry.shutil.which", fake_which)
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", fake_which)
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
 
     answers = iter(["all", "", "", "", "n", "", "", "", "n"])
@@ -936,7 +1010,7 @@ def test_setup_detect_empty_selection_skips(bindings_file, monkeypatch, capsys):
     from coral.cli.agents import cmd_setup
 
     monkeypatch.setattr(
-        "coral.agent.registry.shutil.which",
+        "coral.agent.cli_resolver.shutil.which",
         lambda cmd: "/usr/local/bin/claude" if cmd == "claude" else None,
     )
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
@@ -953,7 +1027,7 @@ def test_setup_detect_invalid_selection_reprompts(bindings_file, monkeypatch, ca
     from coral.cli.agents import cmd_setup
 
     monkeypatch.setattr(
-        "coral.agent.registry.shutil.which",
+        "coral.agent.cli_resolver.shutil.which",
         lambda cmd: "/usr/local/bin/claude" if cmd == "claude" else None,
     )
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
@@ -1011,7 +1085,7 @@ def test_setup_detect_shows_existing_binding_count(bindings_file, monkeypatch, c
     def fake_which(cmd):
         return "/usr/local/bin/claude" if cmd == "claude" else None
 
-    monkeypatch.setattr("coral.agent.registry.shutil.which", fake_which)
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", fake_which)
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
     # Skip via empty selection.
     monkeypatch.setattr("builtins.input", lambda prompt="": "")
@@ -1052,7 +1126,7 @@ def test_setup_detect_can_add_second_binding_for_already_bound_runtime(
     def fake_which(cmd):
         return "/usr/local/bin/claude" if cmd == "claude" else None
 
-    monkeypatch.setattr("coral.agent.registry.shutil.which", fake_which)
+    monkeypatch.setattr("coral.agent.cli_resolver.shutil.which", fake_which)
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
     # Select #1, accept the de-duped default name (claude-code-2), accept default model, skip role_file, 'n'.
     answers = iter(["1", "", "", "", "n"])

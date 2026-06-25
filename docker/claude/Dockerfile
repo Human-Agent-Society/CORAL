@@ -3,6 +3,7 @@ FROM python:3.12-slim
 # System deps: git, Node.js (for claude CLI), and build essentials
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
+        bubblewrap \
         curl \
         ca-certificates \
         gnupg \

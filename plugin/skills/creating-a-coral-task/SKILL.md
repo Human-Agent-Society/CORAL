@@ -73,7 +73,22 @@ Full `TaskGrader` surface — every attribute (`self.codebase_path`, `self.priva
 
 ## Hidden data
 
-Answer keys, hidden fixtures, and any secret the agent must not see go under **`grader.private`** in task.yaml — CORAL copies those paths into `.coral/private/` (which every runtime is denied read access to) and the grader reads them via `self.private_dir`. Do **not** rely on a packaged `taskdata/` dir (`Path(__file__).parent / "taskdata"`) to hide answer keys: graders are installed editable (`uv pip install -e ./grader`), so the package source stays in the task tree and agents can read it by absolute path — `taskdata/` is bundled with the grader, but it is **not** hidden. Reserve `Path(__file__).parent` for grader code and non-secret helper data. Never put an answer key under `seed/` either — agents read `seed/` and will game the score.
+Answer keys, hidden fixtures, and any secret the agent must not see go under
+**`grader.private`** in task.yaml — CORAL copies those paths into
+`.coral/private/` and the grader reads them via `self.private_dir`. Keep
+`workspace.repo_path` pointed at `seed/`, and do not re-add hidden paths through
+`runtime_options.mounts`, `role_file`, or Claude `add_dirs`; `coral validate`
+rejects those overlaps. `TaskGrader.run_program` / `run_script` run submitted
+code in a reduced sandbox when available, so prefer those helpers over direct
+`subprocess.run`.
+
+Do **not** rely on a packaged `taskdata/` dir (`Path(__file__).parent /
+"taskdata"`) to hide answer keys: graders are installed editable (`uv pip
+install -e ./grader`), so the package source stays in the task tree and agents
+can read it by absolute path — `taskdata/` is bundled with the grader, but it is
+**not** hidden. Reserve `Path(__file__).parent` for grader code and non-secret
+helper data. Never put an answer key under `seed/` either — agents read `seed/`
+and will game the score.
 
 ## Smoke-test, then scale
 
@@ -92,8 +107,9 @@ Once one agent evals cleanly, raise `agents.count`. Driving the run from here is
 | `repo_path` points at the task root, not `./seed` | Grader sees `task.yaml`/`grader/` in `codebase_path` | Point `repo_path` at `./seed`. |
 | `direction` backwards | Leaderboard ordered upside down | "ratio, higher better" → `maximize`; "raw error/latency" → `minimize`. |
 | Answer key under `seed/` or packaged `taskdata/` | Agents read it (editable installs expose `taskdata/`), game the score | Put it under `grader.private`, read via `self.private_dir`. |
+| `grader.private` path also under `workspace.repo_path` or runtime mounts | `coral validate` rejects the task, or agents can read hidden files on old CORAL versions | Keep `workspace.repo_path: ./seed`; keep hidden files outside `seed/` and out of `runtime_options.mounts` / `add_dirs`. |
 | Grader writes under `self.codebase_path` and re-reads it | Files vanish — daemon force-removes the worktree after each eval | Write under `self.eval_logs_dir`. |
-| Grader uses `sys.executable` | Misses task deps from `workspace.setup` | Use `self.get_python_command()` / `self.run_program` / `self.run_script`. |
+| Grader uses `sys.executable` or direct `subprocess.run` for submitted code | Misses task deps and bypasses CORAL's submitted-code sandbox | Use `self.get_python_command()` / `self.run_program` / `self.run_script`. |
 | Runtime deps in `grader.setup` | Validate passes, the run fails every eval | Runtime deps → `workspace.setup`; grader-only deps → `grader.setup`. |
 | Scoring speed without a correctness gate | Agents "optimize" by returning garbage fast | Gate on correctness first, then score the metric. |
 | `parallel.max_workers > 1` with an unsafe grader | Sporadic port/GPU/scratch collisions | Leave at `1` unless provably concurrency-safe. |

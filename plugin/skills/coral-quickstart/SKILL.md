@@ -41,9 +41,26 @@ coral --help      # verify
 
 The installer grabs the **latest `coral` release** by default — that's what you want. (Only pin a specific release with `CORAL_VERSION=<tag>` before the curl if you have a reason to.)
 
+On Linux/WSL, install `bubblewrap` (`bwrap`) once as the local sandbox backend
+(`sudo apt install bubblewrap` on Ubuntu). CORAL uses it by default for
+full-access local/tmux agent runtimes when it is available. If a task sets
+`grader.private`, CORAL fails closed without a sandbox; install `bubblewrap` or
+use `run.session=docker`. `run.sandbox.mode=off` is only for non-private
+compatibility runs.
+
 ### 2. Register a runtime (`coral setup`)
 
 `coral` shells out to a coding-agent CLI (Claude Code, Codex, Cursor, Kiro, OpenCode) — each installed and authenticated separately. Tell coral which to use:
+
+For Codex on Windows, install and authenticate Codex **inside WSL** even if the
+Windows app or npm shim is present:
+
+```bash
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+codex login
+codex login status
+sudo apt install bubblewrap
+```
 
 ```bash
 coral setup            # scans PATH, wizard to create named runtime bindings
@@ -92,7 +109,11 @@ coral start -c task.yaml         # launch agents (results stay under .coral_work
 coral status                     # watch the leaderboard
 ```
 
-If `coral validate` succeeds, the grader can score the seed; most "agents are stuck" reports trace to a grader that crashes here. Driving the run from here — monitoring, steering, stopping — is the `running-coral-experiments` skill.
+If `coral validate` succeeds, the grader can score the seed and private files
+are not re-exposed through `workspace.repo_path`, runtime mounts, or add-dir
+options. Most "agents are stuck" reports trace to a grader that crashes here.
+Driving the run from here — monitoring, steering, stopping — is the
+`running-coral-experiments` skill.
 
 ## The workflows (where to go next)
 

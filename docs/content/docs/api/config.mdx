@@ -61,7 +61,22 @@ class GraderConfig:
     args: dict[str, Any]   # Extra grader arguments
     private: list[str]     # Files hidden from agents
     direction: str         # "maximize" or "minimize"
+    sandbox: GraderSandboxConfig  # Submitted-code helper subprocess sandbox policy
 ```
+
+## GraderSandboxConfig
+
+```python
+@dataclass
+class GraderSandboxConfig:
+    mode: str      # "auto", "required", or "off"
+    backend: str   # "auto", "bwrap", or "none"
+    profile: str   # "private-safe" or "compatibility"
+```
+
+By default, `TaskGrader.run_program()` and `run_script()` use `bubblewrap`
+(`bwrap`) for submitted-code subprocesses when available. If `grader.private`
+is non-empty, CORAL fails closed when no submitted-code sandbox is available.
 
 ## AgentConfig
 
@@ -116,6 +131,7 @@ class RunConfig:
     session: str           # "local", "tmux", or "docker"
     docker_image: str      # Docker image override
     stop: RunStopConfig    # Optional run-level auto-stop conditions
+    sandbox: RunSandboxConfig  # Local/tmux agent sandbox policy
 ```
 
 ## RunStopConfig
@@ -139,3 +155,21 @@ Examples:
 coral start -c task.yaml run.stop.score_threshold=0.8
 coral start -c task.yaml run.stop.max_real_attempts=30
 ```
+
+## RunSandboxConfig
+
+```python
+@dataclass
+class RunSandboxConfig:
+    mode: str      # "auto", "required", or "off"
+    backend: str   # "auto", "bwrap", or "none"
+    profile: str   # "private-safe" or "compatibility"
+```
+
+For local/tmux runs on Linux/WSL, `auto` uses `bwrap` for full-access agent
+runtimes when it is available. If `grader.private` is configured, CORAL fails
+closed when no sandbox backend is available; install `bubblewrap` or use
+`run.session=docker`.
+Custom runtime entrypoints keep their legacy behavior in `auto` unless
+`grader.private` is configured; set `mode: required` to force bwrap for a custom
+runtime. `run.sandbox.mode=off` is rejected when `grader.private` is configured.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import atexit
+import inspect
 import json
 import logging
 import multiprocessing
@@ -65,6 +66,7 @@ from coral.hub.heartbeat import (
     write_global_heartbeat,
 )
 from coral.hub.steering import ContinueFromAction, mark_applied, read_pending
+from coral.sandbox.bwrap import AgentSandboxSpec, SandboxUnavailable
 from coral.template.coral_md import generate_coral_md
 from coral.types import BUDGET_CLASS_REAL, Attempt, get_budget_class
 from coral.workspace import (
@@ -86,6 +88,17 @@ from coral.workspace import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _runtime_accepts_kwarg(func: Any, name: str) -> bool:
+    """Return whether a runtime start method accepts a keyword argument."""
+    signature = inspect.signature(func)
+    for param in signature.parameters.values():
+        if param.kind is inspect.Parameter.VAR_KEYWORD:
+            return True
+        if param.name == name:
+            return True
+    return False
 
 
 class AgentManager:
@@ -597,6 +610,13 @@ class AgentManager:
         # and lock .coral/private/ to root, then run the agent subprocess as
         # that user. Manager/grader stay root. No-op when isolate_user is unset.
         run_as_user = self._apply_user_isolation(worktree_path, island_id, shared_dir_name)
+        runtime_name = spec.runtime if spec is not None else self.config.agents.runtime
+        sandbox_spec = self._resolve_agent_sandbox(
+            agent_id,
+            runtime_name=runtime_name,
+            shared_dir_name=shared_dir_name,
+            island_id=island_id,
+        )
 
         # Start agent
         if island_id is not None:
@@ -604,26 +624,56 @@ class AgentManager:
         else:
             log_dir = self.paths.coral_dir / "public" / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
-        handle = runtime.start(
-            worktree_path=worktree_path,
-            coral_md_path=worktree_path / instruction_file,
-            model=model,
-            runtime_options=runtime_options,
-            max_turns=max_turns if max_turns is not None else self.config.agents.max_turns,
-            verbose=self.verbose,
-            log_dir=log_dir,
-            resume_session_id=resume_session_id,
-            prompt=prompt,
-            prompt_source=prompt_source,
-            task_name=self.config.task.name,
-            task_description=self.config.task.description,
-            gateway_url=gateway_url,
-            gateway_api_key=gateway_api_key,
-            run_as_user=run_as_user,
-        )
+        start_kwargs: dict[str, Any] = {
+            "worktree_path": worktree_path,
+            "coral_md_path": worktree_path / instruction_file,
+            "model": model,
+            "runtime_options": runtime_options,
+            "max_turns": max_turns if max_turns is not None else self.config.agents.max_turns,
+            "verbose": self.verbose,
+            "log_dir": log_dir,
+            "resume_session_id": resume_session_id,
+            "prompt": prompt,
+            "prompt_source": prompt_source,
+            "task_name": self.config.task.name,
+            "task_description": self.config.task.description,
+            "gateway_url": gateway_url,
+            "gateway_api_key": gateway_api_key,
+            "run_as_user": run_as_user,
+        }
+        if sandbox_spec is not None:
+            if not _runtime_accepts_kwarg(runtime.start, "sandbox_spec"):
+                raise SandboxUnavailable(
+                    f"Runtime {runtime_name!r} does not accept CORAL sandbox_spec; "
+                    "set run.sandbox.mode=off only for non-private tasks or use a builtin runtime."
+                )
+            start_kwargs["sandbox_spec"] = sandbox_spec
+        handle = runtime.start(**start_kwargs)
         # Record fresh process start time for the exit-classifier uptime check.
         self._started_at[agent_id] = time.time()
         return handle
+
+    def _resolve_agent_sandbox(
+        self,
+        agent_id: str,
+        *,
+        runtime_name: str,
+        shared_dir_name: str,
+        island_id: str | int | None,
+    ) -> AgentSandboxSpec | None:
+        """Resolve host-side sandboxing for one agent subprocess."""
+        assert self.paths is not None
+        from coral.sandbox.bwrap import resolve_agent_sandbox
+
+        return resolve_agent_sandbox(
+            self.config,
+            paths=self.paths,
+            agent_id=agent_id,
+            runtime_name=runtime_name,
+            shared_dir_name=shared_dir_name,
+            island_id=island_id,
+            in_coral_docker=os.environ.get("CORAL_IN_DOCKER") == "1",
+        )
 
     def _apply_user_isolation(
         self,

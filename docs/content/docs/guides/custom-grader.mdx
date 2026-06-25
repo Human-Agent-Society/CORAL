@@ -88,7 +88,9 @@ When `coral start` (or `coral validate`) runs, it:
    grading and ships the result back as JSON.
 
 The venv lives inside `.coral/private/`, which is denied to agents by the
-worktree permission rules — your grader source stays hidden.
+worktree permission rules. On Linux/WSL local/tmux runs, CORAL also uses
+`bubblewrap` (`bwrap`) as a host-side sandbox for full-access agent runtimes
+when available; Docker runs keep the existing container/user boundary.
 
 ## TaskGrader helpers
 
@@ -134,6 +136,16 @@ bundled with the grader, but it is **not** hidden. Reserve `Path(__file__).paren
 for grader code and non-secret helper data only; route every secret through
 `grader.private` + `self.private_dir`.
 </Callout>
+
+Keep hidden sources outside `workspace.repo_path` (normally `seed/`) and out of
+`runtime_options.mounts`, `runtime_options.role_file`, and Claude `add_dirs`.
+`coral validate` rejects those overlaps because they would re-expose private
+material to agents before `.coral/private/` permissions matter.
+
+Use `self.run_program()` / `self.run_script()` for untrusted submitted code.
+Those helpers project the submitted checkout into a reduced `/workspace` view
+when `bwrap` is available, so the child process cannot walk the grader's
+private filesystem view. Direct `subprocess.run` bypasses that helper sandbox.
 
 ### `score(value, explanation="")`
 

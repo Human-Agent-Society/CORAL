@@ -54,6 +54,34 @@ At least one supported agent runtime:
 - **Codex** — OpenAI's coding agent
 - **OpenCode** — open-source alternative
 
+### WSL + Codex quick path
+
+On Windows, run CORAL and Codex from inside WSL when you want local/tmux
+private-safe runs. A Windows Codex install may put a shim under `/mnt/c/...`,
+but CORAL expects a native Linux Codex binary for the WSL `bwrap` sandbox.
+
+```bash
+# CORAL itself
+curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
+
+# Local sandbox backend for full-access agents and submitted-code helpers
+sudo apt update
+sudo apt install -y bubblewrap
+
+# Native Codex CLI inside WSL
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+codex login
+codex login status
+
+# Register and validate the runtime before starting agents
+coral setup
+coral agents doctor
+```
+
+If `coral setup` sees only a Windows `/mnt/c/.../codex` shim, install the native
+WSL Codex CLI above or create a binding with
+`coral setup agent --runtime codex --command /home/<you>/.local/bin/codex`.
+
 For Harbor-based benchmarks (SWE-bench, terminal-bench):
 
 - **Docker** — installed and running on the host

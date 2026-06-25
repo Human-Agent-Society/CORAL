@@ -35,6 +35,35 @@ class ParallelGraderConfig:
 
 
 @dataclass
+class GraderSandboxConfig:
+    """Sandbox policy for untrusted submitted-code subprocesses.
+
+    The grader process itself may read ``.coral/private``. Helper-launched
+    submitted code should not inherit that filesystem view when hidden data is
+    present.
+    """
+
+    mode: str = "auto"  # "auto", "required", or "off"
+    backend: str = "auto"  # "auto", "bwrap", or "none"
+    profile: str = "private-safe"
+
+    def __post_init__(self) -> None:
+        valid_modes = {"auto", "required", "off"}
+        if self.mode not in valid_modes:
+            raise ValueError(f"grader.sandbox.mode must be one of {valid_modes}, got {self.mode!r}")
+        valid_backends = {"auto", "bwrap", "none"}
+        if self.backend not in valid_backends:
+            raise ValueError(
+                f"grader.sandbox.backend must be one of {valid_backends}, got {self.backend!r}"
+            )
+        valid_profiles = {"private-safe", "compatibility"}
+        if self.profile not in valid_profiles:
+            raise ValueError(
+                f"grader.sandbox.profile must be one of {valid_profiles}, got {self.profile!r}"
+            )
+
+
+@dataclass
 class GraderConfig:
     """Grader configuration."""
 
@@ -56,6 +85,7 @@ class GraderConfig:
     # is graded, which prevents runaway pending floods when the grader is slow.
     max_pending_per_agent: int = 1
     parallel: ParallelGraderConfig = field(default_factory=ParallelGraderConfig)
+    sandbox: GraderSandboxConfig = field(default_factory=GraderSandboxConfig)
 
     def __post_init__(self) -> None:
         if self.max_pending_per_agent < 0:
@@ -68,6 +98,8 @@ class GraderConfig:
         # work for both real callers and the worker reconstruction path.
         if isinstance(self.parallel, dict):
             self.parallel = ParallelGraderConfig(**self.parallel)
+        if isinstance(self.sandbox, dict):
+            self.sandbox = GraderSandboxConfig(**self.sandbox)
         if self.parallel.max_workers < 1:
             raise ValueError(
                 f"grader.parallel.max_workers must be >= 1, got {self.parallel.max_workers}"
@@ -268,6 +300,30 @@ class RunStopConfig:
 
 
 @dataclass
+class RunSandboxConfig:
+    """Host-side sandboxing policy for local/tmux agent processes."""
+
+    mode: str = "auto"  # "auto", "required", or "off"
+    backend: str = "auto"  # "auto", "bwrap", or "none"
+    profile: str = "private-safe"
+
+    def __post_init__(self) -> None:
+        valid_modes = {"auto", "required", "off"}
+        if self.mode not in valid_modes:
+            raise ValueError(f"run.sandbox.mode must be one of {valid_modes}, got {self.mode!r}")
+        valid_backends = {"auto", "bwrap", "none"}
+        if self.backend not in valid_backends:
+            raise ValueError(
+                f"run.sandbox.backend must be one of {valid_backends}, got {self.backend!r}"
+            )
+        valid_profiles = {"private-safe", "compatibility"}
+        if self.profile not in valid_profiles:
+            raise ValueError(
+                f"run.sandbox.profile must be one of {valid_profiles}, got {self.profile!r}"
+            )
+
+
+@dataclass
 class RunConfig:
     """Runtime flags for a CORAL session."""
 
@@ -276,10 +332,13 @@ class RunConfig:
     session: str = "tmux"  # "local", "tmux", or "docker"
     docker_image: str = ""  # empty = auto-build from project Dockerfile
     stop: RunStopConfig = field(default_factory=RunStopConfig)
+    sandbox: RunSandboxConfig = field(default_factory=RunSandboxConfig)
 
     def __post_init__(self) -> None:
         if isinstance(self.stop, dict):
             self.stop = RunStopConfig(**self.stop)
+        if isinstance(self.sandbox, dict):
+            self.sandbox = RunSandboxConfig(**self.sandbox)
 
 
 @dataclass
