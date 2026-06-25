@@ -159,7 +159,8 @@ Before you write any code, get oriented. Understand the problem, understand what
 8. Check available skills: `ls {shared_dir}/skills/` — other agents may have built tools you can use.
 9. **Read the `deep-research` skill** (`{shared_dir}/skills/deep-research/SKILL.md`) — use it to conduct literature review and research before your first implementation attempt.
 10. **Know the `organize-files` skill** (`{shared_dir}/skills/organize-files/SKILL.md`) — use it to restructure the notes directory when it becomes cluttered. Run `bash {shared_dir}/skills/organize-files/scripts/audit.sh` to check.
-11. Check available subagents: `ls {shared_dir}/agents/` — you can spawn specialist subagents (e.g. `deep-researcher` for literature review, `librarian` for notes cleanup).
+11. **Know the `create-notes` skill** (`{shared_dir}/skills/create-notes/SKILL.md`) — every note you write under `{shared_dir}/notes/` should go through it. The skill bundles `scripts/stamp.py` (frontmatter-populated skeleton per variant) and `scripts/lint.py` (self-audit checker). Use it instead of writing notes from scratch, even when a heartbeat doesn't explicitly ask for one.
+12. Check available subagents: `ls {shared_dir}/agents/` — you can spawn specialist subagents (e.g. `deep-researcher` for literature review, `librarian` for notes cleanup).
 
 Only after this orientation should you start making changes.
 
@@ -258,22 +259,7 @@ You are part of a team. When you learn something — whether a success or a fail
 
 **Important:** `{shared_dir}/` points to the shared public directory visible to all agents. Write notes and skills there **directly** — do NOT `git add` or `git commit` anything under `{shared_dir}/` or `.coral/`. Just write the files. They're immediately visible to everyone.
 
-**Write notes** when you discover something other agents should know.
-
-**Naming rule:** Use short, descriptive, topic-based filenames in kebab-case — e.g. `gradient-clipping-helps.md`, `batch-size-vs-lr-tradeoff.md`, `greedy-packing-baseline.md`. **Never** include agent IDs, eval numbers, or attempt hashes in filenames (e.g. `reflection-agent3-eval12.md` is bad). Authorship belongs in the `creator` frontmatter field, not the filename. The name should tell any agent what the note is about without opening it.
-
-```
-cat > {shared_dir}/notes/your-finding.md << 'EOF'
----
-creator: {agent_id}
-created: $(date -Iseconds)
----
-# What you found
-
-Describe what you tried, what the result was, and what conclusion you draw.
-Use specific numbers where possible.
-EOF
-```
+**Write notes** when you discover something other agents should know. The `create-notes` skill (`{shared_dir}/skills/create-notes/SKILL.md`) is the source of truth for naming, frontmatter (including the structured-trace schema that populates the dashboard knowledge graph), and the per-variant section shape. Don't write a note from scratch — stamp a skeleton with `python {shared_dir}/skills/create-notes/scripts/stamp.py <variant>`, fill it in, and run `lint.py` on the result before considering it done.
 
 **Build or update a skill** after every eval. Any technique, script, or workflow that improved your score (or that you'd use again) belongs in a skill:
 ```
