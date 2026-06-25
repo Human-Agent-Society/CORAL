@@ -3,7 +3,7 @@ import { api, type RunStatus } from "../lib/api";
 import { useSSE } from "../hooks/useSSE";
 import RunSelector from "./RunSelector";
 
-type Tab = "overview" | "dag" | "knowledge" | "logs";
+type Tab = "overview" | "dag" | "knowledge" | "logs" | "chat";
 
 interface Props {
   activeTab: Tab;
@@ -15,6 +15,7 @@ const tabs: { key: Tab; label: string }[] = [
   { key: "dag", label: "Lineage" },
   { key: "knowledge", label: "Knowledge" },
   { key: "logs", label: "Logs" },
+  { key: "chat", label: "Chat" },
 ];
 
 export default function Header({ activeTab, onTabChange }: Props) {
