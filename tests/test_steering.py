@@ -114,18 +114,21 @@ def test_steering_queue_round_trip(tmp_path: Path) -> None:
     assert remaining[0].applied_at is None
 
 
-async def test_post_steer_rejects_writes_while_run_is_alive(tmp_path: Path) -> None:
+async def test_post_steer_queues_while_run_is_alive(tmp_path: Path) -> None:
+    """Dashboard steering is queue-on-resume — should work whether or not the
+    run is live, since the action just waits in `.coral/public/steering/` until
+    the next `coral resume` reads it."""
     coral_dir = tmp_path / ".coral"
-    (coral_dir / "public").mkdir(parents=True)
+    write_attempt(coral_dir, _attempt("abc123"))
     (coral_dir / "public" / "manager.pid").write_text(str(os.getpid()))
 
     response = await post_steer(
         _request(coral_dir, {"kind": "continue_from", "hash": "abc123", "instruction": "retry"})
     )
 
-    assert response.status_code == 409
-    assert json.loads(response.body)["error"] == "stop the run to steer"
-    assert read_pending(coral_dir) == []
+    assert response.status_code == 200
+    pending = read_pending(coral_dir)
+    assert [a.hash for a in pending] == ["abc123"]
 
 
 async def test_post_steer_queues_when_stopped_and_get_lists_pending(tmp_path: Path) -> None:

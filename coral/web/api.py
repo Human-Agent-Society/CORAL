@@ -160,13 +160,17 @@ async def get_steering(request: Request) -> JSONResponse:
 
 
 async def post_steer(request: Request) -> JSONResponse:
-    """POST /api/steer — queue or apply dashboard steering actions."""
+    """POST /api/steer — queue or apply dashboard steering actions.
+
+    `mark_best` is just a flag on an attempt and applies immediately.
+    `continue_from` is queued under `.coral/public/steering/` and consumed by
+    `coral resume`. Both are safe to call while the run is alive — the queued
+    `continue_from` action simply waits until the user stops and resumes.
+    """
     from coral.hub.attempts import set_user_best
     from coral.hub.steering import ContinueFromAction, enqueue
 
     coral_dir = _coral_dir(request)
-    if _run_is_alive(coral_dir):
-        return JSONResponse({"error": "stop the run to steer"}, status_code=409)
 
     body = await request.json()
     kind = body.get("kind")
