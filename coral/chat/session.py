@@ -27,6 +27,7 @@ import logging
 import os
 import signal
 import subprocess
+import sys
 import tempfile
 import threading
 import uuid
@@ -83,6 +84,7 @@ class ChatSession:
         extra_args: list[str] | None = None,
         env: dict[str, str] | None = None,
         claude_bin: str = "claude",
+        approval: dict[str, str] | None = None,
     ) -> None:
         self.session_id = session_id
         self.workdir = Path(workdir)
@@ -90,6 +92,9 @@ class ChatSession:
         self._extra_args = extra_args
         self._env = env
         self._claude_bin = claude_bin
+        # When set (keys: base_url, token, gate_mode), wires the PreToolUse
+        # approval hook that gates `coral start`. None → no gating (P1/P2).
+        self._approval = approval
 
         self.process: subprocess.Popen[str] | None = None
         # claude's own session id (from the system/init frame) — distinct from
@@ -118,6 +123,29 @@ class ChatSession:
 
         cmd = _build_cmd(self._claude_bin, self.model, self._extra_args)
         env = self._env if self._env is not None else _clean_env()
+
+        # Wire the PreToolUse approval hook when an approval callback is
+        # configured (P3): a localhost round-trip gates `coral start`.
+        if self._approval and self._approval.get("base_url"):
+            env = dict(env)
+            hook_path = Path(__file__).resolve().parent.parent / "hooks" / "pretooluse_gate.py"
+            settings = {
+                "hooks": {
+                    "PreToolUse": [
+                        {
+                            "matcher": "Write|Edit|MultiEdit|Bash",
+                            "hooks": [
+                                {"type": "command", "command": f"{sys.executable} {hook_path}"}
+                            ],
+                        }
+                    ]
+                }
+            }
+            cmd += ["--settings", json.dumps(settings)]
+            env["CORAL_CHAT_CALLBACK_URL"] = self._approval["base_url"]
+            env["CORAL_CHAT_CALLBACK_TOKEN"] = self._approval.get("token", "")
+            env["CORAL_CHAT_SESSION_ID"] = self.session_id
+            env["CORAL_CHAT_GATE_MODE"] = self._approval.get("gate_mode", "bypass")
 
         # stderr → a file (not a pipe) so a chatty claude can never deadlock on
         # a full, undrained stderr pipe. Mirrors claude_code.py's err split.
@@ -167,6 +195,10 @@ class ChatSession:
         with self._lock:
             if q in self._subscribers:
                 self._subscribers.remove(q)
+
+    def emit_event(self, frame: dict[str, Any]) -> None:
+        """Inject a synthetic frame (e.g. awaiting_approval) into the stream."""
+        self._emit(frame)
 
     # ── internals ────────────────────────────────────────────────────────
 
@@ -258,6 +290,7 @@ class ChatSessionManager:
         extra_args: list[str] | None = None,
         env: dict[str, str] | None = None,
         claude_bin: str = "claude",
+        approval: dict[str, str] | None = None,
     ) -> ChatSession:
         """Create, start, and register a session. Call from an async context."""
         session_id = uuid.uuid4().hex
@@ -268,6 +301,7 @@ class ChatSessionManager:
             extra_args=extra_args,
             env=env,
             claude_bin=claude_bin,
+            approval=approval,
         )
         session.start()
         with self._lock:

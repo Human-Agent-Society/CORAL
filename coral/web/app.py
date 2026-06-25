@@ -14,6 +14,7 @@ from starlette.responses import FileResponse, Response
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
+from coral.chat.approval import ApprovalRegistry
 from coral.chat.session import ChatSessionManager
 from coral.web.api import (
     get_agent_attempts,
@@ -37,6 +38,8 @@ from coral.web.api import (
 from coral.web.chat import (
     chat_events,
     delete_chat_session,
+    post_chat_approval,
+    post_chat_internal_approval,
     post_chat_message,
     post_chat_session,
     post_chat_workspace,
@@ -68,6 +71,7 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
         app.state.watcher = FileWatcher(coral_dir)
         app.state._watcher_task = asyncio.create_task(app.state.watcher.run())
         app.state.chat_manager = ChatSessionManager()
+        app.state.approvals = ApprovalRegistry()
         try:
             yield
         finally:
@@ -109,7 +113,9 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
         Route("/api/events", sse_endpoint),
         # Chat module (design/chat-module.md)
         Route("/api/chat/workspaces", post_chat_workspace, methods=["POST"]),
+        Route("/api/chat/internal/approval", post_chat_internal_approval, methods=["POST"]),
         Route("/api/chat/sessions", post_chat_session, methods=["POST"]),
+        Route("/api/chat/{sid}/approvals/{pid}", post_chat_approval, methods=["POST"]),
         Route("/api/chat/{sid}/message", post_chat_message, methods=["POST"]),
         Route("/api/chat/{sid}/events", chat_events),
         Route("/api/chat/{sid}", delete_chat_session, methods=["DELETE"]),

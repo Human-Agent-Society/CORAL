@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import uuid
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
@@ -27,6 +28,22 @@ def _manager(request: Request) -> ChatSessionManager:
     return request.app.state.chat_manager
 
 
+def _approval_config(request: Request) -> dict[str, str] | None:
+    """Build the per-session approval config from app.state, or None.
+
+    None disables the `coral start` gate (P1/P2 behaviour). It is populated
+    by the serving layer (`coral ui`) once it knows its localhost URL + token.
+    """
+    base_url = getattr(request.app.state, "chat_callback_base_url", None)
+    if not base_url:
+        return None
+    return {
+        "base_url": base_url,
+        "token": getattr(request.app.state, "chat_callback_token", ""),
+        "gate_mode": getattr(request.app.state, "chat_gate_mode", "bypass"),
+    }
+
+
 async def post_chat_session(request: Request) -> Response:
     """POST /api/chat/sessions {workdir, model?} → {session_id}."""
     try:
@@ -40,7 +57,9 @@ async def post_chat_session(request: Request) -> Response:
         wd = validate_local_path(workdir)
     except LocalPathError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
-    session = _manager(request).create(workdir=wd, model=body.get("model"))
+    session = _manager(request).create(
+        workdir=wd, model=body.get("model"), approval=_approval_config(request)
+    )
     return JSONResponse({"session_id": session.session_id, "workdir": str(wd)})
 
 
@@ -119,3 +138,59 @@ async def delete_chat_session(request: Request) -> Response:
     # the event loop so a slow teardown can't stall other requests.
     ok = await asyncio.get_running_loop().run_in_executor(None, manager.close, sid)
     return JSONResponse({"closed": ok}, status_code=200 if ok else 404)
+
+
+async def post_chat_internal_approval(request: Request) -> Response:
+    """POST /api/chat/internal/approval — the PreToolUse hook's callback.
+
+    Token-gated (localhost only). Parks the request until the user resolves it
+    in the UI, then returns ``{"decision": "allow"|"deny"}``.
+    """
+    expected = getattr(request.app.state, "chat_callback_token", None)
+    if not expected or request.headers.get("X-Coral-Callback-Token", "") != expected:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    session_id = body.get("session_id", "")
+    prompt_id = body.get("prompt_id") or uuid.uuid4().hex
+    tool_name = body.get("tool_name", "")
+    tool_input = body.get("tool_input", {}) or {}
+
+    registry = request.app.state.approvals
+    # Register the pending future BEFORE surfacing the prompt, so a fast UI
+    # resolve can't race ahead of registration.
+    registry.create(
+        prompt_id,
+        {"session_id": session_id, "tool_name": tool_name, "tool_input": tool_input},
+    )
+    session = _manager(request).get(session_id)
+    if session is not None:
+        session.emit_event(
+            {
+                "type": "awaiting_approval",
+                "prompt_id": prompt_id,
+                "tool_name": tool_name,
+                "tool_input": tool_input,
+            }
+        )
+    decision = await registry.wait(prompt_id, timeout=300)
+    if session is not None:
+        session.emit_event(
+            {"type": "approval_resolved", "prompt_id": prompt_id, "decision": decision}
+        )
+    return JSONResponse({"decision": decision})
+
+
+async def post_chat_approval(request: Request) -> Response:
+    """POST /api/chat/{sid}/approvals/{pid} {decision} — UI resolves an approval."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    decision = body.get("decision", "deny")
+    if decision not in ("allow", "deny"):
+        return JSONResponse({"error": "decision must be allow|deny"}, status_code=400)
+    ok = request.app.state.approvals.resolve(request.path_params["pid"], decision)
+    return JSONResponse({"resolved": ok}, status_code=200 if ok else 404)

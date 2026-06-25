@@ -107,6 +107,21 @@ def _ensure_ui_deps() -> None:
         print("[coral] UI dependencies installed.")
 
 
+def _wire_chat_callbacks(app, port: int) -> None:
+    """Give the chat module a localhost URL + token for the approval hook.
+
+    The PreToolUse hook (coral/hooks/pretooluse_gate.py) calls back to the
+    running dashboard to gate `coral start`. It always targets 127.0.0.1
+    regardless of the dashboard's bind host, and authenticates with a
+    per-process token.
+    """
+    import secrets
+
+    app.state.chat_callback_base_url = f"http://127.0.0.1:{port}"
+    app.state.chat_callback_token = secrets.token_urlsafe(32)
+    app.state.chat_gate_mode = "bypass"
+
+
 def _port_available(host: str, port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         try:
@@ -170,6 +185,7 @@ def start_ui_background(
         print(f"[coral] Dashboard port {port} is in use; using {fallback_port}.")
         port = fallback_port
     url = f"http://{host}:{port}"
+    _wire_chat_callbacks(app, port)
 
     config = uvicorn.Config(app, host=host, port=port, log_level="warning")
     server = uvicorn.Server(config)
@@ -207,6 +223,7 @@ def cmd_ui(args: argparse.Namespace) -> None:
 
     results_dir = coral_dir.resolve().parent.parent.parent
     app = create_app(coral_dir, results_dir=results_dir)
+    _wire_chat_callbacks(app, port)
     url = f"http://{args.host}:{port}"
     print(f"CORAL Dashboard: {url}")
     print(f"Serving data from: {coral_dir}")
