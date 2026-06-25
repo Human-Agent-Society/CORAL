@@ -34,6 +34,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from coral.chat.transcript import ChatTranscript
 from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,7 @@ class ChatSession:
         env: dict[str, str] | None = None,
         claude_bin: str = "claude",
         approval: dict[str, str] | None = None,
+        transcript_root: Path | None = None,
     ) -> None:
         self.session_id = session_id
         self.workdir = Path(workdir)
@@ -95,6 +97,9 @@ class ChatSession:
         # When set (keys: base_url, token, gate_mode), wires the PreToolUse
         # approval hook that gates `coral start`. None → no gating (P1/P2).
         self._approval = approval
+        # When set, frames are persisted under <transcript_root>/<session_id>/.
+        self._transcript_root = transcript_root
+        self._writer: ChatTranscript | None = None
 
         self.process: subprocess.Popen[str] | None = None
         # claude's own session id (from the system/init frame) — distinct from
@@ -120,6 +125,10 @@ class ChatSession:
         if self.process is not None:
             raise RuntimeError("session already started")
         self._loop = asyncio.get_running_loop()
+
+        if self._transcript_root is not None:
+            self._writer = ChatTranscript(self.session_id, self._transcript_root)
+            self._writer.open({"workdir": str(self.workdir), "model": self.model})
 
         cmd = _build_cmd(self._claude_bin, self.model, self._extra_args)
         env = self._env if self._env is not None else _clean_env()
@@ -206,6 +215,8 @@ class ChatSession:
         """Record a frame and fan it out to subscribers (reader-thread side)."""
         with self._lock:
             self._transcript.append(frame)
+            if self._writer is not None:
+                self._writer.append(frame)
             subs = list(self._subscribers)
         loop = self._loop
         if loop is None:
@@ -273,6 +284,8 @@ class ChatSession:
             except Exception:
                 pass
             self._stderr_file = None
+        if self._writer is not None:
+            self._writer.close()
 
 
 class ChatSessionManager:
@@ -291,6 +304,7 @@ class ChatSessionManager:
         env: dict[str, str] | None = None,
         claude_bin: str = "claude",
         approval: dict[str, str] | None = None,
+        transcript_root: Path | None = None,
     ) -> ChatSession:
         """Create, start, and register a session. Call from an async context."""
         session_id = uuid.uuid4().hex
@@ -302,6 +316,7 @@ class ChatSessionManager:
             env=env,
             claude_bin=claude_bin,
             approval=approval,
+            transcript_root=transcript_root,
         )
         session.start()
         with self._lock:

@@ -1,8 +1,9 @@
-"""Chat routes — scaffold a workspace, start a session, stream frames over SSE.
+"""Chat routes — scaffold a workspace, run a session, stream/gate/persist it.
 
-P1+P2 of the chat module (``design/chat-module.md``). Workspaces are
-path-gated via ``coral.chat.workspace.validate_local_path`` and new tasks
-scaffolded via ``coral init``. The ``coral start`` approval hook is P3.
+The chat module (``design/chat-module.md``): workspaces are path-gated
+(``validate_local_path``) and scaffolded (``coral init``); sessions stream
+over SSE; ``coral start`` is gated by the PreToolUse approval callback; and
+frames are persisted (``coral.chat.transcript``) for history.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from coral.chat.session import CLOSED_FRAME_TYPE, ChatSessionManager
+from coral.chat.transcript import chat_home, list_sessions, read_meta, read_transcript
 from coral.chat.workspace import LocalPathError, scaffold_task, validate_local_path
 
 _SSE_HEADERS = {
@@ -58,9 +60,23 @@ async def post_chat_session(request: Request) -> Response:
     except LocalPathError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     session = _manager(request).create(
-        workdir=wd, model=body.get("model"), approval=_approval_config(request)
+        workdir=wd,
+        model=body.get("model"),
+        approval=_approval_config(request),
+        transcript_root=chat_home(),
     )
     return JSONResponse({"session_id": session.session_id, "workdir": str(wd)})
+
+
+async def get_chat_sessions(request: Request) -> Response:
+    """GET /api/chat/sessions — list persisted chat sessions (newest first)."""
+    return JSONResponse({"sessions": list_sessions()})
+
+
+async def get_chat_transcript(request: Request) -> Response:
+    """GET /api/chat/{sid}/transcript — frames + meta for a session, from disk."""
+    sid = request.path_params["sid"]
+    return JSONResponse({"session_id": sid, "meta": read_meta(sid), "frames": read_transcript(sid)})
 
 
 async def post_chat_workspace(request: Request) -> Response:
