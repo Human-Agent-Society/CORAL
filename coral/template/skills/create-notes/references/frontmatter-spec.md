@@ -21,7 +21,7 @@ mapping is in the table near the end of this file.
 | `type` | enum | `experiment \| hypothesis \| dead_end \| open_question \| synthesis` | What kind of claim this is. Picks the node category in the knowledge graph. | `notes_graph` node `type`, color/shape in the dashboard graph view |
 | `claim` | string | one testable sentence | The thing this note asserts. Not a title — a falsifiable statement. | future search / aggregation; lint enforces presence per-variant |
 | `status` | enum | `confirmed \| refuted \| untested` | Whether the claim has been verified. | knowledge-graph node color; consolidate filters |
-| `confidence` | float | `[0.0, 1.0]` | Your numeric prior on the claim. | knowledge-graph node size; sort order in synthesis views |
+| `confidence` | enum | `low \| medium \| high` | How confident the team should be in this claim. Discrete on purpose — LLM-written floats aren't calibrated, and a 3-bucket vocabulary is what agents agree on across runs. | knowledge-graph node size; sort order in synthesis views |
 | `based_on` | string | attempt hash | The graded artifact this builds on. Provenance, not consumption. | knowledge-graph `based_on` edge (planned), attempt → note crosslink |
 | `evidence` | dict | `{attempt, score_delta, verified}` | The graded artifact behind the claim. `attempt` is a hash, `score_delta` a signed number (`+328` = baseline→this), `verified: true` when the result has been replicated. | `status: confirmed` is only meaningful with `evidence.verified: true` — lint warns on the inconsistency |
 | `supersedes` | list[string] | note paths or slugs | Prior notes this one replaces. Use this instead of overwriting — the graph then carries the lineage. | knowledge-graph `supersedes` edges (typed) |
@@ -46,11 +46,23 @@ mapping is in the table near the end of this file.
 - **`refuted`** — verified evidence contradicts the claim. Often paired with `refutes:` pointing at the note that proposed the (now-refuted) claim.
 - **`untested`** — no evidence yet. The honest default for a hypothesis / focus note.
 
+### `confidence:`
+
+Three levels. Pick based on what you actually know, not on how excited you are:
+
+- **`high`** — multiple verified evidence points agree, mechanism is understood, and you'd be surprised to see a counter-example. Synthesis notes with 3+ confirming attempts typically land here.
+- **`medium`** — the default when you have some evidence but room for surprise. A single confirmed eval usually means `medium`, not `high`.
+- **`low`** — you'd bet against the claim if pushed, or there's no evidence behind it yet but you still want the note on record (a hypothesis you're not committed to, a hunch that didn't pan out).
+
+If you have *nothing* to base a confidence on, omit the field. Don't put a placeholder — lint will catch the empty `<placeholder>` and flag it as not in the vocabulary.
+
+Why no numerics: LLM-written floats (`0.7`, `0.83`) aren't calibrated — the difference between 0.7 and 0.8 is noise, not signal. Discrete buckets are honest about the resolution actually achievable, and stay consistent across agents (your `0.7` may be another agent's `0.5`, but you'd both agree on `medium`).
+
 ## Rules of thumb
 
 - **`claim:` is one testable sentence**, not a title — "matmul tile=32 improves score" beats "matmul experiments."
 - **`status:` follows the evidence**: `confirmed` only with `evidence.verified: true`; downgrade to `untested` if the grader hasn't seen it yet.
-- **`confidence:` is a number, not a vibe** — under 0.5 means "I'd bet against this." A focus note declaring `confidence: 0.9` on day one without evidence is a signal you haven't actually tested anything.
+- **`confidence:` is grounded in evidence, not enthusiasm** — a focus note declaring `high` on day one without evidence is a signal you haven't actually tested anything. Default to `medium` and earn `high` with verified results.
 - **Use `supersedes:` instead of overwriting**: write a new synthesis note that points at the old one. The graph then shows the lineage; the old claim isn't silently lost.
 - **Body links count too**: a free-text note that writes `Based on [eval-12](experiments/eval-12-simd.md)` already shows up as a `references` edge in the graph. The trace schema is for typed edges (`supersedes` / `refutes`); free-text links are for everything else.
 

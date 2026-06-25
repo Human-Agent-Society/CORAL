@@ -185,9 +185,26 @@ function layout(nodes: NoteGraphNode[], edges: NoteGraphEdge[]): Map<string, Pla
   return out;
 }
 
+/* Confidence is a 3-level enum (low | medium | high); pixel radius is a
+ * pure presentation concern. Legacy notes written under the old float
+ * schema still render at a sensible size via a one-shot bucketing. */
+const CONFIDENCE_RADIUS: Record<string, number> = {
+  low: 6,
+  medium: 8,
+  high: 11,
+};
+
 function radius(n: NoteGraphNode): number {
-  const c = typeof n.confidence === "number" ? Math.max(0, Math.min(1, n.confidence)) : null;
-  return c == null ? 7 : 5 + c * 6; // 5..11 by confidence
+  const c = n.confidence;
+  if (typeof c === "string" && c in CONFIDENCE_RADIUS) {
+    return CONFIDENCE_RADIUS[c];
+  }
+  if (typeof c === "number") {
+    if (c < 0.4) return CONFIDENCE_RADIUS.low;
+    if (c < 0.7) return CONFIDENCE_RADIUS.medium;
+    return CONFIDENCE_RADIUS.high;
+  }
+  return 7; // no confidence stated — neutral mid size
 }
 
 /** Gentle quadratic-bezier arc between two node boundaries, leaving room for

@@ -30,14 +30,14 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone  # noqa: UP017  bundled scripts may run under py<3.11
 from pathlib import Path
 
 AGENT_ID_FILES = (".coral_agent_id",)
 
 
 def _now_iso() -> str:
-    return datetime.now(UTC).isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")  # noqa: UP017
 
 
 def _detect_agent_id() -> str:
@@ -61,7 +61,7 @@ commit: <coral eval commit hash, or "n/a">
 type: experiment
 claim: "<one testable sentence — e.g. 'u8 SIMD widening doubles QPS at recall ≥ 0.97'>"
 status: <confirmed | refuted | untested>
-confidence: <0.0 - 1.0>
+confidence: <low | medium | high>
 evidence:
   attempt: <commit hash>
   score_delta: <baseline → this; signed number>
@@ -150,7 +150,7 @@ generation: 1
 type: hypothesis
 claim: "<your bet — e.g. 'u8 SIMD widening will close the bandwidth-bound gap'>"
 status: untested
-confidence: <0.0 - 1.0; your prior before any evidence>
+confidence: <low | medium | high; your prior before any evidence>
 tags: [<lane tags>]
 ---
 
@@ -185,7 +185,7 @@ created: {created}
 type: synthesis
 claim: "<one-sentence team belief, conditions included>"
 status: <confirmed | refuted | untested>
-confidence: <0.0 - 1.0; weighted by evidence strength>
+confidence: <low | medium | high; weighted by evidence strength>
 supersedes: [<prior synthesis path, if any>]
 tags: [<topic>]
 ---

@@ -94,7 +94,7 @@ commit: <the coral eval commit hash this note describes, or "n/a">
 type: experiment
 claim: "<one testable sentence — e.g. 'u8 SIMD widening doubles QPS at recall ≥ 0.97'>"
 status: <confirmed | refuted | untested>
-confidence: <0.0 - 1.0>
+confidence: <low | medium | high>
 evidence:
   attempt: <commit hash>
   score_delta: <baseline → this; signed number>
@@ -158,7 +158,7 @@ generation: 1
 type: hypothesis
 claim: "<your bet — e.g. 'u8 SIMD widening will close the bandwidth-bound gap'>"
 status: untested
-confidence: <0.0 - 1.0; your prior before any evidence>
+confidence: <low | medium | high; your prior before any evidence>
 tags: [<lane tags>]
 ---
 
@@ -182,7 +182,7 @@ created: <ISO-8601>
 type: synthesis
 claim: "<one-sentence team belief, conditions included>"
 status: <confirmed | refuted | untested>
-confidence: <0.0 - 1.0; weighted by evidence strength>
+confidence: <low | medium | high; weighted by evidence strength>
 supersedes: [<prior synthesis path, if any>]
 tags: [<topic>]
 ---
@@ -306,7 +306,7 @@ Before saving, run `scripts/lint.py <path-to-note>` — it mechanizes every chec
 
 **For synthesis (Variant D.1) notes:**
 - [ ] **At least 3 attempt hashes cited as evidence.**
-- [ ] **A confidence level + conditions are stated.** Mirror in the frontmatter `confidence:` so the graph view sizes the node correctly.
+- [ ] **A confidence level + conditions are stated.** Mirror in the frontmatter `confidence:` (`low` / `medium` / `high`) so the graph view sizes the node correctly.
 - [ ] **Counter-evidence is named**, even if "no counter-evidence found yet."
 - [ ] **If this replaces a prior synthesis, `supersedes:` points at it.** Don't silently overwrite — write a new file and let the graph carry the lineage.
 

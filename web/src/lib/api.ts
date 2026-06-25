@@ -78,17 +78,21 @@ export interface Note {
   // Structured-trace fields (optional; present when the note carries the schema).
   type?: string;
   status?: string;
-  confidence?: number;
+  confidence?: ConfidenceLevel | number | string | null;
   based_on?: string;
   touched?: string[] | string;
 }
+
+export type ConfidenceLevel = "low" | "medium" | "high";
 
 export interface NoteGraphNode {
   id: string;
   title: string;
   type: string;
   status?: string | null;
-  confidence?: number | null;
+  // Schema is the enum; the `number` branch is for legacy notes written
+  // under the older float-based schema and is migrated by the renderer.
+  confidence?: ConfidenceLevel | number | string | null;
   creator: string;
   island_id?: string | null;
   date: string;

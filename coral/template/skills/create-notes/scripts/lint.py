@@ -9,7 +9,7 @@ What it checks (per note):
 - ``created:`` is present and looks like an ISO-8601 date / datetime
 - ``type:`` (if present) is one of the documented vocabulary
 - ``status:`` (if present) is one of the documented vocabulary
-- ``confidence:`` (if present) is a number in [0.0, 1.0]
+- ``confidence:`` (if present) is one of ``low | medium | high``
 - ``status: confirmed`` is paired with ``evidence.verified: true`` — a
   confirmed claim with no verified evidence is the most common silent
   inconsistency the knowledge graph hides
@@ -44,6 +44,7 @@ DEFAULT_NOTES_DIR = ".coral/public/notes"
 
 TYPE_VOCAB = {"experiment", "hypothesis", "dead_end", "open_question", "synthesis"}
 STATUS_VOCAB = {"confirmed", "refuted", "untested"}
+CONFIDENCE_VOCAB = {"low", "medium", "high"}
 
 # Map directory / filename pattern → expected `type:` value. The first
 # match wins, so order matters: focus-*.md must beat the bare "other"
@@ -219,12 +220,15 @@ def _lint_note(
 
     confidence = meta.get("confidence")
     if confidence is not None:
-        try:
-            c = float(confidence)
-            if not 0.0 <= c <= 1.0:
-                warnings.append(f"`confidence: {confidence!r}` is outside [0.0, 1.0]")
-        except (TypeError, ValueError):
-            warnings.append(f"`confidence: {confidence!r}` is not a number")
+        if isinstance(confidence, (int, float)) and not isinstance(confidence, bool):
+            warnings.append(
+                f"`confidence: {confidence}` is a number — the schema is now "
+                f"{sorted(CONFIDENCE_VOCAB)}; map low (<0.4) / medium / high (>0.7)"
+            )
+        elif confidence not in CONFIDENCE_VOCAB:
+            warnings.append(
+                f"`confidence: {confidence!r}` is not in the vocabulary {sorted(CONFIDENCE_VOCAB)}"
+            )
 
     evidence = meta.get("evidence")
     if status == "confirmed":

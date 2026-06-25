@@ -15,7 +15,7 @@ relate, and verify them:
       attempt: 7b1e4d           # the graded artifact behind the claim
       score_delta: -0.03        # 0.42 -> 0.39
       verified: true
-    confidence: 0.7
+    confidence: medium                # low | medium | high
     status: confirmed           # confirmed | refuted | untested
     supersedes: [research/old-idea.md]
     touched: [matmul.cu]
