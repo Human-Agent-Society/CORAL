@@ -14,6 +14,7 @@ from starlette.responses import FileResponse, Response
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
+from coral.chat.session import ChatSessionManager
 from coral.web.api import (
     get_agent_attempts,
     get_attempt_detail,
@@ -32,6 +33,12 @@ from coral.web.api import (
     get_steering,
     post_steer,
     switch_run,
+)
+from coral.web.chat import (
+    chat_events,
+    delete_chat_session,
+    post_chat_message,
+    post_chat_session,
 )
 from coral.web.events import FileWatcher, sse_endpoint
 
@@ -59,10 +66,12 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
         app.state._switch_lock = asyncio.Lock()
         app.state.watcher = FileWatcher(coral_dir)
         app.state._watcher_task = asyncio.create_task(app.state.watcher.run())
+        app.state.chat_manager = ChatSessionManager()
         try:
             yield
         finally:
             # shutdown
+            app.state.chat_manager.shutdown()
             app.state.watcher.stop()
             app.state._watcher_task.cancel()
             try:
@@ -97,6 +106,11 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
         Route("/api/runs", get_runs),
         Route("/api/runs/switch", switch_run, methods=["POST"]),
         Route("/api/events", sse_endpoint),
+        # Chat module (design/chat-module.md)
+        Route("/api/chat/sessions", post_chat_session, methods=["POST"]),
+        Route("/api/chat/{sid}/message", post_chat_message, methods=["POST"]),
+        Route("/api/chat/{sid}/events", chat_events),
+        Route("/api/chat/{sid}", delete_chat_session, methods=["DELETE"]),
     ]
 
     # Mount static files if the directory exists (post-build)
