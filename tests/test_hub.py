@@ -12,7 +12,15 @@ from coral.hub.attempts import (
     search_attempts,
     write_attempt,
 )
-from coral.hub.notes import format_notes_list, get_recent_notes, list_notes, read_note, search_notes
+from coral.hub.notes import (
+    format_notes_list,
+    get_recent_notes,
+    list_notes,
+    mark_notes_legacy,
+    notes_by,
+    read_note,
+    search_notes,
+)
 from coral.hub.skills import get_skill_tree, list_skills, read_skill
 from coral.types import Attempt
 
@@ -200,6 +208,117 @@ def test_notes_empty():
         entries = list_notes(d)
         assert entries == []
         assert format_notes_list(entries) == "No notes yet."
+
+
+def _write_note(notes_dir: Path, name: str, body: str) -> Path:
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    path = notes_dir / name
+    path.write_text(body)
+    return path
+
+
+def test_mark_notes_legacy_stamps_and_moves_authored_notes():
+    """Notes by the agent get `legacy: true` and move under `_legacy/`; others untouched."""
+    with tempfile.TemporaryDirectory() as d:
+        notes_dir = Path(d) / "public" / "notes"
+        mine = _write_note(
+            notes_dir,
+            "tiling.md",
+            "---\ncreator: agent-1\ncreated: 2026-03-14\nclaim: tiling helps\n---\n\n# Tiling\nbody\n",
+        )
+        theirs = _write_note(
+            notes_dir,
+            "other.md",
+            "---\ncreator: agent-2\ncreated: 2026-03-14\n---\n\n# Other\nbody\n",
+        )
+
+        marked = mark_notes_legacy(d, island_id=None, agent_id="agent-1", reason="migrated to 1")
+
+        moved = notes_dir / "_legacy" / "tiling.md"
+        assert marked == [moved]
+        # The original is gone; the note now lives under _legacy/.
+        assert not mine.exists()
+        assert moved.exists()
+        moved_text = moved.read_text()
+        assert "legacy: true" in moved_text
+        assert 'legacy_reason: "migrated to 1"' in moved_text
+        # Existing frontmatter + body survive the surgical insert.
+        assert "creator: agent-1" in moved_text
+        assert "claim: tiling helps" in moved_text
+        assert "# Tiling" in moved_text
+        # Another agent's note is left alone, in place.
+        assert theirs.exists()
+        assert "legacy" not in theirs.read_text()
+
+
+def test_mark_notes_legacy_preserves_subdir_structure():
+    """A categorized note keeps its relative path under `_legacy/`."""
+    with tempfile.TemporaryDirectory() as d:
+        notes_dir = Path(d) / "public" / "notes"
+        nested = _write_note(
+            notes_dir / "research",
+            "idea.md",
+            "---\ncreator: agent-1\ncreated: 2026-03-14\n---\n\n# Idea\nbody\n",
+        )
+
+        marked = mark_notes_legacy(d, island_id=None, agent_id="agent-1")
+
+        moved = notes_dir / "_legacy" / "research" / "idea.md"
+        assert marked == [moved]
+        assert not nested.exists()
+        assert moved.exists()
+
+
+def test_mark_notes_legacy_is_idempotent():
+    """A second call doesn't re-stamp, re-move, or duplicate the legacy field."""
+    with tempfile.TemporaryDirectory() as d:
+        notes_dir = Path(d) / "public" / "notes"
+        _write_note(
+            notes_dir,
+            "n.md",
+            "---\ncreator: agent-1\ncreated: 2026-03-14\n---\n\n# N\nbody\n",
+        )
+
+        moved = notes_dir / "_legacy" / "n.md"
+        first = mark_notes_legacy(d, island_id=None, agent_id="agent-1")
+        assert first == [moved]
+        second = mark_notes_legacy(d, island_id=None, agent_id="agent-1")
+        assert second == []
+        # The note stays parked under _legacy/ with a single legacy stamp.
+        assert moved.read_text().count("legacy: true") == 1
+
+
+def test_mark_notes_legacy_skips_unattributed():
+    """A note with no creator can't be attributed, so it's never flagged or moved."""
+    with tempfile.TemporaryDirectory() as d:
+        notes_dir = Path(d) / "public" / "notes"
+        anon = _write_note(notes_dir, "anon.md", "# Anon\nno frontmatter\n")
+
+        marked = mark_notes_legacy(d, island_id=None, agent_id="agent-1")
+
+        assert marked == []
+        assert anon.exists()
+        assert "legacy" not in anon.read_text()
+        assert not (notes_dir / "_legacy").exists()
+
+
+def test_mark_notes_legacy_surfaces_in_list_and_format():
+    """The legacy flag round-trips through list_notes and format_notes_list."""
+    with tempfile.TemporaryDirectory() as d:
+        notes_dir = Path(d) / "public" / "notes"
+        _write_note(
+            notes_dir,
+            "n.md",
+            "---\ncreator: agent-1\ncreated: 2026-03-14\n---\n\n# Legacy Note\nbody\n",
+        )
+        mark_notes_legacy(d, island_id=None, agent_id="agent-1")
+
+        entries = list_notes(d)
+        assert len(entries) == 1
+        assert entries[0]["legacy"] is True
+        assert "[legacy]" in format_notes_list(entries)
+        # The note moved under _legacy/ but is still attributable to its author.
+        assert notes_by(d, island_id=None, agent_id="agent-1") == [notes_dir / "_legacy" / "n.md"]
 
 
 def test_skills():

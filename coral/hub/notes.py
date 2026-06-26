@@ -51,6 +51,12 @@ from coral.hub._island import island_root
 # subsystems agree on how to spell "no author."
 UNATTRIBUTED_CREATOR = "unknown"
 
+# Subdirectory under an island's ``notes/`` where a migrated agent's notes are
+# parked. The leading underscore keeps it out of category aggregation while
+# ``_is_user_note`` (which only inspects the *filename*) still surfaces the
+# files themselves, so legacy notes stay readable through ``coral notes``.
+LEGACY_DIR_NAME = "_legacy"
+
 # Structured-trace frontmatter fields surfaced (beyond creator/created) so the
 # API/UI and aggregation/verification passes can act on them.
 _TRACE_FIELDS = (
@@ -65,6 +71,8 @@ _TRACE_FIELDS = (
     "touched",
     "tags",
     "next",
+    "legacy",
+    "legacy_reason",
 )
 
 
@@ -355,7 +363,8 @@ def format_notes_list(entries: list[dict[str, Any]]) -> str:
     for i, e in enumerate(entries, 1):
         date_str = f"[{e['date']}] " if e.get("date") else ""
         creator = e.get("creator") or UNATTRIBUTED_CREATOR
-        lines.append(f"  {i}. {date_str}{e['title']} ({creator})")
+        legacy = " [legacy]" if e.get("legacy") else ""
+        lines.append(f"  {i}. {date_str}{e['title']} ({creator}){legacy}")
     return "\n".join(lines)
 
 
@@ -412,6 +421,121 @@ def notes_by(
         if meta.get("creator") == agent_id:
             matched.append(md_file)
     return matched
+
+
+def _yaml_quote(value: str) -> str:
+    """Render ``value`` as a YAML double-quoted scalar.
+
+    Keeps arbitrary punctuation in a free-text reason from breaking the
+    frontmatter block when it's re-parsed by the real YAML loader.
+    """
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def _insert_legacy_fields(text: str, reason: str | None) -> str | None:
+    """Insert ``legacy: true`` (+ optional ``legacy_reason``) into frontmatter.
+
+    Returns the modified text, or ``None`` when the note already carries a
+    truthy ``legacy:`` field (so the caller can treat marking as idempotent).
+    The edit is surgical — existing frontmatter formatting is preserved and
+    the new lines are inserted just before the closing ``---`` so they parse
+    as top-level keys. A note with no frontmatter gets a fresh block prepended.
+    """
+    meta, _ = _parse_frontmatter(text)
+    if meta.get("legacy"):
+        return None
+
+    new_lines = ["legacy: true"]
+    if reason:
+        new_lines.append(f"legacy_reason: {_yaml_quote(reason)}")
+    block = "\n".join(new_lines)
+
+    if text.startswith("---"):
+        end = text.find("---", 3)
+        if end != -1:
+            front = text[3:end].rstrip("\n")
+            rest = text[end:]  # begins at the closing '---'
+            return f"---{front}\n{block}\n{rest}"
+
+    return f"---\n{block}\n---\n\n{text}"
+
+
+def _legacy_destination(notes_dir: Path, path: Path) -> Path:
+    """Where a freshly-flagged note should live under ``notes/_legacy/``.
+
+    Preserves the note's path relative to ``notes_dir`` so a categorized note
+    keeps its structure (``research/idea.md`` → ``_legacy/research/idea.md``).
+    A note that already sits under ``_legacy/`` keeps its place (no double
+    nesting). When a different note of the same name already occupies the
+    destination — e.g. a note authored *after* an earlier migration — a
+    ``-N`` suffix is appended so the earlier legacy note is never clobbered.
+    """
+    try:
+        rel = path.relative_to(notes_dir)
+    except ValueError:
+        rel = Path(path.name)
+    if rel.parts and rel.parts[0] == LEGACY_DIR_NAME:
+        return path  # already parked under _legacy/ — flag in place.
+
+    dest = notes_dir / LEGACY_DIR_NAME / rel
+    if dest == path or not dest.exists():
+        return dest
+    stem, suffix = dest.stem, dest.suffix
+    n = 2
+    while True:
+        candidate = dest.with_name(f"{stem}-{n}{suffix}")
+        if not candidate.exists():
+            return candidate
+        n += 1
+
+
+def mark_notes_legacy(
+    coral_dir: str | Path,
+    island_id: str | int | None,
+    agent_id: str,
+    *,
+    reason: str | None = None,
+) -> list[Path]:
+    """Flag and relocate every note ``agent_id`` authored on an island.
+
+    Called when an agent migrates away: its notes stay on the source island
+    as island-local shared knowledge (see :func:`notes_by`), but each one is
+    stamped ``legacy: true`` and moved into the island's ``notes/_legacy/``
+    subdirectory so future readers know the author has left and the work is no
+    longer actively maintained here. ``reason`` is recorded as
+    ``legacy_reason:`` when given. The note's path relative to ``notes/`` is
+    preserved under ``_legacy/``, and the files remain readable through
+    ``coral notes`` (``_is_user_note`` filters on filename, not directory).
+
+    Idempotent: a note already marked ``legacy: true`` is left where it is, so
+    a second migration of the same agent is a no-op. Returns the new (moved)
+    paths of the notes freshly flagged — the ones whose author could be
+    attributed via frontmatter; unattributed notes are skipped, exactly as in
+    :func:`notes_by`.
+    """
+    notes_dir = _notes_dir(coral_dir, island_id)
+    moved: list[Path] = []
+    for path in notes_by(coral_dir, island_id, agent_id):
+        try:
+            text = path.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        new_text = _insert_legacy_fields(text, reason)
+        if new_text is None:
+            continue  # already legacy — leave it parked.
+        dest = _legacy_destination(notes_dir, path)
+        try:
+            if dest != path:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_text(new_text)
+                path.unlink()
+            else:
+                dest.write_text(new_text)
+        except OSError:
+            continue
+        moved.append(dest)
+    return moved
 
 
 def notes_unattributed(
@@ -523,6 +647,7 @@ def notes_graph(
                 "island_id": e.get("island_id"),
                 "date": e.get("date", ""),
                 "based_on": e.get("based_on"),
+                "legacy": bool(e.get("legacy")),
             }
         )
 

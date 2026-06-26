@@ -64,6 +64,7 @@ from coral.hub.heartbeat import (
     write_agent_heartbeat,
     write_global_heartbeat,
 )
+from coral.hub.notes import mark_notes_legacy
 from coral.hub.steering import ContinueFromAction, mark_applied, read_pending
 from coral.template.coral_md import generate_coral_md
 from coral.types import BUDGET_CLASS_REAL, Attempt, get_budget_class
@@ -1911,7 +1912,9 @@ class AgentManager:
         3. Move per-agent files (``roles/<agent>.md``,
            ``heartbeat/<agent>.json``, attempts, and matching eval logs)
            from src island to dst. Notes and skills stay on the source
-           island as island-local shared knowledge.
+           island as island-local shared knowledge; the agent's own notes
+           there are flagged ``legacy: true`` and moved into
+           ``notes/_legacy/`` so readers know the author has moved on.
         4. Repoint the worktree's shared-state symlinks at the dst island.
         5. Re-write the runtime's permission settings with the new
            island_id (so Read scopes follow the move).
@@ -1968,6 +1971,25 @@ class AgentManager:
 
         # (3) Move per-agent identity / cadence files src → dst.
         _move_agent_files(coral_dir, agent_id, src=src, dst=dst)
+
+        # (3b) The agent's notes stay on the source island as island-local
+        # shared knowledge, but flag them legacy and park them under
+        # ``notes/_legacy/`` so future readers know the author has migrated
+        # away and the work is no longer maintained here.
+        try:
+            marked = mark_notes_legacy(
+                coral_dir,
+                island_id=src,
+                agent_id=agent_id,
+                reason=f"author {agent_id} migrated to island {dst}",
+            )
+            if marked:
+                logger.info(
+                    f"Flagged and moved {len(marked)} note(s) by {agent_id} on island "
+                    f"{src} into notes/_legacy/ after migration to island {dst}"
+                )
+        except OSError as e:
+            logger.warning(f"Failed to mark legacy notes for {agent_id} on island {src}: {e}")
 
         # (4) Repoint worktree symlinks at dst.
         repoint_shared_state(worktree_path, coral_dir, shared_dir_name, new_island_id=dst)
@@ -2530,7 +2552,9 @@ def _move_agent_files(
     Moves ``roles/<agent>.md`` and ``heartbeat/<agent>.json`` plus the
     agent's attempt records and matching ``eval_logs/<commit>/`` directories.
     Notes / skills deliberately stay on the source island as shared
-    island-local knowledge.
+    island-local knowledge (the caller flags the migrating agent's notes
+    ``legacy`` and moves them into ``notes/_legacy/`` separately via
+    ``mark_notes_legacy``).
 
     Idempotent: missing source files are silently skipped, so the helper
     is safe to call twice on the same agent. Existing files at the
@@ -2804,7 +2828,9 @@ def _build_migration_prompt(candidate: MigrationCandidate, *, shared_dir: str) -
         f"- Your evolved role, heartbeat cadence, attempts, and eval logs "
         f"followed you here.\n"
         f"- Notes and skills stayed on island `{candidate.src_island}` as "
-        f"that island's shared knowledge base.\n\n"
+        f"that island's shared knowledge base. Your notes there are now "
+        f"flagged `legacy` and moved under `{shared_dir}/notes/_legacy/` "
+        f"since you've moved on.\n\n"
         f"What to do first:\n"
         f"1. `coral log -n 10` to see this island's current leaderboard.\n"
         f"2. `coral notes --recent` to read what your new teammates "

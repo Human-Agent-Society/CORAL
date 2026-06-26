@@ -769,6 +769,46 @@ def test_write_arrival_note_lands_on_dst_island_as_coral_authored():
         assert notes_by(coral_dir, island_id="1", agent_id="0-agent-1") == []
 
 
+def test_mark_notes_legacy_flags_source_island_notes_on_migration():
+    """A migrating agent's notes stay on the source island, turn legacy, and move to _legacy/."""
+    from coral.hub.notes import list_notes, mark_notes_legacy, notes_by
+
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        src_notes = coral_dir / "islands" / "0" / "notes"
+        src_notes.mkdir(parents=True)
+        (coral_dir / "islands" / "1" / "notes").mkdir(parents=True)
+        (src_notes / "mine.md").write_text(
+            "---\ncreator: 0-agent-1\ncreated: 2026-05-31\n---\n\n# Mine\nbody\n"
+        )
+        (src_notes / "teammate.md").write_text(
+            "---\ncreator: 0-agent-2\ncreated: 2026-05-31\n---\n\n# Teammate\nbody\n"
+        )
+
+        marked = mark_notes_legacy(
+            coral_dir,
+            island_id="0",
+            agent_id="0-agent-1",
+            reason="author 0-agent-1 migrated to island 1",
+        )
+
+        moved = src_notes / "_legacy" / "mine.md"
+        assert marked == [moved]
+        # The note moves into _legacy/ on the *source* island, not the dest island.
+        assert not (src_notes / "mine.md").exists()
+        assert moved.exists()
+        assert not (coral_dir / "islands" / "1" / "notes" / "mine.md").exists()
+        # It remains attributable to its author after the move.
+        assert notes_by(coral_dir, island_id="0", agent_id="0-agent-1") == [moved]
+        entry = next(e for e in list_notes(coral_dir, island_id="0") if e["title"] == "Mine")
+        assert entry["legacy"] is True
+        assert entry["legacy_reason"] == "author 0-agent-1 migrated to island 1"
+        # The teammate's note is untouched, still in place.
+        teammate = next(e for e in list_notes(coral_dir, island_id="0") if e["title"] == "Teammate")
+        assert not teammate.get("legacy")
+        assert (src_notes / "teammate.md").exists()
+
+
 def test_manager_migration_eval_count_ignores_tune_and_pending(tmp_path):
     """Migration cadence advances only on finalized real attempts."""
     from coral.agent.manager import AgentManager

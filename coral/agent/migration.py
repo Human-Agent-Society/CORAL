@@ -28,11 +28,14 @@ a swap/cycle rather than as a one-way drain.
 What moves with an agent (mechanics in the manager): ``roles/<agent>.md``,
 ``heartbeat/<agent>.json``, that agent's attempt records, and matching
 ``eval_logs/<commit>/`` directories follow them. Notes and skills authored
-on the source island stay put as island-local shared knowledge. The agent's
-worktree symlinks and ``.coral_island`` breadcrumb are repointed at the
-destination, and an optional arrival note is dropped on the destination's
-``notes/`` when ``notify_island=True`` so other agents see the newcomer
-through ``coral notes``.
+on the source island stay put as island-local shared knowledge, but the
+migrating agent's own notes there are flagged ``legacy: true`` and moved
+into ``notes/_legacy/`` so future readers know the author has moved on. The
+agent's worktree symlinks and
+``.coral_island`` breadcrumb are repointed at the destination, and an
+optional arrival note is dropped on the destination's ``notes/`` when
+``notify_island=True`` so other agents see the newcomer through
+``coral notes``.
 """
 
 from __future__ import annotations
