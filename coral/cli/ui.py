@@ -200,6 +200,80 @@ def start_ui_background(
     webbrowser.open(url)
 
 
+def _latest_run_coral_dir(results_root: Path) -> Path | None:
+    """Newest ``<task>/<run>/.coral`` under the runs root, or None."""
+    if not results_root.is_dir():
+        return None
+    candidates: list[Path] = []
+    for task_dir in results_root.iterdir():
+        if not task_dir.is_dir():
+            continue
+        for run_dir in task_dir.iterdir():
+            cd = run_dir / ".coral"
+            if cd.is_dir():
+                candidates.append(cd)
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def _server_placeholder() -> Path:
+    """A stable empty ``.coral`` used as the initial view when no run exists.
+
+    The read endpoints (attempts/notes/logs/...) read this dir and return
+    empty — no per-endpoint null-handling needed. The UI re-points to a real
+    run via ``/api/runs/switch`` once one is selected.
+    """
+    import os
+
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    base = Path(xdg).expanduser() if xdg else Path.home() / ".config"
+    placeholder = base / "coral" / "server-placeholder" / ".coral"
+    (placeholder / "public").mkdir(parents=True, exist_ok=True)
+    return placeholder
+
+
+def cmd_server(args: argparse.Namespace) -> None:
+    """Launch the host-level server (dashboard + chat, no run required).
+
+    Examples:
+      coral server
+      coral server --results ./results --port 8500
+    """
+    _ensure_ui_deps()
+    import uvicorn
+
+    _ensure_ui_built()
+
+    results_root = (
+        Path(args.results).expanduser().resolve() if args.results else Path.cwd() / "results"
+    )
+    results_root.mkdir(parents=True, exist_ok=True)
+    coral_dir = _latest_run_coral_dir(results_root) or _server_placeholder()
+
+    try:
+        port = _resolve_ui_port(args.host, args.port)
+    except RuntimeError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    from coral.web import create_app
+
+    app = create_app(coral_dir, results_dir=results_root)
+    _wire_chat_callbacks(app, port)
+    url = f"http://{args.host}:{port}"
+    print(f"CORAL Server: {url}")
+    print(f"Runs root:    {results_root}")
+    print("Dashboard + chat ready (no run required). Stop with Ctrl-C.\n")
+
+    if not args.no_open:
+        import webbrowser
+
+        webbrowser.open(url)
+
+    uvicorn.run(app, host=args.host, port=port, log_level="warning")
+
+
 def cmd_ui(args: argparse.Namespace) -> None:
     """Launch the web dashboard.
 
