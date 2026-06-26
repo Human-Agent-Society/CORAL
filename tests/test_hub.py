@@ -13,6 +13,7 @@ from coral.hub.attempts import (
     write_attempt,
 )
 from coral.hub.notes import (
+    copy_notes_to_island,
     format_notes_list,
     get_recent_notes,
     list_notes,
@@ -319,6 +320,82 @@ def test_mark_notes_legacy_surfaces_in_list_and_format():
         assert "[legacy]" in format_notes_list(entries)
         # The note moved under _legacy/ but is still attributable to its author.
         assert notes_by(d, island_id=None, agent_id="agent-1") == [notes_dir / "_legacy" / "n.md"]
+
+
+def test_copy_notes_to_island_carries_authored_notes():
+    """An agent's live notes are copied to the destination island, attributed and live."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        src = coral_dir / "islands" / "0" / "notes"
+        dst = coral_dir / "islands" / "1" / "notes"
+        dst.mkdir(parents=True)
+        _write_note(
+            src,
+            "tiling.md",
+            "---\ncreator: 0-agent-1\ncreated: 2026-03-14\nclaim: tiling helps\n---\n\n# Tiling\nbody\n",
+        )
+        _write_note(
+            src / "research",
+            "idea.md",
+            "---\ncreator: 0-agent-1\ncreated: 2026-03-14\n---\n\n# Idea\nbody\n",
+        )
+        _write_note(
+            src,
+            "teammate.md",
+            "---\ncreator: 0-agent-2\ncreated: 2026-03-14\n---\n\n# Teammate\nbody\n",
+        )
+
+        copied = copy_notes_to_island(coral_dir, "0-agent-1", src_island="0", dst_island="1")
+
+        assert sorted(copied) == [dst / "research" / "idea.md", dst / "tiling.md"]
+        # Relative structure preserved; copies stay attributed and are NOT legacy.
+        copy_text = (dst / "tiling.md").read_text()
+        assert "creator: 0-agent-1" in copy_text
+        assert "claim: tiling helps" in copy_text
+        assert "legacy" not in copy_text
+        assert notes_by(coral_dir, island_id="1", agent_id="0-agent-1") == [
+            dst / "research" / "idea.md",
+            dst / "tiling.md",
+        ]
+        # Teammate's note didn't ride along.
+        assert not (dst / "teammate.md").exists()
+        # Source island is left untouched by the copy.
+        assert (src / "tiling.md").exists()
+
+
+def test_copy_notes_to_island_skips_already_legacy_and_avoids_collisions():
+    """Already-archived notes aren't re-carried; same-named dst notes aren't clobbered."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        src = coral_dir / "islands" / "0" / "notes"
+        dst = coral_dir / "islands" / "1" / "notes"
+        dst.mkdir(parents=True)
+        # A live note that should be carried...
+        _write_note(
+            src,
+            "live.md",
+            "---\ncreator: 0-agent-1\ncreated: 2026-03-14\n---\n\n# Live\nbody\n",
+        )
+        # ...and one already archived as legacy on the source (under _legacy/).
+        _write_note(
+            src / "_legacy",
+            "old.md",
+            "---\ncreator: 0-agent-1\ncreated: 2026-03-14\nlegacy: true\n---\n\n# Old\nbody\n",
+        )
+        # The destination already has a same-named note by someone else.
+        _write_note(
+            dst,
+            "live.md",
+            "---\ncreator: 1-agent-9\ncreated: 2026-03-14\n---\n\n# Pre-existing\nkeep me\n",
+        )
+
+        copied = copy_notes_to_island(coral_dir, "0-agent-1", src_island="0", dst_island="1")
+
+        # legacy note skipped; live note copied under a non-clobbering name.
+        assert copied == [dst / "live-2.md"]
+        assert "keep me" in (dst / "live.md").read_text()
+        assert not (dst / "old.md").exists()
+        assert not (dst / "_legacy" / "old.md").exists()
 
 
 def test_skills():

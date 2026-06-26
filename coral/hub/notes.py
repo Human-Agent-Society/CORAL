@@ -461,6 +461,23 @@ def _insert_legacy_fields(text: str, reason: str | None) -> str | None:
     return f"---\n{block}\n---\n\n{text}"
 
 
+def _dedupe_path(path: Path) -> Path:
+    """Return ``path``, or a ``-N``-suffixed sibling if it already exists.
+
+    Keeps a write from clobbering an existing file of the same name (e.g. a
+    note carried to an island that already holds a same-named teammate note).
+    """
+    if not path.exists():
+        return path
+    stem, suffix = path.stem, path.suffix
+    n = 2
+    while True:
+        candidate = path.with_name(f"{stem}-{n}{suffix}")
+        if not candidate.exists():
+            return candidate
+        n += 1
+
+
 def _legacy_destination(notes_dir: Path, path: Path) -> Path:
     """Where a freshly-flagged note should live under ``notes/_legacy/``.
 
@@ -477,17 +494,52 @@ def _legacy_destination(notes_dir: Path, path: Path) -> Path:
         rel = Path(path.name)
     if rel.parts and rel.parts[0] == LEGACY_DIR_NAME:
         return path  # already parked under _legacy/ — flag in place.
+    return _dedupe_path(notes_dir / LEGACY_DIR_NAME / rel)
 
-    dest = notes_dir / LEGACY_DIR_NAME / rel
-    if dest == path or not dest.exists():
-        return dest
-    stem, suffix = dest.stem, dest.suffix
-    n = 2
-    while True:
-        candidate = dest.with_name(f"{stem}-{n}{suffix}")
-        if not candidate.exists():
-            return candidate
-        n += 1
+
+def copy_notes_to_island(
+    coral_dir: str | Path,
+    agent_id: str,
+    *,
+    src_island: str | int | None,
+    dst_island: str | int | None,
+) -> list[Path]:
+    """Copy ``agent_id``'s live notes from one island into another's ``notes/``.
+
+    Called on migration so an agent keeps its own research when it moves to a
+    new island. Each note's path relative to ``notes/`` is preserved on the
+    destination, the copy stays attributed to its original ``creator`` (so
+    :func:`notes_by` on the destination finds it), and it is **not** flagged
+    legacy — it's live where the agent now works. Notes already archived as
+    legacy on the source (``legacy: true``, typically under ``_legacy/``) are
+    skipped so an agent doesn't re-carry work it already left behind on an
+    earlier hop. Same-named notes already on the destination get a ``-N``
+    suffix rather than being overwritten. Returns the destination paths
+    written.
+    """
+    src_notes = _notes_dir(coral_dir, src_island)
+    dst_notes = _notes_dir(coral_dir, dst_island)
+    copied: list[Path] = []
+    for path in notes_by(coral_dir, src_island, agent_id):
+        try:
+            text = path.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        meta, _ = _parse_frontmatter(text)
+        if meta.get("legacy"):
+            continue  # already archived on the source — don't carry it forward.
+        try:
+            rel = path.relative_to(src_notes)
+        except ValueError:
+            rel = Path(path.name)
+        dest = _dedupe_path(dst_notes / rel)
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(text)
+        except OSError:
+            continue
+        copied.append(dest)
+    return copied
 
 
 def mark_notes_legacy(

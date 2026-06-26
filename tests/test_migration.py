@@ -1060,6 +1060,85 @@ def test_apply_migration_end_to_end_moves_state_and_repoints_worktree(tmp_path):
     assert mgr._restart_counts["0-agent-1"] == 1
 
 
+def test_apply_migration_copies_agent_notes_to_dst_and_archives_source(tmp_path):
+    """End-to-end: the migrating agent's notes are copied to dst and archived on src."""
+    from coral.agent.assignments import AgentSpec
+    from coral.agent.manager import AgentManager
+    from coral.agent.runtime import AgentHandle
+    from coral.config import AgentAssignmentConfig, AgentConfig, CoralConfig
+    from coral.hub.notes import notes_by
+    from coral.workspace import setup_shared_state
+    from coral.workspace.project import ProjectPaths
+
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public").mkdir(parents=True)
+    for island in ("0", "1"):
+        for sub in ("attempts", "notes", "skills", "agents", "logs", "heartbeat", "roles", "eval_logs"):
+            (coral_dir / "islands" / island / sub).mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+    setup_shared_state(worktree, coral_dir, ".claude", island_id="0")
+
+    # The migrating agent and a teammate both authored notes on island 0.
+    src_notes = coral_dir / "islands" / "0" / "notes"
+    (src_notes / "tiling.md").write_text(
+        "---\ncreator: 0-agent-1\ncreated: 2026-06-26\nclaim: tile=32 helps\n---\n\n# Tiling\nbody\n"
+    )
+    (src_notes / "research").mkdir()
+    (src_notes / "research" / "idea.md").write_text(
+        "---\ncreator: 0-agent-1\ncreated: 2026-06-26\n---\n\n# Idea\nbody\n"
+    )
+    (src_notes / "teammate.md").write_text(
+        "---\ncreator: 0-agent-2\ncreated: 2026-06-26\n---\n\n# Teammate\nstays\n"
+    )
+
+    cfg = CoralConfig(
+        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=2)]),
+        islands=IslandsConfig(count=2, migration=MigrationConfig(every=5, rank_window=3)),
+    )
+    mgr = AgentManager(cfg)
+    mgr.paths = ProjectPaths(
+        results_dir=tmp_path,
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=tmp_path / "agents",
+        repo_dir=tmp_path / "repo",
+    )
+    spec = AgentSpec(agent_id="0-agent-1", runtime="claude_code", model="opus", island_id="0")
+    mgr.specs = [spec]
+    mgr.specs_by_id = {"0-agent-1": spec}
+    mgr._agent_island = {"0-agent-1": "0"}
+    log_path = tmp_path / "0-agent-1.log"
+    log_path.write_text("")
+    mgr.handles = [
+        AgentHandle(agent_id="0-agent-1", process=None, worktree_path=worktree, log_path=log_path)
+    ]
+    mgr._setup_and_start_agent = lambda agent_id, **kw: mgr.handles[0]  # type: ignore[assignment]
+
+    candidate = MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.9)
+    mgr._apply_migration(candidate)
+
+    dst_notes = coral_dir / "islands" / "1" / "notes"
+    # The agent's notes were copied to dst (live, attributed, structure preserved).
+    assert (dst_notes / "tiling.md").exists()
+    assert (dst_notes / "research" / "idea.md").exists()
+    dst_text = (dst_notes / "tiling.md").read_text()
+    assert "creator: 0-agent-1" in dst_text
+    assert "legacy" not in dst_text
+    assert notes_by(coral_dir, island_id="1", agent_id="0-agent-1") == [
+        dst_notes / "research" / "idea.md",
+        dst_notes / "tiling.md",
+    ]
+    # The source-island originals are archived under _legacy/ and flagged.
+    assert (src_notes / "_legacy" / "tiling.md").exists()
+    assert "legacy: true" in (src_notes / "_legacy" / "tiling.md").read_text()
+    assert not (src_notes / "tiling.md").exists()
+    # The teammate's note didn't move or get copied.
+    assert (src_notes / "teammate.md").exists()
+    assert not (dst_notes / "teammate.md").exists()
+
+
 def test_apply_migration_moves_pending_attempt_with_agent(tmp_path):
     """Pending grader attempts move with the agent instead of blocking migration."""
     from coral.agent.assignments import AgentSpec
