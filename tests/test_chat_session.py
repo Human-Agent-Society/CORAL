@@ -136,14 +136,17 @@ def emit(o):
 args = sys.argv[1:]            # exec [resume <tid>] <text> --flags... --json
 resume = "resume" in args
 i = 1 if args[:1] == ["exec"] else 0
+tid = ""
 if args[i:i + 1] == ["resume"]:
+    tid = args[i + 1] if i + 1 < len(args) else ""
     i += 2                     # skip 'resume' and the thread id
 msg = args[i] if i < len(args) and not args[i].startswith("-") else ""
 
 if not resume:
     emit({"type": "thread.started", "thread_id": "thr-1"})
 emit({"type": "turn.started"})
-emit({"type": "item.completed", "item": {"id": "i0", "type": "agent_message", "text": "echo: " + msg}})
+prefix = ("resume " + tid + " ") if resume else ""
+emit({"type": "item.completed", "item": {"id": "i0", "type": "agent_message", "text": "echo: " + prefix + msg}})
 emit({"type": "turn.completed", "usage": {"output_tokens": 1}})
 """
 
@@ -182,3 +185,40 @@ def test_per_turn_session_spawns_per_message(tmp_path: Path) -> None:
     assert assistant["message"]["content"][0]["text"] == "echo: hi"
     assert frames[-1]["type"] == "result" and frames[-1]["is_error"] is False
     assert rid == "thr-1"  # captured for resume on the next turn
+
+
+def test_per_turn_resume_carries_context_across_turns(tmp_path: Path) -> None:
+    """Turn 2 must spawn with turn 1's session id — context is preserved
+    across the per-turn process boundary via resume."""
+    mock = _write_mock_codex(tmp_path)
+
+    async def inner():
+        mgr = ChatSessionManager()
+        session = mgr.create(workdir=tmp_path, runtime="codex", binary=str(mock))
+        queue = session.subscribe()
+
+        async def run_turn(text: str) -> dict:
+            # wait until any prior turn has fully finished, then send.
+            while session.busy():
+                await asyncio.sleep(0.02)
+            session.send(text)
+            assistant = None
+            while True:
+                frame = await asyncio.wait_for(queue.get(), timeout=10)
+                if frame.get("type") == "assistant":
+                    assistant = frame
+                if frame.get("type") == "result":
+                    return assistant
+
+        a1 = await run_turn("hi")
+        a2 = await run_turn("again")
+        rid = session.runtime_session_id
+        mgr.shutdown()
+        return a1, a2, rid
+
+    a1, a2, rid = asyncio.run(inner())
+    assert a1["message"]["content"][0]["text"] == "echo: hi"  # turn 1: fresh
+    # turn 2 was spawned as `codex exec resume thr-1 again` — the captured
+    # thread id flowed through, so the CLI reloads the conversation.
+    assert a2["message"]["content"][0]["text"] == "echo: resume thr-1 again"
+    assert rid == "thr-1"

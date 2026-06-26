@@ -173,6 +173,10 @@ class ChatSession:
             return self.process is not None and self.process.poll() is None
         return not self._closed
 
+    def busy(self) -> bool:
+        """True while a per-turn process is mid-flight (streaming is never busy)."""
+        return self._turn_thread is not None and self._turn_thread.is_alive()
+
     def send(self, text: str) -> None:
         """Deliver a user message — write to stdin (streaming) or spawn a turn."""
         if self._adapter.mode == STREAMING:

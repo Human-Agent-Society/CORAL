@@ -169,6 +169,8 @@ async def post_chat_message(request: Request) -> Response:
         return JSONResponse({"error": "no such session"}, status_code=404)
     if not session.alive:
         return JSONResponse({"error": "session not running"}, status_code=409)
+    if session.busy():
+        return JSONResponse({"error": "a turn is already in progress"}, status_code=409)
     try:
         body = await request.json()
     except Exception:
