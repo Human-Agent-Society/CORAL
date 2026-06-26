@@ -1073,7 +1073,16 @@ def test_apply_migration_copies_agent_notes_to_dst_and_archives_source(tmp_path)
     coral_dir = tmp_path / ".coral"
     (coral_dir / "public").mkdir(parents=True)
     for island in ("0", "1"):
-        for sub in ("attempts", "notes", "skills", "agents", "logs", "heartbeat", "roles", "eval_logs"):
+        for sub in (
+            "attempts",
+            "notes",
+            "skills",
+            "agents",
+            "logs",
+            "heartbeat",
+            "roles",
+            "eval_logs",
+        ):
             (coral_dir / "islands" / island / sub).mkdir(parents=True)
     worktree = tmp_path / "worktree"
     worktree.mkdir()

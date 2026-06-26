@@ -1980,18 +1980,14 @@ class AgentManager:
         # ``legacy: true`` and parked under ``notes/_legacy/`` as island-local
         # history. Skills still stay put on the source island.
         try:
-            copied = copy_notes_to_island(
-                coral_dir, agent_id, src_island=src, dst_island=dst
-            )
+            copied = copy_notes_to_island(coral_dir, agent_id, src_island=src, dst_island=dst)
             if copied:
                 logger.info(
                     f"Copied {len(copied)} note(s) by {agent_id} from island {src} "
                     f"to island {dst} on migration"
                 )
         except OSError as e:
-            logger.warning(
-                f"Failed to copy notes for {agent_id} from island {src} to {dst}: {e}"
-            )
+            logger.warning(f"Failed to copy notes for {agent_id} from island {src} to {dst}: {e}")
         try:
             marked = mark_notes_legacy(
                 coral_dir,
