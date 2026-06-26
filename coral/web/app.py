@@ -87,11 +87,14 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
             except asyncio.CancelledError:
                 pass
 
-    # SPA fallback: serve index.html for any non-API, non-static route
+    # SPA fallback: serve index.html for any non-API, non-static route.
+    # index.html must never be cached — it references content-hashed asset
+    # filenames, so a stale cached HTML would keep loading an old bundle after
+    # a rebuild. (The hashed assets themselves are safe to cache.)
     async def spa_fallback(request: Request) -> Response:
         index = static_dir / "index.html"
         if index.exists():
-            return FileResponse(index)
+            return FileResponse(index, headers={"Cache-Control": "no-cache, must-revalidate"})
         return Response("Dashboard not built. Run: cd web && npm run build", status_code=404)
 
     routes = [
