@@ -297,6 +297,10 @@ export const api = {
   runs: () => get<RunsResponse>("/runs"),
   switchRun: (task: string, run: string) =>
     post<{ ok: boolean; task: string; run: string }>("/runs/switch", { task, run }),
+  chatBrowse: (path?: string) =>
+    get<{ path: string; parent: string | null; entries: { name: string; path: string }[] }>(
+      `/chat/browse${path ? `?path=${encodeURIComponent(path)}` : ""}`,
+    ),
   chatStart: (workdir: string, model?: string) =>
     postResponse<ChatSessionInfo>("/chat/sessions", { workdir, model }),
   chatScaffold: (parent: string, name: string) =>

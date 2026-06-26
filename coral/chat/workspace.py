@@ -171,3 +171,34 @@ def scaffold_task(parent: str | os.PathLike[str], name: str) -> Path:
         detail = (proc.stderr or proc.stdout or "").strip()
         raise LocalPathError(f"`coral init` failed: {detail}")
     return dest
+
+
+def browse_directory(raw: str | os.PathLike[str] | None) -> dict:
+    """List immediate sub-directories of a path, for the UI directory picker.
+
+    Browsing is intentionally permissive — it is *not* selection. Navigating to
+    a project means passing through ``/Users`` / ``$HOME`` etc., so those are
+    listable here; the actual workspace choice is still gated by
+    :func:`validate_local_path` when a session starts. Hidden (dot) directories
+    are omitted. Defaults to the user's home when no path is given.
+
+    Returns ``{"path", "parent", "entries": [{"name", "path"}]}``.
+    """
+    base = Path(str(raw).strip()).expanduser() if raw and str(raw).strip() else Path.home()
+    try:
+        base = base.resolve()
+    except OSError as e:
+        raise LocalPathError(f"cannot resolve {base}: {e}") from e
+    if not base.is_dir():
+        raise LocalPathError(f"not a directory: {base}")
+    try:
+        entries = [
+            {"name": e.name, "path": str(e)}
+            for e in base.iterdir()
+            if e.is_dir() and not e.name.startswith(".")
+        ]
+    except OSError as e:
+        raise LocalPathError(f"cannot read {base}: {e}") from e
+    entries.sort(key=lambda x: x["name"].lower())
+    parent = str(base.parent) if base.parent != base else None
+    return {"path": str(base), "parent": parent, "entries": entries}

@@ -12,7 +12,12 @@ from pathlib import Path
 
 import pytest
 
-from coral.chat.workspace import LocalPathError, scaffold_task, validate_local_path
+from coral.chat.workspace import (
+    LocalPathError,
+    browse_directory,
+    scaffold_task,
+    validate_local_path,
+)
 
 
 def test_accepts_normal_directory(tmp_path: Path) -> None:
@@ -102,3 +107,24 @@ def test_scaffold_task_rejects_bad_name(tmp_path: Path) -> None:
         scaffold_task(tmp_path, "../escape")
     with pytest.raises(LocalPathError):
         scaffold_task(tmp_path, "")
+
+
+def test_browse_directory_lists_subdirs(tmp_path: Path) -> None:
+    (tmp_path / "alpha").mkdir()
+    (tmp_path / "beta").mkdir()
+    (tmp_path / ".hidden").mkdir()  # omitted
+    (tmp_path / "a-file").write_text("x")  # files omitted
+
+    result = browse_directory(tmp_path)
+    names = [e["name"] for e in result["entries"]]
+    assert names == ["alpha", "beta"]  # sorted, no hidden, no files
+    assert result["path"] == str(tmp_path.resolve())
+    assert result["parent"] == str(tmp_path.resolve().parent)
+    assert all(e["path"].startswith(str(tmp_path.resolve())) for e in result["entries"])
+
+
+def test_browse_directory_defaults_to_home_and_rejects_nonexistent(tmp_path: Path) -> None:
+    home = browse_directory(None)
+    assert home["path"] == str(Path.home().resolve())
+    with pytest.raises(LocalPathError):
+        browse_directory(tmp_path / "nope")

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type ChatFrame } from "../lib/api";
+import DirPicker from "../components/DirPicker";
 
 interface Pending {
   prompt_id: string;
@@ -44,6 +45,7 @@ export default function Chat() {
 
   const [showScaffold, setShowScaffold] = useState(false);
   const [scaffoldName, setScaffoldName] = useState("");
+  const [showPicker, setShowPicker] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -163,12 +165,20 @@ export default function Chat() {
           </p>
           <div className="space-y-1.5">
             <label className="text-xs font-mono text-muted-fg">Working directory (absolute)</label>
-            <input
-              value={workdir}
-              onChange={(e) => setWorkdir(e.target.value)}
-              placeholder="/Users/you/code/my-task"
-              className="w-full px-3 py-2 text-sm font-mono bg-muted border border-border rounded-lg focus:outline-none focus:border-border-strong"
-            />
+            <div className="flex gap-2">
+              <input
+                value={workdir}
+                onChange={(e) => setWorkdir(e.target.value)}
+                placeholder="/Users/you/code/my-task"
+                className="flex-1 px-3 py-2 text-sm font-mono bg-muted border border-border rounded-lg focus:outline-none focus:border-border-strong"
+              />
+              <button
+                onClick={() => setShowPicker(true)}
+                className="px-3 py-2 text-sm rounded-lg border border-border text-muted-fg hover:text-foreground hover:bg-muted whitespace-nowrap"
+              >
+                Browse…
+              </button>
+            </div>
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-mono text-muted-fg">Model (optional)</label>
@@ -219,6 +229,16 @@ export default function Chat() {
           )}
           {error && <div className="text-sm text-red-600 font-mono">{error}</div>}
         </div>
+        {showPicker && (
+          <DirPicker
+            initialPath={workdir || undefined}
+            onSelect={(p) => {
+              setWorkdir(p);
+              setShowPicker(false);
+            }}
+            onClose={() => setShowPicker(false)}
+          />
+        )}
       </div>
     );
   }

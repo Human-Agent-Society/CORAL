@@ -17,7 +17,12 @@ from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from coral.chat.session import CLOSED_FRAME_TYPE, ChatSessionManager
 from coral.chat.transcript import chat_home, list_sessions, read_meta, read_transcript
-from coral.chat.workspace import LocalPathError, scaffold_task, validate_local_path
+from coral.chat.workspace import (
+    LocalPathError,
+    browse_directory,
+    scaffold_task,
+    validate_local_path,
+)
 
 _SSE_HEADERS = {
     "Cache-Control": "no-cache",
@@ -66,6 +71,14 @@ async def post_chat_session(request: Request) -> Response:
         transcript_root=chat_home(),
     )
     return JSONResponse({"session_id": session.session_id, "workdir": str(wd)})
+
+
+async def get_chat_browse(request: Request) -> Response:
+    """GET /api/chat/browse?path=… — list sub-directories for the UI picker."""
+    try:
+        return JSONResponse(browse_directory(request.query_params.get("path")))
+    except LocalPathError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
 
 
 async def get_chat_sessions(request: Request) -> Response:
