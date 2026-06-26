@@ -82,7 +82,7 @@ def test_session_persists_frames_to_disk(tmp_path: Path) -> None:
 
     async def inner():
         mgr = ChatSessionManager()
-        session = mgr.create(workdir=tmp_path, claude_bin=str(fake), transcript_root=root)
+        session = mgr.create(workdir=tmp_path, binary=str(fake), transcript_root=root)
         queue = session.subscribe()
         session.send("hello")
         while True:

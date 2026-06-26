@@ -15,6 +15,7 @@ import uuid
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
+from coral.chat.adapters import canonical_runtime, supported_runtimes
 from coral.chat.session import CLOSED_FRAME_TYPE, ChatSessionManager
 from coral.chat.transcript import chat_home, list_sessions, read_meta, read_transcript
 from coral.chat.workspace import (
@@ -51,8 +52,32 @@ def _approval_config(request: Request) -> dict[str, str] | None:
     }
 
 
+def _resolve_runtime_model(body: dict) -> tuple[str, str | None]:
+    """Resolve {runtime, binding, model} → (runtime, model).
+
+    A ``binding`` (a name in ~/.config/coral/agents.yaml) supplies the runtime
+    and a default model; explicit ``runtime``/``model`` override it. Defaults to
+    claude_code.
+    """
+    runtime = body.get("runtime")
+    model = body.get("model")
+    binding_name = body.get("binding")
+    if binding_name:
+        try:
+            from coral.user_agents import load_store
+
+            b = load_store().get(binding_name)
+        except Exception:
+            b = None
+        if b is not None:
+            runtime = runtime or b.runtime
+            if not model:
+                model = b.model or None
+    return (runtime or "claude_code"), (model or None)
+
+
 async def post_chat_session(request: Request) -> Response:
-    """POST /api/chat/sessions {workdir, model?} → {session_id}."""
+    """POST /api/chat/sessions {workdir, runtime?, binding?, model?} → {session_id}."""
     try:
         body = await request.json()
     except Exception:
@@ -64,13 +89,40 @@ async def post_chat_session(request: Request) -> Response:
         wd = validate_local_path(workdir)
     except LocalPathError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
-    session = _manager(request).create(
-        workdir=wd,
-        model=body.get("model"),
-        approval=_approval_config(request),
-        transcript_root=chat_home(),
+
+    runtime, model = _resolve_runtime_model(body)
+    # The `coral start` approval gate is claude/streaming-only (decision A).
+    approval = _approval_config(request) if canonical_runtime(runtime) == "claude_code" else None
+    try:
+        session = _manager(request).create(
+            workdir=wd, runtime=runtime, model=model, approval=approval, transcript_root=chat_home()
+        )
+    except ValueError as e:  # unsupported runtime
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return JSONResponse(
+        {"session_id": session.session_id, "workdir": str(wd), "runtime": session.runtime}
     )
-    return JSONResponse({"session_id": session.session_id, "workdir": str(wd)})
+
+
+async def get_chat_bindings(request: Request) -> Response:
+    """GET /api/chat/bindings — chat-capable bindings + supported runtimes."""
+    bindings: list[dict] = []
+    default = None
+    try:
+        from coral.user_agents import load_store
+
+        store = load_store()
+        default = store.default
+        bindings = [
+            {"name": b.name, "runtime": b.runtime, "model": b.model}
+            for b in store.bindings.values()
+            if canonical_runtime(b.runtime) in supported_runtimes()
+        ]
+    except Exception:
+        pass
+    return JSONResponse(
+        {"bindings": bindings, "default": default, "runtimes": supported_runtimes()}
+    )
 
 
 async def get_chat_browse(request: Request) -> Response:

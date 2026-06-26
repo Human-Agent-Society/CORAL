@@ -52,7 +52,7 @@ def test_chat_bridge_echo_round_trip(tmp_path: Path) -> None:
 
     async def inner():
         mgr = ChatSessionManager()
-        session = mgr.create(workdir=tmp_path, claude_bin=str(fake))
+        session = mgr.create(workdir=tmp_path, binary=str(fake))
         queue = session.subscribe()
         session.send("hello")
         frames = []
@@ -61,7 +61,7 @@ def test_chat_bridge_echo_round_trip(tmp_path: Path) -> None:
             frames.append(frame)
             if frame.get("type") == "result":
                 break
-        claude_sid = session.claude_session_id
+        claude_sid = session.runtime_session_id
         mgr.shutdown()
         return frames, claude_sid
 
@@ -86,7 +86,7 @@ def test_chat_session_emits_closed_frame_on_exit(tmp_path: Path) -> None:
 
     async def inner():
         mgr = ChatSessionManager()
-        session = mgr.create(workdir=tmp_path, claude_bin=str(fake))
+        session = mgr.create(workdir=tmp_path, binary=str(fake))
         queue = session.subscribe()
         # Wait until the init frame actually arrives before tearing down, so
         # the test never races the subprocess's cold start (a fixed sleep can
@@ -113,7 +113,7 @@ def test_manager_get_and_close(tmp_path: Path) -> None:
 
     async def inner():
         mgr = ChatSessionManager()
-        session = mgr.create(workdir=tmp_path, claude_bin=str(fake))
+        session = mgr.create(workdir=tmp_path, binary=str(fake))
         sid = session.session_id
         assert mgr.get(sid) is session
         assert mgr.close(sid) is True
@@ -122,3 +122,63 @@ def test_manager_get_and_close(tmp_path: Path) -> None:
         assert not session.alive
 
     asyncio.run(inner())
+
+
+# Mock `codex`: codex-style JSONL. thread.started only on the first turn (no
+# `resume` arg); echoes the positional message; emits a turn.completed.
+_FAKE_CODEX = r"""
+import sys, json
+
+def emit(o):
+    sys.stdout.write(json.dumps(o) + "\n")
+    sys.stdout.flush()
+
+args = sys.argv[1:]            # exec [resume <tid>] <text> --flags... --json
+resume = "resume" in args
+i = 1 if args[:1] == ["exec"] else 0
+if args[i:i + 1] == ["resume"]:
+    i += 2                     # skip 'resume' and the thread id
+msg = args[i] if i < len(args) and not args[i].startswith("-") else ""
+
+if not resume:
+    emit({"type": "thread.started", "thread_id": "thr-1"})
+emit({"type": "turn.started"})
+emit({"type": "item.completed", "item": {"id": "i0", "type": "agent_message", "text": "echo: " + msg}})
+emit({"type": "turn.completed", "usage": {"output_tokens": 1}})
+"""
+
+
+def _write_mock_codex(tmp_path: Path) -> Path:
+    script = tmp_path / "mock-codex"
+    script.write_text(f"#!{sys.executable}\n{_FAKE_CODEX}")
+    script.chmod(0o755)
+    return script
+
+
+def test_per_turn_session_spawns_per_message(tmp_path: Path) -> None:
+    mock = _write_mock_codex(tmp_path)
+
+    async def inner():
+        mgr = ChatSessionManager()
+        session = mgr.create(workdir=tmp_path, runtime="codex", binary=str(mock))
+        queue = session.subscribe()
+        # per_turn: alive without any persistent process, surfaced init frame.
+        assert session.alive
+        session.send("hi")
+        frames = []
+        while True:
+            frame = await asyncio.wait_for(queue.get(), timeout=10)
+            frames.append(frame)
+            if frame.get("type") == "result":
+                break
+        rid = session.runtime_session_id
+        mgr.shutdown()
+        return frames, rid
+
+    frames, rid = asyncio.run(inner())
+    types = [f.get("type") for f in frames]
+    assert "system" in types  # synthetic init (no thread.started shown)
+    assistant = next(f for f in frames if f.get("type") == "assistant")
+    assert assistant["message"]["content"][0]["text"] == "echo: hi"
+    assert frames[-1]["type"] == "result" and frames[-1]["is_error"] is False
+    assert rid == "thr-1"  # captured for resume on the next turn

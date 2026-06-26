@@ -38,6 +38,7 @@ from coral.web.api import (
 from coral.web.chat import (
     chat_events,
     delete_chat_session,
+    get_chat_bindings,
     get_chat_browse,
     get_chat_sessions,
     get_chat_transcript,
@@ -119,6 +120,7 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
         Route("/api/events", sse_endpoint),
         # Chat module (design/chat-module.md)
         Route("/api/chat/workspaces", post_chat_workspace, methods=["POST"]),
+        Route("/api/chat/bindings", get_chat_bindings),
         Route("/api/chat/browse", get_chat_browse),
         Route("/api/chat/internal/approval", post_chat_internal_approval, methods=["POST"]),
         Route("/api/chat/sessions", post_chat_session, methods=["POST"]),

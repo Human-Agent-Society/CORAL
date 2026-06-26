@@ -273,6 +273,13 @@ export type ChatFrame = Record<string, any>;
 export interface ChatSessionInfo {
   session_id: string;
   workdir: string;
+  runtime?: string;
+}
+
+export interface ChatBinding {
+  name: string;
+  runtime: string;
+  model: string;
 }
 
 /* API functions */
@@ -301,8 +308,10 @@ export const api = {
     get<{ path: string; parent: string | null; entries: { name: string; path: string }[] }>(
       `/chat/browse${path ? `?path=${encodeURIComponent(path)}` : ""}`,
     ),
-  chatStart: (workdir: string, model?: string) =>
-    postResponse<ChatSessionInfo>("/chat/sessions", { workdir, model }),
+  chatBindings: () =>
+    get<{ bindings: ChatBinding[]; default: string | null; runtimes: string[] }>("/chat/bindings"),
+  chatStart: (workdir: string, runtime?: string, model?: string) =>
+    postResponse<ChatSessionInfo>("/chat/sessions", { workdir, runtime, model }),
   chatScaffold: (parent: string, name: string) =>
     postResponse<{ workdir: string }>("/chat/workspaces", { parent, name }),
   chatSend: (sid: string, text: string) =>

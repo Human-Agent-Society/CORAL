@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type ChatFrame } from "../lib/api";
+import { api, type ChatBinding, type ChatFrame } from "../lib/api";
 import DirPicker from "../components/DirPicker";
+
+interface RuntimeChoice {
+  key: string;
+  label: string;
+  runtime: string;
+  model: string;
+}
 
 interface Pending {
   prompt_id: string;
@@ -35,6 +42,9 @@ function summarizeInput(input: unknown): string {
 export default function Chat() {
   const [workdir, setWorkdir] = useState("");
   const [model, setModel] = useState("");
+  const [runtime, setRuntime] = useState("claude_code");
+  const [choices, setChoices] = useState<RuntimeChoice[]>([]);
+  const [choiceKey, setChoiceKey] = useState("rt:claude_code");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [frames, setFrames] = useState<ChatFrame[]>([]);
   const [input, setInput] = useState("");
@@ -54,6 +64,43 @@ export default function Chat() {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [frames, pending]);
+
+  // Load runtimes + chat-capable bindings for the picker.
+  useEffect(() => {
+    api
+      .chatBindings()
+      .then((res) => {
+        const rt: RuntimeChoice[] = res.runtimes.map((r) => ({
+          key: `rt:${r}`,
+          label: r,
+          runtime: r,
+          model: "",
+        }));
+        const bd: RuntimeChoice[] = (res.bindings as ChatBinding[]).map((b) => ({
+          key: `bd:${b.name}`,
+          label: `${b.name} · ${b.runtime}${b.model ? ` · ${b.model}` : ""}`,
+          runtime: b.runtime,
+          model: b.model || "",
+        }));
+        setChoices([...rt, ...bd]);
+      })
+      .catch(() => {
+        setChoices([
+          { key: "rt:claude_code", label: "claude_code", runtime: "claude_code", model: "" },
+          { key: "rt:codex", label: "codex", runtime: "codex", model: "" },
+          { key: "rt:opencode", label: "opencode", runtime: "opencode", model: "" },
+        ]);
+      });
+  }, []);
+
+  function selectChoice(key: string) {
+    setChoiceKey(key);
+    const c = choices.find((x) => x.key === key);
+    if (c) {
+      setRuntime(c.runtime);
+      setModel(c.model);
+    }
+  }
 
   useEffect(() => {
     if (!sessionId) return;
@@ -89,7 +136,7 @@ export default function Chat() {
     setError(null);
     setBusy(true);
     try {
-      const info = await api.chatStart(workdir.trim(), model.trim() || undefined);
+      const info = await api.chatStart(workdir.trim(), runtime, model.trim() || undefined);
       setFrames([]);
       setClosed(false);
       setPending(null);
@@ -159,9 +206,9 @@ export default function Chat() {
         <div className="w-full max-w-xl space-y-4">
           <h2 className="font-display text-xl">Chat</h2>
           <p className="text-sm text-muted-fg">
-            Start a local Claude Code session in a working directory. It can author a
-            task and launch <code className="font-mono">coral start</code> — you'll
-            approve before any run launches.
+            Start a local agent session in a working directory. It can author a task and
+            launch <code className="font-mono">coral start</code>. With claude, you approve
+            before any run launches.
           </p>
           <div className="space-y-1.5">
             <label className="text-xs font-mono text-muted-fg">Working directory (absolute)</label>
@@ -179,6 +226,26 @@ export default function Chat() {
                 Browse…
               </button>
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-mono text-muted-fg">Runtime / binding</label>
+            <select
+              value={choiceKey}
+              onChange={(e) => selectChoice(e.target.value)}
+              className="w-full px-3 py-2 text-sm font-mono bg-muted border border-border rounded-lg focus:outline-none focus:border-border-strong"
+            >
+              {choices.map((c) => (
+                <option key={c.key} value={c.key}>
+                  {c.key.startsWith("bd:") ? `★ ${c.label}` : c.label}
+                </option>
+              ))}
+            </select>
+            {runtime !== "claude_code" && (
+              <p className="text-[11px] text-muted-fg">
+                Approval gating for <code className="font-mono">coral start</code> is
+                claude-only; {runtime} runs without it.
+              </p>
+            )}
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-mono text-muted-fg">Model (optional)</label>
