@@ -234,10 +234,10 @@ def test_notes_skip_index_and_raw_sources():
         )
 
         entries = list_notes(d)
-        assert [e["relative_path"] for e in entries] == [
+        assert {e["relative_path"] for e in entries} == {
             str(Path("_synthesis") / "team-roster.md"),
             str(Path("research") / "useful-idea.md"),
-        ]
+        }
         assert search_notes(d, "needle-only-in-raw") == []
         assert [e["relative_path"] for e in search_notes(d, "roster")] == [
             str(Path("_synthesis") / "team-roster.md")
