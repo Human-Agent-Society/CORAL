@@ -764,7 +764,15 @@ class AgentManager:
         if not paths.agents_dir.is_dir():
             raise RuntimeError(f"No agents directory found at {paths.agents_dir}")
 
-        agent_dirs = sorted(d for d in paths.agents_dir.iterdir() if d.is_dir())
+        # Only real agent worktrees, identified by the .coral_agent_id
+        # breadcrumb that _setup_and_start_agent writes for every agent. This
+        # skips stray subdirs under agents/ that are not worktrees — notably an
+        # orphaned shared-dir like agents/.claude, which has no breadcrumb and,
+        # in a multi-island run, would otherwise be resumed as an agent with no
+        # island and crash in island_root().
+        agent_dirs = sorted(
+            d for d in paths.agents_dir.iterdir() if d.is_dir() and (d / ".coral_agent_id").exists()
+        )
         if not agent_dirs:
             raise RuntimeError(f"No agent worktrees found in {paths.agents_dir}")
 

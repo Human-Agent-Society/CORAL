@@ -169,6 +169,7 @@ def test_resume_all_drains_continue_from_actions(tmp_path: Path, monkeypatch) ->
     repo_dir = tmp_path / "repo"
     agent_dir = agents_dir / "agent-1"
     agent_dir.mkdir(parents=True)
+    (agent_dir / ".coral_agent_id").write_text("agent-1")
     repo_dir.mkdir()
     write_attempt(coral_dir, _attempt("abc123"))
     enqueue(coral_dir, ContinueFromAction(hash="abc123", instruction="build from this branch"))
@@ -239,6 +240,7 @@ def test_resume_all_applies_cli_resume_from_like_queued_steering(
     repo_dir = tmp_path / "repo"
     agent_dir = agents_dir / "agent-1"
     agent_dir.mkdir(parents=True)
+    (agent_dir / ".coral_agent_id").write_text("agent-1")
     repo_dir.mkdir()
     write_attempt(coral_dir, _attempt("abc123"))
 
@@ -304,6 +306,7 @@ def test_resume_from_resets_real_worktree_head(tmp_path: Path, monkeypatch) -> N
     repo_dir = tmp_path / "repo"
     agent_dir = agents_dir / "agent-1"
     agent_dir.mkdir(parents=True)
+    (agent_dir / ".coral_agent_id").write_text("agent-1")
 
     _git(agent_dir, "init")
     _git(agent_dir, "config", "user.email", "test@example.com")
@@ -389,6 +392,7 @@ def test_resume_from_resets_all_descendant_agent_worktrees(tmp_path: Path, monke
         agent_dir = agents_dir / agent_id
         _git(tmp_path, "clone", str(base_repo), str(agent_dir))
         _git(agent_dir, "checkout", "--detach", commit_hash)
+        (agent_dir / ".coral_agent_id").write_text(agent_id)
         agent_dirs[agent_id] = agent_dir
 
     write_attempt(coral_dir, _attempt(target_hash))
@@ -419,3 +423,77 @@ def test_resume_from_resets_all_descendant_agent_worktrees(tmp_path: Path, monke
     assert f"## Continue from Attempt {target_hash}" in prompts["agent-1"]
     assert f"## Continue from Attempt {target_hash}" in prompts["agent-2"]
     assert f"## Continue from Attempt {target_hash}" not in prompts["agent-3"]
+
+
+def test_resume_all_skips_orphan_dirs_without_agent_id_breadcrumb(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """resume_all must only resume real agent worktrees, not stray subdirs.
+
+    Regression: resume_all treated every subdir of agents/ as an agent. A
+    leftover shared-dir like agents/.claude (no .coral_agent_id, no
+    .coral_island) was then resumed as an agent with island_id=None, crashing
+    setup_shared_state in island_root() ("island_id is required in multi-island
+    runs"). Real worktrees carry a .coral_agent_id breadcrumb; orphans don't.
+    """
+    coral_dir = tmp_path / ".coral"
+    agents_dir = tmp_path / "agents"
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    # Multi-island layout on disk.
+    (coral_dir / "islands" / "0").mkdir(parents=True)
+    (coral_dir / "islands" / "1").mkdir(parents=True)
+
+    # Two real agents (with the .coral_agent_id breadcrumb) ...
+    a0 = agents_dir / "0-agent-1"
+    a1 = agents_dir / "1-agent-1"
+    for d, isl in ((a0, "0"), (a1, "1")):
+        d.mkdir(parents=True)
+        (d / ".coral_agent_id").write_text(d.name)
+        (d / ".coral_island").write_text(isl)
+    # ... and an orphan shared-dir that must be ignored (no .coral_agent_id).
+    (agents_dir / ".claude").mkdir(parents=True)
+
+    paths = ProjectPaths(
+        results_dir=tmp_path,
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=agents_dir,
+        repo_dir=repo_dir,
+    )
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "agents": {"count": 2, "runtime": "claude-code"},
+            "islands": {"count": 2},
+        }
+    )
+    manager = AgentManager(cfg)
+
+    monkeypatch.setattr(manager, "_start_gateway_if_enabled", lambda: None)
+    monkeypatch.setattr(manager, "_start_grader_daemon", lambda: None)
+    monkeypatch.setattr(manager, "_kill_old_agent_processes", lambda: None)
+    monkeypatch.setattr(manager, "_load_saved_sessions", lambda: {})
+    monkeypatch.setattr("coral.agent.manager._validate_sessions", lambda sessions, coral_dir: {})
+    monkeypatch.setattr(manager, "_write_pid_file", lambda: None)
+    monkeypatch.setattr("atexit.register", lambda fn: None)
+
+    seen: dict[str, str | None] = {}
+
+    def fake_setup(agent_id: str, **kwargs):
+        seen[agent_id] = kwargs.get("island_id")
+        return SimpleNamespace(
+            agent_id=agent_id,
+            process=SimpleNamespace(pid=123, poll=lambda: None),
+            worktree_path=agents_dir / agent_id,
+            log_path=agents_dir / agent_id / "agent.log",
+            session_id=None,
+        )
+
+    monkeypatch.setattr(manager, "_setup_and_start_agent", fake_setup)
+
+    manager.resume_all(paths)
+
+    # Only the two real agents are resumed; the orphan .claude is skipped.
+    assert seen == {"0-agent-1": "0", "1-agent-1": "1"}
