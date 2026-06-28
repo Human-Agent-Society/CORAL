@@ -34,6 +34,7 @@ inside .coral/public/skills/create-notes/scripts/ on every island.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from datetime import datetime
@@ -121,10 +122,30 @@ def _coerce(val: str) -> Any:
 # split in coral.hub.notes._is_user_note, plus index.md which is owned
 # by organize-files.
 SYSTEM_FILENAMES = {"notes.md", "index.md"}
+SYSTEM_TOP_LEVEL_DIRS = {"raw"}
 
 
-def _is_user_note(p: Path) -> bool:
-    return p.name not in SYSTEM_FILENAMES and not p.name.startswith("_")
+def _is_user_note(p: Path, notes_root: Path) -> bool:
+    if p.name in SYSTEM_FILENAMES or p.name.startswith("_"):
+        return False
+    rel = p.relative_to(notes_root)
+    return not (rel.parts and rel.parts[0] in SYSTEM_TOP_LEVEL_DIRS)
+
+
+def _iter_user_note_files(notes_root: Path) -> list[Path]:
+    files: list[Path] = []
+    for root, dirs, names in os.walk(notes_root):
+        root_path = Path(root)
+        if root_path == notes_root:
+            dirs[:] = sorted(d for d in dirs if d not in SYSTEM_TOP_LEVEL_DIRS)
+        else:
+            dirs.sort()
+        for name in sorted(names):
+            if name.endswith(".md"):
+                p = root_path / name
+                if _is_user_note(p, notes_root):
+                    files.append(p)
+    return files
 
 
 def _iso_parseable(value: Any) -> bool:
@@ -259,9 +280,8 @@ def _collect_targets(args_paths: list[str]) -> list[tuple[Path, Path]]:
     for raw in inputs:
         p = Path(raw)
         if p.is_dir():
-            for f in sorted(p.rglob("*.md")):
-                if _is_user_note(f):
-                    pairs.append((f, p))
+            for f in _iter_user_note_files(p):
+                pairs.append((f, p))
         elif p.is_file() and p.suffix == ".md":
             # Walk up to find a directory named "notes"; fall back to parent.
             root = p.parent
@@ -269,7 +289,8 @@ def _collect_targets(args_paths: list[str]) -> list[tuple[Path, Path]]:
                 if ancestor.name == "notes":
                     root = ancestor
                     break
-            pairs.append((p, root))
+            if _is_user_note(p, root):
+                pairs.append((p, root))
         else:
             print(f"warning: {raw} is neither a directory nor a .md file", file=sys.stderr)
     return pairs

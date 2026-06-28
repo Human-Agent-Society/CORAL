@@ -28,16 +28,37 @@ inside .coral/public/skills/create-notes/scripts/ on every island.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
 DEFAULT_NOTES_DIR = ".coral/public/notes"
 
 SYSTEM_FILENAMES = {"notes.md", "index.md"}
+SYSTEM_TOP_LEVEL_DIRS = {"raw"}
 
 
-def _is_user_note(p: Path) -> bool:
-    return p.name not in SYSTEM_FILENAMES and not p.name.startswith("_")
+def _is_user_note(p: Path, notes_root: Path) -> bool:
+    if p.name in SYSTEM_FILENAMES or p.name.startswith("_"):
+        return False
+    rel = p.relative_to(notes_root)
+    return not (rel.parts and rel.parts[0] in SYSTEM_TOP_LEVEL_DIRS)
+
+
+def _iter_user_note_files(notes_root: Path) -> list[Path]:
+    files: list[Path] = []
+    for root, dirs, names in os.walk(notes_root):
+        root_path = Path(root)
+        if root_path == notes_root:
+            dirs[:] = sorted(d for d in dirs if d not in SYSTEM_TOP_LEVEL_DIRS)
+        else:
+            dirs.sort()
+        for name in sorted(names):
+            if name.endswith(".md"):
+                p = root_path / name
+                if _is_user_note(p, notes_root):
+                    files.append(p)
+    return files
 
 
 def _creator_field(text: str) -> str:
@@ -79,9 +100,7 @@ def main() -> int:
         return 2
 
     missing: list[Path] = []
-    for md in sorted(root.rglob("*.md")):
-        if not _is_user_note(md):
-            continue
+    for md in _iter_user_note_files(root):
         try:
             text = md.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):

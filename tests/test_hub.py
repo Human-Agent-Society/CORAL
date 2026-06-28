@@ -12,7 +12,15 @@ from coral.hub.attempts import (
     search_attempts,
     write_attempt,
 )
-from coral.hub.notes import format_notes_list, get_recent_notes, list_notes, read_note, search_notes
+from coral.hub.notes import (
+    format_notes_list,
+    get_recent_notes,
+    list_notes,
+    notes_by,
+    notes_unattributed,
+    read_note,
+    search_notes,
+)
 from coral.hub.skills import get_skill_tree, list_skills, read_skill
 from coral.types import Attempt
 
@@ -200,6 +208,45 @@ def test_notes_empty():
         entries = list_notes(d)
         assert entries == []
         assert format_notes_list(entries) == "No notes yet."
+
+
+def test_notes_skip_index_and_raw_sources():
+    with tempfile.TemporaryDirectory() as d:
+        notes_dir = Path(d) / "public" / "notes"
+        raw_dir = notes_dir / "raw"
+        research_dir = notes_dir / "research"
+        synthesis_dir = notes_dir / "_synthesis"
+        raw_dir.mkdir(parents=True)
+        research_dir.mkdir()
+        synthesis_dir.mkdir()
+        (notes_dir / "index.md").write_text(
+            "# Notes Index\n\n- [Useful idea](research/useful-idea.md)\n"
+        )
+        (raw_dir / "paper.md").write_text(
+            "---\ncreator: raw-agent\n---\n\n# Raw paper\n\nneedle-only-in-raw\n"
+        )
+        (raw_dir / "unstamped.md").write_text("# Raw source without frontmatter\n")
+        (research_dir / "useful-idea.md").write_text(
+            "---\ncreator: agent-1\n---\n\n# Useful idea\n"
+        )
+        (synthesis_dir / "team-roster.md").write_text(
+            "---\ncreator: synthesizer\n---\n\n# Team roster\n"
+        )
+
+        entries = list_notes(d)
+        assert [e["relative_path"] for e in entries] == [
+            str(Path("_synthesis") / "team-roster.md"),
+            str(Path("research") / "useful-idea.md"),
+        ]
+        assert search_notes(d, "needle-only-in-raw") == []
+        assert [e["relative_path"] for e in search_notes(d, "roster")] == [
+            str(Path("_synthesis") / "team-roster.md")
+        ]
+        assert notes_by(d, None, "raw-agent") == []
+        assert [p.relative_to(notes_dir) for p in notes_by(d, None, "synthesizer")] == [
+            Path("_synthesis") / "team-roster.md"
+        ]
+        assert notes_unattributed(d, None) == []
 
 
 def test_skills():

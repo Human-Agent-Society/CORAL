@@ -89,14 +89,41 @@ def _notes_dir(coral_dir: str | Path, island_id: str | int | None = None) -> Pat
     return p
 
 
-def _is_user_note(p: Path) -> bool:
+_SYSTEM_NOTE_FILENAMES = {"notes.md", "index.md"}
+_SYSTEM_NOTE_TOP_LEVEL_DIRS = {"raw"}
+
+
+def _is_user_note(p: Path, notes_dir: Path) -> bool:
     """Whether a markdown file under notes/ should be treated as a user-authored note.
 
-    Excludes the legacy single-file ``notes.md`` and any file whose name starts
-    with ``_`` (convention for system-managed files like `_synthesis/`,
-    `_connections.md`, `_open-questions.md`).
+    Excludes the legacy single-file ``notes.md``, generated ``index.md``, raw
+    source captures, and files whose name starts with ``_`` (convention for
+    aggregate/system-managed files like ``_connections.md`` and
+    ``_open-questions.md``).
     """
-    return p.name != "notes.md" and not p.name.startswith("_")
+    if p.name in _SYSTEM_NOTE_FILENAMES or p.name.startswith("_"):
+        return False
+    rel = p.relative_to(notes_dir)
+    return not (rel.parts and rel.parts[0] in _SYSTEM_NOTE_TOP_LEVEL_DIRS)
+
+
+def _iter_user_note_files(notes_dir: Path) -> list[Path]:
+    """Return user note markdown files, pruning system directories while walking."""
+    if not notes_dir.is_dir():
+        return []
+    files: list[Path] = []
+    for root, dirs, names in os.walk(notes_dir):
+        root_path = Path(root)
+        if root_path == notes_dir:
+            dirs[:] = sorted(d for d in dirs if d not in _SYSTEM_NOTE_TOP_LEVEL_DIRS)
+        else:
+            dirs.sort()
+        for name in sorted(names):
+            if name.endswith(".md"):
+                p = root_path / name
+                if _is_user_note(p, notes_dir):
+                    files.append(p)
+    return files
 
 
 def _lenient_frontmatter(front: str) -> dict[str, Any]:
@@ -202,7 +229,7 @@ def _collect_from_dir(directory: Path) -> list[dict[str, Any]]:
     if not directory.is_dir():
         return []
 
-    md_files = sorted(f for f in directory.rglob("*.md") if _is_user_note(f))
+    md_files = _iter_user_note_files(directory)
 
     if md_files:
         entries = [_parse_note_file(f) for f in md_files]
@@ -401,9 +428,7 @@ def notes_by(
     """
     notes_dir = _notes_dir(coral_dir, island_id)
     matched: list[Path] = []
-    for md_file in sorted(notes_dir.rglob("*.md")):
-        if not _is_user_note(md_file):
-            continue
+    for md_file in _iter_user_note_files(notes_dir):
         try:
             text = md_file.read_text()
         except (OSError, UnicodeDecodeError):
@@ -428,9 +453,7 @@ def notes_unattributed(
     """
     notes_dir = _notes_dir(coral_dir, island_id)
     missing: list[Path] = []
-    for md_file in sorted(notes_dir.rglob("*.md")):
-        if not _is_user_note(md_file):
-            continue
+    for md_file in _iter_user_note_files(notes_dir):
         try:
             text = md_file.read_text()
         except (OSError, UnicodeDecodeError):
