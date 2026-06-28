@@ -769,46 +769,6 @@ def test_write_arrival_note_lands_on_dst_island_as_coral_authored():
         assert notes_by(coral_dir, island_id="1", agent_id="0-agent-1") == []
 
 
-def test_mark_notes_legacy_flags_source_island_notes_on_migration():
-    """A migrating agent's notes stay on the source island, turn legacy, and move to _legacy/."""
-    from coral.hub.notes import list_notes, mark_notes_legacy, notes_by
-
-    with tempfile.TemporaryDirectory() as d:
-        coral_dir = Path(d)
-        src_notes = coral_dir / "islands" / "0" / "notes"
-        src_notes.mkdir(parents=True)
-        (coral_dir / "islands" / "1" / "notes").mkdir(parents=True)
-        (src_notes / "mine.md").write_text(
-            "---\ncreator: 0-agent-1\ncreated: 2026-05-31\n---\n\n# Mine\nbody\n"
-        )
-        (src_notes / "teammate.md").write_text(
-            "---\ncreator: 0-agent-2\ncreated: 2026-05-31\n---\n\n# Teammate\nbody\n"
-        )
-
-        marked = mark_notes_legacy(
-            coral_dir,
-            island_id="0",
-            agent_id="0-agent-1",
-            reason="author 0-agent-1 migrated to island 1",
-        )
-
-        moved = src_notes / "_legacy" / "mine.md"
-        assert marked == [moved]
-        # The note moves into _legacy/ on the *source* island, not the dest island.
-        assert not (src_notes / "mine.md").exists()
-        assert moved.exists()
-        assert not (coral_dir / "islands" / "1" / "notes" / "mine.md").exists()
-        # It remains attributable to its author after the move.
-        assert notes_by(coral_dir, island_id="0", agent_id="0-agent-1") == [moved]
-        entry = next(e for e in list_notes(coral_dir, island_id="0") if e["title"] == "Mine")
-        assert entry["legacy"] is True
-        assert entry["legacy_reason"] == "author 0-agent-1 migrated to island 1"
-        # The teammate's note is untouched, still in place.
-        teammate = next(e for e in list_notes(coral_dir, island_id="0") if e["title"] == "Teammate")
-        assert not teammate.get("legacy")
-        assert (src_notes / "teammate.md").exists()
-
-
 def test_manager_migration_eval_count_ignores_tune_and_pending(tmp_path):
     """Migration cadence advances only on finalized real attempts."""
     from coral.agent.manager import AgentManager
@@ -1060,45 +1020,42 @@ def test_apply_migration_end_to_end_moves_state_and_repoints_worktree(tmp_path):
     assert mgr._restart_counts["0-agent-1"] == 1
 
 
-def test_apply_migration_copies_agent_notes_to_dst_and_archives_source(tmp_path):
-    """End-to-end: the migrating agent's notes are copied to dst and archived on src."""
+def test_apply_migration_leaves_authored_notes_untouched_on_source(tmp_path):
+    """A migrating agent's notes stay live, in place, on the source island.
+
+    Post-revert (pre-#144 behavior): migration does not touch notes — they
+    are neither flagged ``legacy:`` nor moved into ``_legacy/`` nor copied to
+    the destination. They remain island-local knowledge at their original
+    paths, so inbound links (e.g. a teammate's index.md) keep resolving.
+    """
     from coral.agent.assignments import AgentSpec
     from coral.agent.manager import AgentManager
     from coral.agent.runtime import AgentHandle
     from coral.config import AgentAssignmentConfig, AgentConfig, CoralConfig
-    from coral.hub.notes import notes_by
     from coral.workspace import setup_shared_state
     from coral.workspace.project import ProjectPaths
 
     coral_dir = tmp_path / ".coral"
     (coral_dir / "public").mkdir(parents=True)
     for island in ("0", "1"):
-        for sub in (
-            "attempts",
-            "notes",
-            "skills",
-            "agents",
-            "logs",
-            "heartbeat",
-            "roles",
-            "eval_logs",
-        ):
+        for sub in ("attempts", "notes", "skills", "agents", "logs", "heartbeat", "roles", "eval_logs"):
             (coral_dir / "islands" / island / sub).mkdir(parents=True)
     worktree = tmp_path / "worktree"
     worktree.mkdir()
     setup_shared_state(worktree, coral_dir, ".claude", island_id="0")
 
-    # The migrating agent and a teammate both authored notes on island 0.
     src_notes = coral_dir / "islands" / "0" / "notes"
-    (src_notes / "tiling.md").write_text(
-        "---\ncreator: 0-agent-1\ncreated: 2026-06-26\nclaim: tile=32 helps\n---\n\n# Tiling\nbody\n"
+    # The migrating agent's own firsthand note, in a category subdir.
+    (src_notes / "experiments").mkdir()
+    own = src_notes / "experiments" / "eval-117.md"
+    own.write_text(
+        "---\ncreator: 0-agent-1\ncreated: 2026-06-28T08:00:00-00:00\ntype: experiment\n---\n"
+        "# eval-117 result\nfirsthand finding\n"
     )
-    (src_notes / "research").mkdir()
-    (src_notes / "research" / "idea.md").write_text(
-        "---\ncreator: 0-agent-1\ncreated: 2026-06-26\n---\n\n# Idea\nbody\n"
-    )
-    (src_notes / "teammate.md").write_text(
-        "---\ncreator: 0-agent-2\ncreated: 2026-06-26\n---\n\n# Teammate\nstays\n"
+    # A teammate's index that links to the agent's note at its active path.
+    index = src_notes / "index.md"
+    index.write_text(
+        "---\ncreator: 0-agent-2\n---\n# Island index\n- [117](experiments/eval-117.md)\n"
     )
 
     cfg = CoralConfig(
@@ -1123,29 +1080,34 @@ def test_apply_migration_copies_agent_notes_to_dst_and_archives_source(tmp_path)
     mgr.handles = [
         AgentHandle(agent_id="0-agent-1", process=None, worktree_path=worktree, log_path=log_path)
     ]
-    mgr._setup_and_start_agent = lambda agent_id, **kw: mgr.handles[0]  # type: ignore[assignment]
+    mgr._setup_and_start_agent = lambda agent_id, **kwargs: mgr.handles[0]  # type: ignore[assignment]
 
-    candidate = MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.9)
-    mgr._apply_migration(candidate)
+    mgr._apply_migration(
+        MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.9)
+    )
 
-    dst_notes = coral_dir / "islands" / "1" / "notes"
-    # The agent's notes were copied to dst (live, attributed, structure preserved).
-    assert (dst_notes / "tiling.md").exists()
-    assert (dst_notes / "research" / "idea.md").exists()
-    dst_text = (dst_notes / "tiling.md").read_text()
-    assert "creator: 0-agent-1" in dst_text
-    assert "legacy" not in dst_text
-    assert notes_by(coral_dir, island_id="1", agent_id="0-agent-1") == [
-        dst_notes / "research" / "idea.md",
-        dst_notes / "tiling.md",
+    # The note stays exactly where it was, with original content (live, unflagged).
+    assert own.exists(), "agent's note must remain on the source island"
+    text = own.read_text()
+    assert "firsthand finding" in text
+    assert "legacy:" not in text, "note must not be flagged legacy on migration"
+
+    # No _legacy/ archive directory was created on the source.
+    assert not (src_notes / "_legacy").exists()
+
+    # The note was NOT copied to the destination island.
+    assert not (coral_dir / "islands" / "1" / "notes" / "experiments" / "eval-117.md").exists()
+    # The destination only holds the arrival note (no carried experiment notes).
+    dst_user_notes = [
+        p
+        for p in (coral_dir / "islands" / "1" / "notes").rglob("*.md")
+        if not p.name.startswith("migration_")
     ]
-    # The source-island originals are archived under _legacy/ and flagged.
-    assert (src_notes / "_legacy" / "tiling.md").exists()
-    assert "legacy: true" in (src_notes / "_legacy" / "tiling.md").read_text()
-    assert not (src_notes / "tiling.md").exists()
-    # The teammate's note didn't move or get copied.
-    assert (src_notes / "teammate.md").exists()
-    assert not (dst_notes / "teammate.md").exists()
+    assert dst_user_notes == []
+
+    # The teammate's index link still resolves to a real file at the active path.
+    assert "(experiments/eval-117.md)" in index.read_text()
+    assert (src_notes / "experiments" / "eval-117.md").exists()
 
 
 def test_apply_migration_moves_pending_attempt_with_agent(tmp_path):
