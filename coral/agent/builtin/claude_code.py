@@ -139,6 +139,17 @@ class ClaudeCodeRuntime:
             prompt,
             "--model",
             model,
+            # Grant the agent autonomy. `auto` MUST be set on the CLI: in
+            # headless `-p` mode Claude Code silently downgrades a project-level
+            # `permissions.defaultMode: "auto"` (from .claude/settings.local.json
+            # or settings.json) back to `default`, because a repo-checked-in
+            # settings file isn't trusted to escalate to auto — only the user's
+            # own ~/.claude/settings.json or this flag can. Without it agents run
+            # in `default` mode and any tool not in the settings allow-list
+            # (e.g. MCP tools) is denied with no human to approve it. The
+            # allow/deny rules in settings.local.json still apply on top.
+            "--permission-mode",
+            "auto",
         ]
         # 0 = no cap — let the underlying `claude` CLI run until it exits
         # naturally. The manager still restarts on any exit, preserving context
