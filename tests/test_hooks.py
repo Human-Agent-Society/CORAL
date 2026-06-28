@@ -439,8 +439,10 @@ def test_setup_claude_settings_permissions():
 
         assert "hooks" not in settings
 
-        # Auto mode is always enabled
-        assert settings["permissions"]["defaultMode"] == "auto"
+        # No defaultMode written: a project-level "auto" is silently downgraded
+        # to "default" in headless -p mode, so the runtime sets the mode via
+        # the --permission-mode CLI flag instead (see claude_code.py).
+        assert "defaultMode" not in settings["permissions"]
 
 
 def test_setup_claude_settings_no_research():
