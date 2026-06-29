@@ -14,6 +14,30 @@ CORAL works with any coding agent that can run as a subprocess. Pick the runtime
 | Cursor Agent    | `cursor` (alias: `cursor_agent`) | `cursor-agent login` once |
 | Kiro            | `kiro`                         | `kiro-cli` setup          |
 
+## Remote Runtime State Bridge
+
+Use `agents.remote_runtime` when an agent executes outside the local CORAL
+worktree but you still want `coral status` and the web dashboard to show its
+state. The adapter is additive: local subprocess agents keep using
+`agents.runtime`, and the remote adapter only syncs state into
+`.coral/public/remote_state/`.
+
+```yaml
+agents:
+  remote_runtime:
+    class: my_package.remote:Runtime
+    config:
+      endpoint: https://example.internal
+    sync_interval_seconds: 30
+```
+
+The class must implement `coral.agent.remote.RemoteRuntime`:
+
+- `deploy(agent_spec) -> RemoteAgentHandle`
+- `invoke(handle, payload) -> dict`
+- `list_agents() -> list[RemoteAgentHandle]`
+- `collect_metrics() -> list[RemoteAgentState]`
+
 ## OpenCode
 
 [OpenCode](https://github.com/opencode-ai/opencode) reads permissions and provider config from an `opencode.json` file. Place it in your task's `seed/` directory so it gets copied into each agent's worktree.

@@ -153,6 +153,7 @@ packaged-grader layout.
 | `timeout` | int | `3600` | Agent session timeout in seconds |
 | `research` | bool | `true` | Enable web search in agent workflow |
 | `heartbeat` | list | see below | Periodic actions triggered during eval loop |
+| `remote_runtime` | object | disabled | Optional `class` + `config` adapter that syncs remote agent state into `.coral/public/remote_state/` for `coral status` and the web UI |
 
 ### Heartbeat actions
 
@@ -171,6 +172,23 @@ You can also define custom heartbeat actions with a prompt:
 
 ```bash
 coral heartbeat set review --every 5 --prompt "Review your approach and consider alternatives."
+```
+
+### Remote runtime state
+
+`agents.remote_runtime` is an optional state bridge for agents that run
+outside CORAL-managed local worktrees. It does not replace `agents.runtime` or
+spawn remote agents by itself; it loads an adapter that implements
+`coral.agent.remote.RemoteRuntime`, periodically calls `collect_metrics()`, and
+writes normalized snapshots to `.coral/public/remote_state/`.
+
+```yaml
+agents:
+  remote_runtime:
+    class: my_package.agentcore:AgentCoreRuntime
+    config:
+      region: us-west-2
+    sync_interval_seconds: 30
 ```
 
 ## `islands` section

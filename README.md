@@ -84,7 +84,7 @@ Skills: `coral-quickstart` (install → setup → `.coral_workspace/`), `setting
 | [Kiro](https://kiro.dev) | `kiro` |
 | [OpenCode](https://github.com/opencode-ai/opencode) | `opencode` |
 
-Each agent must be installed and authenticated separately. Per-runtime config — including the [LiteLLM gateway](https://docs.coralxyz.com/guides/gateway) for custom models — is documented at [Agent Runtimes](https://docs.coralxyz.com/guides/agent-runtimes).
+Each agent must be installed and authenticated separately. Per-runtime config — including the [LiteLLM gateway](https://docs.coralxyz.com/guides/gateway) for custom models and the opt-in remote runtime state bridge — is documented at [Agent Runtimes](https://docs.coralxyz.com/guides/agent-runtimes).
 
 ### How It Works
 

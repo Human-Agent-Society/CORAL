@@ -98,7 +98,9 @@ def load_remote_runtime(class_path: str, config: dict[str, Any] | None = None) -
     runtime_class = getattr(module, class_name)
     runtime_config = config or {}
     from_config = getattr(runtime_class, "from_config", None)
-    runtime = from_config(runtime_config) if callable(from_config) else runtime_class(**runtime_config)
+    runtime = (
+        from_config(runtime_config) if callable(from_config) else runtime_class(**runtime_config)
+    )
     if not isinstance(runtime, RemoteRuntime):
         raise TypeError(
             f"{class_path} does not satisfy the RemoteRuntime protocol "
