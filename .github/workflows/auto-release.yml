@@ -1,0 +1,110 @@
+name: Auto Release
+
+# Periodically cut a new release: bump the version from the latest tag, push
+# the tag, then hand off to release.yml (called as a reusable workflow) to
+# build and publish the GitHub Release.
+on:
+  schedule:
+    # Daily at 06:00 UTC. Cron runs against the default branch.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Which version part to increment"
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+      force:
+        description: "Tag even if there are no new commits since the last tag"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Compute & push version tag
+    runs-on: ubuntu-latest
+    outputs:
+      tagged: ${{ steps.bump.outputs.tagged }}
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need full history + tags to find the latest version and count
+          # commits since it.
+          fetch-depth: 0
+
+      - name: Compute next version and tag
+        id: bump
+        env:
+          # Defaults apply to the scheduled trigger, which has no inputs.
+          BUMP: ${{ github.event.inputs.bump || 'patch' }}
+          FORCE: ${{ github.event.inputs.force || 'false' }}
+        run: |
+          set -euo pipefail
+
+          latest=$(git tag -l 'v*' --sort=-v:refname | head -n1)
+          if [ -z "$latest" ]; then
+            latest="v0.0.0"
+            echo "No existing v* tag found; starting from $latest"
+            base_range=""
+          else
+            echo "Latest tag: $latest"
+            base_range="${latest}..HEAD"
+          fi
+
+          # Skip empty releases: if nothing changed since the last tag, don't
+          # cut a new one (unless explicitly forced via workflow_dispatch).
+          if [ -n "$base_range" ]; then
+            count=$(git rev-list --count "$base_range")
+            echo "Commits since $latest: $count"
+            if [ "$count" -eq 0 ] && [ "$FORCE" != "true" ]; then
+              echo "No new commits since $latest — skipping release."
+              echo "tagged=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          ver="${latest#v}"
+          IFS='.' read -r major minor patch <<< "$ver"
+          case "$BUMP" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+            *) echo "Unknown bump '$BUMP'" >&2; exit 1 ;;
+          esac
+          next="v${major}.${minor}.${patch}"
+          echo "Next version: $next"
+
+          if git rev-parse -q --verify "refs/tags/$next" >/dev/null; then
+            echo "Tag $next already exists — aborting." >&2
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$next" -m "Release $next"
+          git push origin "$next"
+
+          echo "tagged=true" >> "$GITHUB_OUTPUT"
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+
+  release:
+    name: Build & publish
+    needs: tag
+    if: needs.tag.outputs.tagged == 'true'
+    # Reuse the existing release pipeline. It checks out at this run's commit,
+    # where the tag we just pushed now lives, so hatch-vcs derives the correct
+    # version.
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: write

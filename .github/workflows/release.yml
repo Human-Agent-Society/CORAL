@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - "v*"
+  # Allow other workflows (e.g. auto-release.yml) to invoke this build+release
+  # job directly. A tag pushed with the default GITHUB_TOKEN does NOT trigger
+  # the `push: tags` event above, so the scheduled auto-tagger calls us here
+  # instead of relying on the tag push to kick off a release.
+  workflow_call:
 
 permissions:
   contents: write
