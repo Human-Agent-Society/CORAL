@@ -32,31 +32,21 @@ task:
     - Small improvements in packing density matter — optimize to high precision.
     - Score = your_sum_radii / 2.635977; 1.0 means matching the best known result and the goal is to reach or surpass 1!
 
+# Inherits agents (opencode + gateway), run.session=docker, and
+# grader.setup from the built-in docker-opencode preset. Keys set below
+# override the preset. NOTE: the preset's model/gateway.port must stay
+# consistent with ./seed/opencode.json.
+preset: docker-opencode
+
 grader:
   entrypoint: "circle_packing_grader.grader:Grader"
-  setup:
-    - "uv pip install -e ./grader"
   timeout: 600
   direction: maximize
   args:
     program_file: "initial_program.py"
-
-agents:
-  count: 1
-  runtime: opencode
-  model: claude/claude-opus-4-6  # to be consistent with ./seed/opencode.json
-  gateway:
-    enabled: true
-    port: 4000  # to be consistent with ./seed/opencode.json
-    config: "./litellm_config.yaml"
 
 workspace:
   results_dir: "./results"
   repo_path: "./examples/circle_packing/seed"
   setup:
     - "uv pip install numpy scipy"
-
-run:
-  verbose: false
-  ui: false
-  session: docker

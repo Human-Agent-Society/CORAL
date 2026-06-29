@@ -60,6 +60,54 @@ workspace:
   repo_path: "."
 ```
 
+## `preset` field
+
+A top-level `preset:` pulls in a reusable bundle of config defaults so tasks
+that share a setup (runtime, gateway, session, grader install step) don't
+repeat the same boilerplate.
+
+```yaml
+preset: docker-opencode      # built-in preset name
+# preset: ./shared.yaml      # — or — a local YAML file, resolved next to task.yaml
+
+task:
+  name: "Circle Packing"
+  description: "..."
+
+grader:
+  entrypoint: "circle_packing_grader.grader:Grader"   # task-specific keys still go here
+```
+
+The preset forms a layer between the schema defaults and the task's own keys:
+
+```
+schema defaults  <  preset  <  task.yaml  <  CLI dotlist overrides
+```
+
+So **anything the task.yaml sets explicitly wins** over the preset, and CLI
+`key=value` overrides still win over everything.
+
+- A **bare name** (no `/` and no `.yaml`/`.yml` suffix) refers to a built-in
+  preset shipped with CORAL under `coral/template/presets/`.
+- Anything else is a **path**: absolute, or relative to the directory holding
+  your `task.yaml`.
+- **Stacking is not supported** — a preset file may not itself declare a
+  `preset:` key.
+
+The resolved run's `config.yaml` is fully expanded (the `preset:` reference is
+flattened away), so `coral resume` and the grader daemon never depend on the
+preset file still being present.
+
+### Built-in presets
+
+| Name | What it sets |
+|------|--------------|
+| `local-claude` | 4× `claude_code` / `opus` agents, `run.session: tmux`, `grader.setup` install step |
+| `docker-opencode` | 1× `opencode` agent through the LiteLLM gateway, `run.session: docker`, `grader.setup` install step |
+
+`examples/circle_packing/task.yaml` uses `preset: docker-opencode` as a
+worked example.
+
 ## `task` section
 
 | Field | Type | Default | Description |

@@ -357,14 +357,30 @@ class CoralConfig:
     def from_yaml(cls, path: str | Path) -> CoralConfig:
         with open(path) as f:
             data = yaml.safe_load(f)
-        return cls.from_dict(data)
+        return cls.from_dict(data, base_dir=Path(path).parent)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> CoralConfig:
-        data = _preprocess(dict(data))
+    def from_dict(cls, data: dict[str, Any], base_dir: Path | None = None) -> CoralConfig:
+        data = dict(data)
+        # A top-level `preset:` names a built-in preset or points at a local
+        # YAML file. Its keys form a layer between the schema defaults and the
+        # task's own keys: schema < preset < task. The task always wins on any
+        # key it sets explicitly. Stacking is not supported (a preset may not
+        # itself declare `preset:`).
+        preset_ref = data.pop("preset", None)
+        preset_data = _load_preset(preset_ref, base_dir) if preset_ref else None
+
         schema = OmegaConf.structured(cls)
-        raw = OmegaConf.create(data)
-        merged = OmegaConf.merge(schema, raw)
+        # Merge preset under task as raw dicts first, then preprocess the
+        # combined picture so legacy-key normalization and runtime/model
+        # defaulting see the final merged values (e.g. runtime from preset +
+        # model from task).
+        layers = [OmegaConf.create(preset_data)] if preset_data is not None else []
+        layers.append(OmegaConf.create(data))
+        combined = OmegaConf.merge(*layers) if len(layers) > 1 else layers[0]
+        combined_dict: dict[str, Any] = OmegaConf.to_container(combined)  # type: ignore[assignment]
+        combined_dict = _preprocess(combined_dict)
+        merged = OmegaConf.merge(schema, OmegaConf.create(combined_dict))
         cfg: CoralConfig = OmegaConf.to_object(merged)  # type: ignore[assignment]
         return cfg
 
@@ -474,6 +490,59 @@ def _expand_bindings(agents_data: dict[str, Any]) -> None:
             name = entry.pop("binding", None)
             if name is not None:
                 _apply_binding(entry, _lookup(str(name)))
+
+
+def _builtin_presets_dir() -> Path:
+    """Directory of bundled preset YAMLs shipped with CORAL."""
+    return Path(__file__).parent / "template" / "presets"
+
+
+def _resolve_preset_path(ref: str, base_dir: Path | None) -> Path:
+    """Resolve a `preset:` string to a YAML file path.
+
+    A bare name (no path separator, no .yaml/.yml suffix) refers to a built-in
+    preset under ``coral/template/presets/``. Anything else is treated as a
+    filesystem path: absolute as-is, relative resolved against ``base_dir``
+    (the directory holding task.yaml) or the cwd as a fallback.
+    """
+    looks_like_path = (
+        "/" in ref or "\\" in ref or ref.endswith((".yaml", ".yml")) or ref.startswith(".")
+    )
+    if not looks_like_path:
+        path = _builtin_presets_dir() / f"{ref}.yaml"
+        if not path.exists():
+            available = sorted(p.stem for p in _builtin_presets_dir().glob("*.yaml"))
+            raise ValueError(
+                f"Unknown preset {ref!r}. Built-in presets: "
+                f"{', '.join(available) or '(none)'}. "
+                f"To use a local file, pass a path ending in .yaml."
+            )
+        return path
+
+    path = Path(ref)
+    if not path.is_absolute():
+        path = (base_dir or Path.cwd()) / path
+    if not path.exists():
+        raise ValueError(f"Preset file not found: {path}")
+    return path
+
+
+def _load_preset(ref: Any, base_dir: Path | None) -> dict[str, Any]:
+    """Load and validate a preset referenced by a task's `preset:` key."""
+    if not isinstance(ref, str) or not ref.strip():
+        raise ValueError(f"preset must be a non-empty string, got {ref!r}")
+    path = _resolve_preset_path(ref.strip(), base_dir)
+    with open(path) as f:
+        loaded = yaml.safe_load(f) or {}
+    if not isinstance(loaded, dict):
+        raise ValueError(f"Preset {path} must contain a YAML mapping, got {type(loaded).__name__}")
+    if "preset" in loaded:
+        raise ValueError(
+            f"Preset {path} declares its own 'preset:' key — preset stacking is not supported."
+        )
+    # A preset is config defaults only; it must not carry task identity.
+    loaded.pop("task_dir", None)
+    return loaded
 
 
 def _preprocess(data: dict[str, Any]) -> dict[str, Any]:

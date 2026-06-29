@@ -1,0 +1,14 @@
+# Built-in preset: local multi-agent Claude Code run in tmux.
+# Reference from a task.yaml with `preset: local-claude`.
+# Any key set in the task.yaml overrides the value here.
+grader:
+  setup:
+    - "uv pip install -e ./grader"
+
+agents:
+  count: 4
+  runtime: claude_code
+  model: opus
+
+run:
+  session: tmux

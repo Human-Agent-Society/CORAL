@@ -1,0 +1,18 @@
+# Built-in preset: OpenCode agents in a Docker session, routed through the
+# bundled LiteLLM gateway. Reference with `preset: docker-opencode`.
+# Any key set in the task.yaml overrides the value here.
+grader:
+  setup:
+    - "uv pip install -e ./grader"
+
+agents:
+  count: 1
+  runtime: opencode
+  model: claude/claude-opus-4-6
+  gateway:
+    enabled: true
+    port: 4000
+    config: "./litellm_config.yaml"
+
+run:
+  session: docker

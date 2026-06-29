@@ -472,3 +472,91 @@ def test_migration_dest_weighting_validation():
                 "islands": {"migration": {"dest_weighting": "nonsense"}},
             }
         )
+
+
+# --- Presets ---------------------------------------------------------------
+
+
+def test_preset_builtin_applies_defaults():
+    config = CoralConfig.from_dict(
+        {
+            "preset": "local-claude",
+            "task": {"name": "t", "description": "d"},
+            "grader": {"entrypoint": "pkg.grader:Grader"},
+        }
+    )
+    # Values come from the local-claude preset.
+    assert config.agents.count == 4
+    assert config.agents.runtime == "claude_code"
+    assert config.agents.model == "opus"
+    assert config.run.session == "tmux"
+    assert config.grader.setup == ["uv pip install -e ./grader"]
+    # Task-set keys are preserved.
+    assert config.grader.entrypoint == "pkg.grader:Grader"
+
+
+def test_preset_task_overrides_preset():
+    config = CoralConfig.from_dict(
+        {
+            "preset": "local-claude",
+            "task": {"name": "t", "description": "d"},
+            "agents": {"count": 1, "model": "sonnet"},
+            "run": {"session": "local"},
+        }
+    )
+    # Task wins on the keys it sets; preset fills the rest.
+    assert config.agents.count == 1
+    assert config.agents.model == "sonnet"
+    assert config.agents.runtime == "claude_code"  # still from preset
+    assert config.run.session == "local"
+
+
+def test_preset_local_path(tmp_path):
+    preset_file = tmp_path / "shared.yaml"
+    preset_file.write_text("agents:\n  count: 7\n  model: haiku\n")
+    task_file = tmp_path / "task.yaml"
+    task_file.write_text(
+        "preset: ./shared.yaml\n"
+        "task:\n  name: t\n  description: d\n"
+        "grader:\n  entrypoint: pkg.grader:Grader\n"
+    )
+    config = CoralConfig.from_yaml(task_file)
+    assert config.agents.count == 7
+    assert config.agents.model == "haiku"
+
+
+def test_preset_unknown_name_raises():
+    with pytest.raises(ValueError, match="Unknown preset"):
+        CoralConfig.from_dict(
+            {"preset": "does-not-exist", "task": {"name": "t", "description": "d"}}
+        )
+
+
+def test_preset_missing_file_raises(tmp_path):
+    task_file = tmp_path / "task.yaml"
+    task_file.write_text("preset: ./nope.yaml\ntask:\n  name: t\n  description: d\n")
+    with pytest.raises(ValueError, match="Preset file not found"):
+        CoralConfig.from_yaml(task_file)
+
+
+def test_preset_no_stacking(tmp_path):
+    inner = tmp_path / "inner.yaml"
+    inner.write_text("preset: local-claude\nagents:\n  count: 2\n")
+    task_file = tmp_path / "task.yaml"
+    task_file.write_text("preset: ./inner.yaml\ntask:\n  name: t\n  description: d\n")
+    with pytest.raises(ValueError, match="stacking is not supported"):
+        CoralConfig.from_yaml(task_file)
+
+
+def test_preset_runtime_in_preset_model_in_task():
+    # preset sets the runtime, task sets the model — preprocessing sees both
+    # and does not clobber the explicit model with a runtime default.
+    config = CoralConfig.from_dict(
+        {
+            "preset": "docker-opencode",
+            "task": {"name": "t", "description": "d"},
+            "agents": {"model": "claude/claude-sonnet-4-6"},
+        }
+    )
+    assert config.agents.runtime == "opencode"
+    assert config.agents.model == "claude/claude-sonnet-4-6"

@@ -33,8 +33,8 @@ config = CoralConfig.from_yaml("task.yaml")
 
 | Method | Description |
 |--------|-------------|
-| `from_yaml(path)` | Load config from a YAML file |
-| `from_dict(data)` | Create config from a dictionary |
+| `from_yaml(path)` | Load config from a YAML file (resolves a top-level `preset:` relative to the file's directory) |
+| `from_dict(data, base_dir=None)` | Create config from a dictionary; `base_dir` resolves a relative `preset:` path |
 | `to_dict()` | Serialize to dictionary |
 | `to_yaml(path)` | Write to a YAML file |
 
