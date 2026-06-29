@@ -93,6 +93,26 @@ def test_agent_runtime_options_roundtrip():
     }
 
 
+def test_remote_runtime_config_accepts_class_key():
+    config = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "agents": {
+                "remote_runtime": {
+                    "class": "pkg.module:Runtime",
+                    "config": {"region": "us-west-2"},
+                    "sync_interval_seconds": 10,
+                },
+            },
+        }
+    )
+
+    assert config.agents.remote_runtime.class_path == "pkg.module:Runtime"
+    assert config.agents.remote_runtime.config == {"region": "us-west-2"}
+    assert config.agents.remote_runtime.sync_interval_seconds == 10
+    assert config.to_dict()["agents"]["remote_runtime"]["class"] == "pkg.module:Runtime"
+
+
 def test_config_setup_roundtrip():
     config = CoralConfig(
         task=TaskConfig(name="test", description="A test"),

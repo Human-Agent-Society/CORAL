@@ -113,6 +113,22 @@ class WarmStartConfig:
 
 
 @dataclass
+class RemoteRuntimeConfig:
+    """Optional adapter for state from agents running in a remote runtime."""
+
+    class_path: str = ""  # YAML key: agents.remote_runtime.class
+    config: dict[str, Any] = field(default_factory=dict)
+    sync_interval_seconds: int = 30
+
+    def __post_init__(self) -> None:
+        if self.sync_interval_seconds < 1:
+            raise ValueError(
+                "agents.remote_runtime.sync_interval_seconds must be >= 1, "
+                f"got {self.sync_interval_seconds}"
+            )
+
+
+@dataclass
 class AgentAssignmentConfig:
     """Per-assignment override of runtime/model for mix-and-match multi-agent runs.
 
@@ -145,6 +161,7 @@ class AgentConfig:
     model: str = "sonnet"
     gateway: GatewayConfig = field(default_factory=GatewayConfig)
     warmstart: WarmStartConfig = field(default_factory=WarmStartConfig)
+    remote_runtime: RemoteRuntimeConfig = field(default_factory=RemoteRuntimeConfig)
     runtime_options: dict[str, Any] = field(default_factory=dict)
     # OS-user isolation: when set (e.g. "agent"), the agent subprocess is run as
     # this unprivileged user while the manager/grader stay root. The agent's
@@ -200,6 +217,8 @@ class AgentConfig:
     min_clean_runtime_seconds: int = 60
 
     def __post_init__(self) -> None:
+        if isinstance(self.remote_runtime, dict):
+            self.remote_runtime = RemoteRuntimeConfig(**self.remote_runtime)
         # Reject negative values for the new reliability knobs;
         # 0 is treated as "disabled" for the same fields where it makes sense.
         for field_name in (
@@ -389,6 +408,11 @@ class CoralConfig:
         container: dict[str, Any] = OmegaConf.to_container(sc, resolve=True)  # type: ignore[assignment]
         # Remove internal-only fields
         container.pop("task_dir", None)
+        remote_runtime = container.get("agents", {}).get("remote_runtime")
+        if isinstance(remote_runtime, dict):
+            class_path = remote_runtime.pop("class_path", "")
+            if class_path:
+                remote_runtime["class"] = class_path
         # Serialize heartbeat is_global as "global" for YAML compat
         for h in container.get("agents", {}).get("heartbeat", []):
             h["global"] = h.pop("is_global", False)
@@ -570,6 +594,13 @@ def _preprocess(data: dict[str, Any]) -> dict[str, Any]:
     # else looks at them. This keeps bindings a pure preset layer over the
     # existing runtime/model/assignment system.
     _expand_bindings(agents_data)
+
+    remote_runtime = agents_data.get("remote_runtime")
+    if isinstance(remote_runtime, dict):
+        remote_runtime = dict(remote_runtime)
+        if "class" in remote_runtime:
+            remote_runtime["class_path"] = remote_runtime.pop("class")
+        agents_data["remote_runtime"] = remote_runtime
 
     heartbeat_raw = agents_data.pop("heartbeat", None)
     old_reflect = agents_data.pop("reflect_every", None)

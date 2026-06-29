@@ -37,6 +37,7 @@ from coral.agent.migration import (
     choose_roster_balanced_subset,
 )
 from coral.agent.registry import get_runtime
+from coral.agent.remote import RemoteStateBridge, load_remote_runtime
 from coral.agent.runtime import AgentHandle, AgentRuntime
 from coral.agent.state import (
     AgentRuntimeState,
@@ -157,6 +158,8 @@ class AgentManager:
         self._pending_restart_after_pause: set[str] = set()
         self._gateway: Any | None = None
         self._gateway_keys: dict[str, str] = {}  # agent_id -> proxy key
+        self._remote_state_bridge: RemoteStateBridge | None = None
+        self._last_remote_state_sync = 0.0
         self._grader_proc: multiprocessing.Process | None = None
         self._grader_stop_event: Any | None = None  # multiprocessing.Event
         # Island migration. Only meaningful with >=2 islands and migration
@@ -210,6 +213,11 @@ class AgentManager:
         logger.info(f"Run directory: {self.paths.run_dir}")
         logger.info(f"  coral_dir: {self.paths.coral_dir}")
         logger.info(f"  repo_dir:  {self.paths.repo_dir}")
+
+        # Optional remote runtime state bridge. This is additive: local
+        # subprocess agents keep their current worktree lifecycle.
+        self._start_remote_state_bridge_if_configured()
+        self._sync_remote_state(force=True)
 
         # 1b. Start gateway if configured
         self._start_gateway_if_enabled()
@@ -397,6 +405,35 @@ class AgentManager:
         gateway.start()
         self._gateway = gateway
         logger.info(f"Gateway running at {gateway.url}")
+
+    def _start_remote_state_bridge_if_configured(self) -> None:
+        """Initialize the remote state bridge when agents.remote_runtime is configured."""
+        assert self.paths is not None
+        remote_cfg = self.config.agents.remote_runtime
+        if not remote_cfg.class_path:
+            return
+
+        runtime = load_remote_runtime(remote_cfg.class_path, remote_cfg.config)
+        self._remote_state_bridge = RemoteStateBridge(
+            runtime=runtime,
+            state_dir=self.paths.coral_dir / "public" / "remote_state",
+        )
+        logger.info("Remote runtime state bridge enabled: %s", remote_cfg.class_path)
+
+    def _sync_remote_state(self, force: bool = False) -> None:
+        """Best-effort sync from the configured remote runtime into public state."""
+        if self._remote_state_bridge is None:
+            return
+        interval = self.config.agents.remote_runtime.sync_interval_seconds
+        now = time.time()
+        if not force and now - self._last_remote_state_sync < interval:
+            return
+        try:
+            states = self._remote_state_bridge.sync_once()
+            self._last_remote_state_sync = now
+            logger.debug("Synced %d remote agent state snapshot(s)", len(states))
+        except Exception as e:
+            logger.warning("Remote runtime state sync failed: %s", e)
 
     def _run_warmstart_research(
         self,
@@ -2093,6 +2130,8 @@ class AgentManager:
         logger.info(f"Monitoring {len(self.handles)} agent(s) (check every {check_interval}s)...")
 
         while self._running:
+            self._sync_remote_state()
+
             # Check for new attempts
             current_attempts = self._get_seen_attempts()
             new_attempts = current_attempts - seen_attempts
