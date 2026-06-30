@@ -67,6 +67,18 @@ class _NotRemoteRuntime:
     runtime_type = "fake"
 
 
+class _UnsafeIdRemoteRuntime(_FakeRemoteRuntime):
+    def collect_metrics(self) -> list[RemoteAgentState]:
+        return [
+            RemoteAgentState(
+                agent_id="../remote/agent",
+                runtime_type=self.runtime_type,
+                runtime_id="remote-unsafe",
+                status="running",
+            )
+        ]
+
+
 @pytest.fixture
 def fake_remote_module() -> types.ModuleType:
     mod_name = "coral_test_fake_remote_runtime"
@@ -111,3 +123,16 @@ def test_remote_state_bridge_writes_index_and_agent_file(tmp_path: Path) -> None
 
     agent_payload = json.loads((state_dir / "strategy-1.json").read_text())
     assert agent_payload["artifacts"] == {"trace": "trace-1"}
+
+
+def test_remote_state_bridge_encodes_agent_id_for_filename(tmp_path: Path) -> None:
+    state_dir = tmp_path / ".coral" / "public" / "remote_state"
+    bridge = RemoteStateBridge(_UnsafeIdRemoteRuntime(), state_dir)
+
+    bridge.sync_once()
+
+    assert (state_dir / "..%2Fremote%2Fagent.json").exists()
+    assert not (tmp_path / ".coral" / "public" / "remote").exists()
+    index = read_remote_state(tmp_path / ".coral")
+    assert index is not None
+    assert index["agents"][0]["agent_id"] == "../remote/agent"

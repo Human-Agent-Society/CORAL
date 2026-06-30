@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
+from urllib.parse import quote
 
 
 def utc_now_iso() -> str:
@@ -123,7 +124,7 @@ class RemoteStateBridge:
         self.state_dir.mkdir(parents=True, exist_ok=True)
 
         for state in serialized:
-            self._write_json(self.state_dir / f"{state['agent_id']}.json", state)
+            self._write_json(self.state_dir / self._state_filename(state["agent_id"]), state)
 
         self._write_json(
             self.state_dir / "index.json",
@@ -140,6 +141,11 @@ class RemoteStateBridge:
         tmp_path = path.with_suffix(path.suffix + ".tmp")
         tmp_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
         os.replace(tmp_path, path)
+
+    @staticmethod
+    def _state_filename(agent_id: Any) -> str:
+        encoded = quote(str(agent_id), safe="")
+        return f"{encoded or '_'}.json"
 
 
 def read_remote_state(coral_dir: str | Path) -> dict[str, Any] | None:
