@@ -83,8 +83,9 @@ Skills: `coral-quickstart` (install → setup → `.coral_workspace/`), `setting
 | [Cursor Agent](https://cursor.com/docs/cli/overview) | `cursor` |
 | [Kiro](https://kiro.dev) | `kiro` |
 | [OpenCode](https://github.com/opencode-ai/opencode) | `opencode` |
+| Remote proxy | `remote_proxy` |
 
-Each agent must be installed and authenticated separately. Per-runtime config — including the [LiteLLM gateway](https://docs.coralxyz.com/guides/gateway) for custom models — is documented at [Agent Runtimes](https://docs.coralxyz.com/guides/agent-runtimes).
+Each agent must be installed and authenticated separately. Per-runtime config — including the [LiteLLM gateway](https://docs.coralxyz.com/guides/gateway) for custom models and remote proxy adapters — is documented at [Agent Runtimes](https://docs.coralxyz.com/guides/agent-runtimes).
 
 ### How It Works
 

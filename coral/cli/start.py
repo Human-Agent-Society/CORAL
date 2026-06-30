@@ -838,6 +838,7 @@ def cmd_stop(args: argparse.Namespace) -> None:
 
 def cmd_status(args: argparse.Namespace) -> None:
     """Show agent status and leaderboard."""
+    from coral.agent.remote import read_remote_state
     from coral.hub.attempts import (
         format_leaderboard,
         format_status_summary,
@@ -989,6 +990,27 @@ def cmd_status(args: argparse.Namespace) -> None:
                         f"grader_error={grader_error}  tune={tune}  "
                         f"|  grader-error rate: {rate_str}"
                     )
+
+    remote_state = read_remote_state(coral_dir)
+    if remote_state:
+        remote_agents = remote_state.get("agents", [])
+        if isinstance(remote_agents, list):
+            print(f"\nRemote agents: {len(remote_agents)}")
+            for agent in remote_agents:
+                if not isinstance(agent, dict):
+                    continue
+                metrics = agent.get("metrics") if isinstance(agent.get("metrics"), dict) else {}
+                metric_text = ""
+                if metrics:
+                    metric_text = "  |  " + ", ".join(
+                        f"{key}={value}" for key, value in sorted(metrics.items())
+                    )
+                print(
+                    f"  {agent.get('agent_id', 'unknown')}: "
+                    f"{agent.get('status', 'unknown')}  |  "
+                    f"{agent.get('runtime_type', remote_state.get('runtime_type', 'remote'))}"
+                    f"{metric_text}"
+                )
 
     direction = read_direction(coral_dir)
     print()

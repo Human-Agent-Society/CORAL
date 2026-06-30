@@ -147,12 +147,23 @@ packaged-grader layout.
 |-------|------|---------|-------------|
 | `count` | int | `1` | Number of agents to spawn |
 | `binding` | string | – | Name of a user-level [agent binding](/docs/guides/agent-bindings) to expand into `runtime`/`model`/`runtime_options`. Explicit fields here override the binding. |
-| `runtime` | string | `"claude_code"` | Agent runtime: `claude_code`, `codex`, `opencode` |
+| `runtime` | string | `"claude_code"` | Agent runtime: `claude_code`, `codex`, `opencode`, `cursor_agent`, `kiro`, `pi`, or `remote_proxy` |
 | `model` | string | `"sonnet"` | Model to use (e.g. `opus`, `sonnet`, `haiku`, or full model ID) |
 | `max_turns` | int | `200` | Maximum conversation turns per agent |
 | `timeout` | int | `3600` | Agent session timeout in seconds |
 | `research` | bool | `true` | Enable web search in agent workflow |
 | `heartbeat` | list | see below | Periodic actions triggered during eval loop |
+
+For remote execution with a local CORAL workspace, set `runtime: remote_proxy`
+and provide `runtime_options.adapter` plus any adapter-specific config:
+
+```yaml
+agents:
+  runtime: remote_proxy
+  runtime_options:
+    adapter: my_package.remote:RuntimeAdapter
+    config: {}
+```
 
 ### Heartbeat actions
 

@@ -565,28 +565,33 @@ def _validate_binding(
 
     # 2. CLI exists on PATH or at the configured command path.
     command = binding.command or default_command_for_runtime(binding.runtime) or ""
-    resolved = None
-    if command:
+    if not command:
+        rows.append(("CLI found", True, "not required for this runtime"))
+        rows.append(("CLI --version", True, "skipped (no runtime CLI)"))
+        cli_ok = False
+        resolved = None
+    else:
+        resolved = None
         cand = Path(command).expanduser()
         if cand.is_absolute() or "/" in command:
             resolved = str(cand) if cand.exists() else None
         else:
             resolved = shutil.which(command)
-    cli_ok = resolved is not None
-    rows.append(
-        (
-            "CLI found",
-            cli_ok,
-            f"{resolved}" if cli_ok else f"{command!r} not found on PATH",
+        cli_ok = resolved is not None
+        rows.append(
+            (
+                "CLI found",
+                cli_ok,
+                f"{resolved}" if cli_ok else f"{command!r} not found on PATH",
+            )
         )
-    )
 
-    # 3. Version command works (best-effort, only if the CLI was found).
-    if cli_ok and resolved:
-        ver_ok, ver_detail = _try_version(resolved)
-        rows.append(("CLI --version", ver_ok, ver_detail))
-    else:
-        rows.append(("CLI --version", False, "skipped (CLI not found)"))
+        # 3. Version command works (best-effort, only if the CLI was found).
+        if cli_ok and resolved:
+            ver_ok, ver_detail = _try_version(resolved)
+            rows.append(("CLI --version", ver_ok, ver_detail))
+        else:
+            rows.append(("CLI --version", False, "skipped (CLI not found)"))
 
     # 4. Role file exists, if specified.
     if binding.role_file:

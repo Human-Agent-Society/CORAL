@@ -11,6 +11,7 @@ from coral.agent.builtin.cursor_agent import CursorAgentRuntime
 from coral.agent.builtin.kiro import KiroRuntime
 from coral.agent.builtin.opencode import OpenCodeRuntime
 from coral.agent.builtin.pi_agent import PiAgentRuntime
+from coral.agent.builtin.remote_proxy import RemoteProxyRuntime
 from coral.agent.runtime import AgentRuntime
 
 _RUNTIMES: dict[str, type] = {
@@ -20,6 +21,7 @@ _RUNTIMES: dict[str, type] = {
     "kiro": KiroRuntime,
     "opencode": OpenCodeRuntime,
     "pi": PiAgentRuntime,
+    "remote_proxy": RemoteProxyRuntime,
 }
 
 # Convenience aliases
@@ -33,6 +35,7 @@ _ALIASES: dict[str, str] = {
     "cursor": "cursor_agent",
     "cursor-agent": "cursor_agent",
     "pi-agent": "pi",
+    "remote": "remote_proxy",
 }
 
 # Default models per runtime (used when user doesn't specify --model)
@@ -43,6 +46,7 @@ _DEFAULT_MODELS: dict[str, str] = {
     "kiro": "auto",
     "opencode": "openai/gpt-5",
     "pi": "zai/glm-5.1",
+    "remote_proxy": "remote",
 }
 
 # Default CLI command (binary) each runtime invokes. Used by `coral setup agent`
@@ -55,6 +59,7 @@ _RUNTIME_COMMANDS: dict[str, str] = {
     "kiro": "kiro-cli",
     "opencode": "opencode",
     "pi": "pi",
+    "remote_proxy": "",
 }
 
 

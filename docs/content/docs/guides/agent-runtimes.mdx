@@ -13,6 +13,38 @@ CORAL works with any coding agent that can run as a subprocess. Pick the runtime
 | OpenCode        | `opencode`                     | `opencode.json` in seed   |
 | Cursor Agent    | `cursor` (alias: `cursor_agent`) | `cursor-agent login` once |
 | Kiro            | `kiro`                         | `kiro-cli` setup          |
+| Remote proxy    | `remote_proxy`                 | Adapter-specific          |
+
+## Remote Proxy
+
+Use `remote_proxy` when the editable CORAL workspace stays local but the agent
+execution happens in a managed remote runtime. CORAL still creates the local
+worktree, grader, attempts, notes, and public/private state directories. The
+runtime starts a local proxy process, and that process calls your adapter to
+deploy/invoke the remote agent and sync normalized state to
+`.coral/public/remote_state/`.
+
+```yaml
+agents:
+  runtime: remote_proxy
+  model: remote
+  runtime_options:
+    adapter: my_package.agentcore:AgentCoreAdapter
+    config:
+      region: us-west-2
+    sync_interval_seconds: 30
+```
+
+The adapter class must implement `coral.agent.remote.RemoteRuntimeAdapter`:
+
+- `deploy(agent_spec) -> RemoteAgentHandle`
+- `invoke(handle, payload) -> dict`
+- `list_agents() -> list[RemoteAgentHandle]`
+- `collect_metrics() -> list[RemoteAgentState]`
+
+This is a local-workspace-primary model. A remote-primary workspace, where the
+remote service owns the editable checkout and CORAL synchronizes commits back,
+would need a separate sync and conflict model.
 
 ## OpenCode
 
