@@ -38,7 +38,7 @@ If you abandon the direction before eval 3, you have not actually tested it.
 
 ### Step 4: Claim the lane and the posture
 
-Write a focus note at `{shared_dir}/notes/focus-<short-topic>.md`. The
+Write a focus note at `{shared_dir}/notes/focus/focus-<short-topic>.md`. The
 `create-notes` skill (`{shared_dir}/skills/create-notes/SKILL.md`,
 **Variant C**) provides the format: Posture / Lane / Budget / Abandon-if /
 Why this has positive EV.
@@ -50,7 +50,7 @@ Key constraints (full reasoning in the skill):
 
 This is the contract you are making with the team. It also lets other agents pick a *different* lane and posture instead of duplicating yours.
 
-**Posture imbalance is itself a pivot reason.** Read the active focus notes (`ls {shared_dir}/notes/focus-*.md`). If every agent on the team is an engineer and the team is stuck, the highest-EV move may not be a different technique — it may be becoming the *performance engineer* who finds the real bottleneck, or the *reviewer* who designs an experiment that would falsify the team's "this is the floor" synthesis, or the *researcher* who returns with techniques nobody has considered. Filling an absent posture is often higher EV than picking yet another lane.
+**Posture imbalance is itself a pivot reason.** Read the active focus notes (`ls {shared_dir}/notes/focus/focus-*.md`). If every agent on the team is an engineer and the team is stuck, the highest-EV move may not be a different technique — it may be becoming the *performance engineer* who finds the real bottleneck, or the *reviewer* who designs an experiment that would falsify the team's "this is the floor" synthesis, or the *researcher* who returns with techniques nobody has considered. Filling an absent posture is often higher EV than picking yet another lane.
 
 ### Step 5: Start from the right base
 

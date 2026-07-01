@@ -20,7 +20,7 @@ Each heartbeat that produces a note corresponds to one variant. The skill is one
 | Triggered by | Variant | File location |
 |---|---|---|
 | `reflect` heartbeat after each eval | **Experiment note** (Variant A) | `notes/experiments/eval-<N>-<slug>.md` |
-| `pivot` plateau detection | **Focus note** (Variant C) | `notes/focus-<topic>.md` |
+| `pivot` plateau detection | **Focus note** (Variant C) | `notes/focus/focus-<topic>.md` |
 | `consolidate` synthesis / connections / open-questions | **Synthesis + map + gaps** (Variant D) | `notes/_synthesis/<topic>.md`, `notes/_connections.md`, `notes/_open-questions.md` |
 | First time a grader / build / runtime issue is hit | **Infra note** (Variant B) | `notes/infra/<slug>.md` (or `notes/<slug>.md`) |
 | `deep-research` warm-start phase | **Research note** | Per `deep-research/SKILL.md` (not duplicated here) |
@@ -38,7 +38,8 @@ notes/
 ├── research/             ← deep-research findings (link back to raw/)
 ├── experiments/          ← per-eval reflections, written by the reflect heartbeat
 ├── infra/                ← grader / build / runtime issues + workarounds (recommended)
-├── focus-<topic>.md      ← per-agent focus declarations (owned by the pivot heartbeat)
+├── focus/                ← per-agent focus declarations (owned by the pivot heartbeat)
+├── migrations/           ← island-arrival notes (written by the framework)
 ├── _synthesis/           ← owned by consolidate; do not write here unless consolidating
 ├── _connections.md       ← owned by consolidate
 ├── _open-questions.md    ← owned by consolidate
@@ -247,9 +248,9 @@ If a single open question is big enough to deserve its own file, promote it: use
 | Synthesis | `_synthesis/<topic>.md` | `_synthesis/simd-u8-widening.md` |
 | Connections map | `_connections.md` (single file, append-only sections) | n/a |
 | Open questions | `_open-questions.md` (single file, append-only sections) | n/a |
-| Focus | `focus-<short-topic>.md` | `focus-1-agent-1-ivf-u8-simd.md` |
+| Focus | `focus/focus-<short-topic>.md` | `focus/focus-1-agent-1-ivf-u8-simd.md` |
 | Research | `research/<topic>/<short-slug>.md` | `research/simd/avx2-l2-distance.md` |
-| Migration | `migration_<ISO-timestamp>_<agent_id>.md` | `migration_20260605T061159_0-agent-2.md` |
+| Migration | `migrations/migration_<ISO-timestamp>_<agent_id>.md` | `migrations/migration_20260605T061159_0-agent-2.md` |
 
 Rules: lowercase, kebab-case, no spaces. No agent id in the filename (except `focus-*` and `migration_*`, which are inherently per-agent). Don't start filenames with `_` — that prefix is reserved for system-managed files. `lint.py` catches all of these.
 
@@ -299,7 +300,7 @@ Before saving, run `scripts/lint.py <path-to-note>` — it mechanizes every chec
 - [ ] **Result has at least one absolute number AND at least one delta vs a baseline.** A result without a baseline is uninterpretable.
 - [ ] **"What did not work" has ≥ 2 entries.** If you only tried one approach, say so explicitly and explain why you did not explore alternatives.
 - [ ] **Every magic number has a source.** For each constant in Mechanism (bandwidth, latency, parameter values, thresholds), mark it as **measured** (script/command that produced it), **cited** (paper / doc / file), or **estimated** (one-line justification). The default reading of an unsourced number is "the author guessed."
-- [ ] **Cross-links exist.** If a `focus-*.md` exists for this direction, link it in Context and verify the abandon-if gate against your result. If a sister `experiments/*.md` note exists, link it in References.
+- [ ] **Cross-links exist.** If a `focus/focus-*.md` exists for this direction, link it in Context and verify the abandon-if gate against your result. If a sister `experiments/*.md` note exists, link it in References.
 
 **For experiment (Variant A) notes specifically:**
 - [ ] **Every quantitative prediction in any prior note this builds on has been backfilled.** Open those notes, append "Predicted X, actual Y, gap = Z; mechanism was W," and link from this note's "Next" section.
@@ -313,7 +314,7 @@ Before saving, run `scripts/lint.py <path-to-note>` — it mechanizes every chec
 **For focus (Variant C) notes:**
 - [ ] **Abandon-if gate is concrete and testable** (specific score / recall / failure mode, not a vibe).
 - [ ] **Why-this-has-EV cites ≥ 1 other note or attempt.**
-- [ ] **Posture is the most-missing one on the team**, not the most comfortable. Verify by `ls {shared_dir}/notes/focus-*.md` and reading the team roster in `_connections.md`.
+- [ ] **Posture is the most-missing one on the team**, not the most comfortable. Verify by `ls {shared_dir}/notes/focus/focus-*.md` and reading the team roster in `_connections.md`.
 
 ## File-Writing Gotcha (read this — it will silently corrupt your note)
 
@@ -349,7 +350,7 @@ Avoid: `python3 -c "..."` with markdown in the string; `echo "..." > file.md` (s
 | Cross-category connection | D.2 | append to `notes/_connections.md` |
 | Contradiction or knowledge gap | D.3 | append to `notes/_open-questions.md` |
 | Grader / build / runtime issue | B | `notes/infra/<short-slug>.md` (or `notes/<slug>.md` if no `infra/`) |
-| Agent's current direction + budget + abandon-if | C | `notes/focus-<topic>.md` |
+| Agent's current direction + budget + abandon-if | C | `notes/focus/focus-<topic>.md` |
 | Index of all the above | — | Edit `notes/index.md` |
 
 If a slot does not exist, create it — but check first with `ls {shared_dir}/notes/`.

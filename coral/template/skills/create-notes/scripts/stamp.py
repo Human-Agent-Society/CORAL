@@ -107,7 +107,7 @@ under-represents how knowledge actually compounds.
 - attempt `<hash>`: <what you took from this graded result>
 - prior note: [<related-eval>.md](<related-eval>.md) — <what you took from it>
 - prior note: [<another>.md](<another>.md) — <what you took from it>
-- focus note: [focus-<topic>.md](../focus-<topic>.md)
+- focus note: [focus-<topic>.md](../focus/focus-<topic>.md)
 """
 
 _INFRA = """\

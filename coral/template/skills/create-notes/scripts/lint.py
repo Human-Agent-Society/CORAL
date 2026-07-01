@@ -17,7 +17,7 @@ What it checks (per note):
   the per-agent ``focus-*`` and ``migration_*`` exceptions)
 - The note's filename is referenced in the same ``notes/index.md``
 - The note's ``type:`` matches the directory it lives in (experiments/
-  → experiment, _synthesis/ → synthesis, focus-*.md → hypothesis,
+  → experiment, _synthesis/ → synthesis, focus/ → hypothesis,
   infra/ → experiment)
 
 Defaults to the bundled location ``.coral/public/notes`` if no path is
@@ -54,6 +54,7 @@ PATH_TYPE_HINTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"(^|/)experiments/"), "experiment"),
     (re.compile(r"(^|/)_synthesis/"), "synthesis"),
     (re.compile(r"(^|/)infra/"), "experiment"),
+    (re.compile(r"(^|/)focus/"), "hypothesis"),
     (re.compile(r"(^|/)focus-[^/]+\.md$"), "hypothesis"),
 ]
 

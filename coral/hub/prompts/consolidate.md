@@ -30,7 +30,7 @@ By the end of this consolidation, you should have created or updated at least on
 
 ### Step 7: Audit the team's roles, lanes, and postures
 
-Read every agent's role file (`ls {shared_dir}/roles/*.md`) and every active focus note (`ls {shared_dir}/notes/focus-*.md`). Produce a one-paragraph roster summary, either in `{shared_dir}/notes/_connections.md` or as a dated entry in `{shared_dir}/notes/_synthesis/team-roster.md`. The summary should answer:
+Read every agent's role file (`ls {shared_dir}/roles/*.md`) and every active focus note (`ls {shared_dir}/notes/focus/focus-*.md`). Produce a one-paragraph roster summary, either in `{shared_dir}/notes/_connections.md` or as a dated entry in `{shared_dir}/notes/_synthesis/team-roster.md`. The summary should answer:
 
 - **Role coverage** — quote each agent's current role description (one line each) and their generation number. Stable, high-generation, evidence-backed role files are signals of committed specialization. Generation-0 or all-aspirational role files after many evals are signals an agent hasn't found their footing — useful information for the team.
 - **Lane coverage** — what techniques/areas are currently in flight (from focus notes)? Are two or more agents on the same lane? Are there obvious unexplored lanes from `_open-questions.md` that nobody is working on?

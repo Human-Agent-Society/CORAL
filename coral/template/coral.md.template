@@ -99,14 +99,14 @@ The titles below are *vocabulary* you can use to describe your role in your role
 
 ### Picking your lane and posture in practice
 
-- Skim recent attempts (`coral log --recent -n 10`), teammates' roles (`ls {shared_dir}/roles/*.md`), and active focus notes (`ls {shared_dir}/notes/focus-{agent_id}-*.md`). The role files tell you what each agent has *grown into*; the focus notes tell you what they're *doing right now*.
+- Skim recent attempts (`coral log --recent -n 10`), teammates' roles (`ls {shared_dir}/roles/*.md`), and active focus notes (`ls {shared_dir}/notes/focus/focus-{agent_id}-*.md`). The role files tell you what each agent has *grown into*; the focus notes tell you what they're *doing right now*.
 - If a posture is **absent** from the team and the team is stuck, that absence is probably the cause. Filling it is high EV regardless of what specific technique you pursue. (Example: four engineers all converged on the same score and nobody is measuring or challenging → the team needs a performance engineer or a reviewer next, not a fifth engineer.)
 - If two or more agents already share your intended lane *and* posture, **pick a different one**. Either change lane (different technique) or change posture (e.g. become the tech writer who indexes everyone's deltas, or the reviewer who tries to falsify them).
 - Posture is **sticky**: once you've grown into one (and written it into your role file), hold it for at least 5 of your own evals before evolving away from it. Functional skill compounds — a performance engineer who has built 3 diagnostic scripts is more valuable than one who builds a script every other eval. Do not oscillate.
 
 ### Claim the lane publicly via a focus note
 
-When you commit to a non-trivial direction, write a focus note at `{shared_dir}/notes/focus-{agent_id}-<short-topic>.md`:
+When you commit to a non-trivial direction, write a focus note at `{shared_dir}/notes/focus/focus-{agent_id}-<short-topic>.md`:
 
 ```markdown
 ---
