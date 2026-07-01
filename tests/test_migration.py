@@ -754,7 +754,7 @@ def test_write_arrival_note_lands_on_dst_island_as_coral_authored():
         )
         _write_arrival_note(coral_dir, candidate)
 
-        notes_dir = coral_dir / "islands" / "1" / "notes"
+        notes_dir = coral_dir / "islands" / "1" / "notes" / "migrations"
         files = list(notes_dir.glob("migration_*_0-agent-1.md"))
         assert len(files) == 1
         text = files[0].read_text()
@@ -997,12 +997,14 @@ def test_apply_migration_end_to_end_moves_state_and_repoints_worktree(tmp_path):
     assert mgr.specs_by_id["0-agent-1"].island_id == "1"
     assert mgr._agent_island["0-agent-1"] == "1"
 
-    # Arrival note dropped on dst (creator: coral)
-    arrival_notes = list((coral_dir / "islands" / "1" / "notes").glob("migration_*_0-agent-1.md"))
+    # Arrival note dropped on dst under notes/migrations/ (creator: coral)
+    arrival_notes = list(
+        (coral_dir / "islands" / "1" / "notes" / "migrations").glob("migration_*_0-agent-1.md")
+    )
     assert len(arrival_notes) == 1
     assert "creator: coral" in arrival_notes[0].read_text()
     # Source island didn't get a stray arrival note
-    assert list((coral_dir / "islands" / "0" / "notes").glob("migration_*")) == []
+    assert list((coral_dir / "islands" / "0" / "notes").rglob("migration_*")) == []
 
     # Claude settings file regenerated with dst island scope
     settings = (worktree / ".claude" / "settings.local.json").read_text()
