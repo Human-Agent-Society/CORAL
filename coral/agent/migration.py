@@ -31,8 +31,8 @@ What moves with an agent (mechanics in the manager): ``roles/<agent>.md``,
 on the source island stay put as island-local shared knowledge. The agent's
 worktree symlinks and ``.coral_island`` breadcrumb are repointed at the
 destination, and an optional arrival note is dropped on the destination's
-``notes/`` when ``notify_island=True`` so other agents see the newcomer
-through ``coral notes``.
+``notes/migrations/`` when ``notify_island=True`` so other agents see the
+newcomer through ``coral notes``.
 """
 
 from __future__ import annotations

@@ -1925,8 +1925,9 @@ class AgentManager:
            island_id (so Read scopes follow the move).
         6. Swap the in-memory ``AgentSpec`` + ``_agent_island`` entry so
            later restarts honor the new home.
-        7. Drop an arrival note on dst (when ``notify_island=True``) so
-           teammates see the newcomer in ``coral notes --recent``.
+        7. Drop an arrival note on dst under ``notes/migrations/`` (when
+           ``notify_island=True``) so teammates see the newcomer in
+           ``coral notes --recent``.
         8. Hand back to ``_setup_and_start_agent`` with the new island and
            an "arrival" prompt summarising the move.
         """
@@ -2719,7 +2720,7 @@ def _write_arrival_note(coral_dir: Path, candidate: MigrationCandidate) -> None:
     ``notes_by`` author lookups, which the framework uses to attribute
     work back to specific agents.
     """
-    notes_dir = island_root(coral_dir, candidate.dst_island) / "notes"
+    notes_dir = island_root(coral_dir, candidate.dst_island) / "notes" / "migrations"
     notes_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.now(UTC)
     fname_ts = now.strftime("%Y%m%dT%H%M%S")
