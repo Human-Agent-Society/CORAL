@@ -18,6 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from coral.agent.nicknames import island_name_for_index, nickname_for_index
 from coral.agent.registry import default_model_for_runtime
 from coral.config import CoralConfig
 
@@ -33,18 +34,21 @@ class AgentSpec:
     # Index into ``agents.assignments`` this agent came from, or None when the
     # run is in uniform mode (no assignments list).
     assignment_index: int | None = None
-    # Birth island ID after partitioning (e.g. "0", "1"). None in single-island
-    # mode. Stable across migration — the prefix on ``agent_id`` always reflects
-    # birth island, while this field can be repointed in Phase 3 if needed.
+    # Birth island ID after partitioning (e.g. "atlantis", "avalon"). None in
+    # single-island mode. Stable across migration — the ``-from-<island>``
+    # suffix on ``agent_id`` always reflects birth island, while this field can
+    # be repointed in Phase 3 if needed.
     island_id: str | None = None
 
 
 def resolve_agent_specs(config: CoralConfig) -> list[AgentSpec]:
     """Expand a config into the concrete per-agent specs the manager will spawn.
 
-    Always returns at least one spec. Agent IDs are ``agent-1``, ``agent-2``,
-    ... in spawn order. When ``agents.assignments`` is empty the function
-    falls back to ``agents.count`` copies of the top-level defaults.
+    Always returns at least one spec. Agent IDs are drawn from the curated
+    ocean-themed nickname pool (``captain-nemo``, ``captain-ahab``, ...) in
+    deterministic spawn order — see ``coral.agent.nicknames``. When
+    ``agents.assignments`` is empty the function falls back to
+    ``agents.count`` copies of the top-level defaults.
     """
     base_runtime = config.agents.runtime
     base_model = config.agents.model
@@ -58,7 +62,7 @@ def resolve_agent_specs(config: CoralConfig) -> list[AgentSpec]:
         for i in range(total):
             specs.append(
                 AgentSpec(
-                    agent_id=f"agent-{i + 1}",
+                    agent_id=nickname_for_index(i),
                     runtime=base_runtime,
                     model=base_model,
                     runtime_options=dict(base_options),
@@ -67,7 +71,7 @@ def resolve_agent_specs(config: CoralConfig) -> list[AgentSpec]:
             )
         return specs
 
-    next_idx = 1
+    next_idx = 0
     for assignment_idx, assignment in enumerate(assignments):
         runtime = assignment.runtime or base_runtime
         model = assignment.model
@@ -84,7 +88,7 @@ def resolve_agent_specs(config: CoralConfig) -> list[AgentSpec]:
         for _ in range(assignment.count):
             specs.append(
                 AgentSpec(
-                    agent_id=f"agent-{next_idx}",
+                    agent_id=nickname_for_index(next_idx),
                     runtime=runtime,
                     model=model,
                     runtime_options=dict(options),
@@ -107,15 +111,16 @@ def partition_into_islands(
 ) -> list[AgentSpec]:
     """Distribute resolved agent specs across `count` islands round-robin.
 
-    Returns a new list of AgentSpecs with ``island_id`` populated and
-    ``agent_id`` rewritten to ``<birth_island>-agent-<per-island-seq>``
-    when count > 1. When count == 1, returns the input unchanged (no
-    ID rewriting, ``island_id`` stays None) — preserves today's single-island
-    behavior exactly.
+    Returns a new list of AgentSpecs with ``island_id`` set to a named isle
+    (``atlantis``, ``avalon``, ...) and ``agent_id`` rewritten to
+    ``<nickname>-from-<island>`` when count > 1 (e.g.
+    ``poseidon-from-avalon``). When count == 1, returns the input unchanged
+    (no ID rewriting, ``island_id`` stays None) — preserves today's
+    single-island behavior exactly.
 
-    Round-robin: spec i lands on island ``i % count``. The per-island sequence
-    is the order each island sees specs (so the first spec landing on island 2
-    is ``2-agent-1`` regardless of its global index).
+    Round-robin: spec i lands on island ``i % count``. Island names come from
+    ``island_name_for_index`` by island index, matching the directories
+    ``create_project`` mints, so ``island_id`` is a real place, not a number.
 
     Raises:
         ValueError: if count < 1.
@@ -125,13 +130,10 @@ def partition_into_islands(
     if count == 1:
         return list(specs)
 
-    per_island_seq: dict[str, int] = {}
     out: list[AgentSpec] = []
     for global_idx, spec in enumerate(specs):
-        island_id = str(global_idx % count)
-        per_island_seq[island_id] = per_island_seq.get(island_id, 0) + 1
-        seq = per_island_seq[island_id]
-        new_id = f"{island_id}-agent-{seq}"
+        island_id = island_name_for_index(global_idx % count)
+        new_id = f"{spec.agent_id}-from-{island_id}"
         out.append(
             AgentSpec(
                 agent_id=new_id,

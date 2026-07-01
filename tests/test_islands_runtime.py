@@ -5,6 +5,7 @@ from __future__ import annotations
 import json as _json
 from pathlib import Path
 
+from coral.agent.nicknames import island_name_for_index
 from coral.config import CoralConfig
 from coral.workspace.project import create_project
 from coral.workspace.worktree import (
@@ -56,7 +57,7 @@ def test_create_project_multi_island_creates_per_island_subtrees(tmp_path):
     islands_root = paths.coral_dir / "islands"
     assert islands_root.is_dir()
     for i in range(3):
-        island = islands_root / str(i)
+        island = islands_root / island_name_for_index(i)
         for sub in (
             "attempts",
             "notes",
@@ -81,7 +82,7 @@ def test_create_project_multi_island_seeds_bundled_skills_per_island(tmp_path):
     paths = create_project(cfg, config_dir=repo)
 
     for i in range(2):
-        sk = paths.coral_dir / "islands" / str(i) / "skills"
+        sk = paths.coral_dir / "islands" / island_name_for_index(i) / "skills"
         # At least one bundled skill must land on each island
         bundled = list(sk.iterdir())
         assert bundled, f"island {i} got no bundled skills"
@@ -104,7 +105,7 @@ def test_create_project_multi_island_per_island_eval_counter_files(tmp_path):
     # Counters are created lazily on first bump (matches Phase 1's behavior);
     # what we DO assert is that the layout permits them to exist.
     for i in range(2):
-        assert (paths.coral_dir / "islands" / str(i)).is_dir()
+        assert (paths.coral_dir / "islands" / island_name_for_index(i)).is_dir()
 
 
 def test_create_project_multi_island_per_island_checkpoint_repo(tmp_path):
@@ -118,7 +119,7 @@ def test_create_project_multi_island_per_island_checkpoint_repo(tmp_path):
     paths = create_project(cfg, config_dir=repo)
 
     for i in range(2):
-        assert (paths.coral_dir / "islands" / str(i) / ".git").is_dir(), (
+        assert (paths.coral_dir / "islands" / island_name_for_index(i) / ".git").is_dir(), (
             f"island {i} has no checkpoint .git"
         )
 
@@ -318,20 +319,20 @@ def test_agent_manager_partitions_specs_in_start_all_setup(tmp_path):
     mgr = AgentManager(cfg)
 
     ids = sorted(s.agent_id for s in mgr.specs)
-    # 6 agents on 3 islands round-robin → 2 each
+    # 6 agents on 3 islands round-robin → 2 each, named <nickname>-from-<island>
     assert ids == [
-        "0-agent-1",
-        "0-agent-2",
-        "1-agent-1",
-        "1-agent-2",
-        "2-agent-1",
-        "2-agent-2",
+        "captain-ahab-from-avalon",
+        "captain-nemo-from-atlantis",
+        "davy-jones-from-atlantis",
+        "jack-sparrow-from-lemuria",
+        "long-john-silver-from-avalon",
+        "sinbad-the-sailor-from-lemuria",
     ]
-    assert all(s.island_id in {"0", "1", "2"} for s in mgr.specs)
+    assert all(s.island_id in {"atlantis", "avalon", "lemuria"} for s in mgr.specs)
 
 
 def test_agent_manager_single_island_specs_unchanged(tmp_path):
-    """Single-island AgentManager keeps the flat agent-N ids."""
+    """Single-island AgentManager keeps flat (unprefixed) nickname ids."""
     repo = tmp_path / "myrepo"
     (repo / "src").mkdir(parents=True)
     data = _base_config_dict(repo)
@@ -342,5 +343,5 @@ def test_agent_manager_single_island_specs_unchanged(tmp_path):
 
     mgr = AgentManager(cfg)
 
-    assert [s.agent_id for s in mgr.specs] == ["agent-1", "agent-2"]
+    assert [s.agent_id for s in mgr.specs] == ["captain-nemo", "captain-ahab"]
     assert all(s.island_id is None for s in mgr.specs)

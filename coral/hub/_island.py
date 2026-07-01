@@ -42,21 +42,18 @@ def island_root(coral_dir: str | Path, island_id: str | int | None) -> Path:
 
 
 def island_id_from_agent_id(agent_id: str) -> str | None:
-    """Extract the island id from a partition-prefixed agent id.
+    """Extract the island id from a partition-named agent id.
 
-    Partitioning writes agent ids as ``<island_id>-agent-<n>`` (e.g.
-    ``0-agent-1``); a bare ``agent-N`` (no prefix) means single-island and
-    returns None. The prefix is a stable birth-lineage marker, not a current
-    island marker after migration. Use it only for lineage display or
-    backwards-compatible birth-island guesses, never as authoritative
-    current-location routing.
+    Partitioning writes agent ids as ``<nickname>-from-<island>`` (e.g.
+    ``poseidon-from-avalon``); a bare nickname (no ``-from-``) means
+    single-island and returns None. The suffix is a stable birth-lineage
+    marker, not a current island marker after migration. Use it only for
+    lineage display or backwards-compatible birth-island guesses, never as
+    authoritative current-location routing.
     """
-    if "-" not in agent_id:
+    if "-from-" not in agent_id:
         return None
-    head = agent_id.split("-", 1)[0]
-    # Heuristic: an island id is a short non-negative int; anything else is
-    # an ordinary agent name and we leave it for the caller to interpret.
-    return head if head.isdigit() else None
+    return agent_id.split("-from-", 1)[1]
 
 
 def all_view_roots(coral_dir: str | Path) -> list[Path]:

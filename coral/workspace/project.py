@@ -251,9 +251,14 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
             list(config.agents.skills),
         )
     else:
+        # Lazy import: coral.agent's package __init__ pulls in the heavy
+        # manager, which imports coral.workspace — importing at module top
+        # would form a cycle. nicknames itself has no such deps.
+        from coral.agent.nicknames import island_name_for_index
+
         (coral_dir / "islands").mkdir(parents=True, exist_ok=True)
         for i in range(config.islands.count):
-            island_root = coral_dir / "islands" / str(i)
+            island_root = coral_dir / "islands" / island_name_for_index(i)
             island_root.mkdir(parents=True, exist_ok=True)
             _build_island_subtree(
                 coral_dir,

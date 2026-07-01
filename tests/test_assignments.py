@@ -32,7 +32,7 @@ def test_uniform_default_single_agent():
     config = _make_config(AgentConfig())
     specs = resolve_agent_specs(config)
     assert len(specs) == 1
-    assert specs[0].agent_id == "agent-1"
+    assert specs[0].agent_id == "captain-nemo"
     assert specs[0].runtime == "claude_code"
     assert specs[0].model == "sonnet"
     assert specs[0].assignment_index is None
@@ -41,7 +41,12 @@ def test_uniform_default_single_agent():
 def test_uniform_count_n():
     config = _make_config(AgentConfig(count=4, runtime="codex", model="gpt-5.4"))
     specs = resolve_agent_specs(config)
-    assert [s.agent_id for s in specs] == ["agent-1", "agent-2", "agent-3", "agent-4"]
+    assert [s.agent_id for s in specs] == [
+        "captain-nemo",
+        "captain-ahab",
+        "jack-sparrow",
+        "davy-jones",
+    ]
     assert all(s.runtime == "codex" for s in specs)
     assert all(s.model == "gpt-5.4" for s in specs)
     assert all(s.assignment_index is None for s in specs)
@@ -70,7 +75,11 @@ def test_assignments_basic_mix():
         )
     )
     specs = resolve_agent_specs(config)
-    assert [s.agent_id for s in specs] == ["agent-1", "agent-2", "agent-3"]
+    assert [s.agent_id for s in specs] == [
+        "captain-nemo",
+        "captain-ahab",
+        "jack-sparrow",
+    ]
     assert [s.runtime for s in specs] == ["claude_code", "claude_code", "codex"]
     assert [s.model for s in specs] == ["opus", "opus", "gpt-5.4"]
     assert [s.assignment_index for s in specs] == [0, 0, 1]
@@ -185,23 +194,23 @@ def test_partition_round_robin_distributes_specs():
     by_island: dict[str, list[str]] = {}
     for s in out:
         by_island.setdefault(s.island_id, []).append(s.agent_id)
-    assert sorted(by_island) == ["0", "1", "2"]
-    # Round-robin: agent-1→0, agent-2→1, agent-3→2, agent-4→0, ...
-    assert by_island["0"] == ["0-agent-1", "0-agent-2"]
-    assert by_island["1"] == ["1-agent-1", "1-agent-2"]
-    assert by_island["2"] == ["2-agent-1", "2-agent-2"]
+    assert sorted(by_island) == ["atlantis", "avalon", "lemuria"]
+    # Round-robin, each spec's nickname tagged with its island's name:
+    # agent-1→atlantis, agent-2→avalon, agent-3→lemuria, agent-4→atlantis, ...
+    assert by_island["atlantis"] == ["agent-1-from-atlantis", "agent-4-from-atlantis"]
+    assert by_island["avalon"] == ["agent-2-from-avalon", "agent-5-from-avalon"]
+    assert by_island["lemuria"] == ["agent-3-from-lemuria", "agent-6-from-lemuria"]
 
 
 def test_partition_rewrites_agent_ids_with_birth_island_prefix():
-    """Multi-island IDs are <birth_island>-agent-<per-island-seq>."""
+    """Multi-island IDs are <nickname>-from-<island>, identity preserved."""
     specs = [_bare_spec(f"agent-{i + 1}") for i in range(4)]
     out = partition_into_islands(specs, count=2)
-    # 0-agent-1, 1-agent-1, 0-agent-2, 1-agent-2
     assert [s.agent_id for s in out] == [
-        "0-agent-1",
-        "1-agent-1",
-        "0-agent-2",
-        "1-agent-2",
+        "agent-1-from-atlantis",
+        "agent-2-from-avalon",
+        "agent-3-from-atlantis",
+        "agent-4-from-avalon",
     ]
 
 
@@ -223,10 +232,10 @@ def test_partition_preserves_runtime_and_model():
     ]
     out = partition_into_islands(specs, count=2)
     by_id = {s.agent_id: s for s in out}
-    assert by_id["0-agent-1"].runtime == "claude_code"
-    assert by_id["0-agent-1"].runtime_options == {"foo": "bar"}
-    assert by_id["1-agent-1"].runtime == "codex"
-    assert by_id["1-agent-1"].model == "gpt-5.4"
+    assert by_id["agent-1-from-atlantis"].runtime == "claude_code"
+    assert by_id["agent-1-from-atlantis"].runtime_options == {"foo": "bar"}
+    assert by_id["agent-2-from-avalon"].runtime == "codex"
+    assert by_id["agent-2-from-avalon"].model == "gpt-5.4"
 
 
 def test_partition_raises_on_count_zero():
