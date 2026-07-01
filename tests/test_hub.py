@@ -5,6 +5,7 @@ from pathlib import Path
 
 from coral.hub.attempts import (
     format_leaderboard,
+    format_status_summary,
     get_agent_attempts,
     get_leaderboard,
     per_agent_class_counts,
@@ -26,7 +27,11 @@ from coral.types import Attempt
 
 
 def _make_attempt(
-    commit: str, agent: str = "agent-1", score: float = 0.5, title: str = "test"
+    commit: str,
+    agent: str = "agent-1",
+    score: float = 0.5,
+    title: str = "test",
+    timestamp: str = "2026-03-11T10:00:00Z",
 ) -> Attempt:
     return Attempt(
         commit_hash=commit,
@@ -35,8 +40,42 @@ def _make_attempt(
         score=score,
         status="improved",
         parent_hash=None,
-        timestamp="2026-03-11T10:00:00Z",
+        timestamp=timestamp,
     )
+
+
+def test_status_summary_records_latest():
+    with tempfile.TemporaryDirectory() as d:
+        write_attempt(
+            d, _make_attempt("aaa", score=0.5, title="first", timestamp="2026-03-11T10:00:00")
+        )
+        write_attempt(
+            d, _make_attempt("bbb", score=0.9, title="best one", timestamp="2026-03-11T11:00:00")
+        )
+        write_attempt(
+            d, _make_attempt("ccc", score=0.3, title="latest one", timestamp="2026-03-11T12:00:00")
+        )
+
+        summary = format_status_summary(d)
+        assert "Best:  0.9000000000  (best one)" in summary
+        # Latest is the most recent by time, distinct from best -> shown on its own line.
+        assert "Latest: 0.3000000000  (latest one)" in summary
+
+
+def test_status_summary_hides_latest_when_it_is_best():
+    with tempfile.TemporaryDirectory() as d:
+        write_attempt(
+            d, _make_attempt("aaa", score=0.5, title="first", timestamp="2026-03-11T10:00:00")
+        )
+        write_attempt(
+            d, _make_attempt("bbb", score=0.9, title="best latest", timestamp="2026-03-11T11:00:00")
+        )
+
+        summary = format_status_summary(d)
+        # Newest attempt is also the best -> no redundant "Latest: <score>" line.
+        # (The unrelated "First attempt | Latest: <time>" line is expected, so match
+        # on the score-bearing prefix, not the bare word "Latest:".)
+        assert not any(line.startswith("Latest: ") for line in summary.splitlines())
 
 
 def test_attempts_crud():

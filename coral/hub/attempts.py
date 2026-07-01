@@ -446,6 +446,8 @@ def format_status_summary(
         best = max(scored, key=lambda a: a.score or 0.0) if scored else None
         worst = min(scored, key=lambda a: a.score or 0.0) if scored else None
 
+    latest = max(scored, key=lambda a: a.timestamp) if scored else None
+
     # Per-agent stats
     agents: dict[str, list[Attempt]] = {}
     for a in attempts:
@@ -461,6 +463,10 @@ def format_status_summary(
         )
     if worst and best and worst.commit_hash != best.commit_hash:
         lines.append(f"Worst: {worst.score:.10f}  ({worst.title[:50]})")
+    if latest and (not best or latest.commit_hash != best.commit_hash):
+        lines.append(
+            f"Latest: {latest.score:.10f}  ({latest.title[:50]})  @ {_format_time(latest.timestamp)}"
+        )
 
     if scored:
         first_time = min(a.timestamp for a in attempts)
