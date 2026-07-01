@@ -31,7 +31,7 @@ Look at these before writing anything new — copy the closest one and edit:
 | [examples/dna_design/](examples/dna_design/) | Packaged grader with bundled data files (`importlib.resources`) and `[ml]` optional-deps for heavy libs |
 | [examples/swebench-verified/](examples/swebench-verified/) | Tiered eval (different instance counts per tier), private answer keys, harbor integration |
 | [examples/circle_packing/](examples/circle_packing/) | Smallest packaged task end-to-end — single solution file, single grader file |
-| [examples/mnist/](examples/mnist/) | Packaged grader with a hidden answer key (note: secret data belongs under `grader.private`, not a readable packaged `taskdata/`) |
+| [examples/mnist/](examples/mnist/) | Packaged grader with a hidden answer key (note: secret data belongs under `grader.private` in a `taskdata/` sibling of `grader/`, never inside the grader package) |
 
 ## 1. The seed
 
@@ -142,9 +142,9 @@ grader:
     - "taskdata"   # a sibling of grader/ → .coral/private/taskdata, read via Path(self.private_dir) / "taskdata"
 ```
 
-Keep hidden data **outside** the `grader/` package. The whole grader source is surfaced read-only to agents at `<shared_dir>/grader/` (a symlink to the real package) so they can read how they're scored — so a `grader.private` path *inside* `grader/` (e.g. `grader/taskdata`) would be both copied to `.coral/private/` **and** leaked through the surfaced source. Put it beside `grader/` instead (declare it as `taskdata`, resolving to `<task_dir>/taskdata`); `coral validate` errors if a private path is inside the package.
+The single rule: **everything inside the `grader/` package is visible to agents**, and secrets live in `grader.private` **outside** `grader/`. The whole grader source is surfaced read-only to agents at `<shared_dir>/grader/` (a symlink to the real package) so they can read how they're scored — so anything under `grader/` is readable, including a `grader.private` path that points *inside* it (it gets copied to `.coral/private/` **and** leaked through the surfaced source). Keep `taskdata/` as a sibling of `grader/` (declare it `taskdata`, resolving to `<task_dir>/taskdata`); `coral validate` errors if a private path is inside the package.
 
-Do **not** rely on a packaged `taskdata/` dir (`Path(__file__).parent / "taskdata"`) to hide secrets either. Graders install editable (`uv pip install -e ./grader`), so the package source stays in the task tree **and** is surfaced at `<shared_dir>/grader/` — it's bundled with the grader, but the opposite of hidden. Reserve `Path(__file__).parent` for grader code and **non-secret** helper data only — e.g. [examples/ADRS/txn_scheduling/](examples/ADRS/txn_scheduling/) puts helper modules on `sys.path` that way.
+Non-secret bundled data (lookup tables, reference configs, helper modules) may live inside `grader/` and be read via `Path(__file__).parent / ...` — just remember it's visible, so never put a secret there. E.g. [examples/ADRS/txn_scheduling/](examples/ADRS/txn_scheduling/) puts helper modules on `sys.path` that way.
 
 ## 3. The task.yaml
 
@@ -223,7 +223,7 @@ Add a one-line entry to the table in [examples/README.md](examples/README.md) an
 |---|---|---|
 | `repo_path` points at `examples/<task>/` instead of `examples/<task>/seed/` | Grader sees `task.yaml` and `grader/` in `codebase_path` | Always point `repo_path` at the seed dir. |
 | `direction: maximize` for a loss / `minimize` for a benchmark ratio | Leaderboard ordered backwards | Score = "ratio against benchmark, >1 is better" → `maximize`. Score = "raw error" → `minimize`. |
-| Hidden answer key under `seed/`, inside the `grader/` package, or a packaged `taskdata/` | Agents read it and game the score — `seed/` is their repo, and the whole `grader/` source is surfaced at `<shared_dir>/grader/` | Put it under `grader.private` **outside** `grader/` (e.g. a sibling `taskdata/`), read via `self.private_dir`. `coral validate` errors on a private path inside `grader/`. |
+| Hidden answer key under `seed/` or anywhere inside the `grader/` package | Agents read it and game the score — `seed/` is their repo, and the whole `grader/` source is surfaced at `<shared_dir>/grader/` | Put it under `grader.private` **outside** `grader/` (e.g. a sibling `taskdata/`), read via `self.private_dir`. `coral validate` errors on a private path inside `grader/`. |
 | Grader writes results under `self.codebase_path` and reads them later | Files vanish — daemon force-removes the worktree after each eval | Write under `self.eval_logs_dir`. |
 | Grader uses `sys.executable` to run the agent's program | Misses task-specific deps installed via `workspace.setup` | Use `self.get_python_command()` (it switches to `uv run --project` when the codebase has a `pyproject.toml`). |
 | Heavy deps in main grader `dependencies` | `coral validate` is slow / fails on machines without the GPU stack | Move to `optional-dependencies` and fall back gracefully. See dna_design's `[ml]` extra. |

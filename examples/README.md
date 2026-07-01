@@ -107,14 +107,13 @@ Hidden data the grader must keep from agents (answer keys, hidden test
 fixtures) is declared under `grader.private` in task.yaml and read via
 `self.private_dir` — CORAL copies those paths into `.coral/private/`, which
 every agent runtime is denied read access to. Keep those paths **outside** the
-`grader/` package (e.g. a sibling `taskdata/`, declared as `taskdata`): the
-whole grader source is surfaced read-only to agents at `<shared_dir>/grader/`
-so they can read how they're scored, so a `grader.private` path inside `grader/`
-would leak — `coral validate` errors on that. A packaged `taskdata/` dir
-resolved with `Path(__file__).parent / "taskdata"` is convenient for grader
-code and **non-secret** helper data, but it is likewise **not** hidden: graders
-install editable (`uv pip install -e ./grader`), so the package source stays in
-the task tree and is surfaced to agents.
+`grader/` package (conventionally a sibling `taskdata/`, declared as
+`taskdata`), because **everything inside `grader/` is visible to agents**: the
+whole grader source is surfaced read-only at `<shared_dir>/grader/` so they can
+read how they're scored, so a `grader.private` path inside `grader/` would leak
+— `coral validate` errors on that. Non-secret bundled data (lookup tables,
+helper modules) may live inside `grader/` and be read via `Path(__file__).parent`,
+but it is visible — never put a secret there.
 
 ### `seed/`
 
