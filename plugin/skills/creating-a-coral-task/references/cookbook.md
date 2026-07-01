@@ -35,7 +35,7 @@ def evaluate(self) -> float | ScoreBundle:
 
 ## 2. Test pass-rate against a hidden test set
 
-Ship the tests under `grader.private` (so agents can't read them — list e.g. `grader/taskdata` and read via `self.private_dir`), copy them next to the agent's code, run pytest, score the pass fraction. `direction: maximize`.
+Ship the tests under `grader.private` (so agents can't read them — list a dir **outside** `grader/`, e.g. `taskdata`, and read via `self.private_dir`), copy them next to the agent's code, run pytest, score the pass fraction. `direction: maximize`.
 
 ```python
 import json, shutil
@@ -134,14 +134,14 @@ If you do nothing, tune evals are identical to real ones (the default `describe_
 
 ---
 
-## Hidden data — always under `grader.private`
+## Hidden data — under `grader.private`, outside the grader package
 
-Answer keys, hidden fixtures, and any secret the agent must not see go under `grader.private` in `task.yaml`. CORAL copies those paths into `.coral/private/` (denied to every agent runtime) and the grader reads them from `self.private_dir`:
+Answer keys, hidden fixtures, and any secret the agent must not see go under `grader.private` in `task.yaml`, in a dir **outside** `grader/`. CORAL copies those paths into `.coral/private/` (denied to every agent runtime) and the grader reads them from `self.private_dir`:
 
 ```yaml
 grader:
   private:
-    - "grader/taskdata"   # → .coral/private/taskdata
+    - "taskdata"   # a sibling of grader/  →  .coral/private/taskdata
 ```
 
 ```python
@@ -149,4 +149,4 @@ from pathlib import Path
 _TASKDATA = Path(self.private_dir) / "taskdata"
 ```
 
-Do **not** use a packaged `taskdata/` dir (`Path(__file__).parent / "taskdata"`) for secrets: graders install editable (`pip install -e ./grader`), so the package source stays in the task tree and agents read it by absolute path — bundled, but not hidden. Reserve `Path(__file__).parent` for grader code / non-secret helper data. Never put answer keys under `seed/` either — agents read `seed/`.
+Keep it out of `grader/`: the whole grader source is surfaced read-only to agents at `<shared_dir>/grader/` (so they can read how they're scored), so a `grader.private` path *inside* the package (e.g. `grader/taskdata`) is copied to `.coral/private/` **and** leaked via the surfaced source — `coral validate` errors on that. For the same reason, do **not** use a packaged `taskdata/` dir (`Path(__file__).parent / "taskdata"`) for secrets: graders install editable (`pip install -e ./grader`), so the package source stays in the task tree and is surfaced to agents — bundled, but not hidden. Reserve `Path(__file__).parent` for grader code / non-secret helper data. Never put answer keys under `seed/` either — agents read `seed/`.
