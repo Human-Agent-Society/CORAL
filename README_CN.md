@@ -30,7 +30,6 @@
 
 ### 🔥 News
 
-- **[2026-07-01]** agent 现在可以阅读为其评分的 grader：`grader/` 包源码以只读方式呈现到每个 worktree 的 `<shared_dir>/grader/`（软链接，不复制）。只读在 Docker 会话中由内核强制保证（源码为 `:ro` 挂载）；在宿主机上为尽力而为。隐藏输入仍通过 `grader.private` 放入 `.coral/private/`，且必须位于 `grader/` **之外**（否则 `coral validate` 会报错）。
 - **[2026-06-24]** Docker 会话现在会隔离 agent 与 grader：每个 agent 以非特权用户运行（manager 与 grader 仍为 root），agent 将无法读取 `.coral/private/`（grader 虚拟环境、答案 key）—— 即使通过 Bash 也不行。在宿主机上仍可通过 `agents.isolate_user` 选择启用。
 - **[2026-06-13]** 旧版 `eval/grader.py` grader 自动发现已废弃并移除 —— 改用 `grader.entrypoint` 指向打包的 grader。详见 [自定义 Grader 文档](https://docs.coralxyz.com/guides/custom-grader)。
 - **[2026-04-24]** 新增 Rubric 评审 —— 两个开箱即用的 LLM 评审 grader 包，专为开放式任务（报告、备忘、法律分析）设计。详见 [Rubric Judges 文档](https://docs.coralxyz.com/guides/rubric-judge)。
