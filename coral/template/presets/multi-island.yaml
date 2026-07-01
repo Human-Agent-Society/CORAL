@@ -1,0 +1,24 @@
+# Built-in preset: multi-island Claude Code run. Several islands evolve in
+# parallel over their own shared state (attempts / notes / skills), and a
+# migration cycle periodically relocates the strongest agents between islands.
+# Reference from a task.yaml with `preset: multi-island`.
+#
+# Topology only — it deliberately leaves `run.session` unset so it composes
+# with either a local (tmux) or docker task. Any key set in the task.yaml
+# overrides the value here.
+grader:
+  setup:
+    - "uv pip install -e ./grader"
+
+agents:
+  count: 4
+  runtime: claude_code
+
+# 6 agents over 3 islands → ~2 per island. islands.count must be <= agents.count.
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 16          # global evals between migration cycles
+    rank_window: 16    # number of attempts to consider for ranking
+    max_per_cycle: 2   # at most N agents relocate each cycle

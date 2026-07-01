@@ -39,10 +39,13 @@ task:
     - Fully unroll loops when possible to eliminate flow control overhead.
     - Minimize data dependencies between consecutive instructions.
 
+# Multi-island run: several islands optimize the kernel in parallel with
+# periodic migration. Inherits agents / islands / grader.setup from the preset;
+# everything below is task-specific and overrides the preset where they overlap.
+preset: multi-island
+
 grader:
   entrypoint: "kernel_builder_grader.grader:Grader"
-  setup:
-    - "uv pip install -e ./grader"
   timeout: 120
   direction: minimize
   private:
@@ -50,17 +53,10 @@ grader:
   args:
     program_file: "kernel_builder.py"
 
-agents:
-  count: 1
-  runtime: claude_code
-  model: claude-opus-4-6
-
 workspace:
   results_dir: "./results"
   repo_path: "./examples/kernel_builder/seed"
 
 run:
-  verbose: false
-  ui: false
-  session: docker
+  session: local
   docker_image: ""
