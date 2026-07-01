@@ -102,9 +102,12 @@ jobs:
     name: Build & publish
     needs: tag
     if: needs.tag.outputs.tagged == 'true'
-    # Reuse the existing release pipeline. It checks out at this run's commit,
-    # where the tag we just pushed now lives, so hatch-vcs derives the correct
-    # version.
+    # Reuse the existing release pipeline. Pass the tag we just pushed so the
+    # release job checks it out (hatch-vcs derives the correct version) and the
+    # gh-release action attaches the GitHub Release to it — github.ref here is
+    # the scheduled branch, not a tag, so it can't infer the tag on its own.
     uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.tag.outputs.version }}
     permissions:
       contents: write
