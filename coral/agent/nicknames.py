@@ -190,6 +190,7 @@ def _lap_suffix(base: str, lap: int) -> str:
     """``base`` on lap 0, else ``base-<roman(lap+1)>`` (``-ii``, ``-iii``, ...)."""
     return base if lap == 0 else f"{base}-{_roman(lap + 1)}"
 
+
 # Island names: legendary, sunken, and otherworldly isles from myth across
 # cultures — many drawn from sea voyages (Ogygia, Aeaea, Scheria from the
 # Odyssey; Penglai and Horai from East Asian lore). Kebab-safe, unique.
