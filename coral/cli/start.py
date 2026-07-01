@@ -91,6 +91,9 @@ def _build_coral_command(args: argparse.Namespace) -> list[str]:
     """Reconstruct the coral start command with run.session=local added."""
     cmd = [_resolved_python(), "-m", "coral.cli", "start"]
     cmd.extend(["--config", str(Path(args.config).resolve())])
+    # Tell the inner process it was launched by the tmux wrapper so it restores
+    # run.session=tmux in the saved config (see cmd_start's restore block).
+    cmd.extend(["--wrapped-session", "tmux"])
     # Forward user overrides, then force local (inner process is already in tmux)
     cmd.extend(getattr(args, "overrides", []))
     cmd.append("run.session=local")
@@ -329,6 +332,9 @@ def _start_in_docker(args: argparse.Namespace, config: CoralConfig) -> None:
             "start",
             "--config",
             f"/coral-setup/task/{config_path.name}",
+            # Restore run.session=docker in the saved config (see cmd_start).
+            "--wrapped-session",
+            "docker",
             "workspace.run_dir=/app/run",
             "workspace.repo_path=/repo",
             "run.session=local",
@@ -443,13 +449,15 @@ def cmd_start(args: argparse.Namespace) -> None:
             file=sys.stderr,
         )
 
-    # Inner process: run.session=local was set to avoid recursion.
-    # Restore the original session mode so the saved config preserves user intent
-    # (otherwise `coral resume` won't re-launch in the same wrapper).
-    if in_tmux():
-        config.run.session = "tmux"
-    elif in_docker():
-        config.run.session = "docker"
+    # Inner process: the tmux/docker wrapper appended run.session=local to avoid
+    # recursion and passed --wrapped-session so we can restore the real mode in
+    # the saved config (otherwise `coral resume` won't re-launch in the same
+    # wrapper). We rely on that explicit marker rather than in_tmux()/in_docker():
+    # a user running run.session=local from their own tmux session or container
+    # genuinely wants local, and must not have it rewritten to tmux/docker.
+    wrapped_session = getattr(args, "wrapped_session", None)
+    if wrapped_session:
+        config.run.session = wrapped_session
 
     # Mandatory in the Docker session: the agent always runs isolated.
     _enforce_docker_isolation(config)

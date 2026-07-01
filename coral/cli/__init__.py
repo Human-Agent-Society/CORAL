@@ -181,6 +181,16 @@ Run 'coral <command> --help' for details on any command."""
         formatter_class=_CommandHelpFormatter,
     )
     p_start.add_argument("--config", "-c", required=True, help="Path to task config YAML")
+    # Internal: the tmux/docker wrapper sets this so the inner (run.session=local)
+    # process knows which session mode to restore into the saved config. Not for
+    # direct use — inferring from in_tmux()/in_docker() would misfire when a user
+    # runs run.session=local from their own tmux session or container.
+    p_start.add_argument(
+        "--wrapped-session",
+        dest="wrapped_session",
+        choices=["tmux", "docker"],
+        help=argparse.SUPPRESS,
+    )
     p_start.add_argument(
         "overrides",
         nargs="*",
