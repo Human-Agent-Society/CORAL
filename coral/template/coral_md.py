@@ -61,7 +61,7 @@ def generate_coral_md(
             "what has been tried before. Build on what's known.\n"
             "- **Compare 2-4 candidate approaches** — document trade-offs, evidence, "
             "and implementation complexity for each.\n"
-            f"- **Write a research summary** — save findings to `{shared_dir}/notes/research-[topic].md` "
+            f"- **Write a research summary** — save findings to `{shared_dir}/notes/research/[topic].md` "
             f"so all agents benefit. See `{shared_dir}/skills/deep-research/references/` "
             "for templates.\n\n"
             "**When to research:**\n"
