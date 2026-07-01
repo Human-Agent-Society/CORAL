@@ -50,10 +50,13 @@ fi\n' > /etc/profile.d/coral-venv.sh && chmod +x /etc/profile.d/coral-venv.sh
 # which cannot read root-owned .coral/private/ (grader venv, answer keys).
 RUN useradd -m -s /bin/bash agent
 
-# Container-local 700-root dir holding the bind-mounted task/grader source.
-# The agent user cannot traverse it (overlay perms are enforced even when the
-# host share fakes ownership), so grader source/answer keys stay hidden.
-RUN mkdir -p /coral-setup && chmod 700 /coral-setup
+# Container-local wrapper for the read-only-mounted task dir. Mode 711 =
+# traversable but not enumerable: the agent reaches the grader source via the
+# <shared_dir>/grader symlink (-> /coral-setup/task/grader) to read how it's
+# scored, but cannot write it (the mount is :ro) or enumerate the rest of the
+# task dir. Real hidden inputs (grader venv, answer keys) live in the
+# separately-locked .coral/private/ volume, not here.
+RUN mkdir -p /coral-setup && chmod 711 /coral-setup
 
 ENV CORAL_IN_DOCKER=1
 COPY docker/opencode/entrypoint.sh /docker-entrypoint.sh

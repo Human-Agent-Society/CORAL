@@ -583,6 +583,105 @@ def test_setup_shared_state_migrates_real_roles_dir():
         assert (coral_dir / "public" / "roles" / "agent-1.md").read_text() == "local content"
 
 
+# --- grader-source surfacing tests ---
+
+
+def _setup_coral_with_grader(d: str) -> tuple[Path, Path]:
+    """Build a minimal .coral with a config_dir breadcrumb + real grader dir.
+
+    Returns (coral_dir, grader_source).
+    """
+    coral_dir = Path(d) / ".coral"
+    (coral_dir / "public").mkdir(parents=True)
+    task_dir = Path(d) / "task"
+    grader_source = task_dir / "grader"
+    grader_source.mkdir(parents=True)
+    (grader_source / "grade.py").write_text("# grading logic")
+    (coral_dir / "config_dir").write_text(str(task_dir))
+    return coral_dir, grader_source
+
+
+def test_setup_shared_state_symlinks_grader_source():
+    """The real grader package is surfaced in the worktree as a symlink (not a
+    copy) so the agent can read the exact code that scores it."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        coral_dir, grader_source = _setup_coral_with_grader(d)
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+
+        setup_shared_state(worktree, coral_dir, ".claude")
+
+        link = worktree / ".claude" / "grader"
+        assert link.is_symlink()
+        assert link.resolve() == grader_source.resolve()
+        # Reads resolve through the symlink to the real source.
+        assert (link / "grade.py").read_text() == "# grading logic"
+
+
+def test_setup_shared_state_no_grader_symlink_when_source_missing():
+    """A task with no config_dir breadcrumb or no grader/ dir gets no dangling
+    grader symlink."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        coral_dir = Path(d) / ".coral"
+        (coral_dir / "public").mkdir(parents=True)
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+
+        # No breadcrumb at all.
+        setup_shared_state(worktree, coral_dir, ".claude")
+        assert not (worktree / ".claude" / "grader").is_symlink()
+
+        # Breadcrumb points at a task dir with no grader/ subdir.
+        (coral_dir / "config_dir").write_text(str(Path(d) / "task"))
+        (Path(d) / "task").mkdir()
+        setup_shared_state(worktree, coral_dir, ".claude")
+        assert not (worktree / ".claude" / "grader").exists()
+        assert not (worktree / ".claude" / "grader").is_symlink()
+
+
+def test_claude_settings_grant_read_on_grader_source():
+    """The grader symlink target is outside the worktree/state root, so the
+    Claude allow-list must explicitly grant Read on it (else the agent sees the
+    link but can't read through it). It must NOT be granted Edit/Write."""
+    import json
+
+    from coral.workspace.worktree import setup_claude_settings
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        coral_dir, grader_source = _setup_coral_with_grader(d)
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+
+        setup_claude_settings(worktree, coral_dir=coral_dir)
+
+        settings = json.loads((worktree / ".claude" / "settings.local.json").read_text())
+        allow = settings["permissions"]["allow"]
+        grader = str(grader_source.resolve())
+        assert f"Read(/{grader}/**)" in allow
+        # Read-only: no Edit/Write grant on the grader source.
+        assert not any(r.startswith("Edit(") and grader in r for r in allow)
+        assert not any(r.startswith("Write(") and grader in r for r in allow)
+
+
+def test_opencode_settings_grant_external_dir_on_grader_source():
+    """OpenCode gates out-of-project reads via external_directory; the grader
+    source must be listed there so the <shared_dir>/grader symlink resolves."""
+    import json
+
+    from coral.workspace.worktree import setup_opencode_settings
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        coral_dir, grader_source = _setup_coral_with_grader(d)
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+
+        setup_opencode_settings(worktree, coral_dir=coral_dir)
+
+        settings = json.loads((worktree / ".opencode" / "opencode.json").read_text())
+        ext = settings["permission"]["external_directory"]
+        assert ext.get(str(grader_source.resolve()) + "/**") == "allow"
+
+
 def test_repoint_shared_state_swaps_island_targets():
     """repoint_shared_state moves an agent's symlinks from src island to dst."""
     from coral.workspace.worktree import repoint_shared_state

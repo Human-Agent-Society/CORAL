@@ -218,10 +218,17 @@ def _build_docker_cmd(
         "-d",
         "--name",
         container_name,
-        # Task dir (incl. grader source) under a container-local 700-root dir
-        # baked into the image, so the unprivileged agent user cannot traverse
-        # to the grader source — even on macOS where the host share fakes
-        # ownership. Only root (setup, building the grader venv) reads it.
+        # Task dir (task.yaml, grader source, seed, gateway config) mounted
+        # read-only. The agent reaches only the grader source, via the
+        # <shared_dir>/grader symlink that points at /coral-setup/task/grader;
+        # because this mount is ``:ro`` that source is physically unwritable
+        # (kernel-enforced, even for root/Bash), so the agent can read how it's
+        # scored but cannot perturb the grader. The rest of the dir holds no
+        # secrets — the gateway config references keys via ``os.environ/...`` and
+        # the real hidden inputs (grader venv, answer keys) live in the
+        # separately-locked ``.coral/private/`` volume below. ``/coral-setup`` is
+        # baked mode 711 in the image — traversable so the symlink resolves, but
+        # not enumerable.
         "-v",
         f"{config_dir}:/coral-setup/task:ro",
         "-v",

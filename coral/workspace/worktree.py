@@ -146,6 +146,23 @@ def get_coral_dir(worktree_path: Path) -> Path | None:
     return None
 
 
+def grader_source_dir(coral_dir: Path) -> Path | None:
+    """Resolve the task's grader package dir (``{config_dir}/grader``), or None.
+
+    Reads the ``config_dir`` breadcrumb written by ``create_project`` (the
+    effective task dir — ``config.task_dir`` in the Docker session, which maps to
+    ``/coral-setup/task``) and returns ``<that>/grader`` when it exists on disk.
+    Single source of truth so both the ``<shared_dir>/grader`` symlink and the
+    per-runtime read grant point at the same place without threading the task
+    dir through every worktree-setup call site (spawn *and* re-permission).
+    """
+    cfg_file = coral_dir / "config_dir"
+    if not cfg_file.exists():
+        return None
+    grader = Path(cfg_file.read_text().strip()) / "grader"
+    return grader if grader.is_dir() else None
+
+
 def setup_shared_state(
     worktree_path: Path,
     coral_dir: Path,
@@ -202,6 +219,24 @@ def setup_shared_state(
                 dst.symlink_to(rel)
             except (ValueError, OSError):
                 dst.symlink_to(src.resolve())
+
+    # Surface the grader source at <shared_dir>/grader/ so the agent can read
+    # the exact code that scores it (CORAL.md points here and tells the agent
+    # not to modify it). This is a symlink to the real grader package — not a
+    # copy — so there is no duplication. The grader that actually runs is the
+    # editable install from this same source, so writes here would perturb
+    # grading; in the Docker session the target is a read-only (:ro) bind mount,
+    # which makes it physically unwritable. On the host there is no isolation,
+    # so read-only is best-effort (see the CORAL.md reminder). The symlink
+    # target is outside the worktree and shared state, so the per-runtime read
+    # grant in setup_claude_settings / setup_opencode_settings must also cover
+    # it — otherwise the agent could see the link but not read through it.
+    # Guarded on existence so a task without a grader dir gets no dangling link.
+    grader_source = grader_source_dir(coral_dir)
+    if grader_source is not None:
+        grader_dst = shared_dir / "grader"
+        if not grader_dst.exists() and not grader_dst.is_symlink():
+            grader_dst.symlink_to(grader_source.resolve())
 
     # Write the .coral_island breadcrumb when on an island. Single-island
     # callers (no island_id) deliberately do NOT get this file — its absence
@@ -413,6 +448,16 @@ def setup_claude_settings(
     if research:
         allow_rules.extend(["WebSearch", "WebFetch"])
 
+    # Grant read on the grader source so the <shared_dir>/grader symlink is
+    # actually readable: its target is outside the worktree/state root, so
+    # neither the worktree nor state-root Read rule covers it. Read-only — the
+    # grader is not in the Edit/Write allow set, so tool-based edits via the
+    # resolved path are denied (Docker's :ro mount is the hard guarantee).
+    grader_source = grader_source_dir(coral_dir)
+    if grader_source is not None:
+        grader_pattern = f"{grader_source.resolve()}/**"
+        allow_rules.append(f"Read(/{grader_pattern})")
+
     # Deny rules block git and private dir access.
     # Edit/Write/Bash don't need agents_pattern denies — the scoped allows
     # already restrict them to the agent's own worktree.
@@ -492,13 +537,20 @@ def setup_opencode_settings(
     private_pattern = str(coral_dir.resolve() / "private") + "/**"
     state_root_pattern = str(island_root(coral_dir, island_id).resolve()) + "/**"
 
+    # Grant the grader source as an allowed external dir so the
+    # <shared_dir>/grader symlink is readable (its target is outside the project
+    # root; OpenCode gates out-of-project access via external_directory, so
+    # "*": "allow" alone does not reach it).
+    external_allow = {state_root_pattern: "allow"}
+    grader_source = grader_source_dir(coral_dir)
+    if grader_source is not None:
+        external_allow[str(grader_source.resolve()) + "/**"] = "allow"
+
     settings: dict = {
         "$schema": "https://opencode.ai/config.json",
         "permission": {
             "*": "allow",
-            "external_directory": {
-                state_root_pattern: "allow",
-            },
+            "external_directory": external_allow,
             "read": {
                 private_pattern: "deny",
             },

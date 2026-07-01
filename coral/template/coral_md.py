@@ -48,8 +48,10 @@ def generate_coral_md(
             f"Read the `deep-research` skill (`{shared_dir}/skills/deep-research/SKILL.md`) "
             "for a structured research workflow.\n\n"
             "**Research steps:**\n"
-            "- **Understand the problem deeply** — read the grader code, understand the "
-            "objective function, identify constraints and evaluation criteria.\n"
+            "- **Understand the problem deeply** — read the grader source at "
+            f"`{shared_dir}/grader/` (the exact code that scores you — read it to "
+            "understand the objective, but never modify it), identify constraints "
+            "and evaluation criteria.\n"
             "- **Survey the literature** — use web search to find state-of-the-art approaches, "
             "academic papers, benchmark comparisons, and existing implementations. "
             'Search broadly first (`"[problem] state of the art"`), then drill into '

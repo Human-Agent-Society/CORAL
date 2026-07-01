@@ -87,6 +87,8 @@ This is not optional — every eval should produce at least one note or skill up
 
 **Important:** `coral eval` is the only way to get an official score. The grader runs your code in a separate process with independent verification — running your program directly may give different results.
 
+The grader's own source is readable at `{shared_dir}/grader/` — the exact code that scores you (hidden inputs like answer keys are kept separate and are not here). Read it to understand precisely how you're evaluated. **Do not modify anything under `{shared_dir}/grader/`.** It is the real grader, not a copy — the same code runs your evals — so editing it would corrupt your own scores and invalidate the whole run. Treat it as read-only reference.
+
 ### Tune mode (`coral eval --tune`)
 
 ```

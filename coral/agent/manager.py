@@ -480,7 +480,8 @@ class AgentManager:
         # Write .coral_dir breadcrumb (used by workspace guard hook)
         write_coral_dir(worktree_path, self.paths.coral_dir)
 
-        # Set up shared state directory (notes, skills, attempts symlinks)
+        # Set up shared state directory (notes, skills, attempts symlinks, plus
+        # a symlink to the grader source so the agent can read how it's scored).
         shared_dir_name = runtime.shared_dir_name
         setup_shared_state(
             worktree_path,
