@@ -9,6 +9,7 @@ refactored, or generated code, tests, or docs. If you are not sure whether
 your workflow counts, it does — read on.
 
 > **TL;DR**
+> - All PRs target the `dev` branch, never `main` (see CONTRIBUTING.md).
 > - A human author must read every changed line and be able to defend the design end-to-end.
 > - No drive-by mechanical PRs (lone typo fixes, single-line style nits, batch reformat across the repo).
 > - Don't open duplicate PRs against the same issue. Check first.

@@ -1,6 +1,7 @@
 <!--
 Thanks for contributing to CORAL! A few notes before you submit:
 
+- Target the `dev` branch — all PRs go to `dev`, not `main` (see CONTRIBUTING.md).
 - See CONTRIBUTING.md for the full workflow.
 - Keep PRs scoped. Unrelated cleanups belong in a separate PR.
 - Make sure `uv run pytest tests/ -v` and `uv run ruff check .` pass locally.
@@ -45,6 +46,7 @@ Examples:
 
 ## Checklist
 
+- [ ] PR targets the `dev` branch (not `main`).
 - [ ] Title follows [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `refactor:`, ...).
 - [ ] `uv run pytest tests/ -v` passes locally.
 - [ ] `uv run ruff check .` and `uv run ruff format --check .` pass.

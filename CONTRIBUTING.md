@@ -64,7 +64,11 @@ grader daemon, heartbeats, and the runtime registry.
 
 ## Branches and commits
 
-- Create a topic branch off `main`. Suggested naming: `feat/<short-desc>`,
+- CORAL uses a two-branch model: **`dev` is the integration branch** where all
+  day-to-day development lands, and `main` tracks releases. Maintainers merge
+  `dev` into `main` as part of the release process — **all PRs must target
+  `dev`**, never `main` directly.
+- Create a topic branch off `dev`. Suggested naming: `feat/<short-desc>`,
   `fix/<short-desc>`, `docs/<short-desc>`, `refactor/<short-desc>`.
 - Keep commits focused. Prefer several small, reviewable commits over one
   large one.
@@ -80,7 +84,8 @@ grader daemon, heartbeats, and the runtime registry.
 
 1. Fork the repo (external contributors) or push your branch (maintainers).
 2. Make sure tests, `ruff check`, and `ruff format` all pass.
-3. Open a PR against `main` with:
+3. Open a PR against `dev` (PRs against `main` will be retargeted or closed)
+   with:
    - a short **summary** of what changed and **why**,
    - a **test plan** (commands you ran, manual checks, screenshots if UI),
    - links to any related issues or discussions.
