@@ -213,7 +213,8 @@ class PiAgentRuntime:
 
             def _tee_output(proc: subprocess.Popen, log_f, agent: str) -> None:
                 try:
-                    assert proc.stdout is not None
+                    if proc.stdout is None:
+                        return
                     for line in iter(proc.stdout.readline, b""):
                         decoded = line.decode("utf-8", errors="replace")
                         sys.stdout.write(f"[{agent}] {decoded}")

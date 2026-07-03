@@ -513,7 +513,8 @@ def cmd_start(args: argparse.Namespace) -> None:
     for h in handles:
         print(f"  {h.agent_id}: PID {h.process.pid if h.process else '?'} @ {h.worktree_path}")
 
-    assert manager.paths is not None
+    if manager.paths is None:
+        raise RuntimeError("agent manager did not initialize run paths during start_all()")
 
     # Save the starting command for reproducibility
     start_cmd = f"coral start -c {args.config}"
