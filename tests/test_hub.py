@@ -4,11 +4,13 @@ import tempfile
 from pathlib import Path
 
 from coral.hub.attempts import (
+    archive_attempts,
     format_leaderboard,
     format_status_summary,
     get_agent_attempts,
     get_leaderboard,
     per_agent_class_counts,
+    read_attempt,
     read_attempts,
     search_attempts,
     write_attempt,
@@ -88,6 +90,35 @@ def test_attempts_crud():
 
         all_attempts = read_attempts(d)
         assert len(all_attempts) == 2
+
+
+def test_archive_attempts_soft_deletes_from_all_views():
+    with tempfile.TemporaryDirectory() as d:
+        write_attempt(d, _make_attempt("aaa111", score=0.5, title="kept"))
+        write_attempt(d, _make_attempt("bbb222", score=0.9, title="discarded"))
+
+        archived = archive_attempts(d, {"bbb222"}, reason="discarded by resume --from aaa111")
+
+        assert archived == ["bbb222"]
+        assert [a.commit_hash for a in read_attempts(d)] == ["aaa111"]
+        assert [a.commit_hash for a in get_leaderboard(d)] == ["aaa111"]
+        assert [a.commit_hash for a in get_agent_attempts(d, "agent-1")] == ["aaa111"]
+        assert search_attempts(d, "discarded") == []
+        assert "bbb222" not in format_status_summary(d)
+        # The record survives on disk and stays resolvable by explicit hash.
+        kept = read_attempt(d, "bbb222")
+        assert kept is not None
+        assert kept.archived
+        assert kept.metadata["archive_reason"] == "discarded by resume --from aaa111"
+
+
+def test_archive_attempts_ignores_unknown_and_empty():
+    with tempfile.TemporaryDirectory() as d:
+        write_attempt(d, _make_attempt("aaa111"))
+
+        assert archive_attempts(d, set()) == []
+        assert archive_attempts(d, {"nope"}) == []
+        assert [a.commit_hash for a in read_attempts(d)] == ["aaa111"]
 
 
 def test_leaderboard():

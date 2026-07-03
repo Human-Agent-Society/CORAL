@@ -49,6 +49,7 @@ from coral.config import CoralConfig
 from coral.hub._island import island_root
 from coral.hub.attempts import (
     agent_in_grader_queue,
+    archive_attempts,
     get_leaderboard,
     read_attempts,
     read_eval_count,
@@ -901,6 +902,28 @@ class AgentManager:
             if action.id:
                 applied_actions.add(action.id)
 
+        # Reset matched worktrees before any agent starts, archiving the
+        # attempts on the discarded segments first (soft delete: the run has
+        # explicitly rewound past them, so leaderboard/status/log must stop
+        # showing them). The JSONs and git objects stay on disk.
+        for agent_dir in agent_dirs:
+            action = steering_by_agent.get(agent_dir.name)
+            if action is None:
+                continue
+            discarded = _discarded_commit_hashes(agent_dir, action.hash)
+            _reset_worktree_to_commit(agent_dir, action.hash)
+            if discarded:
+                archived = archive_attempts(
+                    paths.coral_dir,
+                    discarded,
+                    reason=f"discarded by resume --from {action.hash}",
+                )
+                if archived:
+                    logger.info(
+                        f"Archived {len(archived)} attempt(s) discarded by "
+                        f"resume --from {action.hash} ({agent_dir.name})"
+                    )
+
         handles = []
         for agent_dir in agent_dirs:
             agent_id = agent_dir.name
@@ -938,7 +961,6 @@ class AgentManager:
                 prompt = fresh_start_prompt
 
             if steering_action is not None:
-                _reset_worktree_to_commit(agent_dir, steering_action.hash)
                 prompt = _compose_resume_instruction(
                     base_prompt=prompt,
                     action=steering_action,
@@ -2858,6 +2880,19 @@ def _reset_worktree_to_commit(worktree_path: Path, target_hash: str) -> None:
     )
     if result.returncode != 0:
         raise RuntimeError(f"Steering checkout failed for '{target_hash}': {result.stderr}")
+
+
+def _discarded_commit_hashes(worktree_path: Path, target_hash: str) -> set[str]:
+    """Commits that a reset to target_hash drops from this worktree's HEAD."""
+    result = subprocess.run(
+        ["git", "rev-list", f"{target_hash}..HEAD"],
+        capture_output=True,
+        text=True,
+        cwd=worktree_path,
+    )
+    if result.returncode != 0:
+        return set()
+    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
 
 
 def _worktree_head_descends_from(worktree_path: Path, target_hash: str) -> bool:

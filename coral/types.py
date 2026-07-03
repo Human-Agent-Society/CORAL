@@ -170,6 +170,11 @@ class Attempt:
         """Budget classification: 'real', 'grader_error', or 'tune'. Defaults to 'real'."""
         return get_budget_class(self.metadata)
 
+    @property
+    def archived(self) -> bool:
+        """True when hidden from listing views (e.g. discarded by `coral resume --from`)."""
+        return self.metadata.get("archived") is True
+
     def to_dict(self) -> dict[str, Any]:
         d = {
             "commit_hash": self.commit_hash,

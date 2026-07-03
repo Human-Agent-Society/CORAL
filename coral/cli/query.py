@@ -153,6 +153,10 @@ def cmd_show(args: argparse.Namespace) -> None:
     from coral.types import get_budget_class
 
     print(f"Budget:  {get_budget_class(data.get('metadata'))}")
+    meta = data.get("metadata") or {}
+    if meta.get("archived") is True:
+        reason = meta.get("archive_reason")
+        print(f"Archived: yes ({reason})" if reason else "Archived: yes")
     print(f"Time:    {data['timestamp']}")
     if data.get("parent_hash"):
         print(f"Parent:  {data['parent_hash']}")

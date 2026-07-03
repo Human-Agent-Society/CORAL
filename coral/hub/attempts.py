@@ -18,18 +18,13 @@ def _attempts_dir(coral_dir: str | Path, island_id: str | int | None = None) -> 
     return d
 
 
-def write_attempt(
-    coral_dir: str | Path,
-    attempt: Attempt,
-    island_id: str | int | None = None,
-) -> Path:
-    """Write an attempt record to JSON atomically (tmp + rename).
+def _write_attempt_json(path: Path, attempt: Attempt) -> None:
+    """Write an attempt to `path` atomically (tmp + rename).
 
     Readers (monitor loop, grader daemon, `coral wait`) may poll these files
     concurrently with writes. Using tmp + rename guarantees readers see either
     the old complete file or the new complete file, never a partial write.
     """
-    path = _attempts_dir(coral_dir, island_id) / f"{attempt.commit_hash}.json"
     payload = json.dumps(attempt.to_dict(), indent=2)
     # Write to a temp file in the same directory (same filesystem -> atomic rename).
     fd, tmp_path = tempfile.mkstemp(
@@ -50,6 +45,16 @@ def write_attempt(
         except OSError:
             pass
         raise
+
+
+def write_attempt(
+    coral_dir: str | Path,
+    attempt: Attempt,
+    island_id: str | int | None = None,
+) -> Path:
+    """Write an attempt record to JSON atomically (tmp + rename)."""
+    path = _attempts_dir(coral_dir, island_id) / f"{attempt.commit_hash}.json"
+    _write_attempt_json(path, attempt)
     return path
 
 
@@ -90,25 +95,46 @@ def set_user_best(coral_dir: str | Path, commit_hash: str) -> Attempt | None:
                 attempt.metadata.pop("user_best", None)
             else:
                 continue
-            payload = json.dumps(attempt.to_dict(), indent=2)
-            fd, tmp_path = tempfile.mkstemp(
-                prefix=f".{attempt.commit_hash}.",
-                suffix=".json.tmp",
-                dir=path.parent,
-            )
-            try:
-                with os.fdopen(fd, "w") as f:
-                    f.write(payload)
-                    f.flush()
-                    os.fsync(f.fileno())
-                os.replace(tmp_path, path)
-            except Exception:
-                try:
-                    os.unlink(tmp_path)
-                except OSError:
-                    pass
-                raise
+            _write_attempt_json(path, attempt)
     return target
+
+
+def archive_attempts(
+    coral_dir: str | Path,
+    commit_hashes: set[str],
+    reason: str | None = None,
+) -> list[str]:
+    """Soft-delete attempts: every listing view stops showing them.
+
+    The JSON stays on disk (and `read_attempt` / `coral show` can still
+    resolve an explicit hash), but `read_attempts` and everything built on
+    it (leaderboard, status, recent, search) skip archived records
+    unconditionally. Scans every view root so multi-island runs archive the
+    record wherever it lives. Returns the commit hashes actually archived.
+    """
+    from coral.hub._island import all_view_roots
+
+    if not commit_hashes:
+        return []
+    archived: list[str] = []
+    for view_root in all_view_roots(coral_dir):
+        attempts_dir = view_root / "attempts"
+        if not attempts_dir.is_dir():
+            continue
+        for commit_hash in sorted(commit_hashes):
+            path = attempts_dir / f"{commit_hash}.json"
+            if not path.exists():
+                continue
+            try:
+                attempt = Attempt.from_dict(json.loads(path.read_text()))
+            except (json.JSONDecodeError, KeyError, OSError):
+                continue
+            attempt.metadata["archived"] = True
+            if reason:
+                attempt.metadata["archive_reason"] = reason
+            _write_attempt_json(path, attempt)
+            archived.append(commit_hash)
+    return archived
 
 
 def _global_eval_count_path(coral_dir: str | Path) -> Path:
@@ -171,7 +197,11 @@ def read_eval_count(coral_dir: str | Path, island_id: str | int | None = None) -
 
 
 def read_attempts(coral_dir: str | Path, island_id: str | int | None = None) -> list[Attempt]:
-    """Read all attempt records."""
+    """Read all attempt records.
+
+    Archived attempts (e.g. discarded by `coral resume --from`) are treated
+    as soft-deleted: they never appear here or in any view built on this.
+    """
     d = _attempts_dir(coral_dir, island_id)
     attempts = []
     for f in sorted(d.glob("*.json")):
@@ -180,7 +210,7 @@ def read_attempts(coral_dir: str | Path, island_id: str | int | None = None) -> 
             attempts.append(Attempt.from_dict(data))
         except (json.JSONDecodeError, KeyError):
             continue
-    return attempts
+    return [a for a in attempts if not a.archived]
 
 
 def _read_all_island_attempts(coral_dir: str | Path) -> list[Attempt]:
