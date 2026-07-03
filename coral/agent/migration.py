@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import logging
 import random
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from itertools import combinations
 from pathlib import Path
@@ -66,6 +66,25 @@ class MigrationCandidate:
     src_island: str
     dst_island: str
     score: float
+
+
+@dataclass(frozen=True)
+class MigrationResyncOp:
+    """One piece of launch-injected per-agent state that must be rebuilt
+    when the island partition changes.
+
+    Bystander resync is a standard post-migration phase: agents on the
+    affected islands are interrupt+restarted, and the restart pipeline
+    itself rebuilds everything ``_setup_and_start_agent`` covers (sandbox
+    spec, permission settings, symlinks). ``prepare`` is the hook for work
+    outside that pipeline — it runs per agent in the quiet window between
+    the interrupt and the restart. The phase is a no-op when no ops apply;
+    see :meth:`coral.agent.manager.AgentManager._migration_resync_ops` for
+    the registry.
+    """
+
+    name: str
+    prepare: Callable[[str], None] | None = None
 
 
 @dataclass(frozen=True)

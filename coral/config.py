@@ -375,6 +375,13 @@ class MigrationConfig:
     dest_weighting: str = "score"  # score | uniform | round_robin
     max_per_cycle: int = 2
     notify_island: bool = True
+    # Standard post-migration phase: interrupt+resume live bystanders on the
+    # affected islands so launch-injected per-agent state follows the new
+    # partition immediately instead of at their next natural restart (see
+    # AgentManager._migration_resync_ops for the op registry). Sessions are
+    # resumed, so no work is lost. A no-op when no resync ops apply — today
+    # the only op is the agents.sandbox boundary refresh.
+    resync_bystanders: bool = True
 
     def __post_init__(self) -> None:
         if self.every < 1:
