@@ -168,7 +168,8 @@ def main() -> None:
         if not group_tasks:
             continue
         sources = {(t / "eval" / "grader.py").read_bytes() for t in group_tasks}
-        assert len(sources) == 1, f"{group} grader.py files differ; refusing to share"
+        if len(sources) != 1:
+            raise RuntimeError(f"{group} grader.py files differ; refusing to share")
         canonical = EXAMPLES / group / "_grader"
         write_package(
             canonical,
