@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO, Any, Protocol, runtime_checkable
 
+from coral.sandbox.protocol import AgentSandboxSpec
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,6 +38,7 @@ class AgentRuntime(Protocol):
         gateway_url: str | None = None,
         gateway_api_key: str | None = None,
         run_as_user: dict[str, Any] | None = None,
+        sandbox: AgentSandboxSpec | None = None,
     ) -> AgentHandle: ...
 
     def extract_session_id(self, log_path: Path) -> str | None: ...
@@ -53,6 +56,30 @@ class AgentRuntime(Protocol):
         config/skill discovery: `.claude`, `.codex`, `.opencode`, etc.
         """
         ...
+
+
+def apply_sandbox(cmd: list[str], sandbox: AgentSandboxSpec | None) -> list[str]:
+    """Wrap a runtime command in its sandbox (no-op when sandbox is None).
+
+    ``sandbox`` comes from the run's :class:`coral.sandbox.SandboxProvider`
+    (e.g. ``["srt", "--settings", <path>, "--"]`` for the srt backend). The
+    sandbox applies to the whole process tree, so everything the runtime
+    spawns (shell tools, ``coral eval``) inherits it.
+    """
+    if sandbox is None or not sandbox.command_prefix:
+        return cmd
+    return [*sandbox.command_prefix, *cmd]
+
+
+def apply_sandbox_env(env: dict[str, str], sandbox: AgentSandboxSpec | None) -> None:
+    """Merge the sandbox spec's env into the agent environment, in place.
+
+    Empty for the srt backend (srt injects its proxy vars into the child
+    itself); remote/shim backends carry endpoints and credentials here
+    rather than in the command prefix (argv is visible in ``ps``).
+    """
+    if sandbox is not None and sandbox.env:
+        env.update(sandbox.env)
 
 
 def apply_run_as_user(env: dict[str, str], run_as_user: dict[str, Any] | None) -> dict[str, Any]:

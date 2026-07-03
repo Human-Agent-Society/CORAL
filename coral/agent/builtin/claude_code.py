@@ -15,7 +15,14 @@ from coral.agent.exit_classifier import (
     claude_code_log_has_session_error,
 )
 from coral.agent.process import open_agent_stderr_for_log_dir
-from coral.agent.runtime import AgentHandle, apply_run_as_user, write_coral_log_entry
+from coral.agent.runtime import (
+    AgentHandle,
+    apply_run_as_user,
+    apply_sandbox,
+    apply_sandbox_env,
+    write_coral_log_entry,
+)
+from coral.sandbox.protocol import AgentSandboxSpec
 from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)
@@ -55,6 +62,30 @@ def _extract_claude_code_session_id(log_path: Path) -> str | None:
     except Exception as e:
         logger.debug(f"Failed to extract session_id from {log_path}: {e}")
     return None
+
+
+def _permission_args(
+    sandbox: AgentSandboxSpec | None, run_as_user: dict[str, Any] | None
+) -> list[str]:
+    """Permission flags for the `claude` CLI, keyed on OS-level containment.
+
+    Under OS-level containment — an srt sandbox spec, or user isolation
+    (which the Docker session forces) — the kernel already enforces every
+    boundary the permission system politely requests, so skip permission
+    checks entirely: `auto` mode would only add friction (a fringe tool not
+    in the allow-list gets denied with no human to approve it).
+
+    Otherwise grant autonomy via `auto`, which MUST be set on the CLI: in
+    headless `-p` mode Claude Code silently downgrades a project-level
+    `permissions.defaultMode: "auto"` (from .claude/settings.local.json or
+    settings.json) back to `default`, because a repo-checked-in settings
+    file isn't trusted to escalate to auto — only the user's own
+    ~/.claude/settings.json or this flag can. The allow/deny rules in
+    settings.local.json still apply on top.
+    """
+    if sandbox is not None or run_as_user is not None:
+        return ["--dangerously-skip-permissions"]
+    return ["--permission-mode", "auto"]
 
 
 class ClaudeCodeRuntime:
@@ -113,6 +144,7 @@ class ClaudeCodeRuntime:
         gateway_url: str | None = None,
         gateway_api_key: str | None = None,
         run_as_user: dict[str, Any] | None = None,
+        sandbox: AgentSandboxSpec | None = None,
     ) -> AgentHandle:
         """Start a Claude Code agent in the given worktree."""
         agent_id_file = worktree_path / ".coral_agent_id"
@@ -139,17 +171,7 @@ class ClaudeCodeRuntime:
             prompt,
             "--model",
             model,
-            # Grant the agent autonomy. `auto` MUST be set on the CLI: in
-            # headless `-p` mode Claude Code silently downgrades a project-level
-            # `permissions.defaultMode: "auto"` (from .claude/settings.local.json
-            # or settings.json) back to `default`, because a repo-checked-in
-            # settings file isn't trusted to escalate to auto — only the user's
-            # own ~/.claude/settings.json or this flag can. Without it agents run
-            # in `default` mode and any tool not in the settings allow-list
-            # (e.g. MCP tools) is denied with no human to approve it. The
-            # allow/deny rules in settings.local.json still apply on top.
-            "--permission-mode",
-            "auto",
+            *_permission_args(sandbox, run_as_user),
         ]
         # 0 = no cap — let the underlying `claude` CLI run until it exits
         # naturally. The manager still restarts on any exit, preserving context
@@ -174,6 +196,8 @@ class ClaudeCodeRuntime:
         if resume_session_id:
             cmd.extend(["--resume", resume_session_id])
 
+        cmd = apply_sandbox(cmd, sandbox)
+
         logger.info(f"Starting agent {agent_id} in {worktree_path}")
         logger.info(f"Command: {' '.join(cmd)}")
 
@@ -194,6 +218,14 @@ class ClaudeCodeRuntime:
             logger.info(f"Agent {agent_id}: routing via gateway at {gateway_url}")
         if gateway_api_key:
             agent_env["ANTHROPIC_API_KEY"] = gateway_api_key
+
+        apply_sandbox_env(agent_env, sandbox)
+
+        # Claude Code refuses --dangerously-skip-permissions as root unless
+        # IS_SANDBOX=1. We only pass that flag under OS-level containment
+        # (see _permission_args), where the claim is true by construction.
+        if sandbox is not None or run_as_user is not None:
+            agent_env["IS_SANDBOX"] = "1"
 
         # OS-user isolation: drop the agent subprocess to the unprivileged user
         # (no-op when run_as_user is None). Adjusts HOME so Claude Code finds its

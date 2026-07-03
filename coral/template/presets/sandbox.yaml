@@ -1,0 +1,17 @@
+# Wrap every agent in Anthropic's sandbox-runtime (`srt`) for OS-level
+# enforcement of CORAL's isolation boundaries: reads are confined to the
+# agent's slice of this run (own worktree, run repo, shared .coral/ state
+# minus private/, grader source) plus toolchain dotdirs — other runs,
+# sibling worktrees, and host secrets (~/.ssh, ~/.aws) are unreadable.
+# Writes are allow-listed to the same slice. Network traffic flows through
+# an allow-all proxy (full network access, proxy-mediated).
+#
+# Requires: npm install -g @anthropic-ai/sandbox-runtime
+# Linux additionally: bubblewrap, socat, ripgrep
+#
+# Usage in task.yaml:   preset: sandbox
+# Or ad hoc:            coral start -c task.yaml agents.sandbox.enabled=true
+agents:
+  sandbox:
+    enabled: true
+    network: open

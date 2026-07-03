@@ -29,6 +29,22 @@ def _clean_env() -> dict[str, str]:
     return env
 
 
+def _pin_hooks_path(dest: Path) -> None:
+    """Point the run repo's core.hooksPath at its own (empty) hooks dir.
+
+    A user-level core.hooksPath (e.g. ~/.git-hooks with a pre-commit) would
+    otherwise fire personal hooks on every mechanical agent commit — and
+    under the srt sandbox those hook files are unreadable, so every
+    `coral eval` commit would fail. The local setting overrides the global
+    one; the absolute path matters because worktrees resolve a relative
+    hooksPath against their own toplevel.
+    """
+    subprocess.run(
+        ["git", "-C", str(dest), "config", "core.hooksPath", str(dest / ".git" / "hooks")],
+        capture_output=True,
+    )
+
+
 def clone_or_init_repo(source: Path, dest: Path) -> Path:
     """Clone source repo to dest, or init a new one if source doesn't exist.
 
@@ -45,6 +61,7 @@ def clone_or_init_repo(source: Path, dest: Path) -> Path:
         if result.returncode != 0:
             raise RuntimeError(f"git clone failed: {result.stderr}")
         logger.debug(f"Clone: {result.stdout.strip()}")
+        _pin_hooks_path(dest)
         return dest
 
     if source.name.endswith(".git"):
@@ -57,6 +74,7 @@ def clone_or_init_repo(source: Path, dest: Path) -> Path:
         )
         if result.returncode != 0:
             raise RuntimeError(f"git clone failed: {result.stderr}")
+        _pin_hooks_path(dest)
         return dest
 
     # No git repo at source — init a fresh one at dest
@@ -86,6 +104,7 @@ def clone_or_init_repo(source: Path, dest: Path) -> Path:
         ["git", "-C", str(dest), "config", "user.name", "CORAL"],
         capture_output=True,
     )
+    _pin_hooks_path(dest)
     subprocess.run(
         ["git", "-C", str(dest), "add", "-A"],
         capture_output=True,

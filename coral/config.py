@@ -113,6 +113,73 @@ class WarmStartConfig:
 
 
 @dataclass
+class SandboxConfig:
+    """OS-level agent sandboxing via a pluggable provider (default: ``srt``).
+
+    When enabled, every agent subprocess is wrapped by the configured
+    sandbox provider (see ``coral.sandbox``), which enforces filesystem and
+    network boundaries — uniformly across all runtimes, unlike the
+    per-runtime permission settings, which are advisory. With the built-in
+    ``srt`` provider (Anthropic's sandbox-runtime — Seatbelt on macOS,
+    bubblewrap on Linux), reads are confined to this run: the agent sees
+    its own worktree, the run repo, shared ``.coral/`` state (minus
+    ``private/``), the surfaced grader source, and the toolchain's home
+    dotdirs — not other runs, sibling agents' worktrees, or host secrets
+    (``~/.ssh``, ``~/.aws``, ...). Writes are allow-listed to the same
+    slice plus /tmp.
+
+    Composes with tmux/local sessions; mutually exclusive with
+    ``agents.isolate_user`` (and thus ``run.session=docker``) — both solve
+    the same isolation problem.
+
+    ``provider``: built-in name (``srt``) or a custom
+    ``module.path:ClassName`` entrypoint implementing
+    :class:`coral.sandbox.SandboxProvider` — the hook for hosted backends
+    like e2b or modal.
+
+    ``network``:
+    - ``"open"`` (default): full network access via an allow-all proxy the
+      manager runs in-process. srt refuses a wildcard allowlist; an external
+      proxy owning the filtering policy is its sanctioned escape hatch.
+      Traffic is proxy-mediated, so raw UDP/ICMP and proxy-ignorant clients
+      won't work.
+    - ``"allowlist"``: srt's own filtering proxies restrict traffic to
+      ``allowed_domains`` (srt syntax, e.g. "github.com", "*.npmjs.org").
+
+    The srt provider requires the sandbox-runtime npm package
+    (npm install -g @anthropic-ai/sandbox-runtime), invoked via
+    ``srt_command`` (default ``npx --no-install srt``); Linux additionally
+    needs bubblewrap, socat, and ripgrep.
+    """
+
+    enabled: bool = False
+    provider: str = "srt"  # built-in name or "module.path:ClassName" entrypoint
+    network: str = "open"  # "open" or "allowlist"
+    # How to invoke srt. The npx default also finds npm -g installs whose
+    # global bin dir is not on PATH; --no-install stops npx from fetching
+    # the unrelated "srt" registry package when sandbox-runtime is missing.
+    # Override with e.g. ["srt"] or ["/usr/local/bin/srt"].
+    srt_command: list[str] = field(default_factory=lambda: ["npx", "--no-install", "srt"])
+    allowed_domains: list[str] = field(default_factory=list)  # allowlist mode only
+    deny_read: list[str] = field(default_factory=list)  # extra paths hidden from agents
+    allow_read: list[str] = field(default_factory=list)  # extra readable paths (e.g. ~/.aws)
+    allow_write: list[str] = field(default_factory=list)  # extra writable paths
+    # Escape hatch: deep-merged last into the generated srt settings JSON
+    # (e.g. {"enableWeakerNestedSandbox": true} inside containers).
+    extra_settings: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.provider:
+            raise ValueError("agents.sandbox.provider must be a non-empty string")
+        if self.network not in ("open", "allowlist"):
+            raise ValueError(
+                f"agents.sandbox.network must be 'open' or 'allowlist', got {self.network!r}"
+            )
+        if not self.srt_command:
+            raise ValueError("agents.sandbox.srt_command must be a non-empty command list")
+
+
+@dataclass
 class AgentAssignmentConfig:
     """Per-assignment override of runtime/model for mix-and-match multi-agent runs.
 
@@ -155,6 +222,9 @@ class AgentConfig:
     # session this value is forced to the image's ``agent`` user regardless of
     # what is set here.
     isolate_user: str = ""
+    # OS-level sandboxing via sandbox-runtime (`srt`) — the lightweight,
+    # host-native alternative to isolate_user/Docker. See SandboxConfig.
+    sandbox: SandboxConfig = field(default_factory=SandboxConfig)
     # Mix-and-match: when non-empty, each entry spawns its own runtime/model
     # combo. ``agents.count`` is ignored (total = sum of assignment counts).
     # Empty fields on an assignment inherit the agents.* defaults below.
@@ -200,6 +270,15 @@ class AgentConfig:
     min_clean_runtime_seconds: int = 60
 
     def __post_init__(self) -> None:
+        # Direct construction (tests, SubprocessGrader-style round-trips) may
+        # leave nested sandbox config as a plain dict; coerce like RunConfig.stop.
+        if isinstance(self.sandbox, dict):
+            self.sandbox = SandboxConfig(**self.sandbox)
+        if self.sandbox.enabled and self.isolate_user:
+            raise ValueError(
+                "agents.sandbox and agents.isolate_user are mutually exclusive — "
+                "both isolate agents from .coral/private/; use one or the other."
+            )
         # Reject negative values for the new reliability knobs;
         # 0 is treated as "disabled" for the same fields where it makes sense.
         for field_name in (

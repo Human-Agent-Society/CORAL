@@ -302,7 +302,7 @@ async def get_logs(request: Request) -> JSONResponse:
         agg_usage: dict[str, int] = {}
         for m in all_session_metas:
             for k, v in m.get("usage", {}).items():
-                if isinstance(v, (int, float)):
+                if isinstance(v, int | float):
                     agg_usage[k] = agg_usage.get(k, 0) + int(v)
         agent_meta = {
             "total_cost_usd": total_cost,

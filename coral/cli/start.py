@@ -979,6 +979,8 @@ def cmd_status(args: argparse.Namespace) -> None:
                 status_str = "stopped"
 
             extras = []
+            if runtime_state and runtime_state.sandbox:
+                extras.append(f"sandbox: {runtime_state.sandbox}")
             if runtime_state and runtime_state.pause_count > 0:
                 extras.append(f"pauses: {runtime_state.pause_count}")
             if runtime_state and runtime_state.last_fault_at:

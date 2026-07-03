@@ -157,6 +157,9 @@ class AgentManager:
         self._pending_restart_after_pause: set[str] = set()
         self._gateway: Any | None = None
         self._gateway_keys: dict[str, str] = {}  # agent_id -> proxy key
+        # Sandbox provider (agents.sandbox.provider, e.g. srt). Instantiated
+        # in _start_sandbox_if_enabled; lives and dies with the manager.
+        self._sandbox: Any | None = None
         self._grader_proc: multiprocessing.Process | None = None
         self._grader_stop_event: Any | None = None  # multiprocessing.Event
         # Island migration. Only meaningful with >=2 islands and migration
@@ -214,6 +217,10 @@ class AgentManager:
         # 1b. Start gateway if configured
         self._start_gateway_if_enabled()
 
+        # 1b2. Start the sandbox provider if configured (must be up before
+        # agents spawn — their launch specs embed its live state).
+        self._start_sandbox_if_enabled()
+
         # 1c. Start grader daemon. Agents' `coral eval` writes pending attempts;
         #     the daemon picks them up, grades inside an isolated worktree,
         #     and writes the score back. Must be running before agents start.
@@ -266,8 +273,10 @@ class AgentManager:
         self.handles = handles
         self._running = True
 
-        # 5. Write PID file
+        # 5. Write PID file + initial agent state (so `coral status` shows
+        # per-agent facts like the sandbox provider from the first tick).
         self._write_pid_file()
+        self._persist_agent_state()
 
         # 6. Register atexit handler as safety net for unexpected exits
         atexit.register(self._atexit_cleanup)
@@ -397,6 +406,77 @@ class AgentManager:
         gateway.start()
         self._gateway = gateway
         logger.info(f"Gateway running at {gateway.url}")
+
+    def _start_sandbox_if_enabled(self) -> None:
+        """Resolve, validate, and start the configured sandbox provider.
+
+        Idempotent. The provider owns its run-level resources (the srt
+        backend starts its allow-all proxy here; other backends might open
+        an API session or warm a VM pool).
+        """
+        sb = self.config.agents.sandbox
+        if not sb.enabled or self._sandbox is not None:
+            return
+
+        from coral.sandbox import get_sandbox_provider
+
+        provider = get_sandbox_provider(sb)
+        provider.validate(self.config.agents)
+        provider.start()
+        self._sandbox = provider
+        logger.info(f"Sandbox provider {sb.provider!r} active")
+        if self.verbose:
+            print(f"[coral] Sandbox provider {sb.provider!r} active")
+
+    def _stop_sandbox(self) -> None:
+        if self._sandbox is not None:
+            self._sandbox.stop()
+            self._sandbox = None
+
+    def _island_worktrees(self, agent_id: str) -> list[Path]:
+        """Worktrees of this agent's island-mates (own included).
+
+        Computed from the manager's roster rather than on-disk breadcrumbs:
+        at initial start later agents' worktrees don't exist yet, and after
+        a migration the live ``_agent_island`` map is fresher than the birth
+        island recorded on the spec.
+        """
+        assert self.paths is not None
+
+        def island_of(aid: str) -> str | None:
+            spec = self.specs_by_id.get(aid)
+            return self._agent_island.get(aid) or (spec.island_id if spec else None)
+
+        own = island_of(agent_id)
+        return [
+            self.paths.agents_dir / s.agent_id for s in self.specs if island_of(s.agent_id) == own
+        ]
+
+    def _sandbox_spec_for(self, agent_id: str, worktree_path: Path, shared_dir_name: str):
+        """Build the agent's sandbox launch spec (None when disabled).
+
+        Called on every (re)start so specs always reflect live provider
+        state (e.g. the srt backend's current proxy port) and the current
+        island partition (migration restarts the migrant through here).
+        """
+        if self._sandbox is None:
+            return None
+        assert self.paths is not None
+
+        from coral.sandbox import AgentSandboxContext
+
+        spec = self._sandbox.prepare_agent(
+            AgentSandboxContext(
+                agent_id=agent_id,
+                worktree_path=worktree_path,
+                coral_dir=self.paths.coral_dir,
+                repo_dir=self.paths.repo_dir,
+                shared_dir_name=shared_dir_name,
+                sibling_worktrees=self._island_worktrees(agent_id),
+            )
+        )
+        logger.info(f"  {agent_id}: sandboxed via {self.config.agents.sandbox.provider!r}")
+        return spec
 
     def _run_warmstart_research(
         self,
@@ -599,6 +679,10 @@ class AgentManager:
         # that user. Manager/grader stay root. No-op when isolate_user is unset.
         run_as_user = self._apply_user_isolation(worktree_path, island_id, shared_dir_name)
 
+        # Sandbox: ask the provider for this agent's launch spec (command
+        # prefix + env). None when agents.sandbox is disabled.
+        sandbox_spec = self._sandbox_spec_for(agent_id, worktree_path, shared_dir_name)
+
         # Start agent
         if island_id is not None:
             log_dir = self.paths.coral_dir / "islands" / str(island_id) / "logs"
@@ -621,6 +705,7 @@ class AgentManager:
             gateway_url=gateway_url,
             gateway_api_key=gateway_api_key,
             run_as_user=run_as_user,
+            sandbox=sandbox_spec,
         )
         # Record fresh process start time for the exit-classifier uptime check.
         self._started_at[agent_id] = time.time()
@@ -747,6 +832,10 @@ class AgentManager:
         # Start gateway if configured
         self._start_gateway_if_enabled()
 
+        # Start the sandbox provider if configured (resumed agents get
+        # fresh launch specs reflecting its new state).
+        self._start_sandbox_if_enabled()
+
         # Start grader daemon (must be up before resumed agents submit evals).
         self._start_grader_daemon()
 
@@ -869,6 +958,7 @@ class AgentManager:
         self.handles = handles
         self._running = True
         self._write_pid_file()
+        self._persist_agent_state()
         atexit.register(self._atexit_cleanup)
         return handles
 
@@ -942,10 +1032,13 @@ class AgentManager:
         if self._gateway:
             self._gateway.stop()
             self._gateway = None
+        # Stop the sandbox provider last — nothing else depends on it.
+        self._stop_sandbox()
         logger.info("All agents stopped.")
 
     def status(self) -> list[dict[str, Any]]:
         """Get status of all agents."""
+        sandbox = self.config.agents.sandbox.provider if self._sandbox is not None else None
         statuses = []
         for handle in self.handles:
             statuses.append(
@@ -957,6 +1050,7 @@ class AgentManager:
                     "log": str(handle.log_path),
                     "session_id": handle.session_id,
                     "restarts": self._restart_counts.get(handle.agent_id, 0),
+                    "sandbox": sandbox,
                 }
             )
         return statuses
@@ -1511,6 +1605,7 @@ class AgentManager:
         """Persist current paused/active state to public/agent_state.json."""
         if self.paths is None:
             return
+        sandbox = self.config.agents.sandbox.provider if self._sandbox is not None else None
         document = AgentStateDocument()
         for handle in self.handles:
             agent_id = handle.agent_id
@@ -1521,6 +1616,7 @@ class AgentManager:
                 paused_until=until,
                 pause_count=self._pause_count.get(agent_id, 0),
                 last_fault_at=self._last_fault_at.get(agent_id),
+                sandbox=sandbox,
             )
         try:
             write_agent_state(self.paths.coral_dir, document)

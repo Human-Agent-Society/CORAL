@@ -44,12 +44,15 @@ class AgentRuntimeState:
     `state` is one of "active", "paused".
     `paused_until` is the wall-clock epoch second the pause expires; it is None
     when the agent is not currently paused.
+    `sandbox` is the sandbox provider name the agent runs under
+    (`agents.sandbox.provider`, e.g. "srt"); None when unsandboxed.
     """
 
     state: str = "active"
     paused_until: float | None = None
     pause_count: int = 0
     last_fault_at: str | None = None  # ISO-8601 UTC timestamp of most recent fault dump
+    sandbox: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -61,6 +64,7 @@ class AgentRuntimeState:
             paused_until=data.get("paused_until"),
             pause_count=int(data.get("pause_count", 0)),
             last_fault_at=data.get("last_fault_at"),
+            sandbox=data.get("sandbox"),
         )
 
 

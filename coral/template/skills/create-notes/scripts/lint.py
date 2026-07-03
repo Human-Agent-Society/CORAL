@@ -242,7 +242,7 @@ def _lint_note(
 
     confidence = meta.get("confidence")
     if confidence is not None:
-        if isinstance(confidence, (int, float)) and not isinstance(confidence, bool):
+        if isinstance(confidence, int | float) and not isinstance(confidence, bool):
             warnings.append(
                 f"`confidence: {confidence}` is a number — the schema is now "
                 f"{sorted(CONFIDENCE_VOCAB)}; map low (<0.4) / medium / high (>0.7)"

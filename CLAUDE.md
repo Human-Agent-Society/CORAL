@@ -19,6 +19,7 @@ Key concepts:
 | `coral/types.py` | Core types: `Task`, `Score`, `ScoreBundle`, `Attempt` |
 | `coral/config.py` | OmegaConf-backed YAML configuration (`CoralConfig`, `GraderConfig`, `AgentConfig`, `GatewayConfig`, `WarmStartConfig`, `HeartbeatActionConfig`, ...) |
 | `coral/agent/` | Agent lifecycle: `manager.py` (multi-agent supervisor), `runtime.py` (abstract), `state.py`, `heartbeat.py`, `exit_classifier.py`, `warmstart.py`, `process.py`, `registry.py` |
+| `coral/sandbox/` | Pluggable agent sandboxing (`agents.sandbox`): `protocol.py` (`SandboxProvider` + spec/context types), `registry.py` (name or `module:Class` entrypoint resolution), `srt.py` (built-in srt provider: OS-level FS/network enforcement + allow-all proxy) |
 | `coral/agent/builtin/` | Concrete runtimes: `claude_code`, `codex`, `cursor_agent`, `kiro`, `opencode` |
 | `coral/grader/` | Grader stack: `protocol.py`, `base.py`, `task_grader.py`, `loader.py`, `subprocess_grader.py`, `daemon.py` (long-running grader), `builtin/function_grader.py` |
 | `coral/hub/` | Shared state: `attempts.py`, `notes.py`, `skills.py`, `checkpoint.py` (git-tracked snapshots of `.coral/public/`), `heartbeat.py`, `prompts/` (built-in heartbeat prompts) |
@@ -110,6 +111,7 @@ coral start -c task.yaml                          # Launch agents (auto-tmux)
 coral start -c task.yaml agents.count=4 agents.model=opus       # Dotlist overrides
 coral start -c task.yaml run.verbose=true run.ui=true           # Verbose + dashboard
 coral start -c task.yaml run.stop.max_real_attempts=30          # Stop after 30 finalized real attempts
+coral start -c task.yaml agents.sandbox.enabled=true            # Wrap agents in srt OS-level sandbox (or `preset: sandbox`)
 coral start -c task.yaml run.session=local                      # No tmux session
 coral resume                                      # Resume latest run (sessions restored)
 coral resume -i "Try greedy approaches"           # Inject an instruction at resume
