@@ -14,6 +14,7 @@ import subprocess
 import threading
 import time
 from collections import deque
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,7 @@ from coral.agent.heartbeat import HeartbeatRunner
 from coral.agent.migration import (
     IslandRoster,
     MigrationCandidate,
+    MigrationResyncOp,
     MigrationRunner,
     choose_roster_balanced_subset,
 )
@@ -789,8 +791,15 @@ class AgentManager:
         idx: int,
         prompt: str,
         prompt_source: str | None = None,
+        pre_restart_ops: Sequence[Callable[[str], None]] = (),
     ) -> AgentHandle:
-        """Interrupt a running agent and resume with a feedback prompt."""
+        """Interrupt a running agent and resume with a feedback prompt.
+
+        ``pre_restart_ops`` run (with the agent id) in the quiet window
+        after the interrupt and before the restart — the slot for surgery
+        that needs the agent's process down, e.g. migration resync ops
+        rewriting launch-injected state.
+        """
         handle = self.handles[idx]
         agent_id = handle.agent_id
 
@@ -799,6 +808,8 @@ class AgentManager:
         # via the owning runtime after interrupt() returns.
         handle.interrupt()
         session_id = self._runtime_for(agent_id).extract_session_id(handle.log_path)
+        for op in pre_restart_ops:
+            op(agent_id)
         self._restart_counts[agent_id] = self._restart_counts.get(agent_id, 0) + 1
 
         if session_id:
@@ -1880,17 +1891,77 @@ class AgentManager:
                 )
             return False
 
+        applied: list[MigrationCandidate] = []
+        ok = True
         for candidate in migrations:
             try:
                 self._apply_migration(candidate, assume_preflight=True)
+                applied.append(candidate)
             except Exception as e:
                 logger.exception(
                     f"Migration {candidate.agent_id} {candidate.src_island}→"
                     f"{candidate.dst_island} failed: {e}"
                 )
-                return False
-        self._deferred_candidates = []
-        return True
+                ok = False
+                break
+        # Even a partially-applied batch changed the partition — resync
+        # bystanders for whatever actually moved.
+        self._resync_bystanders_after_migration(applied)
+        if ok:
+            self._deferred_candidates = []
+        return ok
+
+    def _migration_resync_ops(self) -> list[MigrationResyncOp]:
+        """Registry of resync ops for the standard bystander-resync phase.
+
+        Each op names a piece of launch-injected per-agent state that can
+        only follow an island-partition change through a restart; an op
+        contributes a ``prepare`` hook only for work the restart pipeline
+        (``_setup_and_start_agent``) does not already cover. No applicable
+        ops → the phase is a no-op.
+        """
+        ops: list[MigrationResyncOp] = []
+        if self._sandbox is not None:
+            # Sandbox read boundaries are baked into per-agent settings at
+            # launch; the restart regenerates them via prepare_agent, so no
+            # prepare hook is needed.
+            ops.append(MigrationResyncOp(name="sandbox"))
+        return ops
+
+    def _resync_bystanders_after_migration(self, applied: list[MigrationCandidate]) -> None:
+        """Standard post-migration phase: restart live bystanders on the
+        affected islands so launch-injected per-agent state follows the new
+        partition.
+
+        What needs resyncing is defined by :meth:`_migration_resync_ops` —
+        with no applicable ops (e.g. sandboxing disabled) this is a no-op.
+        Migrants are excluded (:meth:`_apply_migration` already restarted
+        them with fresh state); dead and paused agents pick everything up
+        on their own (re)start path. Sessions are resumed, so no work is
+        lost. Disable via ``islands.migration.resync_bystanders``.
+        """
+        ops = self._migration_resync_ops()
+        if not applied or not ops or not self.migration_config.resync_bystanders:
+            return
+        affected = {c.src_island for c in applied} | {c.dst_island for c in applied}
+        migrated = {c.agent_id for c in applied}
+        op_names = ", ".join(op.name for op in ops)
+        pre_restart_ops = [op.prepare for op in ops if op.prepare is not None]
+        for idx, handle in enumerate(self.handles):
+            agent_id = handle.agent_id
+            if agent_id in migrated or not handle.alive or self._is_paused(agent_id):
+                continue
+            if self._agent_island.get(agent_id) in affected:
+                logger.info(
+                    f"Migration resync ({op_names}): restarting {agent_id} "
+                    f"(island partition changed)"
+                )
+                self.handles[idx] = self._interrupt_and_resume(
+                    idx,
+                    prompt=_build_resync_prompt(op_names),
+                    prompt_source="migration:resync",
+                    pre_restart_ops=pre_restart_ops,
+                )
 
     def _migration_block_reason(self, candidate: MigrationCandidate) -> str | None:
         """Return why ``candidate`` cannot safely migrate right now, if any."""
@@ -2954,4 +3025,14 @@ def _build_migration_prompt(candidate: MigrationCandidate, *, shared_dir: str) -
         f"here so you don't reinvent it.\n\n"
         f"Then bring your strongest ideas from your previous run and "
         f"adapt them to this island's frontier."
+    )
+
+
+def _build_resync_prompt(op_names: str) -> str:
+    """Prompt for bystanders restarted by the post-migration resync phase."""
+    return (
+        "An agent migrated between islands, so your process was restarted "
+        f"to refresh launch-injected state ({op_names}) against the new "
+        "island roster. Your session and work are intact — continue exactly "
+        "where you left off."
     )

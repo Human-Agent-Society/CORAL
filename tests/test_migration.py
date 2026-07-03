@@ -1617,3 +1617,121 @@ def test_maybe_run_migration_cycle_does_not_mix_blocked_deferred_with_fresh(tmp_
 
     assert applied == []
     assert [(c.agent_id, r) for c, r in mgr._deferred_candidates] == [("0-agent-1", "paused")]
+
+
+# ---------------------------------------------------------------------------
+# Bystander resync after migration (islands.migration.resync_bystanders)
+# ---------------------------------------------------------------------------
+
+
+def _resync_manager():
+    """Manager with three islands and one live agent in every role the
+    resync phase distinguishes: the migrant, live mates on the src/dst
+    islands, an outsider, and a dead + a paused mate on src."""
+    from coral.agent.manager import AgentManager
+    from coral.agent.runtime import AgentHandle
+    from coral.config import AgentAssignmentConfig, AgentConfig, CoralConfig
+
+    cfg = CoralConfig(
+        agents=AgentConfig(assignments=[AgentAssignmentConfig(count=6)]),
+        islands=IslandsConfig(count=3),
+    )
+    mgr = AgentManager(cfg)
+
+    class _AliveProc:
+        def poll(self):
+            return None
+
+    def _handle(agent_id: str, *, alive: bool = True) -> AgentHandle:
+        return AgentHandle(
+            agent_id=agent_id,
+            process=_AliveProc() if alive else None,
+            worktree_path=Path("/x"),
+            log_path=Path("/x.log"),
+        )
+
+    mgr._agent_island = {
+        "migrant": "1",  # _apply_migration already moved + restarted it
+        "src-mate": "0",
+        "dst-mate": "1",
+        "outsider": "2",
+        "dead-mate": "0",
+        "paused-mate": "0",
+    }
+    mgr.handles = [
+        _handle("migrant"),
+        _handle("src-mate"),
+        _handle("dst-mate"),
+        _handle("outsider"),
+        _handle("dead-mate", alive=False),
+        _handle("paused-mate"),
+    ]
+    mgr._paused_until = {"paused-mate": 1e18}
+    return mgr
+
+
+def _resync_batch():
+    return [MigrationCandidate(agent_id="migrant", src_island="0", dst_island="1", score=1.0)]
+
+
+def test_resync_bystanders_restarts_affected_live_agents():
+    """With an applicable op (sandbox active), live agents on the src/dst
+    islands restart so launch-injected state follows the new partition;
+    the migrant (already restarted), dead/paused agents, and unaffected
+    islands are left alone."""
+    mgr = _resync_manager()
+    mgr._sandbox = object()  # sandbox provider active -> one resync op
+
+    restarted: list[str] = []
+
+    def _fake_interrupt_and_resume(idx, prompt, prompt_source=None, pre_restart_ops=()):
+        assert prompt_source == "migration:resync"
+        assert "sandbox" in prompt
+        restarted.append(mgr.handles[idx].agent_id)
+        return mgr.handles[idx]
+
+    mgr._interrupt_and_resume = _fake_interrupt_and_resume  # type: ignore[assignment]
+
+    mgr._resync_bystanders_after_migration(_resync_batch())
+    assert restarted == ["src-mate", "dst-mate"]
+
+    # Flag off or empty batch -> no restarts.
+    restarted.clear()
+    mgr.migration_config.resync_bystanders = False
+    mgr._resync_bystanders_after_migration(_resync_batch())
+    mgr.migration_config.resync_bystanders = True
+    mgr._resync_bystanders_after_migration([])
+    assert restarted == []
+
+
+def test_resync_bystanders_noop_without_ops():
+    """No applicable resync ops (no sandbox) -> the phase is a no-op."""
+    mgr = _resync_manager()
+    assert mgr._sandbox is None
+    assert mgr._migration_resync_ops() == []
+
+    mgr._interrupt_and_resume = pytest.fail  # type: ignore[assignment]
+    mgr._resync_bystanders_after_migration(_resync_batch())
+
+
+def test_resync_bystanders_forwards_op_prepare_hooks():
+    """An op's prepare hook rides into _interrupt_and_resume's quiet window
+    (after interrupt, before restart)."""
+    from coral.agent.migration import MigrationResyncOp
+
+    mgr = _resync_manager()
+    prepared: list[str] = []
+    mgr._migration_resync_ops = lambda: [  # type: ignore[assignment]
+        MigrationResyncOp(name="custom", prepare=prepared.append)
+    ]
+
+    def _fake_interrupt_and_resume(idx, prompt, prompt_source=None, pre_restart_ops=()):
+        agent_id = mgr.handles[idx].agent_id
+        for op in pre_restart_ops:
+            op(agent_id)  # what the real helper does in the quiet window
+        return mgr.handles[idx]
+
+    mgr._interrupt_and_resume = _fake_interrupt_and_resume  # type: ignore[assignment]
+
+    mgr._resync_bystanders_after_migration(_resync_batch())
+    assert prepared == ["src-mate", "dst-mate"]
