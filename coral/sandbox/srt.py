@@ -473,7 +473,8 @@ class AllowAllProxy:
 
     def _serve(self) -> None:
         listener = self._listener
-        assert listener is not None
+        if listener is None:
+            return
         while not self._stopping.is_set():
             try:
                 conn, _addr = listener.accept()
