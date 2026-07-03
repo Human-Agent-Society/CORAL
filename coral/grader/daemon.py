@@ -553,7 +553,9 @@ def _find_pending(coral_dir: Path) -> list[Attempt]:
                 a = Attempt.from_dict(data)
             except Exception:
                 continue
-            if a.status == "pending" and a.score is None:
+            # Archived attempts are soft-deleted (e.g. discarded by
+            # `coral resume --from`) — never grade them.
+            if a.status == "pending" and a.score is None and not a.archived:
                 pending.append(a)
     pending.sort(key=lambda x: x.timestamp)
     return pending

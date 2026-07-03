@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 from coral.agent.manager import AgentManager
 from coral.config import CoralConfig
-from coral.hub.attempts import read_attempt, write_attempt
+from coral.hub.attempts import read_attempt, read_attempts, write_attempt
 from coral.hub.steering import (
     ContinueFromAction,
     MarkBestAction,
@@ -361,6 +361,59 @@ def test_resume_from_resets_real_worktree_head(tmp_path: Path, monkeypatch) -> N
     assert _git(agent_dir, "rev-parse", "HEAD") == target_hash
     assert (agent_dir / "solution.txt").read_text() == "target\n"
     assert prompts and f"## Continue from Attempt {target_hash}" in prompts[0]
+
+
+def test_resume_from_archives_attempts_after_target(tmp_path: Path, monkeypatch) -> None:
+    """Attempts on the discarded segment are soft-deleted from every view."""
+    coral_dir = tmp_path / ".coral"
+    agents_dir = tmp_path / "agents"
+    repo_dir = tmp_path / "repo"
+    agent_dir = agents_dir / "agent-1"
+    agent_dir.mkdir(parents=True)
+    (agent_dir / ".coral_agent_id").write_text("agent-1")
+    repo_dir.mkdir()
+
+    _git(agent_dir, "init")
+    _git(agent_dir, "config", "user.email", "test@example.com")
+    _git(agent_dir, "config", "user.name", "Test User")
+    target_hash = _commit_file(agent_dir, "solution.txt", "target\n", "target attempt")
+    mid_hash = _commit_file(agent_dir, "solution.txt", "mid\n", "mid attempt")
+    latest_hash = _commit_file(agent_dir, "solution.txt", "latest\n", "latest attempt")
+
+    write_attempt(coral_dir, _attempt(target_hash, score=0.5))
+    write_attempt(coral_dir, _attempt(mid_hash, score=0.6))
+    write_attempt(coral_dir, _attempt(latest_hash, score=0.7))
+
+    paths = ProjectPaths(
+        results_dir=tmp_path,
+        task_dir=tmp_path,
+        run_dir=tmp_path,
+        coral_dir=coral_dir,
+        agents_dir=agents_dir,
+        repo_dir=repo_dir,
+    )
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "agents": {"count": 1, "runtime": "claude-code"},
+        }
+    )
+    manager = AgentManager(cfg)
+    _stub_manager_for_resume(manager, monkeypatch, {"agent-1": agent_dir})
+
+    manager.resume_all(paths, resume_from=target_hash)
+
+    # Only the target survives in listing views; the discarded segment is gone.
+    visible = {a.commit_hash for a in read_attempts(coral_dir)}
+    assert visible == {target_hash}
+    # The records themselves stay on disk, flagged archived with a reason.
+    for discarded_hash in (mid_hash, latest_hash):
+        record = read_attempt(coral_dir, discarded_hash)
+        assert record is not None
+        assert record.archived
+        assert record.metadata["archive_reason"] == f"discarded by resume --from {target_hash}"
+    target_record = read_attempt(coral_dir, target_hash)
+    assert target_record is not None and not target_record.archived
 
 
 def test_resume_from_resets_all_descendant_agent_worktrees(tmp_path: Path, monkeypatch) -> None:

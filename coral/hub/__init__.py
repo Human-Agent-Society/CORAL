@@ -1,6 +1,7 @@
 """Hub — shared state management for CORAL agents."""
 
 from coral.hub.attempts import (
+    archive_attempts,
     format_leaderboard,
     get_agent_attempts,
     get_leaderboard,
@@ -13,6 +14,7 @@ from coral.hub.notes import list_notes, read_note
 from coral.hub.skills import get_skill_tree, list_skills, read_skill
 
 __all__ = [
+    "archive_attempts",
     "format_leaderboard",
     "get_agent_attempts",
     "get_leaderboard",

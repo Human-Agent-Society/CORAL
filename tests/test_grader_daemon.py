@@ -772,6 +772,33 @@ def test_find_pending_multi_island_scans_every_island(tmp_path):
     assert hashes == {"aaa000", "bbb111"}
 
 
+def test_find_pending_skips_archived(tmp_path):
+    """Archived (soft-deleted) pending attempts must never be graded."""
+    from coral.grader.daemon import _find_pending
+    from coral.hub.attempts import archive_attempts, write_attempt
+    from coral.types import Attempt
+
+    coral_dir = tmp_path / ".coral"
+
+    def _pending(commit: str) -> Attempt:
+        return Attempt(
+            commit_hash=commit,
+            agent_id="agent-1",
+            title="x",
+            score=None,
+            status="pending",
+            parent_hash=None,
+            timestamp="2026-05-31T10:00:00Z",
+        )
+
+    write_attempt(coral_dir, _pending("aaa000"))
+    write_attempt(coral_dir, _pending("bbb111"))
+    archive_attempts(coral_dir, {"bbb111"}, reason="discarded by resume --from aaa000")
+
+    pending = _find_pending(coral_dir)
+    assert {a.commit_hash for a in pending} == {"aaa000"}
+
+
 def test_grade_one_finalizes_migrated_pending_attempt_in_current_island(tmp_path, monkeypatch):
     """If migration moves a pending attempt mid-grade, finalize into its current island."""
     import coral.grader.daemon as daemon
