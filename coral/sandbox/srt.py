@@ -448,9 +448,7 @@ class AllowAllProxy:
         listener.listen(128)
         self._listener = listener
         self.port = listener.getsockname()[1]
-        self._thread = threading.Thread(
-            target=self._serve, name="coral-sandbox-proxy", daemon=True
-        )
+        self._thread = threading.Thread(target=self._serve, name="coral-sandbox-proxy", daemon=True)
         self._thread.start()
         return self.port
 
