@@ -448,9 +448,7 @@ class AllowAllProxy:
         listener.listen(128)
         self._listener = listener
         self.port = listener.getsockname()[1]
-        self._thread = threading.Thread(
-            target=self._serve, name="coral-sandbox-proxy", daemon=True
-        )
+        self._thread = threading.Thread(target=self._serve, name="coral-sandbox-proxy", daemon=True)
         self._thread.start()
         return self.port
 
@@ -467,10 +465,12 @@ class AllowAllProxy:
             self._thread = None
 
     def _serve(self) -> None:
-        assert self._listener is not None
+        listener = self._listener
+        if listener is None:
+            return
         while not self._stopping.is_set():
             try:
-                conn, _addr = self._listener.accept()
+                conn, _addr = listener.accept()
             except OSError:
                 break  # listener closed by stop()
             threading.Thread(target=self._handle, args=(conn,), daemon=True).start()

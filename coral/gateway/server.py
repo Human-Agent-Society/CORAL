@@ -59,7 +59,8 @@ class GatewayManager:
         from coral.gateway.middleware import CoralGatewayMiddleware
 
         proxy_key = f"sk-coral-{agent_id}-{secrets.token_hex(4)}"
-        assert isinstance(self._middleware, CoralGatewayMiddleware)
+        if not isinstance(self._middleware, CoralGatewayMiddleware):
+            raise RuntimeError("gateway middleware is not initialized; call start() first")
         self._middleware.register_agent(agent_id, worktree_path, proxy_key)
         logger.info(f"Registered {agent_id} with gateway (key: {proxy_key[:20]}...)")
         return proxy_key

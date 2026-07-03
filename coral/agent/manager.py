@@ -291,7 +291,8 @@ class AgentManager:
         still recorded in .coral/public/grader_daemon.pid — otherwise two
         daemons would race for the same pending attempts.
         """
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
 
         if self._grader_proc is not None and self._grader_proc.is_alive():
             return
@@ -371,7 +372,8 @@ class AgentManager:
 
     def _start_gateway_if_enabled(self) -> None:
         """Start the LiteLLM gateway if configured."""
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
         gw_cfg = self.config.agents.gateway
         if not gw_cfg.enabled:
             return
@@ -442,7 +444,8 @@ class AgentManager:
         a migration the live ``_agent_island`` map is fresher than the birth
         island recorded on the spec.
         """
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
 
         def island_of(aid: str) -> str | None:
             spec = self.specs_by_id.get(aid)
@@ -462,7 +465,8 @@ class AgentManager:
         """
         if self._sandbox is None:
             return None
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
 
         from coral.sandbox import AgentSandboxContext
 
@@ -485,7 +489,8 @@ class AgentManager:
         agent_ids: list[str],
     ) -> dict[str, str]:
         """Run the warm-start research phase. Returns {agent_id: session_id}."""
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
 
         if self.verbose:
             print("\n[coral] Warm-start: research phase...\n")
@@ -533,7 +538,8 @@ class AgentManager:
         max_turns: int | None = None,
     ) -> AgentHandle:
         """Set up a single agent and start it."""
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
 
         runtime = self._runtime_for(agent_id)
         spec = self.specs_by_id.get(agent_id)
@@ -1084,7 +1090,8 @@ class AgentManager:
 
     def _get_seen_attempts(self) -> set[str]:
         """Get the set of attempt filenames currently in any island's attempts dir."""
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
         coral_dir = self.paths.coral_dir
         islands_dir = coral_dir / "islands"
         if islands_dir.exists():
@@ -1101,7 +1108,8 @@ class AgentManager:
 
     def _resolve_attempt_path(self, fname: str) -> Path | None:
         """Look up an attempt JSON file across all islands or public/."""
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
         coral_dir = self.paths.coral_dir
         islands_dir = coral_dir / "islands"
         if islands_dir.exists():
@@ -1182,7 +1190,8 @@ class AgentManager:
 
     def _get_eval_count(self) -> int:
         """Read the current global eval count."""
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
         coral_dir = self.paths.coral_dir
         if (coral_dir / "islands").exists():
             counter_file = coral_dir / "eval_count"
@@ -1206,7 +1215,8 @@ class AgentManager:
 
     def _read_all_run_attempts(self) -> list[Attempt]:
         """Read attempts across the whole run, spanning islands when present."""
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
         coral_dir = self.paths.coral_dir
         if (coral_dir / "islands").exists():
             attempts = []
@@ -1307,7 +1317,8 @@ class AgentManager:
         real_attempt_count = self._get_finalized_real_attempt_count()
         threshold = stop_config.score_threshold
         if threshold is not None:
-            assert self.paths is not None
+            if self.paths is None:
+                raise RuntimeError("run paths are not initialized; start_all() has not run")
             best = get_leaderboard(
                 self.paths.coral_dir,
                 top_n=1,
@@ -1351,7 +1362,8 @@ class AgentManager:
 
     def _auto_stop(self, reason: dict[str, Any]) -> None:
         """Record the auto-stop reason and gracefully stop the run."""
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
         write_auto_stop(self.paths.coral_dir, reason)
         logger.info(
             "Auto-stop triggered: %s (score=%s, real_attempts=%s)",
@@ -1372,7 +1384,8 @@ class AgentManager:
         """Build a HeartbeatRunner by merging local + global heartbeat configs."""
         from coral.agent.heartbeat import HeartbeatAction
 
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
         shared_dir = self._runtime_for(agent_id).shared_dir_name
         island_id = self._agent_island.get(agent_id)
 
@@ -1539,7 +1552,8 @@ class AgentManager:
         linger. Returns the ISO-8601 timestamp of the dump on success, or
         None if the dump could not be written.
         """
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
         diag_dir = self.paths.coral_dir / "public" / "diagnostics" / agent_id
         try:
             diag_dir.mkdir(parents=True, exist_ok=True)
@@ -1754,7 +1768,8 @@ class AgentManager:
         correct after a resume reshuffles agents across islands via the
         ``.coral_island`` breadcrumb.
         """
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
         results: dict[str, float] = {}
         direction = self.config.grader.direction
         islands_dir = self.paths.coral_dir / "islands"
@@ -1894,7 +1909,8 @@ class AgentManager:
 
     def _migration_block_reason(self, candidate: MigrationCandidate) -> str | None:
         """Return why ``candidate`` cannot safely migrate right now, if any."""
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
 
         agent_id = candidate.agent_id
         if not any(handle.agent_id == agent_id for handle in self.handles):
@@ -2050,7 +2066,8 @@ class AgentManager:
         8. Hand back to ``_setup_and_start_agent`` with the new island and
            an "arrival" prompt summarising the move.
         """
-        assert self.paths is not None
+        if self.paths is None:
+            raise RuntimeError("run paths are not initialized; start_all() has not run")
 
         agent_id = candidate.agent_id
         # (1) Locate handle, bail on missing / paused / pending agents.
