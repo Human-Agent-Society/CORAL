@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import select
 import shutil
 import socket
@@ -97,8 +98,9 @@ class SrtSandbox:
 
         Regenerated on every (re)start so restarts pick up the current
         proxy port. srt injects the proxy env vars into its child itself;
-        the spec's own env only carries the editable-install PYTHONPATH
-        shim (see :func:`_cli_pythonpath_shim`), when one is needed.
+        the spec's own env carries the editable-install PYTHONPATH shim
+        (see :func:`_cli_pythonpath_shim`), when one is needed, plus the
+        TLS bundle override for rustls clients (:func:`_tls_cert_env`).
         """
         settings = build_srt_settings(
             self.cfg,
@@ -126,6 +128,7 @@ class SrtSandbox:
             Path(coral.__file__).resolve().parent,
             Path(sys.prefix).resolve(),
         )
+        env.update(_tls_cert_env())
         return AgentSandboxSpec(
             command_prefix=srt_command_prefix(self.cfg.srt_command, settings_path),
             env=env,
@@ -337,6 +340,25 @@ def _cli_pythonpath_shim(run_dir: Path, package_dir: Path, prefix: Path) -> dict
     link.unlink(missing_ok=True)  # repoint if the checkout moved since last start
     link.symlink_to(package_dir)
     return {"PYTHONPATH": str(shim_dir)}
+
+
+def _tls_cert_env() -> dict[str, str]:
+    """Point rustls-based CLIs (codex) at the PEM root-cert bundle.
+
+    On macOS, rustls-native-certs loads roots by querying the system
+    keychain's trust settings through the Security framework, which
+    Seatbelt denies inside the sandbox — every HTTPS request then fails
+    with reqwest's generic "error sending request", while curl (which
+    reads /etc/ssl/cert.pem) works fine. SSL_CERT_FILE short-circuits the
+    keychain lookup to a plain file read the sandbox allows. Respect an
+    existing SSL_CERT_FILE (it propagates via the inherited environment).
+    """
+    if os.environ.get("SSL_CERT_FILE"):
+        return {}
+    for candidate in ("/etc/ssl/cert.pem", "/etc/ssl/certs/ca-certificates.crt"):
+        if Path(candidate).is_file():
+            return {"SSL_CERT_FILE": candidate}
+    return {}
 
 
 def build_srt_settings(

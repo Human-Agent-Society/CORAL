@@ -24,6 +24,7 @@ from coral.sandbox.srt import (
     AllowAllProxy,
     SrtSandbox,
     _cli_pythonpath_shim,
+    _tls_cert_env,
     build_srt_settings,
     ensure_sandbox_supported,
     srt_command_prefix,
@@ -303,6 +304,26 @@ def test_cli_pythonpath_shim_noop_for_normal_install(tmp_path):
     assert not (tmp_path / "run" / ".sandbox").exists()
 
 
+def test_tls_cert_env_respects_existing_override(monkeypatch):
+    """A user-set SSL_CERT_FILE propagates via the inherited environment —
+    the spec must not clobber it."""
+    monkeypatch.setenv("SSL_CERT_FILE", "/custom/bundle.pem")
+    assert _tls_cert_env() == {}
+
+
+def test_tls_cert_env_points_at_pem_bundle(monkeypatch):
+    """rustls clients (codex) cannot query the macOS keychain inside the
+    sandbox; the spec points them at the host's PEM bundle instead."""
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    env = _tls_cert_env()
+    if env:  # host has a bundle at a known path (macOS/Linux defaults)
+        assert Path(env["SSL_CERT_FILE"]).is_file()
+    else:  # no known bundle on this host — nothing to point at
+        assert not any(
+            Path(p).is_file() for p in ("/etc/ssl/cert.pem", "/etc/ssl/certs/ca-certificates.crt")
+        )
+
+
 def test_build_settings_open_mode_network(tmp_path):
     settings = build_srt_settings(SandboxConfig(enabled=True), proxy_port=12345, **_paths(tmp_path))
     # Open mode: no domain allowlist, all traffic via the external proxy.
@@ -381,8 +402,10 @@ def test_srt_provider_open_mode_lifecycle(tmp_path):
         assert spec.command_prefix == ["srt", "--settings", str(settings_path), "--"]
         # srt injects proxy env into its child itself; the spec's own env
         # carries at most the editable-install PYTHONPATH shim (present when
-        # this test runs from a dev checkout, absent for normal installs).
-        assert set(spec.env) <= {"PYTHONPATH"}
+        # this test runs from a dev checkout, absent for normal installs)
+        # and the SSL_CERT_FILE override for rustls clients (present when
+        # the host has a PEM bundle at a known path).
+        assert set(spec.env) <= {"PYTHONPATH", "SSL_CERT_FILE"}
     finally:
         provider.stop()
     assert provider._proxy is None
