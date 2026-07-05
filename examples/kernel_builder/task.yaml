@@ -57,6 +57,17 @@ workspace:
   results_dir: "./results"
   repo_path: "./examples/kernel_builder/seed"
 
+islands:
+  count: 1
+
+agents:
+  count: 1
+  runtime: codex
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
 run:
   session: local
   docker_image: ""
