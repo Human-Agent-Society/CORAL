@@ -74,9 +74,11 @@ def apply_sandbox(cmd: list[str], sandbox: AgentSandboxSpec | None) -> list[str]
 def apply_sandbox_env(env: dict[str, str], sandbox: AgentSandboxSpec | None) -> None:
     """Merge the sandbox spec's env into the agent environment, in place.
 
-    Empty for the srt backend (srt injects its proxy vars into the child
-    itself); remote/shim backends carry endpoints and credentials here
-    rather than in the command prefix (argv is visible in ``ps``).
+    For the srt backend this carries the editable-install PYTHONPATH shim
+    and the SSL_CERT_FILE override for rustls clients (srt injects its
+    proxy vars into the child itself); remote/shim backends carry
+    endpoints and credentials here rather than in the command prefix
+    (argv is visible in ``ps``).
     """
     if sandbox is not None and sandbox.env:
         env.update(sandbox.env)

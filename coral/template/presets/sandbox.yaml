@@ -14,4 +14,5 @@
 agents:
   sandbox:
     enabled: true
+    provider: srt
     network: open
