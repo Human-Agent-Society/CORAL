@@ -41,7 +41,7 @@ from typing import Any
 
 import yaml
 
-from coral.hub._island import island_root
+from coral.hub._island import all_view_roots, island_root
 
 # Sentinel surfaced when a note has no parseable ``creator:`` field. Kept
 # distinct from the empty string so the absence is loud — the dashboard, the
@@ -280,7 +280,7 @@ def list_notes(
         return _list_notes_single(coral_dir, island_id)
 
     entries: list[dict[str, Any]] = []
-    for view_root in _note_view_roots(coral_dir):
+    for view_root in all_view_roots(coral_dir):
         sub = _list_notes_single(coral_dir, island_id=view_root.name, clean=False)
         for entry in sub:
             entry["island_id"] = view_root.name
@@ -334,13 +334,6 @@ def _clean_note_entries(entries: list[dict[str, Any]]) -> None:
         else:
             entry["relative_path"] = entry.get("filename", "")
             entry["category"] = "other"
-
-
-def _note_view_roots(coral_dir: Path) -> list[Path]:
-    """Per-island note roots in multi-island mode."""
-    from coral.hub._island import all_view_roots
-
-    return [r for r in all_view_roots(coral_dir) if r.name.isdigit()]
 
 
 def search_notes(

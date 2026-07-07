@@ -57,6 +57,21 @@ def test_list_log_files_aggregates_island_logs(tmp_path):
     assert logs["1-agent-1"][0]["island_id"] == "1"
 
 
+def test_list_log_files_tags_island_id_for_string_named_islands(tmp_path):
+    """Name-based islands (the coral start default) must be tagged too."""
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public").mkdir(parents=True)
+    for island in ("atlantis", "avalon"):
+        (coral_dir / "islands" / island / "logs").mkdir(parents=True)
+    (coral_dir / "islands" / "atlantis" / "logs" / "ahab-from-atlantis.0.log").write_text("a")
+    (coral_dir / "islands" / "avalon" / "logs" / "sparrow-from-avalon.0.log").write_text("b")
+
+    logs = list_log_files(coral_dir)
+
+    assert logs["ahab-from-atlantis"][0]["island_id"] == "atlantis"
+    assert logs["sparrow-from-avalon"][0]["island_id"] == "avalon"
+
+
 async def test_status_uses_global_eval_count_and_island_logs(tmp_path):
     coral_dir = tmp_path / ".coral"
     _make_multi_island(coral_dir)
