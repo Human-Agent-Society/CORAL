@@ -277,8 +277,10 @@ def get_agent_attempts(
     """
     coral_dir = Path(coral_dir)
     if island_id is None and (coral_dir / "islands").exists():
+        from coral.hub._island import all_view_roots
+
         attempts: list[Attempt] = []
-        for view_root in _all_view_attempt_roots(coral_dir):
+        for view_root in all_view_roots(coral_dir):
             attempts.extend(
                 a
                 for a in read_attempts(coral_dir, island_id=view_root.name)
@@ -286,13 +288,6 @@ def get_agent_attempts(
             )
         return attempts
     return [a for a in read_attempts(coral_dir, island_id=island_id) if a.agent_id == agent_id]
-
-
-def _all_view_attempt_roots(coral_dir: Path) -> list[Path]:
-    """Per-island attempt dirs in multi-island mode (sorted)."""
-    from coral.hub._island import all_view_roots
-
-    return [r for r in all_view_roots(coral_dir) if r.name.isdigit()]
 
 
 def agent_in_grader_queue(

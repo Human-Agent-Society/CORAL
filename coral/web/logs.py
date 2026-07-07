@@ -413,6 +413,7 @@ def list_log_files(coral_dir: Path) -> dict[str, list[dict[str, Any]]]:
     from coral.hub._island import all_view_roots
 
     agents: dict[str, list[dict[str, Any]]] = {}
+    multi_island = (coral_dir / "islands").exists()
     for view_root in all_view_roots(coral_dir):
         logs_dir = view_root / "logs"
         if not logs_dir.exists():
@@ -428,7 +429,7 @@ def list_log_files(coral_dir: Path) -> dict[str, list[dict[str, Any]]]:
                 "size_bytes": stat.st_size,
                 "modified": stat.st_mtime,
             }
-            if view_root.name.isdigit():
+            if multi_island:
                 entry["island_id"] = view_root.name
             agents.setdefault(agent_id, []).append(entry)
 
