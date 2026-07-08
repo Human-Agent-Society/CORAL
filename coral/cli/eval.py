@@ -209,6 +209,8 @@ def _print_attempt_result(attempt, header: str) -> None:
 
 def cmd_revert(args: argparse.Namespace) -> None:
     """Revert to the last commit (undo uncommitted changes and last commit)."""
+    from coral.workspace.worktree import setup_gitignore
+
     workdir = args.workdir or "."
 
     result = subprocess.run(
@@ -231,9 +233,16 @@ def cmd_revert(args: argparse.Namespace) -> None:
         print(f"Error: git reset failed: {result.stderr}", file=sys.stderr)
         sys.exit(1)
 
+    # Re-apply .gitignore entries for CORAL infrastructure files. The reset
+    # reverts .gitignore to its committed state which may lack these entries,
+    # causing the next `coral eval` (git add -A) to stage breadcrumb files.
+    setup_gitignore(Path(workdir))
+
 
 def cmd_checkout(args: argparse.Namespace) -> None:
     """Checkout a previous attempt's code by commit hash."""
+    from coral.workspace.worktree import setup_gitignore
+
     workdir = args.workdir or "."
     target = args.hash
 
@@ -278,6 +287,11 @@ def cmd_checkout(args: argparse.Namespace) -> None:
     if result.returncode != 0:
         print(f"Error: git reset failed: {result.stderr}", file=sys.stderr)
         sys.exit(1)
+
+    # Re-apply .gitignore entries for CORAL infrastructure files. The reset
+    # reverts .gitignore to its committed state which may lack these entries,
+    # causing the next `coral eval` (git add -A) to stage breadcrumb files.
+    setup_gitignore(Path(workdir))
 
 
 def cmd_export(args: argparse.Namespace) -> None:
