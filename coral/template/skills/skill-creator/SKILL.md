@@ -15,6 +15,21 @@ Create skills by analyzing your own work patterns — you are both creator and e
 
 Before drafting, identify what skill to build and confirm it doesn't already exist.
 
+### Admission Gate (read first)
+
+Read `references/meta-skill.md` — the admission standards for the shared
+library — before drafting anything. In short, a skill must clear all five:
+
+1. **Recurrence**: the pattern showed up ≥3 times (or in 2+ agents independently)
+2. **Outcome link**: it's tied to better scores or major time savings, with evidence you can cite
+3. **Beyond base-model competence**: a fresh agent without it would plausibly fail
+4. **No existing home**: nothing at 70%+ overlap (update that skill instead)
+5. **Generalizes**: phrased for the kind of problem, not the current file/dataset
+
+If any fails, stop here and write a note instead — a rejected skill is a
+good outcome, because every skill's description permanently occupies every
+agent's context. The gate is where library quality is decided.
+
 ### Pattern Detection
 
 Scan these sources for repeated, reusable patterns:
@@ -34,6 +49,10 @@ coral skills
 ```
 
 Read each relevant `SKILL.md` frontmatter. If an existing skill has 70%+ overlap with your candidate, **update that skill** instead of creating a new one.
+
+If an adjacent skill exists but never gets used (check with
+`python .claude/skills/scan-usage/scripts/scan_usage.py` if available), fix
+its description rather than creating a sibling that splits the trigger.
 
 ### Output
 
@@ -362,13 +381,15 @@ The `agents/` directory contains instructions for specialized subagents. Read th
 - `agents/comparator.md` — Blind A/B comparison between two outputs
 - `agents/analyzer.md` — Analyze benchmark results and why one version beat another
 
-The `references/` directory has schema documentation:
+The `references/` directory has schema and policy documentation:
+- `references/meta-skill.md` — admission standards for the shared library (read before drafting)
 - `references/schemas.md` — JSON structures for evals.json, grading.json, benchmark.json, etc.
 
 ---
 
 ## Summary
 
+0. **Gate** the candidate against `references/meta-skill.md` — reject freely
 1. **Analyze** your work patterns for reusable skills
 2. **Draft** the SKILL.md following the writing guide
 3. **Test** with generated cases (with-skill vs baseline)

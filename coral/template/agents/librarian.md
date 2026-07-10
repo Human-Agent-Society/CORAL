@@ -100,7 +100,14 @@ Look for reusable patterns buried in notes that should be skills:
 - Notes the usage scan shows are read by many distinct agents — repeated
   cross-agent reads mean the content is a workflow, not a finding
 
-Package them in `.claude/skills/<name>/SKILL.md` with the standard skill format.
+Before packaging, apply the admission gate in
+`.claude/skills/skill-creator/references/meta-skill.md` (recurrence +
+outcome evidence, beyond base-model competence, no 70%+ overlap with an
+existing skill, generalizes past the current task-state). Rejecting a
+candidate is a good outcome — every skill description permanently occupies
+every agent's context.
+
+Package the ones that pass in `.claude/skills/<name>/SKILL.md` with the standard skill format.
 
 ### 7. Log Changes
 
