@@ -49,6 +49,11 @@ All five must hold before you draft. If any fails, write a note instead
 | A workflow 2+ agents keep reinventing | Skill |
 | An insight about *this* codebase's structure | Note (skills outlive context) |
 
+The same principles govern the note side — placement over duplication,
+update-vs-new, discoverability — via the "Before You Write" check in the
+`create-notes` skill. Route note-shaped content there, not to a thinner
+gate.
+
 ## Scope and granularity
 
 - **One workflow per skill.** If the SKILL.md needs "Part A / Part B" for

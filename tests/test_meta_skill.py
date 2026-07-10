@@ -1,9 +1,12 @@
-"""The meta-skill admission gate stays wired into every skill-authoring path.
+"""The meta-skill admission gate stays wired into every knowledge-authoring path.
 
 Library quality is decided at birth: skill-creator and the librarian are the
 two places agents package new skills, and both must route candidates through
-the admission standards in skill-creator's references/meta-skill.md. This
-test is the regression gate for that wiring surviving future prompt edits.
+the admission standards in skill-creator's references/meta-skill.md; the
+same principles (update-vs-new placement, note-vs-skill routing,
+discoverability) apply to note creation via create-notes' before-you-write
+check. This test is the regression gate for that wiring surviving future
+prompt edits.
 """
 
 from pathlib import Path
@@ -28,3 +31,12 @@ def test_skill_creator_routes_through_admission_gate():
 def test_librarian_routes_through_admission_gate():
     text = Path("coral/template/agents/librarian.md").read_text(encoding="utf-8")
     assert "skill-creator/references/meta-skill.md" in text
+
+
+def test_create_notes_applies_admission_principles():
+    text = Path("coral/template/skills/create-notes/SKILL.md").read_text(encoding="utf-8")
+    assert "Before You Write" in text
+    # Update-vs-new placement, note-vs-skill routing, and discoverability.
+    assert "update that note" in text
+    assert "skill-creator/references/meta-skill.md" in text
+    assert "scan-usage" in text
