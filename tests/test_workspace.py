@@ -11,10 +11,11 @@ import pytest
 from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig, WorkspaceConfig
 from coral.workspace import (
     apply_runtime_mounts,
+    create_agent_worktree,
     create_project,
     seed_agent_role,
     setup_codex_settings,
-    setup_gitignore,
+    setup_git_exclude,
     setup_shared_state,
     setup_worktree_env,
     write_agent_id,
@@ -112,42 +113,128 @@ def test_write_agent_id():
         assert content == "agent-42"
 
 
-def test_setup_gitignore():
+def test_setup_git_exclude():
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        _git_init(d)
         worktree = Path(d)
-        setup_gitignore(worktree)
+        setup_git_exclude(worktree)
 
-        gitignore = worktree / ".gitignore"
-        assert gitignore.exists()
-        content = gitignore.read_text()
+        exclude = worktree / ".git" / "info" / "exclude"
+        assert exclude.exists()
+        content = exclude.read_text()
         assert ".coral_agent_id" in content
         assert "CLAUDE.md" in content
         assert ".claude/" in content
         assert ".coral_island" in content
+        # The tracked .gitignore is never touched
+        assert not (worktree / ".gitignore").exists()
 
 
-def test_setup_gitignore_preserves_existing():
+def test_setup_git_exclude_preserves_existing():
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        _git_init(d)
         worktree = Path(d)
-        gitignore = worktree / ".gitignore"
-        gitignore.write_text("*.pyc\n__pycache__/\n")
+        exclude = worktree / ".git" / "info" / "exclude"
+        exclude.parent.mkdir(parents=True, exist_ok=True)
+        exclude.write_text("*.pyc\n__pycache__/\n")
 
-        setup_gitignore(worktree)
+        setup_git_exclude(worktree)
 
-        content = gitignore.read_text()
+        content = exclude.read_text()
         assert "*.pyc" in content
         assert ".coral_agent_id" in content
         assert ".claude/" in content
 
 
-def test_setup_gitignore_idempotent():
+def test_setup_git_exclude_idempotent():
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        _git_init(d)
         worktree = Path(d)
-        setup_gitignore(worktree)
-        setup_gitignore(worktree)
+        setup_git_exclude(worktree)
+        setup_git_exclude(worktree)
 
-        content = (worktree / ".gitignore").read_text()
+        content = (worktree / ".git" / "info" / "exclude").read_text()
         assert content.count(".claude/") == 1
+
+
+def test_setup_git_exclude_requires_git_repo():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        with pytest.raises(RuntimeError, match="git-common-dir"):
+            setup_git_exclude(Path(d))
+
+
+def test_setup_git_exclude_survives_reset_hard():
+    """Regression test for #171: breadcrumbs stay ignored after any hard reset.
+
+    The old implementation appended entries to the working-tree .gitignore;
+    `coral revert` / `coral checkout` (or an agent running `git reset --hard`
+    directly) restored .gitignore to its committed state, and the next
+    `git add -A` staged the breadcrumb files into the attempt's commit.
+    """
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        repo = Path(d)
+        _git_init(d)
+        setup_git_exclude(repo)
+
+        # CORAL breadcrumbs (untracked, must stay that way)
+        (repo / ".coral_agent_id").write_text("agent-1")
+        (repo / ".coral_dir").write_text("/tmp/coral")
+
+        # Agent's first eval: change + `git add -A` + commit
+        (repo / "main.py").write_text("print('attempt 1')\n")
+
+        def _run(*args: str) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                ["git", "-C", d, "-c", "user.name=test", "-c", "user.email=test@test.com", *args],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+        _run("add", "-A")
+        _run("commit", "-m", "attempt 1")
+
+        # Revert past the first attempt (what `coral revert` does)
+        _run("reset", "--hard", "HEAD~1")
+
+        # The next eval's `git add -A` must not stage breadcrumbs
+        _run("add", "-A")
+        status = _run("status", "--porcelain").stdout
+        assert ".coral_agent_id" not in status
+        assert ".coral_dir" not in status
+
+
+def test_setup_git_exclude_shared_across_worktrees():
+    """Entries written from one worktree apply to all worktrees of the repo."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        repo = Path(d) / "repo"
+        repo.mkdir()
+        _git_init(str(repo))
+
+        agents_dir = Path(d) / "agents"
+        agents_dir.mkdir()
+        worktree = create_agent_worktree(repo, "agent-1", agents_dir)
+
+        # Configure from the linked worktree; must land in the shared exclude
+        setup_git_exclude(worktree)
+        assert ".coral_agent_id" in (repo / ".git" / "info" / "exclude").read_text()
+
+        (worktree / ".coral_agent_id").write_text("agent-1")
+        result = subprocess.run(
+            ["git", "-C", str(worktree), "check-ignore", ".coral_agent_id"],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0
+
+        # ...and in the main checkout too
+        (repo / ".coral_agent_id").write_text("main")
+        result = subprocess.run(
+            ["git", "-C", str(repo), "check-ignore", ".coral_agent_id"],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0
 
 
 @pytest.mark.parametrize(

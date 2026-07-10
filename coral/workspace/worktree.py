@@ -95,9 +95,30 @@ def create_agent_worktree(repo_path: Path, agent_id: str, agents_dir: Path) -> P
     return worktree_path
 
 
-def setup_gitignore(worktree_path: Path) -> None:
-    """Write .gitignore to exclude CORAL-managed files from git."""
-    gitignore_path = worktree_path / ".gitignore"
+def setup_git_exclude(worktree_path: Path) -> None:
+    """Register CORAL-managed files in the repo's git exclude file.
+
+    Entries go to ``$GIT_COMMON_DIR/info/exclude`` rather than the tracked
+    ``.gitignore``: the exclude file is shared by every worktree of the run's
+    repo, is never part of any commit (so it can't pollute an attempt's diff),
+    and survives ``git reset --hard`` — a working-tree ``.gitignore`` edit is
+    wiped by ``coral revert`` / ``coral checkout`` or any raw reset the agent
+    runs, after which ``git add -A`` stages the breadcrumb files (#171).
+    """
+    result = subprocess.run(
+        ["git", "rev-parse", "--git-common-dir"],
+        capture_output=True,
+        text=True,
+        cwd=worktree_path,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"git rev-parse --git-common-dir failed in {worktree_path}: {result.stderr}"
+        )
+    # The path may be relative to the worktree (typically just ".git").
+    common_dir = (worktree_path / result.stdout.strip()).resolve()
+    exclude_path = common_dir / "info" / "exclude"
+
     entries = {
         ".coral_agent_id",
         ".coral_dir",
@@ -114,12 +135,13 @@ def setup_gitignore(worktree_path: Path) -> None:
 
     # Preserve existing entries
     existing = set()
-    if gitignore_path.exists():
-        existing = set(gitignore_path.read_text().splitlines())
+    if exclude_path.exists():
+        existing = set(exclude_path.read_text().splitlines())
 
     missing = entries - existing
     if missing:
-        with gitignore_path.open("a") as f:
+        exclude_path.parent.mkdir(parents=True, exist_ok=True)
+        with exclude_path.open("a") as f:
             for entry in sorted(missing):
                 f.write(f"{entry}\n")
 
