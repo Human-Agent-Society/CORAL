@@ -80,7 +80,7 @@ from coral.workspace import (
     setup_claude_settings,
     setup_codex_settings,
     setup_cursor_settings,
-    setup_gitignore,
+    setup_git_exclude,
     setup_opencode_settings,
     setup_shared_state,
     setup_worktree_env,
@@ -560,8 +560,8 @@ class AgentManager:
         )
         logger.info(f"  Worktree: {worktree_path}")
 
-        # Set up .gitignore for CORAL files
-        setup_gitignore(worktree_path)
+        # Ignore CORAL files via the repo's shared info/exclude (reset-proof)
+        setup_git_exclude(worktree_path)
 
         # Run setup commands (uv sync, etc.) and install coral in the worktree
         setup_worktree_env(worktree_path, self.config.workspace.setup)
