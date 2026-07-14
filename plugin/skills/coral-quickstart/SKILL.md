@@ -102,4 +102,4 @@ If `coral validate` succeeds, the grader can score the seed; most "agents are st
 | **Author** a task / write a grader | `creating-a-coral-task` | `coral init`, `coral validate` |
 | **Run / manage** experiments | `running-coral-experiments` | `coral start / status / log / show / resume / stop` |
 
-The eval loop *inside* a run (`coral eval -m "..."` → score → iterate) is driven by the agents themselves — they read it from the `CORAL.md` CORAL generates, so you never run it by hand. Docs: https://docs.coralxyz.com/
+The eval loop *inside* a run (`coral eval -m "..."` → score → iterate) is driven by the agents themselves — they read it from the `CORAL.md` CORAL generates, so you never run it by hand. Docs: https://docs.coral.compounding-intelligence.ai/

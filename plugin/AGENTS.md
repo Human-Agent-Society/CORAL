@@ -13,4 +13,4 @@ install the plugin but still want the agent to reach for CORAL.
 - **Run / manage experiments**: use the `running-coral-experiments` skill. Drive `coral start / status / log / show / resume / stop`; pass per-run overrides as dotlist args (`agents.count=4`).
 - **What is it / install**: use the `coral-quickstart` skill.
 
-Don't memorize flags — run `coral <cmd> --help`. The in-run eval loop (`coral eval`) is documented in the generated `CORAL.md` each agent reads automatically. Docs: https://docs.coralxyz.com/
+Don't memorize flags — run `coral <cmd> --help`. The in-run eval loop (`coral eval`) is documented in the generated `CORAL.md` each agent reads automatically. Docs: https://docs.coral.compounding-intelligence.ai/

@@ -14,7 +14,7 @@
 </p>
 
 [![Paper](https://img.shields.io/badge/Paper-arXiv%3A2604.01658-B31B1B.svg?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2604.01658v1)
-[![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://human-agent-society.github.io/CORAL/)
+[![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://coral.compounding-intelligence.ai/)
 [![Apache 2.0 License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
 
@@ -23,7 +23,7 @@
 </div>
 
 <p align="center">
-<a href="#安装">安装</a> · <a href="#插件在你自己的-agent-里使用-coral">插件</a> · <a href="#支持的-agent">支持的 Agent</a> · <a href="#工作原理">工作原理</a> · <a href="#示例">示例</a> · <a href="https://docs.coralxyz.com/">文档</a> · <a href="https://arxiv.org/abs/2604.01658v1">论文</a>
+<a href="#安装">安装</a> · <a href="#插件在你自己的-agent-里使用-coral">插件</a> · <a href="#支持的-agent">支持的 Agent</a> · <a href="#工作原理">工作原理</a> · <a href="#示例">示例</a> · <a href="https://docs.coral.compounding-intelligence.ai/">文档</a> · <a href="https://arxiv.org/abs/2604.01658v1">论文</a>
 </p>
 
 **CORAL** 是用于构建**自主 AI Agent 组织**的基础设施 —— Agent 持续运行实验、共享知识、不断进化。只需提供代码库和评分脚本，CORAL 负责其余的一切：隔离工作空间、安全评估、持久共享状态、多 Agent 协作。原生集成 Claude Code、OpenCode、Codex、Cursor Agent、Kiro。
@@ -32,10 +32,10 @@
 
 - **[2026-07-08]** CORAL 已被 **COLM 2026** 接收！🎉
 - **[2026-06-24]** Docker 会话现在会隔离 agent 与 grader：每个 agent 以非特权用户运行（manager 与 grader 仍为 root），agent 将无法读取 `.coral/private/`（grader 虚拟环境、答案 key）—— 即使通过 Bash 也不行。在宿主机上仍可通过 `agents.isolate_user` 选择启用。
-- **[2026-06-13]** 旧版 `eval/grader.py` grader 自动发现已废弃并移除 —— 改用 `grader.entrypoint` 指向打包的 grader。详见 [自定义 Grader 文档](https://docs.coralxyz.com/guides/custom-grader)。
-- **[2026-04-24]** 新增 Rubric 评审 —— 两个开箱即用的 LLM 评审 grader 包，专为开放式任务（报告、备忘、法律分析）设计。详见 [Rubric Judges 文档](https://docs.coralxyz.com/guides/rubric-judge)。
+- **[2026-06-13]** 旧版 `eval/grader.py` grader 自动发现已废弃并移除 —— 改用 `grader.entrypoint` 指向打包的 grader。详见 [自定义 Grader 文档](https://docs.coral.compounding-intelligence.ai/guides/custom-grader)。
+- **[2026-04-24]** 新增 Rubric 评审 —— 两个开箱即用的 LLM 评审 grader 包，专为开放式任务（报告、备忘、法律分析）设计。详见 [Rubric Judges 文档](https://docs.coral.compounding-intelligence.ai/guides/rubric-judge)。
 - **[2026-04-03]** 我们的论文 "CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery" 现已发布！请查看 [Arxiv](https://arxiv.org/abs/2604.01658v1)。
-- **[2026-03-18]** CORAL 正式发布！点击查看 [Blog](https://human-agent-society.github.io/CORAL/)。
+- **[2026-03-18]** CORAL 正式发布！点击查看 [Blog](https://coral.compounding-intelligence.ai/)。
 
 ![CORAL 多 Agent 自主编程演示 —— 多个编程 Agent 在独立 git worktree 中并行运行,通过共享状态目录交换知识](assets/demo.gif)
 
@@ -45,7 +45,7 @@
 curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
 ```
 
-通过 `uv tool install` 全局安装**最新版 `coral`**。如确需指定版本，设置 `CORAL_VERSION=<tag>`。手动安装、开发模式、前置依赖等详见[安装文档](https://docs.coralxyz.com/getting-started/installation)。
+通过 `uv tool install` 全局安装**最新版 `coral`**。如确需指定版本，设置 `CORAL_VERSION=<tag>`。手动安装、开发模式、前置依赖等详见[安装文档](https://docs.coral.compounding-intelligence.ai/getting-started/installation)。
 
 ```bash
 coral init my-task                       # 生成任务模板
@@ -80,7 +80,7 @@ codex plugin add coral@coral-marketplace
 
 插件会自动开一个被 gitignore 的 `.coral_workspace/`，把你的代码放进 `seed/`，按你的指标写好 grader，并反复跑 `coral validate` 直到任务可启动——最后把 `coral start` 命令交给你。在 Claude Code 上，`coral-task-author` 子 agent 会自主完成整个搭建过程（另有 `coral-run-doctor` 负责诊断卡住的 run）；在其他 harness 上，打包的 skill 会带你走同样的流程。
 
-包含的 skill：`coral-quickstart`（安装 → setup → `.coral_workspace/`）、`setting-up-coral`（运行时绑定）、`creating-a-coral-task`（编写 grader）、`running-coral-experiments`（运维一个 run）。子 agent、skill 目录手动安装方式及其他 harness，见[插件指南](https://docs.coralxyz.com/guides/plugin)或 [`plugin/README.md`](plugin/README.md)。
+包含的 skill：`coral-quickstart`（安装 → setup → `.coral_workspace/`）、`setting-up-coral`（运行时绑定）、`creating-a-coral-task`（编写 grader）、`running-coral-experiments`（运维一个 run）。子 agent、skill 目录手动安装方式及其他 harness，见[插件指南](https://docs.coral.compounding-intelligence.ai/guides/plugin)或 [`plugin/README.md`](plugin/README.md)。
 
 ### 支持的 Agent
 
@@ -92,7 +92,7 @@ codex plugin add coral@coral-marketplace
 | [Kiro](https://kiro.dev) | `kiro` |
 | [OpenCode](https://github.com/opencode-ai/opencode) | `opencode` |
 
-每个 Agent 需自行安装并完成认证。各运行时的详细配置（含[ LiteLLM Gateway](https://docs.coralxyz.com/guides/gateway) 自定义模型代理）见 [Agent 运行时文档](https://docs.coralxyz.com/guides/agent-runtimes)。
+每个 Agent 需自行安装并完成认证。各运行时的详细配置（含[ LiteLLM Gateway](https://docs.coral.compounding-intelligence.ai/guides/gateway) 自定义模型代理）见 [Agent 运行时文档](https://docs.coral.compounding-intelligence.ai/guides/agent-runtimes)。
 
 ### 工作原理
 
@@ -102,7 +102,7 @@ codex plugin add coral@coral-marketplace
 
 每个 Agent 跑在自己的 git worktree 里。共享状态（历史记录、笔记、技能）放在 `.coral/public/`，软链到所有 worktree —— Agent 实时看到彼此的工作。Grader 守护进程为每次提交打分。后台管理器通过心跳机制打断 Agent 并注入指令（`reflect`、`consolidate`、`pivot`）。
 
-深入阅读：[核心概念](https://docs.coralxyz.com/concepts) · [多 Agent 运行](https://docs.coralxyz.com/guides/multi-agent) · [评估循环](https://docs.coralxyz.com/concepts/eval-loop)
+深入阅读：[核心概念](https://docs.coral.compounding-intelligence.ai/concepts) · [多 Agent 运行](https://docs.coral.compounding-intelligence.ai/guides/multi-agent) · [评估循环](https://docs.coral.compounding-intelligence.ai/concepts/eval-loop)
 
 ### 示例
 
@@ -118,7 +118,7 @@ codex plugin add coral@coral-marketplace
 | **spaceship_titanic** | 机器学习 | Kaggle 竞赛 |
 | **stanford_covid_vaccine** | 生物/ML | mRNA 降解预测 |
 
-完整任务清单与详解见[示例文档](https://docs.coralxyz.com/examples)。
+完整任务清单与详解见[示例文档](https://docs.coral.compounding-intelligence.ai/examples)。
 
 ### 开发
 

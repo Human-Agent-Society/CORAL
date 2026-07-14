@@ -72,4 +72,4 @@ Trade-off: more adaptive, but the moving target makes scores across evals less d
 - **Make the artifact filename a hard contract** in `task.description` — the judge grades exactly `files: [...]`; if the agent writes `final_report.md` and you asked for `report.md`, every eval fails.
 - **Judges cost an LLM call (or many) per eval.** Keep `agents.count` modest and `grader.parallel.max_workers: 1` unless you've confirmed the judge is concurrency-safe and you have the budget.
 - **Copy a judge package as your starting point** (`cp -r examples/race-japan-elderly/grader my-task/grader`) and edit the rubric — faster than wiring one from scratch.
-- These are the same packages the README's "Rubric Judges" guide documents: https://docs.coralxyz.com/guides/rubric-judge
+- These are the same packages the README's "Rubric Judges" guide documents: https://docs.coral.compounding-intelligence.ai/guides/rubric-judge

@@ -104,4 +104,4 @@ sharing:
   skills: true                  # shared skills visible across agents
 ```
 
-Turn pieces off to make agents explore more independently. Full schema with every field: https://docs.coralxyz.com/api/config
+Turn pieces off to make agents explore more independently. Full schema with every field: https://docs.coral.compounding-intelligence.ai/api/config

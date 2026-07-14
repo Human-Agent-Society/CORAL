@@ -64,7 +64,7 @@ def _missing_context() -> str:
         "uv tool install coral\n"
         "```\n\n"
         "Then the `creating-a-coral-task` and `running-coral-experiments` skills apply. "
-        "Docs: https://docs.coralxyz.com/\n"
+        "Docs: https://docs.coral.compounding-intelligence.ai/\n"
     )
 
 
