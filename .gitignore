@@ -51,6 +51,7 @@ htmlcov/
 site/
 docs/.next/
 docs/node_modules/
+docs/public/blog/
 docs/.source/
 docs/superpowers/
 

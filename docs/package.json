@@ -3,7 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "predev": "node scripts/sync-blog.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/sync-blog.mjs",
     "build": "fumadocs-mdx && next build",
     "postinstall": "fumadocs-mdx",
     "start": "next start"
