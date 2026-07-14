@@ -78,6 +78,10 @@ class AgentConfig:
     heartbeat: list[HeartbeatActionConfig]  # Periodic actions
 ```
 
+For `runtime="remote_proxy"`, `runtime_options` includes `adapter`, optional
+adapter `config`, and optional `grant` fields that define the workspace scope,
+permitted operations, memory namespace, artifact namespace, issuer, and expiry.
+
 ## HeartbeatActionConfig
 
 ```python

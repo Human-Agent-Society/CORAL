@@ -64,9 +64,18 @@ def test_remote_proxy_start_builds_worker_command(
     assert cmd[:3] == [cmd[0], "-m", "coral.agent.remote_proxy_worker"]
     assert "--adapter" in cmd
     assert cmd[cmd.index("--adapter") + 1] == "pkg.remote:Adapter"
-    config_json = cmd[cmd.index("--config-json") + 1]
-    assert json.loads(config_json) == {"region": "us-west-2"}
+    assert "--config-json" not in cmd
+    assert json.loads(captured["kwargs"]["env"]["CORAL_REMOTE_PROXY_CONFIG_JSON"]) == {
+        "region": "us-west-2"
+    }
     assert cmd[cmd.index("--state-dir") + 1] == str(coral_dir / "public" / "remote_state")
+    assert cmd[cmd.index("--control-dir") + 1] == str(worktree / ".remote" / "control")
+    assert cmd[cmd.index("--operation-id") + 1].startswith("agent-1:")
+    grant_json = cmd[cmd.index("--grant-json") + 1]
+    grant = json.loads(grant_json)
+    assert grant["grant_id"] == "coral:agent-1"
+    assert grant["workspace_id"] == coral_dir.parent.name
+    assert grant["permitted_operations"] == ["execute", "collect_metrics", "write_artifacts"]
     assert cmd[cmd.index("--sync-interval-seconds") + 1] == "5.0"
     assert captured["kwargs"]["cwd"] == str(worktree)
     assert handle.agent_id == "agent-1"

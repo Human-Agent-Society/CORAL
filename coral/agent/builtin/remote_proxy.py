@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import subprocess
@@ -81,20 +82,27 @@ class RemoteProxyRuntime:
             prompt = "Start or resume this CORAL task through the configured remote runtime."
 
         state_dir = self._remote_state_dir(worktree_path)
+        control_dir = worktree_path / ".remote" / "control"
+        operation_id = self._operation_id(agent_id, prompt, task_name)
+        grant = self._workspace_grant(
+            agent_id=agent_id,
+            worktree_path=worktree_path,
+            runtime_options=runtime_options,
+        )
         cmd = [
             sys.executable,
             "-m",
             "coral.agent.remote_proxy_worker",
             "--adapter",
             str(adapter),
-            "--config-json",
-            json.dumps(adapter_config),
             "--agent-id",
             agent_id,
             "--worktree-path",
             str(worktree_path),
             "--state-dir",
             str(state_dir),
+            "--control-dir",
+            str(control_dir),
             "--log-path",
             str(log_path),
             "--prompt",
@@ -103,6 +111,10 @@ class RemoteProxyRuntime:
             task_name or "",
             "--task-description",
             task_description or "",
+            "--operation-id",
+            operation_id,
+            "--grant-json",
+            json.dumps(grant),
             "--sync-interval-seconds",
             str(sync_interval),
         ]
@@ -115,6 +127,7 @@ class RemoteProxyRuntime:
         agent_env["UV_PROJECT_ENVIRONMENT"] = worktree_venv
         agent_env["VIRTUAL_ENV"] = worktree_venv
         agent_env["PATH"] = str(worktree_path / ".venv" / "bin") + ":" + agent_env.get("PATH", "")
+        agent_env["CORAL_REMOTE_PROXY_CONFIG_JSON"] = json.dumps(adapter_config)
 
         user_kwargs = apply_run_as_user(agent_env, run_as_user)
         log_file = open(log_path, "w", buffering=1)
@@ -154,3 +167,39 @@ class RemoteProxyRuntime:
         if coral_dir_file.exists():
             return Path(coral_dir_file.read_text().strip()) / "public" / "remote_state"
         return worktree_path / ".coral" / "public" / "remote_state"
+
+    @staticmethod
+    def _operation_id(agent_id: str, prompt: str, task_name: str | None) -> str:
+        payload = json.dumps(
+            {"agent_id": agent_id, "prompt": prompt, "task_name": task_name or ""},
+            sort_keys=True,
+        )
+        digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+        return f"{agent_id}:{digest}"
+
+    @staticmethod
+    def _workspace_grant(
+        agent_id: str,
+        worktree_path: Path,
+        runtime_options: dict[str, Any],
+    ) -> dict[str, Any]:
+        configured = dict(runtime_options.get("grant") or {})
+        coral_dir_file = worktree_path / ".coral_dir"
+        workspace_id = (
+            Path(coral_dir_file.read_text().strip()).parent.name
+            if coral_dir_file.exists()
+            else worktree_path.name
+        )
+        return {
+            "grant_id": str(configured.get("grant_id") or f"coral:{agent_id}"),
+            "issuer": str(configured.get("issuer") or "coral"),
+            "workspace_id": str(configured.get("workspace_id") or workspace_id),
+            "permitted_operations": list(
+                configured.get("permitted_operations")
+                or ["execute", "collect_metrics", "write_artifacts"]
+            ),
+            "memory_namespace": configured.get("memory_namespace") or f"remote:{agent_id}",
+            "artifact_namespace": configured.get("artifact_namespace") or f"remote:{agent_id}",
+            "expires_at": configured.get("expires_at"),
+            "metadata": dict(configured.get("metadata") or {}),
+        }

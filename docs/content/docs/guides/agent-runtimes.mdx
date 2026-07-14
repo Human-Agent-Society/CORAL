@@ -24,6 +24,11 @@ runtime starts a local proxy process, and that process calls your adapter to
 deploy/invoke the remote agent and sync normalized state to
 `.coral/public/remote_state/`.
 
+The invariant is: **CORAL owns task truth. The remote runtime owns execution
+state. The bridge imports evidence, never authority.** Remote `status` values
+are observations; the CORAL grader remains responsible for scoring and
+completion decisions.
+
 ```yaml
 agents:
   runtime: remote_proxy
@@ -32,6 +37,10 @@ agents:
     adapter: my_package.agentcore:AgentCoreAdapter
     config:
       region: us-west-2
+    grant:
+      permitted_operations: ["execute", "collect_metrics", "write_artifacts"]
+      memory_namespace: remote/agent-1
+      artifact_namespace: remote/agent-1
     sync_interval_seconds: 30
 ```
 
@@ -41,6 +50,28 @@ The adapter class must implement `coral.agent.remote.RemoteRuntimeAdapter`:
 - `invoke(handle, payload) -> dict`
 - `list_agents() -> list[RemoteAgentHandle]`
 - `collect_metrics() -> list[RemoteAgentState]`
+
+`RemoteAgentSpec` carries an explicit `RemoteWorkspaceGrant` so adapter code
+does not treat the local `code_path` or adapter config as authority. The grant
+describes the workspace identity, permitted operations, memory/artifact
+namespaces, issuer, and optional expiry.
+
+`RemoteAgentState.evidence` is a list of typed `RemoteEvidence` envelopes. Use
+these for remote traces, logs, metrics exports, receipts, or result artifacts:
+
+- `artifact_id`
+- `kind`
+- `source_runtime`
+- `runtime_id`
+- `collected_at`
+- `digest`
+- `provenance`
+- `trust_level`
+
+The proxy persists the remote handle and operation id locally before invoking
+the adapter. On restart, it reuses the known handle and operation id instead of
+blindly deploying/invoking again. Adapters should treat `operation_id` as an
+idempotency key.
 
 This is a local-workspace-primary model. A remote-primary workspace, where the
 remote service owns the editable checkout and CORAL synchronizes commits back,

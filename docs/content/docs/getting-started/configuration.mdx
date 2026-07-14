@@ -163,6 +163,8 @@ agents:
   runtime_options:
     adapter: my_package.remote:RuntimeAdapter
     config: {}
+    grant:
+      permitted_operations: ["execute", "collect_metrics", "write_artifacts"]
 ```
 
 ### Heartbeat actions

@@ -14,6 +14,7 @@ from coral.agent.remote import (
     RemoteAgentHandle,
     RemoteAgentSpec,
     RemoteAgentState,
+    RemoteEvidence,
     RemoteStateBridge,
     load_remote_adapter,
     read_remote_state,
@@ -58,7 +59,16 @@ class _FakeRemoteAdapter:
                 runtime_id="remote-1",
                 status="running",
                 metrics={"score": 0.42},
-                artifacts={"trace": "trace-1"},
+                evidence=[
+                    RemoteEvidence(
+                        artifact_id="trace-1",
+                        kind="trace",
+                        source_runtime=self.runtime_type,
+                        runtime_id="remote-1",
+                        digest="sha256:abc",
+                        provenance={"source": "fake"},
+                    )
+                ],
             )
         ]
 
@@ -119,7 +129,8 @@ def test_remote_state_bridge_writes_index_and_agent_file(tmp_path: Path) -> None
     assert index["agents"][0]["metrics"] == {"score": 0.42}
 
     agent_payload = json.loads((state_dir / "strategy-1.json").read_text())
-    assert agent_payload["artifacts"] == {"trace": "trace-1"}
+    assert agent_payload["evidence"][0]["artifact_id"] == "trace-1"
+    assert agent_payload["evidence"][0]["trust_level"] == "observed"
 
 
 def test_remote_state_bridge_encodes_agent_id_for_filename(tmp_path: Path) -> None:
@@ -133,3 +144,16 @@ def test_remote_state_bridge_encodes_agent_id_for_filename(tmp_path: Path) -> No
     index = read_remote_state(tmp_path / ".coral")
     assert index is not None
     assert index["agents"][0]["agent_id"] == "../remote/agent"
+
+
+def test_remote_state_index_is_generated_from_agent_files(tmp_path: Path) -> None:
+    state_dir = tmp_path / ".coral" / "public" / "remote_state"
+
+    RemoteStateBridge(_FakeRemoteAdapter(prefix="agent-a"), state_dir).sync_once()
+    RemoteStateBridge(_FakeRemoteAdapter(prefix="agent-b"), state_dir).sync_once()
+
+    index = read_remote_state(tmp_path / ".coral")
+
+    assert index is not None
+    assert {agent["agent_id"] for agent in index["agents"]} == {"agent-a-1", "agent-b-1"}
+    assert index["runtime_type"] == "fake"

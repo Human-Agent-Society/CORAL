@@ -10,7 +10,9 @@ from coral.agent.remote import (
     RemoteAgentHandle,
     RemoteAgentSpec,
     RemoteAgentState,
+    RemoteEvidence,
     RemoteRuntimeAdapter,
+    RemoteWorkspaceGrant,
 )
 from coral.agent.runtime import AgentRuntime
 
@@ -23,8 +25,10 @@ __all__ = [
     "RemoteAgentHandle",
     "RemoteAgentSpec",
     "RemoteAgentState",
+    "RemoteEvidence",
     "RemoteProxyRuntime",
     "RemoteRuntimeAdapter",
+    "RemoteWorkspaceGrant",
     "get_runtime",
     "register_runtime",
 ]
