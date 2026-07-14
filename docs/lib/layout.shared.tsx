@@ -20,7 +20,7 @@ export function baseOptions(): BaseLayoutProps {
     links: [
       {
         text: 'Blog',
-        url: 'https://coral.compounding-intelligence.ai/',
+        url: '/blog',
       },
     ],
     githubUrl: 'https://github.com/Human-Agent-Society/CORAL',
