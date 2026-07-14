@@ -82,4 +82,4 @@ coral stop                                  # done
 - **Steer / fork / heartbeat tuning** → [references/steering.md](references/steering.md)
 - **Budget classes, islands, gateway, troubleshooting matrix** → [references/scaling-and-ops.md](references/scaling-and-ops.md)
 
-Note: `coral eval / diff / revert / checkout / wait` are **agent-side** commands run *inside* a worktree during a run — agents already know them from the generated `CORAL.md`. As the operator you rarely touch them; you drive the verbs above. Full CLI reference: https://docs.coralxyz.com/cli/reference
+Note: `coral eval / diff / revert / checkout / wait` are **agent-side** commands run *inside* a worktree during a run — agents already know them from the generated `CORAL.md`. As the operator you rarely touch them; you drive the verbs above. Full CLI reference: https://docs.coral.compounding-intelligence.ai/cli/reference

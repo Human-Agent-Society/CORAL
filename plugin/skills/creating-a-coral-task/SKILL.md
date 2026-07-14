@@ -99,4 +99,4 @@ Once one agent evals cleanly, raise `agents.count`. Driving the run from here is
 | `parallel.max_workers > 1` with an unsafe grader | Sporadic port/GPU/scratch collisions | Leave at `1` unless provably concurrency-safe. |
 | Skipping `coral validate` | Agents start, fail every eval identically | Always validate first. |
 
-When in doubt, run `coral init throwaway` and read the generated files. Full config schema: https://docs.coralxyz.com/api/config
+When in doubt, run `coral init throwaway` and read the generated files. Full config schema: https://docs.coral.compounding-intelligence.ai/api/config

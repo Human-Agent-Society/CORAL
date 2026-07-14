@@ -52,7 +52,7 @@ Next steps:
   coral init my-task                    Scaffold a new task
   coral start -c my-task/task.yaml      Launch agents
 
-Docs:  https://human-agent-society.github.io/CORAL/
+Docs:  https://docs.coral.compounding-intelligence.ai/
 EOF
 else
   warn "Install succeeded, but 'coral' is not on PATH in this shell."

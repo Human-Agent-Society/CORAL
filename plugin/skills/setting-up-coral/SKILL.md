@@ -82,7 +82,7 @@ Bindings store **no credentials** — each runtime owns its own login. The hello
 | Kiro | `kiro` | `kiro-cli` setup |
 | OpenCode | `opencode` | `opencode` auth |
 
-Codex reasoning effort is a runtime option, not a model: `coral setup agent --name codex-high --runtime codex --option model_reasoning_effort=high`. For custom or self-hosted models across runtimes, route through the LiteLLM gateway (`agents.gateway` in `task.yaml`): https://docs.coralxyz.com/guides/gateway
+Codex reasoning effort is a runtime option, not a model: `coral setup agent --name codex-high --runtime codex --option model_reasoning_effort=high`. For custom or self-hosted models across runtimes, route through the LiteLLM gateway (`agents.gateway` in `task.yaml`): https://docs.coral.compounding-intelligence.ai/guides/gateway
 
 ## 4. Use a binding in a task
 
@@ -109,4 +109,4 @@ agents:
 
 ## Where this sits
 
-`coral-quickstart` (install) → **`setting-up-coral`** (bindings, here) → `creating-a-coral-task` (author) → `running-coral-experiments` (run). Setup is optional — you can put `runtime`/`model` straight in `task.yaml` — but bindings + `coral agents doctor` are the reliable way to confirm a runtime is installed *and authenticated* before you launch agents. Full reference: https://docs.coralxyz.com/guides/agent-bindings
+`coral-quickstart` (install) → **`setting-up-coral`** (bindings, here) → `creating-a-coral-task` (author) → `running-coral-experiments` (run). Setup is optional — you can put `runtime`/`model` straight in `task.yaml` — but bindings + `coral agents doctor` are the reliable way to confirm a runtime is installed *and authenticated* before you launch agents. Full reference: https://docs.coral.compounding-intelligence.ai/guides/agent-bindings

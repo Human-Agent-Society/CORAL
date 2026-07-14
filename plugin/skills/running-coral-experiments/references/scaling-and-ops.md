@@ -47,7 +47,7 @@ coral start -c task.yaml agents.gateway.enabled=true \
   agents.gateway.port=4000 agents.gateway.config=./litellm_config.yaml
 ```
 
-`agents.gateway.api_key` is auto-generated if empty. Full gateway setup: https://docs.coralxyz.com/guides/gateway
+`agents.gateway.api_key` is auto-generated if empty. Full gateway setup: https://docs.coral.compounding-intelligence.ai/guides/gateway
 
 ## Reading the shared brain
 
@@ -76,4 +76,4 @@ Notes and skills are where agents record what's working — a fast way to unders
 | Leaderboard looks upside down | `grader.direction` wrong | This is a task-authoring bug — fix `direction` in `task.yaml` (the `creating-a-coral-task` skill). |
 | Run won't resume / picks the wrong run | Multiple runs for the task | Disambiguate: `coral runs --all` to list, then `coral resume --task <name> --run <id>`. |
 
-Most run-health questions answer themselves from three commands: `coral status` (who's alive), `coral log --class grader_error` (is the grader healthy), and `coral show <hash> --diff` (what the leader actually did). Full CLI reference: https://docs.coralxyz.com/cli/reference
+Most run-health questions answer themselves from three commands: `coral status` (who's alive), `coral log --class grader_error` (is the grader healthy), and `coral show <hash> --diff` (what the leader actually did). Full CLI reference: https://docs.coral.compounding-intelligence.ai/cli/reference
