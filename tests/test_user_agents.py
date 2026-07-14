@@ -482,6 +482,34 @@ def test_cli_doctor_reports_missing_cli(bindings_file, capsys):
     assert "CLI found" in out
 
 
+def test_cli_doctor_accepts_runtime_without_cli(bindings_file, capsys):
+    from coral.cli.agents import cmd_agents, cmd_setup
+
+    cmd_setup(
+        _ns(
+            setup_command="agent",
+            name="remote",
+            runtime="remote_proxy",
+            command_path=None,
+            model="remote",
+            role_file=None,
+            option=["adapter=pkg.remote:Adapter"],
+            default=False,
+            non_interactive=True,
+            config=None,
+        )
+    )
+    capsys.readouterr()
+
+    with pytest.raises(SystemExit) as exc:
+        cmd_agents(_ns(agents_command="doctor", name="remote", config=None, no_live=False))
+
+    assert exc.value.code == 0
+    out = capsys.readouterr().out
+    assert "not required for this runtime" in out
+    assert "skipped (no runtime CLI)" in out
+
+
 def test_config_without_bindings_does_not_touch_file(monkeypatch, tmp_path):
     # Even if a (broken) file exists, configs that don't reference a binding
     # must load fine — the file is only read when a binding is referenced.
@@ -737,7 +765,10 @@ def test_detect_available_runtimes_includes_all_canonical(monkeypatch):
     assert [r["runtime"] for r in rows] == known_runtimes()
     for r in rows:
         assert set(r.keys()) == {"runtime", "command", "resolved", "model"}
-        assert r["resolved"] == f"/fake/bin/{r['command']}"
+        if r["command"]:
+            assert r["resolved"] == f"/fake/bin/{r['command']}"
+        else:
+            assert r["resolved"] is None
 
 
 def test_detect_marks_missing_runtimes(monkeypatch):

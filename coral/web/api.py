@@ -11,6 +11,7 @@ import yaml
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from coral.agent.remote import read_remote_state
 from coral.cli._helpers import is_docker_run_alive
 
 
@@ -586,5 +587,6 @@ async def get_status(request: Request) -> JSONResponse:
             "best_score": best.score if best else None,
             "best_title": best.title if best else None,
             "agents": agents_status,
+            "remote_state": read_remote_state(coral_dir),
         }
     )

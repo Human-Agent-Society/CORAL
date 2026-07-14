@@ -101,6 +101,8 @@ coral setup agent
 coral setup agent --name claude-opus --runtime claude_code --model opus
 coral setup agent --name codex-high  --runtime codex \
   --option model_reasoning_effort=high
+coral setup agent --name remote --runtime remote_proxy \
+  --option adapter=my_package.remote:Adapter
 ```
 
 Each `coral setup agent` finishes with a lightweight `doctor` pass (see below).

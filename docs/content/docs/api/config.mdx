@@ -69,13 +69,18 @@ class GraderConfig:
 @dataclass
 class AgentConfig:
     count: int             # Number of agents (default: 1)
-    runtime: str           # "claude_code", "codex", "opencode"
+    runtime: str           # "claude_code", "codex", "opencode", "remote_proxy", ...
     model: str             # Model name or ID (default: "sonnet")
+    runtime_options: dict  # Runtime-specific options, such as remote_proxy adapter config
     max_turns: int         # Max conversation turns (default: 200)
     timeout: int           # Session timeout in seconds (default: 3600)
     research: bool         # Enable web search (default: True)
     heartbeat: list[HeartbeatActionConfig]  # Periodic actions
 ```
+
+For `runtime="remote_proxy"`, `runtime_options` includes `adapter`, optional
+adapter `config`, and optional `grant` fields that define the workspace scope,
+permitted operations, memory namespace, artifact namespace, issuer, and expiry.
 
 ## HeartbeatActionConfig
 
