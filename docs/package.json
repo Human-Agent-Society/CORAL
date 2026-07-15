@@ -8,7 +8,8 @@
     "prebuild": "node scripts/sync-blog.mjs",
     "build": "fumadocs-mdx && next build",
     "postinstall": "fumadocs-mdx",
-    "start": "next start"
+    "start": "next start",
+    "test:routes": "node --test tests/site-routes.test.mjs"
   },
   "dependencies": {
     "@types/mdx": "^2.0.13",
