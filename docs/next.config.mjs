@@ -6,8 +6,8 @@ const config = {
   async rewrites() {
     return [
       {
-        source: '/blog',
-        destination: '/blog/index.html',
+        source: '/blogs/evolve-like-coral',
+        destination: '/blogs/evolve-like-coral/index.html',
       },
     ];
   },
