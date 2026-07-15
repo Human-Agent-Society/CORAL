@@ -135,7 +135,7 @@ You can do the same with your own judge — the grader venv is per-run, so two t
 
 ## Writing your own rubric judge
 
-Both shipped judges inherit from `coral.grader.task_grader.TaskGrader` (see [Writing a Custom Grader](/guides/custom-grader) for the base interface). The rubric-judge pattern adds three pieces on top:
+Both shipped judges inherit from `coral.grader.task_grader.TaskGrader` (see [Writing a Custom Grader](/docs/guides/custom-grader) for the base interface). The rubric-judge pattern adds three pieces on top:
 
 1. **A local `RubricItem` dataclass** inside the grader package so the framework's `TaskConfig` schema stays unchanged. See `race_japan_grader/rubric_item.py` and `apex_judge/rubric_item.py` for the canonical 10-line implementation.
 2. **A `CLAUDE.md` builder** that assembles the task description, rubric (static or evolved), reference docs, and an output-format spec demanding a specific JSON schema. `race_japan_grader.grader._build_judge_instructions` is a short, readable example.

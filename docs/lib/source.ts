@@ -7,6 +7,6 @@ import { resolveFiles } from 'fumadocs-mdx';
 // but fumadocs-core 15.x expects an array. This workaround calls resolveFiles
 // directly. The proper fix is upgrading to fumadocs-mdx 14.x + fumadocs-core 16.x.
 export const source = loader({
-  baseUrl: '/',
+  baseUrl: '/docs',
   source: { files: resolveFiles({ docs: docs.docs, meta: docs.meta }) },
 });

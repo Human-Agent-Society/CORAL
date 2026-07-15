@@ -18,10 +18,10 @@ export function baseOptions(): BaseLayoutProps {
       ) as ReactNode,
     },
     links: [
-      {
-        text: 'Blog',
-        url: '/blog',
-      },
+      { text: 'Home', url: '/' },
+      { text: 'Docs', url: '/docs/' },
+      { text: 'Blogs', url: '/blogs/' },
+      { type: 'button', text: 'Get started', url: '/docs/getting-started/' },
     ],
     githubUrl: 'https://github.com/Human-Agent-Society/CORAL',
   };
