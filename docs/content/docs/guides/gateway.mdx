@@ -41,7 +41,7 @@ agents:
     config: "./litellm_config.yaml"  # path relative to task.yaml
 ```
 
-**3. Point your agent at the gateway.** For OpenCode, set `baseURL` in `opencode.json` to `http://localhost:<port>/v1` (see [Agent Runtimes → OpenCode](/guides/agent-runtimes#opencode)). For Claude Code, the gateway URL is automatically injected.
+**3. Point your agent at the gateway.** For OpenCode, set `baseURL` in `opencode.json` to `http://localhost:<port>/v1` (see [Agent Runtimes → OpenCode](/docs/guides/agent-runtimes#opencode)). For Claude Code, the gateway URL is automatically injected.
 
 When you run `coral start`, the gateway starts before agents are spawned, and all agent API requests are routed through it. The gateway automatically assigns each agent a unique proxy key for per-agent request tracking.
 
