@@ -155,11 +155,13 @@ This project is released under the Apache 2.0 [LICENSE](LICENSE).
 }
 ```
 
-<a href="https://www.star-history.com/?repos=Human-Agent-Society%2FCoral&type=date&legend=top-left">
+## Star History
+
+<a href="https://www.star-history.com/?repos=Human-Agent-Society%2FCORAL&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/Coral&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/Coral&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Human-Agent-Society/Coral&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/CORAL&type=date&theme=dark&legend=top-left&sealed_token=_Mr1XWVeoHdhN5RB0i4Fz-C0qC_ci1us7BViejAd73QFLQB7w_FW2o-3uWeM_nqAmLucjkLC8pNTEHRR1MVZ7LKGHYmhes0XBWUMTHuAWyJUJeYjB5XCNw" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/CORAL&type=date&legend=top-left&sealed_token=_Mr1XWVeoHdhN5RB0i4Fz-C0qC_ci1us7BViejAd73QFLQB7w_FW2o-3uWeM_nqAmLucjkLC8pNTEHRR1MVZ7LKGHYmhes0XBWUMTHuAWyJUJeYjB5XCNw" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Human-Agent-Society/CORAL&type=date&legend=top-left&sealed_token=_Mr1XWVeoHdhN5RB0i4Fz-C0qC_ci1us7BViejAd73QFLQB7w_FW2o-3uWeM_nqAmLucjkLC8pNTEHRR1MVZ7LKGHYmhes0XBWUMTHuAWyJUJeYjB5XCNw" />
  </picture>
 </a>
 
