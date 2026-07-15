@@ -43,7 +43,7 @@ Benchmark graders follow the same `TaskGrader` pattern. For example, the circle 
 2. Verifies constraints (circles within bounds, no overlaps)
 3. Computes `sum_radii / best_known_result` as the score
 
-See [Writing a Custom Grader](/guides/custom-grader) for the full guide.
+See [Writing a Custom Grader](/docs/guides/custom-grader) for the full guide.
 
 ## Harbor-based benchmarks (SWE-bench, terminal-bench)
 
@@ -88,4 +88,3 @@ uvx harbor run -d terminal-bench@2.0 \
   --agent-import-path "solve:SolverAgent" \
   -l 5
 ```
-

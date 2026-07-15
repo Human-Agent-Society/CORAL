@@ -58,7 +58,7 @@ Example (from `examples/circle_packing/seed/opencode.json`):
 Key points:
 
 - Set all permissions to `"allow"` except `question`, `webfetch`, `websearch` (set those to `"deny"`) so the agent runs autonomously without interactive prompts.
-- The `provider` section configures which model to use. When using the [gateway](/guides/gateway), point `baseURL` at `http://localhost:<gateway_port>/v1` and set `apiKey` to any placeholder value — the gateway handles authentication.
+- The `provider` section configures which model to use. When using the [gateway](/docs/guides/gateway), point `baseURL` at `http://localhost:<gateway_port>/v1` and set `apiKey` to any placeholder value — the gateway handles authentication.
 - Place `opencode.json` in your seed directory so it gets copied into each agent's worktree.
 
 Task config:

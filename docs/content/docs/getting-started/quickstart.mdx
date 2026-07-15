@@ -79,7 +79,7 @@ class Grader(TaskGrader):
             return self.fail("Could not parse output as a number")
 ```
 
-What you have on `self`: `codebase_path` (agent worktree), `private_dir` (`.coral/private/` for hidden answer keys), `args` (dict from `grader.args`), `timeout`, plus helpers `run_program(filename)`, `score(value, explanation=...)`, `fail(reason)`. See the [Custom Grader guide](/guides/custom-grader) for the full API.
+What you have on `self`: `codebase_path` (agent worktree), `private_dir` (`.coral/private/` for hidden answer keys), `args` (dict from `grader.args`), `timeout`, plus helpers `run_program(filename)`, `score(value, explanation=...)`, `fail(reason)`. See the [Custom Grader guide](/docs/guides/custom-grader) for the full API.
 
 If the grader needs extra dependencies (`numpy`, `torch`, etc.), add them to `my-task/grader/pyproject.toml` under `dependencies` — they'll be installed into the grader's venv by `coral validate` and the daemon.
 
@@ -134,4 +134,4 @@ Each agent autonomously:
 5. Iterates, shares notes, and builds skills
 6. Repeats until stopped
 
-Check [Concepts](/concepts) to understand the full architecture, or [CLI Reference](/cli/reference) for all available commands.
+Check [Concepts](/docs/concepts) to understand the full architecture, or [CLI Reference](/docs/cli/reference) for all available commands.
