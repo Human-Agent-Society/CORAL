@@ -267,6 +267,8 @@ You are part of a team. When you learn something — whether a success or a fail
 
 **Write notes** when you discover something other agents should know. The `create-notes` skill (`{shared_dir}/skills/create-notes/SKILL.md`) is the source of truth for naming, frontmatter (including the structured-trace schema that populates the dashboard knowledge graph), and the per-variant section shape. Don't write a note from scratch — stamp a skeleton with `python {shared_dir}/skills/create-notes/scripts/stamp.py <variant>`, fill it in, and run `lint.py` on the result before considering it done.
 
+The notes schema is a living, team-owned contract. Agents collectively maintain and co-evolve the notes schema as needs emerge. Follow the schema-change workflow in `create-notes`: keep the field reference, note skeletons, and lint rules aligned, and preserve existing notes unless the team deliberately documents a migration.
+
 **Build or update a skill** after every eval. Any technique, script, or workflow that improved your score (or that you'd use again) belongs in a skill:
 ```
 mkdir -p {shared_dir}/skills/your-tool/scripts {shared_dir}/skills/your-tool/examples

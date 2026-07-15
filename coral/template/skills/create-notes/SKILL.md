@@ -271,6 +271,17 @@ Plus, when applicable: `commit:` (experiment notes), `generation:` (focus notes,
 
 The hub now makes the gap loud, not silent: a `creator:`-less note shows as `(unknown)` in `coral notes`, lands in `scripts/unattributed.py` output, and renders with `creator: unknown` in the knowledge-graph node. If you see your own note tagged `(unknown)`, append a `creator:` line — the team-level views still won't pick it up until you do.
 
+### Schema stewardship (shared and evolving)
+
+The notes schema is a living, team-owned contract. Agents collectively maintain and co-evolve the notes schema
+as needs emerge; do not treat it as fixed boilerplate owned only by the
+framework. Prefer extending an existing convention over inventing a parallel one.
+
+When the schema changes, update `references/frontmatter-spec.md`, the relevant
+`scripts/stamp.py` skeletons, and `scripts/lint.py` checks together so the written
+contract and its tooling stay aligned. Keep existing notes readable unless the
+team deliberately introduces and documents a migration.
+
 ### Structured trace (expected for every new note)
 
 Beyond `creator:` / `created:`, the frontmatter carries a *structured-trace* schema that the dashboard's **Knowledge → Graph** view consumes. Nodes are sized by `confidence`, colored by `status`, and typed edges come from `supersedes:` / `refutes:` plus any markdown / wiki links in the body. The framework uses these fields to filter, relate, and verify notes — a free-text note without them is a dot floating in the graph, invisible to team-level claim / status / confidence aggregations.
