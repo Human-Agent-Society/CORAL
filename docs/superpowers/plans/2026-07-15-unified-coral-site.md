@@ -216,8 +216,11 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
   links. Create the Blogs page with H1 Blogs, short description, and one card
   per blogPosts entry; it must not include a docs sidebar.
 
-- [ ] Step 7: Run the production server from Task 1 and make
-  npm run test:routes pass. Commit:
+- [ ] Step 7: Run the production server from Task 1 and run the focused
+  Home/Docs/Blogs test with
+  `node --test tests/site-routes.test.mjs --test-name-pattern="canonical pages"`.
+  The article and asset assertions intentionally remain deferred to Task 3,
+  which owns article synchronization. Commit:
 
 ~~~bash
 git add docs/app docs/lib docs/content
