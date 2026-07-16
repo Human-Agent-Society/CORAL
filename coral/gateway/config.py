@@ -9,6 +9,46 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
+_MINIMAX_OPENAI_ENDPOINTS = {
+    "global_en": "https://api.minimax.io/v1",
+    "cn_zh": "https://api.minimaxi.com/v1",
+}
+_MINIMAX_ANTHROPIC_ENDPOINTS = {
+    "global_en": "https://api.minimax.io/anthropic",
+    "cn_zh": "https://api.minimaxi.com/anthropic",
+}
+_MINIMAX_MODEL_IDS = ("MiniMax-M3", "MiniMax-M2.7")
+
+
+def _minimax_model_entries(model_id: str) -> list[dict]:
+    """Build regional OpenAI-compatible and Anthropic-compatible routes."""
+    entries = [
+        {
+            "model_name": model_id,
+            "litellm_params": {
+                "model": f"openai/{model_id}",
+                "api_key": "os.environ/MINIMAX_API_KEY",
+                "api_base": base_url,
+            },
+        }
+        for base_url in _MINIMAX_OPENAI_ENDPOINTS.values()
+    ]
+    anthropic_model_name = f"{model_id}-anthropic"
+    entries.extend(
+        {
+            "model_name": anthropic_model_name,
+            "litellm_params": {
+                "model": f"anthropic/{model_id}",
+                "api_key": "os.environ/MINIMAX_API_KEY",
+                # LiteLLM appends /v1/messages to this Anthropic base URL.
+                "api_base": base_url,
+            },
+        }
+        for base_url in _MINIMAX_ANTHROPIC_ENDPOINTS.values()
+    )
+    return entries
+
+
 # Map CORAL model shortnames to LiteLLM model identifiers
 _MODEL_MAP: dict[str, list[dict]] = {
     "sonnet": [
@@ -57,6 +97,8 @@ _MODEL_MAP: dict[str, list[dict]] = {
         },
     ],
 }
+
+_MODEL_MAP.update({model_id: _minimax_model_entries(model_id) for model_id in _MINIMAX_MODEL_IDS})
 
 
 def generate_default_litellm_config(path: Path, model: str = "sonnet") -> Path:

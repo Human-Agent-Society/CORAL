@@ -29,6 +29,19 @@ litellm_settings:
 
 Each entry in `model_list` defines a model the gateway will serve. The `model_name` is what agents request; `litellm_params.model` is the upstream provider model. See the [LiteLLM docs](https://docs.litellm.ai/docs/proxy/configs) for full configuration options (multiple providers, load balancing, fallbacks, etc.).
 
+### MiniMax routes
+
+The generated configuration supports `MiniMax-M3` and `MiniMax-M2.7`. Each model ID includes both global and China OpenAI-compatible routes. Use the corresponding `-anthropic` alias for Anthropic-compatible routes. The Anthropic base URLs end in `/anthropic`; LiteLLM appends `/v1/messages` when it sends the request.
+
+All generated routes use `MINIMAX_API_KEY`:
+
+| Alias | Protocol | Regions |
+|-------|----------|---------|
+| `MiniMax-M3` | OpenAI-compatible | global, China |
+| `MiniMax-M3-anthropic` | Anthropic-compatible | global, China |
+| `MiniMax-M2.7` | OpenAI-compatible | global, China |
+| `MiniMax-M2.7-anthropic` | Anthropic-compatible | global, China |
+
 **2. Enable the gateway in your task config:**
 
 ```yaml
