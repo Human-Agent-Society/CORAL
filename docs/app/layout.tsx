@@ -14,7 +14,7 @@ export const metadata = {
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="light" style={{ colorScheme: 'light' }}>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -31,7 +31,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         className="flex min-h-screen flex-col"
         style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
       >
-        <RootProvider theme={{ enabled: false }}>{children}</RootProvider>
+        <RootProvider>{children}</RootProvider>
         <Analytics />
       </body>
     </html>

@@ -7,8 +7,8 @@
   --font-fd-mono: 'DM Mono', ui-monospace, monospace;
 }
 
-/* CORAL blog palette — exact same hex values as the blog */
-html, html.light, :root {
+/* CORAL palette */
+:root, html.light {
   --color-fd-background: #f3f6fb !important;
   --color-fd-foreground: #18222e !important;
   --color-fd-muted: #dde4f0 !important;
@@ -25,23 +25,53 @@ html, html.light, :root {
   --color-fd-accent: #bec8d880 !important;
   --color-fd-accent-foreground: #18222e !important;
   --color-fd-ring: #aab4c6 !important;
+  --coral-body: #26323f;
+  --coral-inline-code: #dde4f0;
   --fd-layout-width: 100vw;
 }
 
+html.dark {
+  --color-fd-background: #111821 !important;
+  --color-fd-foreground: #edf2f7 !important;
+  --color-fd-muted: #202b38 !important;
+  --color-fd-muted-foreground: #9eacba !important;
+  --color-fd-popover: #18222e !important;
+  --color-fd-popover-foreground: #edf2f7 !important;
+  --color-fd-card: #18222e !important;
+  --color-fd-card-foreground: #edf2f7 !important;
+  --color-fd-border: #344454 !important;
+  --color-fd-primary: #edf2f7 !important;
+  --color-fd-primary-foreground: #111821 !important;
+  --color-fd-secondary: #202b38 !important;
+  --color-fd-secondary-foreground: #edf2f7 !important;
+  --color-fd-accent: #34445480 !important;
+  --color-fd-accent-foreground: #edf2f7 !important;
+  --color-fd-ring: #647585 !important;
+  --coral-body: #c7d1dc;
+  --coral-inline-code: #202b38;
+}
+
 body, #nd-sidebar, nav, aside {
-  background-color: #f3f6fb !important;
+  background-color: var(--color-fd-background) !important;
+}
+
+/* Highlight only the global navigation item for the current route. */
+#nd-nav a[data-active='true'] {
+  border-radius: 0.375rem;
+  background-color: var(--color-fd-accent);
+  color: var(--color-fd-accent-foreground);
 }
 
 /* Heading typography — Source Serif 4 */
 h1, h2, h3, h4 {
   font-family: 'Source Serif 4', Georgia, serif;
   letter-spacing: -0.015em;
-  color: #18222e;
+  color: var(--color-fd-foreground);
 }
 
 /* Body text color */
 body, p, li, td {
-  color: #26323f;
+  color: var(--coral-body);
 }
 
 /* Code block font */
@@ -51,7 +81,7 @@ pre, code {
 
 /* Inline code */
 code:not(pre code) {
-  background: #dde4f0;
+  background: var(--coral-inline-code);
 }
 
 /* Fix: fumadocs TOC scroll area mask */

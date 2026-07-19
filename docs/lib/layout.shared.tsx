@@ -19,9 +19,8 @@ export function baseOptions(): BaseLayoutProps {
     },
     links: [
       { text: 'Home', url: '/' },
-      { text: 'Docs', url: '/docs/' },
+      { text: 'Docs', url: '/docs/', active: 'nested-url' },
       { text: 'Blogs', url: '/blogs/' },
-      { type: 'button', text: 'Get started', url: '/docs/getting-started/' },
     ],
     githubUrl: 'https://github.com/Human-Agent-Society/CORAL',
   };
