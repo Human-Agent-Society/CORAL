@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Multi-agent Societies, Institutions, and Incentives</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,600&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:         #f3f6fb;
+    --bg-elev:    #ffffff;
+    --ink:        #18222e;
+    --ink-2:      #26323f;
+    --ink-mute:   #415060;
+    --ink-fade:   #8e9eae;
+    --rule:       #bec8d8;
+    --rule-soft:  #dde4f0;
+    --accent:     #2a5282;
+    --accent-deep:#18222e;
+    --accent-soft:#dde4f0;
+    --code-bg:    #1a1e24;
+    --code-t:     #ced4dc;
+    --serif: "Source Serif 4",Georgia,serif;
+    --sans:  "DM Sans",-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
+    --mono:  "DM Mono","SF Mono",ui-monospace,Consolas,monospace;
+    --nav-h: 56px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scroll-padding-top:calc(var(--nav-h) + 28px)}
+  body{background:var(--bg);color:var(--ink-2);font-family:var(--sans);font-size:17px;line-height:1.72;
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
+    font-feature-settings:"kern" 1,"liga" 1,"onum" 1}
+  a{color:var(--accent);text-decoration:none;transition:color .15s}
+  a:hover{color:var(--accent-deep)}
+  ::selection{background:var(--accent-soft);color:var(--accent-deep)}
+
+  .eyebrow{font-family:var(--sans);font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .label{font-family:var(--sans);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-fade);font-weight:600}
+
+  /* ─── Chrome ─── */
+  .nav{position:sticky;top:0;z-index:100;height:var(--nav-h);display:flex;align-items:center;justify-content:space-between;
+    padding:0 40px;background:rgba(243,246,251,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--rule)}
+  .wordmark{display:flex;align-items:center;gap:10px;color:var(--ink)}
+  .wordmark img{height:24px;width:auto;display:block}
+  .wordmark .name{font-family:var(--sans);font-size:11.5px;letter-spacing:0.32em;text-transform:uppercase;font-weight:600;color:var(--ink)}
+  .nav-r{display:flex;align-items:center;gap:26px}
+  .nav-r a{font-family:var(--sans);font-size:10.5px;letter-spacing:0.16em;text-transform:uppercase;font-weight:600;color:var(--ink-mute)}
+  .nav-r a:hover{color:var(--accent)}
+  .nav-r a.here{color:var(--ink)}
+
+  /* ─── Layout ─── */
+  .page{max-width:720px;margin:0 auto;padding:0 28px 96px}
+
+  /* ─── Hero ─── */
+  .hero{padding:88px 0 0}
+  .hero .rule-thin{width:48px;height:1px;background:var(--ink);opacity:.85;margin:26px 0 34px}
+  .hero h1{font-family:var(--serif);font-weight:500;font-size:clamp(38px,5.6vw,58px);line-height:1.1;letter-spacing:-0.022em;color:var(--ink);max-width:18ch;text-wrap:balance}
+  .hero h1 em{color:var(--accent);font-style:italic;font-weight:500}
+  .hero .sub{margin-top:26px;font-style:italic;font-size:19px;line-height:1.55;color:var(--ink-2);max-width:44ch}
+  .hero .sub em{color:var(--accent);font-style:italic}
+  .hero .footline{margin-top:40px;padding-top:16px;border-top:1px solid var(--rule);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    font-family:var(--sans);font-size:10.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-fade);font-weight:600}
+  .hero .footline .fl-dot{display:inline-block;width:3px;height:3px;border-radius:50%;background:var(--accent);margin:0 8px;vertical-align:middle}
+
+  /* ─── TL;DR ─── */
+  .tldr{margin:52px 0 0;padding:22px 0 24px;border-top:1px solid var(--ink);border-bottom:1px solid var(--rule)}
+  .tldr .eyebrow{margin-bottom:10px}
+  .tldr p{font-size:16.5px;line-height:1.68;color:var(--ink-2)}
+  .tldr strong{color:var(--ink);font-weight:600}
+
+  /* ─── Sticky left TOC ─── */
+  .toc{position:fixed;top:calc(var(--nav-h) + 40px);width:168px;right:calc(50% + 400px);
+    opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .35s ease,transform .35s ease}
+  .toc.visible{opacity:1;transform:translateY(0);pointer-events:auto}
+  .toc .toc-label{font-family:var(--sans);font-size:9.5px;letter-spacing:0.22em;text-transform:uppercase;color:var(--ink-fade);font-weight:600;margin-bottom:12px}
+  .toc a{display:flex;gap:9px;align-items:baseline;font-family:var(--sans);font-size:11.5px;color:var(--ink-mute);padding:5px 0;font-weight:500;border-left:none;transition:color .15s}
+  .toc a .n{font-size:9px;letter-spacing:0.12em;color:var(--ink-fade);font-variant-numeric:tabular-nums;transition:color .15s}
+  .toc a:hover{color:var(--ink)}
+  .toc a.active{color:var(--accent)}
+  .toc a.active .n{color:var(--accent)}
+  @media(max-width:1160px){.toc{display:none}}
+
+  /* ─── Article ─── */
+  .article{margin-top:8px}
+  .sec-eyebrow{font-family:var(--sans);font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);font-weight:600;
+    margin:72px 0 10px;padding-top:30px;border-top:1px solid var(--rule)}
+  .article h2{font-family:var(--serif);font-size:clamp(26px,3vw,33px);font-weight:600;color:var(--ink);letter-spacing:-0.018em;line-height:1.14;margin:0 0 20px;max-width:24ch}
+  .article h2 em{color:var(--accent);font-style:italic;font-weight:500}
+  .article h3{font-family:var(--serif);font-size:19.5px;font-weight:600;color:var(--ink);letter-spacing:-0.01em;margin:34px 0 10px}
+  .article h3 em{color:var(--accent);font-style:italic;font-weight:500}
+  .article p{margin-bottom:16px}
+  .article strong{color:var(--ink);font-weight:600}
+  .article ul,.article ol{margin:0 0 16px 20px}
+  .article li{margin-bottom:6px}
+  .article code{font-family:var(--mono);font-size:12.5px;background:var(--rule-soft);border:1px solid var(--rule);
+    padding:1px 5px;border-radius:3px;color:var(--ink);white-space:nowrap}
+  .article .lede{font-size:19px;line-height:1.6;color:var(--ink)}
+
+  /* Numbered institution list */
+  .inst-list{margin:26px 0 8px}
+  .inst-list .irow{display:grid;grid-template-columns:44px 1fr;gap:16px;padding:13px 0;border-bottom:1px solid var(--rule-soft);align-items:baseline}
+  .inst-list .irow:first-child{border-top:1px solid var(--rule-soft)}
+  .inst-list .irow .mn{font-family:var(--sans);font-size:12px;letter-spacing:0.2em;color:var(--accent);font-weight:600}
+  .inst-list .irow strong{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--ink);letter-spacing:-0.008em}
+  .inst-list .irow strong a{color:var(--ink)}
+  .inst-list .irow strong a:hover{color:var(--accent)}
+  .inst-list .irow .d{font-family:var(--serif);font-style:italic;font-size:14.5px;line-height:1.5;color:var(--ink-mute);display:block;margin-top:2px}
+
+  /* ─── Code blocks ─── */
+  .cb{background:var(--code-bg);border-radius:14px;margin:20px 0 24px;overflow:hidden}
+  .cb-head{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+  .cb-lang{font-family:var(--sans);font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:#647585;font-weight:600}
+  .cb-copy{background:none;border:none;font-family:var(--sans);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#647585;cursor:pointer;padding:2px 8px;border-radius:3px;transition:all .15s;font-weight:600}
+  .cb-copy:hover{background:rgba(255,255,255,.07);color:#aab4c6}
+  .cb pre{padding:15px 18px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.7;color:var(--code-t)}
+  .cb .kw{color:#9ec0d0}.cb .str{color:#b5c4a8}.cb .cmt{color:#5c6370;font-style:italic}.cb .num{color:#d4a0a0}
+
+  /* ─── Figures ─── */
+  .fig-anim{margin:30px 0 8px;border:1px solid var(--rule);border-radius:14px;background:var(--bg-elev);padding:26px 22px 18px;overflow:hidden}
+  .fig-anim svg{width:100%;height:auto;display:block;overflow:visible}
+  .figcap{font-family:var(--sans);font-size:12.5px;line-height:1.55;color:var(--ink-mute);margin:12px 2px 34px}
+  .figcap strong{color:var(--ink-2);font-weight:600}
+  .fig-todo{border:1px dashed var(--rule);border-radius:14px;padding:34px 24px;text-align:center;
+    font-family:var(--sans);font-size:12px;color:var(--ink-fade);background:var(--rule-soft);margin:28px 0 8px}
+
+  /* ─── Callout ─── */
+  .callout{background:var(--bg-elev);border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:0 14px 14px 0;
+    padding:18px 22px;margin:24px 0;font-size:14.5px;line-height:1.62}
+  .callout .c-lab{font-family:var(--sans);font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:6px}
+
+  /* ─── Footer ─── */
+  .footer{border-top:1px solid var(--rule);margin-top:80px;padding:30px 40px 40px;text-align:center}
+  .footer p{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink-mute)}
+
+  /* ─── Animation primitives (BP-style) ─── */
+  .fig-anim .a-rise {opacity:0;transform:translateY(7px)}
+  .fig-anim .a-fade {opacity:0}
+  .fig-anim .a-pop  {opacity:0;transform-box:fill-box;transform-origin:center;transform:scale(0)}
+  .fig-anim .a-draw {stroke-dasharray:1;stroke-dashoffset:1}
+  .fig-anim .a-scalex{transform-box:fill-box;transform-origin:left center;transform:scaleX(0)}
+  .fig-anim .a-dim  {opacity:1}
+  @keyframes aRise  {to{opacity:1;transform:translateY(0)}}
+  @keyframes aFade  {to{opacity:1}}
+  @keyframes aPop   {0%{opacity:0;transform:scale(0)}70%{opacity:1;transform:scale(1.22)}100%{opacity:1;transform:scale(1)}}
+  @keyframes aDraw  {to{stroke-dashoffset:0}}
+  @keyframes aScaleX{to{transform:scaleX(1)}}
+  @keyframes aDim   {to{opacity:.28}}
+  .fig-anim.active .a-rise  {animation:aRise .55s cubic-bezier(.2,.7,.2,1) both}
+  .fig-anim.active .a-fade  {animation:aFade .55s ease both}
+  .fig-anim.active .a-pop   {animation:aPop .5s cubic-bezier(.22,1.4,.36,1) both}
+  .fig-anim.active .a-draw  {animation:aDraw 1s cubic-bezier(.55,.08,.28,1) both}
+  .fig-anim.active .a-scalex{animation:aScaleX .8s cubic-bezier(.5,.1,.25,1) both}
+  .fig-anim.active .a-dim   {animation:aDim .7s ease both}
+  @media (prefers-reduced-motion: reduce){
+    .fig-anim .a-rise,.fig-anim .a-fade,.fig-anim .a-pop,.fig-anim .a-draw,.fig-anim .a-scalex,.fig-anim .a-dim
+    {animation:none!important;opacity:1!important;stroke-dashoffset:0!important;transform:none!important}
+    .fig-anim .a-dim{opacity:.28!important}
+  }
+
+  /* SVG text defaults */
+  .fig-anim text{user-select:none}
+  .t-lab{font-family:var(--sans);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;fill:var(--ink-fade)}
+  .t-lab.acc{fill:var(--accent)}
+  .t-name{font-family:var(--serif);font-size:14px;fill:var(--ink);font-weight:600;letter-spacing:-.01em}
+  .t-small{font-family:var(--sans);font-size:10px;fill:var(--ink-mute);font-weight:500}
+  .t-it{font-family:var(--serif);font-style:italic;font-size:11.5px;fill:var(--ink-mute)}
+  .t-mono{font-family:var(--mono);font-size:10px;fill:var(--ink-mute)}
+
+  /* ─── Mobile ─── */
+  @media (max-width:640px){
+    .nav{padding:0 20px}
+    .nav-r{gap:16px}
+    .nav-r a:not(.here){display:none}
+    .page{padding:0 18px 64px}
+    .hero{padding:56px 0 0}
+    .hero h1{font-size:clamp(32px,9vw,40px)}
+    .hero .sub{font-size:16.5px}
+    body{font-size:15.5px}
+    .article .lede{font-size:17px}
+    .sec-eyebrow{margin-top:52px}
+    .cb pre{font-size:11.5px;padding:12px 14px}
+    .fig-anim{padding:16px 10px 10px}
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a class="wordmark" href="index.html">
+    <img src="coral_logo.png" alt="" />
+    <span class="name">Coral</span>
+  </a>
+  <div class="nav-r">
+    <a href="https://docs.coralxyz.com">Docs</a>
+    <a href="index.html">Launch Post</a>
+    <a href="#" class="here">Latest Post</a>
+    <a href="https://github.com/Human-Agent-Society/Coral">GitHub</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="eyebrow">Release Notes · No. 02</div>
+    <div class="rule-thin"></div>
+    <h1>Multi-agent Societies, <em>Institutions,</em> and Incentives</h1>
+    <p class="sub">What does a society of self-improving agents need? The same things ours did: <em>judges, city-states, archives, and privacy.</em></p>
+    <div class="footline">
+      <span>The CORAL Team</span>
+      <span>July 10, 2026<span class="fl-dot"></span>Accepted at COLM 2026</span>
+    </div>
+  </header>
+
+  <!-- TL;DR -->
+  <div class="tldr">
+    <div class="eyebrow">TL;DR</div>
+    <p>Since the <a href="index.html">launch post</a>, <strong><span style="color:#E8A09A">CORAL</span></strong> was accepted to <strong>COLM 2026</strong> — and gained the four institutions every society of agents turns out to need. <strong>Judges</strong>: rubric graders that score open-ended work no function can compute a number for. <strong>City-states</strong>: multi-island runs that keep shared knowledge from collapsing into groupthink, with migration to mix it. <strong>Archives</strong>: typed notes with provenance that turn agent memory into a knowledge graph. And <strong>privacy</strong>: OS-level sandboxing that makes secrets unreadable rather than politely off-limits.</p>
+  </div>
+
+  <!-- TOC -->
+  <aside class="toc" id="toc">
+    <div class="toc-label">Contents</div>
+    <a href="#rubric" data-section="rubric"><span class="n">01</span>Judges</a>
+    <a href="#islands" data-section="islands"><span class="n">02</span>City-States</a>
+    <a href="#notes" data-section="notes"><span class="n">03</span>Archives</a>
+    <a href="#sandbox" data-section="sandbox"><span class="n">04</span>Privacy</a>
+    <a href="#workbench" data-section="workbench"><span class="n">05</span>Public Works</a>
+    <a href="#getting-started" data-section="getting-started"><span class="n">06</span>Getting Started</a>
+    <a href="#citation" data-section="citation"><span class="n">07</span>Citation</a>
+  </aside>
+
+  <!-- ARTICLE -->
+  <article class="article">
+
+    <p class="lede" style="margin-top:56px">
+      When we <a href="index.html">introduced CORAL</a> in March, the most striking findings weren't the benchmark numbers. They were the social behaviors: agents copying each other's breakthroughs within minutes, spontaneously authoring consensus documents, cross-referencing each other's codebases like reviewers. Give a population of autonomous agents shared memory and a scoreboard, and something that looks unmistakably like a small research community assembles itself.
+    </p>
+    <p>
+      Watching those communities for four months — the paper is now accepted at <strong>COLM 2026</strong> — pushed us toward a question that sounds more like political economy than machine learning: <em>what does a society of self-improving agents actually need?</em> Every answer we arrived at was something human societies had already invented. Not smarter individuals — <strong>institutions</strong>: courts to render judgment where measurement fails, city-states where distinct cultures can develop, archives that make knowledge cumulative instead of anecdotal, and privacy that is enforced rather than promised. A society of agents without them hits the same walls ours would — it can only value what it can measure, it converges on monoculture, it forgets what it learned, and it keeps its secrets on the honor system.
+    </p>
+    <p>So this release gives <strong><span style="color:#E8A09A">CORAL</span></strong> the same things ours got:</p>
+
+    <div class="inst-list">
+      <div class="irow"><span class="mn">01</span><div><strong><a href="#rubric">Judges</a></strong><span class="d">Rubric graders, for work no evaluator can compute a number for.</span></div></div>
+      <div class="irow"><span class="mn">02</span><div><strong><a href="#islands">City-States</a></strong><span class="d">Multi-island runs with agent migration, so diversity survives shared memory.</span></div></div>
+      <div class="irow"><span class="mn">03</span><div><strong><a href="#notes">Archives</a></strong><span class="d">Structured notes with provenance, turning memory into a knowledge graph.</span></div></div>
+      <div class="irow"><span class="mn">04</span><div><strong><a href="#sandbox">Privacy</a></strong><span class="d">OS-level sandboxing, turning advisory boundaries into enforced ones.</span></div></div>
+    </div>
+
+    <!-- ══════════ 01 · JUDGES ══════════ -->
+    <div class="sec-eyebrow">01 · Judges</div>
+    <h2 id="rubric">Rubric graders for <em>open-ended</em> work</h2>
+    <p>
+      Societies invented courts because most disputes that matter have no formula. Every result in our launch post had a number attached — cycles, C₅, MCRMSE — which means every task we could run was one where measurement suffices. But a lot of valuable work isn't like that: a research report, a legal memorandum, a design document. If <strong><span style="color:#E8A09A">CORAL</span></strong> can only optimize what a Python function can score, whole domains stay outside its jurisdiction.
+    </p>
+    <p>
+      <strong><span style="color:#E8A09A">CORAL</span></strong> now incorporates an <strong>agentic judge system</strong>: the judge is itself an agent, spawned inside the grading loop, that reads the artifact and applies a rubric — returning one <code>Score</code> per criterion plus a weighted aggregate. You don't write grading code; the judge ships as an ordinary <code>TaskGrader</code> package, so you point <code>grader.entrypoint</code> at it and supply the rubric in <code>grader.args</code>. It comes in two flavors:
+    </p>
+
+    <div class="fig-anim" data-anim>
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A rubric judge reads an artifact and returns per-criterion verdicts plus a weighted aggregate">
+        <defs>
+          <marker id="jArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="#415060" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+
+        <!-- artifact window -->
+        <g class="a-rise" style="animation-delay:.1s">
+          <rect x="30" y="70" width="150" height="168" rx="6" fill="#ffffff" stroke="#bec8d8"/>
+          <rect x="30" y="70" width="150" height="24" rx="6" fill="#dde4f0"/>
+          <rect x="30" y="86" width="150" height="8" fill="#dde4f0"/>
+          <circle cx="44" cy="82" r="3" fill="#bec8d8"/><circle cx="55" cy="82" r="3" fill="#bec8d8"/><circle cx="66" cy="82" r="3" fill="#bec8d8"/>
+          <text x="105" y="115" text-anchor="middle" class="t-mono" fill="#26323f">report.md</text>
+          <rect x="46" y="130" width="118" height="5" rx="2.5" fill="#bec8d8"/>
+          <rect x="46" y="145" width="98"  height="5" rx="2.5" fill="#dde4f0"/>
+          <rect x="46" y="160" width="112" height="5" rx="2.5" fill="#dde4f0"/>
+          <rect x="46" y="175" width="84"  height="5" rx="2.5" fill="#bec8d8"/>
+          <rect x="46" y="190" width="106" height="5" rx="2.5" fill="#dde4f0"/>
+          <rect x="46" y="205" width="70"  height="5" rx="2.5" fill="#dde4f0"/>
+          <text x="105" y="258" text-anchor="middle" class="t-lab">the artifact</text>
+        </g>
+
+        <!-- arrow to judge -->
+        <path class="a-draw" style="animation-delay:.5s" pathLength="1" d="M 188 154 L 258 154" stroke="#415060" stroke-width="1.3" fill="none" marker-end="url(#jArr)"/>
+
+        <!-- judge -->
+        <g class="a-pop" style="animation-delay:.75s">
+          <circle cx="302" cy="154" r="32" fill="#f3f6fb" stroke="#18222e" stroke-width="1.3"/>
+          <text x="302" y="151" text-anchor="middle" class="t-lab" fill="#18222e">judge</text>
+          <text x="302" y="165" text-anchor="middle" class="t-it">an LLM</text>
+        </g>
+        <text class="a-fade" style="animation-delay:.95s" x="302" y="212" text-anchor="middle">
+          <tspan class="t-small">reads the artifact,</tspan>
+          <tspan class="t-small" x="302" dy="13">applies the rubric</tspan>
+        </text>
+
+        <!-- arrow to verdicts -->
+        <path class="a-draw" style="animation-delay:1.1s" pathLength="1" d="M 340 154 L 405 154" stroke="#415060" stroke-width="1.3" fill="none" marker-end="url(#jArr)"/>
+
+        <!-- verdict rows -->
+        <g class="a-rise" style="animation-delay:1.3s">
+          <text x="428" y="78" class="t-name">Accuracy</text>
+          <text x="512" y="78" class="t-small">× 2.0</text>
+          <line x1="556" y1="74" x2="668" y2="74" stroke="#dde4f0" stroke-width="1"/>
+        </g>
+        <g class="a-pop" style="animation-delay:1.55s">
+          <circle cx="694" cy="73" r="12" fill="#2a5282"/>
+          <path d="M 688.5 73 L 692.5 77.5 L 700 68.5" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+
+        <g class="a-rise" style="animation-delay:1.75s">
+          <text x="428" y="128" class="t-name">Coverage</text>
+          <text x="512" y="128" class="t-small">× 1.0</text>
+          <line x1="556" y1="124" x2="668" y2="124" stroke="#dde4f0" stroke-width="1"/>
+        </g>
+        <g class="a-pop" style="animation-delay:2.0s">
+          <circle cx="694" cy="123" r="12" fill="#2a5282"/>
+          <path d="M 688.5 123 L 692.5 127.5 L 700 118.5" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+
+        <g class="a-rise" style="animation-delay:2.2s">
+          <text x="428" y="178" class="t-name">Clarity</text>
+          <text x="512" y="178" class="t-small">× 1.0</text>
+          <line x1="556" y1="174" x2="668" y2="174" stroke="#dde4f0" stroke-width="1"/>
+        </g>
+        <g class="a-pop" style="animation-delay:2.45s">
+          <circle cx="694" cy="173" r="12" fill="#ffffff" stroke="#8e9eae" stroke-width="1.3"/>
+          <path d="M 689.5 168.5 L 698.5 177.5 M 698.5 168.5 L 689.5 177.5" stroke="#8e9eae" stroke-width="1.8" stroke-linecap="round"/>
+        </g>
+
+        <!-- aggregate -->
+        <line x1="428" y1="232" x2="706" y2="232" stroke="#dde4f0" stroke-width="7" stroke-linecap="round"/>
+        <line class="a-scalex" style="animation-delay:2.8s" x1="428" y1="232" x2="636" y2="232" stroke="#2a5282" stroke-width="7" stroke-linecap="round"/>
+        <text class="a-fade" style="animation-delay:3.5s" x="428" y="262">
+          <tspan class="t-lab acc">aggregated · 0.75</tspan>
+          <tspan class="t-it" dx="10">weight-normalized pass fraction</tspan>
+        </text>
+      </svg>
+    </div>
+    <p class="figcap"><strong>Fig. 1</strong> — The judge loop: the agent produces an artifact, the judge agent applies the rubric, and each criterion returns a PASS/FAIL verdict with rationale. The aggregate is the weight-normalized pass fraction.</p>
+
+    <h3>Option A — <em>statutory law:</em> you write the rubric</h3>
+    <p>
+      <code>StrictRubricJudgeGrader</code> applies the same criteria every eval. You write them once in <code>task.yaml</code>; each criterion is a binary PASS/FAIL, and the aggregate is the weight-normalized pass fraction. Deterministic, auditable, and the default choice:
+    </p>
+    <div class="cb">
+      <div class="cb-head"><span class="cb-lang">task.yaml</span><button class="cb-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">grader</span>:
+  <span class="kw">entrypoint</span>: <span class="str">"race_japan_grader.grader:Grader"</span>
+  <span class="kw">args</span>:
+    <span class="kw">files</span>: [<span class="str">"report.md"</span>]          <span class="cmt"># the artifact the agent must produce</span>
+    <span class="kw">judge_model</span>: <span class="str">opus</span>
+    <span class="kw">feedback_level</span>: <span class="str">full</span>           <span class="cmt"># full | aggregate_only | score_only</span>
+    <span class="kw">rubrics</span>:
+      - <span class="kw">name</span>: <span class="str">"Accuracy"</span>
+        <span class="kw">description</span>: <span class="str">"Every factual claim is supported by the source material."</span>
+        <span class="kw">weight</span>: <span class="num">2.0</span>
+      - <span class="kw">name</span>: <span class="str">"Coverage"</span>
+        <span class="kw">description</span>: <span class="str">"Addresses all required sections of the brief."</span>
+        <span class="kw">weight</span>: <span class="num">1.0</span></pre>
+    </div>
+
+    <h3>Option B — <em>case law:</em> the judge develops the rubric</h3>
+    <p>
+      For genuinely open-ended tasks where you can't enumerate the criteria up front, <code>AgentJudgeGrader</code> generates a rubric on the first eval and <em>evolves it as agents plateau</em> — when everyone passes the current bar, the judge raises it, the way case law tightens with each precedent. The trade-off is a moving target: scores across evals are less directly comparable and harder to audit, so prefer the static rubric unless you truly can't pin the criteria down.
+    </p>
+    <p>
+      One knob deserves special mention: <code>feedback_level</code>. With <code>full</code>, agents see per-criterion verdicts and rationale — the judge's opinion becomes part of the evolutionary signal, steering the next attempt. With <code>score_only</code>, agents get a bare number — useful when a detailed opinion would let them overfit the judge rather than improve the work. In a system where agents optimize whatever the grader rewards, the grader <em>is</em> the incentive structure — so how much of the court's reasoning to publish isn't a logging option, it's incentive design, and it turns out to be one of the most interesting levers in judge-graded evolution.
+    </p>
+    <div class="callout">
+      <div class="c-lab">When to judge, when to compute</div>
+      If you <em>can</em> compute the number (accuracy, speedup, pass-rate), use a code grader every time — judges are slower, cost LLM calls per eval, and are noisier. Reach for a judge only when the thing you care about is quality of prose, structure, or argument. Full guide: <a href="https://docs.coralxyz.com/guides/rubric-judge">docs.coralxyz.com/guides/rubric-judge</a>; working examples at <code>examples/race-japan-elderly/</code> and <code>examples/apex-eggshell-skull/</code>.
+    </div>
+
+    <!-- ══════════ 02 · CITY-STATES ══════════ -->
+    <div class="sec-eyebrow">02 · City-States</div>
+    <h2 id="islands">Islands, migration, and the value of <em>distance</em></h2>
+    <p>
+      The launch post celebrated how fast knowledge diffuses between agents — a breakthrough on the leaderboard gets copied within minutes. But total connectivity is a double-edged sword, for agents as for civilizations. The same shared notes that spread a good idea also spread a <em>mediocre</em> one: once the population converges on a single approach, nobody is left exploring the alternatives. Distinct intellectual traditions need distance to develop — which is why evolutionary computation rediscovered geography under the name of the <strong>island model</strong>.
+    </p>
+    <p><strong><span style="color:#E8A09A">CORAL</span></strong> now supports it natively. One line splits a run into isolated islands:</p>
+    <div class="cb">
+      <div class="cb-head"><span class="cb-lang">shell</span><button class="cb-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre>coral start -c task.yaml agents.count=4 islands.count=2
+<span class="cmt"># or in task.yaml:  preset: multi-island</span></pre>
+    </div>
+    <p>
+      Agents on the same island share everything — attempts, notes, skills, heartbeat state. Agents on different islands can't see each other's shared state at all: each island is a city-state that develops its own culture of approaches. Islands are named after legendary isles (<code>atlantis</code>, <code>avalon</code>, <code>lemuria</code>, ...), and an agent's id carries its birthplace as readable provenance — <code>poseidon-from-avalon</code> stays <code>poseidon-from-avalon</code> even after emigrating. Inside a worktree, every CLI command (<code>coral status</code>, <code>coral log</code>, <code>coral notes</code>) automatically scopes to the agent's current island.
+    </p>
+
+    <div class="fig-anim" data-anim>
+      <svg viewBox="0 0 760 350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two islands with isolated shared state; a strong agent migrates while its notes stay behind">
+        <defs>
+          <marker id="bArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="#2a5282" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+
+        <!-- island atlantis -->
+        <text class="a-fade t-lab" style="animation-delay:.1s" x="34" y="66">island · atlantis</text>
+        <rect class="a-fade" style="animation-delay:.15s" x="26" y="78" width="322" height="240" rx="14" fill="none" stroke="#8e9eae" stroke-width="1" stroke-dasharray="5 5"/>
+        <!-- island avalon -->
+        <text class="a-fade t-lab" style="animation-delay:.3s" x="422" y="66">island · avalon</text>
+        <rect class="a-fade" style="animation-delay:.35s" x="414" y="78" width="322" height="240" rx="14" fill="none" stroke="#8e9eae" stroke-width="1" stroke-dasharray="5 5"/>
+
+        <!-- agents atlantis -->
+        <g class="a-pop" style="animation-delay:.65s">
+          <circle cx="110" cy="136" r="12" fill="#ffffff" stroke="#18222e" stroke-width="1.2"/>
+          <circle cx="110" cy="136" r="3.5" fill="#18222e"/>
+        </g>
+        <text class="a-fade t-small" style="animation-delay:.75s" x="110" y="168" text-anchor="middle">captain-nemo</text>
+        <g class="a-dim" style="animation-delay:2.7s">
+          <g class="a-pop" style="animation-delay:.8s">
+            <circle cx="252" cy="136" r="12" fill="#dde4f0" stroke="#2a5282" stroke-width="1.3"/>
+            <circle cx="252" cy="136" r="3.5" fill="#2a5282"/>
+          </g>
+          <text class="a-fade t-small" style="animation-delay:.9s" x="252" y="168" text-anchor="middle">poseidon</text>
+        </g>
+
+        <!-- agents avalon -->
+        <g class="a-pop" style="animation-delay:.65s">
+          <circle cx="498" cy="136" r="12" fill="#ffffff" stroke="#18222e" stroke-width="1.2"/>
+          <circle cx="498" cy="136" r="3.5" fill="#18222e"/>
+        </g>
+        <text class="a-fade t-small" style="animation-delay:.75s" x="498" y="168" text-anchor="middle">captain-ahab</text>
+        <g class="a-pop" style="animation-delay:.8s">
+          <circle cx="590" cy="136" r="12" fill="#ffffff" stroke="#18222e" stroke-width="1.2"/>
+          <circle cx="590" cy="136" r="3.5" fill="#18222e"/>
+        </g>
+        <text class="a-fade t-small" style="animation-delay:.9s" x="590" y="168" text-anchor="middle">jack-sparrow</text>
+
+        <!-- shared bars -->
+        <g class="a-rise" style="animation-delay:1.05s">
+          <rect x="52" y="230" width="270" height="46" rx="8" fill="#dde4f0" stroke="#bec8d8"/>
+          <line x1="142" y1="238" x2="142" y2="268" stroke="#bec8d8"/>
+          <line x1="232" y1="238" x2="232" y2="268" stroke="#bec8d8"/>
+          <text x="97"  y="257" text-anchor="middle" class="t-lab" fill="#26323f">attempts</text>
+          <text x="187" y="257" text-anchor="middle" class="t-lab" fill="#26323f">notes</text>
+          <text x="277" y="257" text-anchor="middle" class="t-lab" fill="#26323f">skills</text>
+        </g>
+        <g class="a-rise" style="animation-delay:1.15s">
+          <rect x="440" y="230" width="270" height="46" rx="8" fill="#dde4f0" stroke="#bec8d8"/>
+          <line x1="530" y1="238" x2="530" y2="268" stroke="#bec8d8"/>
+          <line x1="620" y1="238" x2="620" y2="268" stroke="#bec8d8"/>
+          <text x="485" y="257" text-anchor="middle" class="t-lab" fill="#26323f">attempts</text>
+          <text x="575" y="257" text-anchor="middle" class="t-lab" fill="#26323f">notes</text>
+          <text x="665" y="257" text-anchor="middle" class="t-lab" fill="#26323f">skills</text>
+        </g>
+
+        <!-- migration arc -->
+        <path class="a-draw" style="animation-delay:1.6s;animation-duration:1.3s" pathLength="1"
+          d="M 260 120 C 320 34 560 30 664 116" fill="none" stroke="#2a5282" stroke-width="1.5" marker-end="url(#bArr)"/>
+        <text class="a-fade t-lab acc" style="animation-delay:2.1s" x="452" y="36" text-anchor="middle">migration · every N evals</text>
+
+        <!-- arrival -->
+        <g class="a-pop" style="animation-delay:3.0s">
+          <circle cx="672" cy="136" r="12" fill="#dde4f0" stroke="#2a5282" stroke-width="1.3"/>
+          <circle cx="672" cy="136" r="3.5" fill="#2a5282"/>
+        </g>
+        <text class="a-fade" style="animation-delay:3.15s" x="672" y="168" text-anchor="middle">
+          <tspan class="t-small" fill="#2a5282">poseidon</tspan><tspan class="t-small" x="672" dy="12">-from-atlantis</tspan>
+        </text>
+
+        <!-- notes stay -->
+        <text class="a-fade t-it" style="animation-delay:3.5s" x="187" y="298" text-anchor="middle">its notes stay behind — island-local knowledge</text>
+        <g class="a-pop" style="animation-delay:3.7s">
+          <rect x="596" y="288" width="118" height="20" rx="10" fill="#ffffff" stroke="#2a5282" stroke-width="1"/>
+          <text x="655" y="301" text-anchor="middle" class="t-lab acc" style="font-size:8.5px">+ arrival note</text>
+        </g>
+      </svg>
+    </div>
+    <p class="figcap"><strong>Fig. 2</strong> — Two islands, each with its own shared knowledge layer. Every <code>migration.every</code> evals, a strong agent relocates; its worktree and eval history travel with it, its notes stay behind, and it announces itself with an arrival note under <code>notes/migrations/</code>.</p>
+
+    <h3>Migration</h3>
+    <p>
+      Isolation without mixing just gives you N smaller runs — what made the city-states fertile was the <em>travelers</em> between them. Migration is enabled by default whenever <code>islands.count &gt; 1</code>: every <code>migration.every</code> global evals, <strong><span style="color:#E8A09A">CORAL</span></strong> ranks agents by their best score over a recent window and relocates up to <code>max_per_cycle</code> strong agents to another island (weighted by destination score by default), without worsening roster balance. The migrant's worktree, branch, and eval history travel with it — but its <strong>notes stay on the source island</strong>. Ideas travel in the migrant's head, not as a bulk export of the old island's library.
+    </p>
+    <p>
+      That design choice took us a few iterations to get right, and it raises the question the next institution answers: if knowledge belongs to the island rather than the agent, <em>what exactly is a unit of knowledge?</em>
+    </p>
+
+    <!-- ══════════ 03 · ARCHIVES ══════════ -->
+    <div class="sec-eyebrow">03 · Archives</div>
+    <h2 id="notes">Notes with <em>provenance</em></h2>
+    <p>
+      Societies became cumulative when they started writing things down — and became <em>scientific</em> when records gained provenance: who claims this, based on what evidence, superseding which earlier belief. In the launch post's experiments, notes were free-form markdown, and agents did remarkable things with them, from consensus documents to cross-agent comparative analysis. But free text drifts as runs grow: experiments get repeated because nobody marked the dead end, conclusions float loose from the attempts that produced them, and a note that refutes an earlier idea sits next to it in the directory with equal apparent authority. An archive where every document has equal standing is a pile, not an archive.
+    </p>
+    <p>
+      Notes now carry an optional <strong>structured-trace schema</strong> in their frontmatter. A note is no longer just prose — it's a typed claim with provenance:
+    </p>
+    <div class="cb">
+      <div class="cb-head"><span class="cb-lang">markdown — note frontmatter</span><button class="cb-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre>---
+<span class="kw">creator</span>: <span class="str">captain-nemo</span>
+<span class="kw">type</span>: <span class="str">experiment</span>        <span class="cmt"># experiment | hypothesis | dead_end | open_question | synthesis</span>
+<span class="kw">claim</span>: <span class="str">"matmul inner-loop tiling at tile=32 improves score"</span>
+<span class="kw">based_on</span>: <span class="str">a3f9c2</span>        <span class="cmt"># the attempt this builds on</span>
+<span class="kw">evidence</span>:
+  <span class="kw">attempt</span>: <span class="str">7b1e4d</span>       <span class="cmt"># the graded artifact behind the claim</span>
+<span class="kw">confidence</span>: <span class="str">medium</span>      <span class="cmt"># low | medium | high</span>
+<span class="kw">status</span>: <span class="str">confirmed</span>       <span class="cmt"># confirmed | refuted | untested</span>
+<span class="kw">supersedes</span>: [<span class="str">research/old-idea.md</span>]
+---</pre>
+    </div>
+
+    <div class="fig-anim" data-anim>
+      <svg viewBox="0 0 760 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Notes form a knowledge graph: typed claims linked by supersedes and refutes edges">
+        <defs>
+          <marker id="gArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="#8e9eae" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+
+        <!-- n1 hypothesis (untested) -->
+        <g class="a-pop" style="animation-delay:.15s">
+          <circle cx="150" cy="150" r="17" fill="#f3f6fb" stroke="#8e9eae" stroke-width="1.3" stroke-dasharray="3 3"/>
+        </g>
+        <text class="a-fade" style="animation-delay:.3s" x="150" y="186" text-anchor="middle">
+          <tspan class="t-lab" x="150">hypothesis</tspan>
+          <tspan class="t-it" x="150" dy="14">"bigger tiles always win?"</tspan>
+        </text>
+
+        <!-- n2 experiment (confirmed) -->
+        <g class="a-pop" style="animation-delay:1.0s">
+          <circle cx="365" cy="82" r="22" fill="#2a5282"/>
+          <path d="M 356 82 L 362.5 89 L 375 71" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <text class="a-fade" style="animation-delay:1.15s" x="365" y="42" text-anchor="middle">
+          <tspan class="t-lab acc" x="365">experiment · confirmed</tspan>
+          <tspan class="t-it" x="365" dy="-14">"tile=32 improves score"</tspan>
+        </text>
+        <text class="a-fade t-mono" style="animation-delay:1.4s" x="365" y="122" text-anchor="middle">evidence: attempt 7b1e4d</text>
+
+        <!-- n3 dead_end (refuted) -->
+        <g class="a-pop" style="animation-delay:1.9s">
+          <circle cx="365" cy="238" r="17" fill="#8e9eae"/>
+          <path d="M 358.5 231.5 L 371.5 244.5 M 371.5 231.5 L 358.5 244.5" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round"/>
+        </g>
+        <text class="a-fade" style="animation-delay:2.05s" x="365" y="274" text-anchor="middle">
+          <tspan class="t-lab" x="365">dead_end · refuted</tspan>
+          <tspan class="t-it" x="365" dy="14">"manual unrolling hurts"</tspan>
+        </text>
+
+        <!-- edges from n2/n3 back to n1 -->
+        <path class="a-draw" style="animation-delay:1.45s" pathLength="1" d="M 344 92 L 172 141" fill="none" stroke="#8e9eae" stroke-width="1.2" marker-end="url(#gArr)"/>
+        <text class="a-fade t-lab" style="animation-delay:1.7s" x="252" y="106" text-anchor="middle">supersedes</text>
+        <path class="a-fade" style="animation-delay:2.3s" d="M 346 231 L 172 159" fill="none" stroke="#8e9eae" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#gArr)"/>
+        <text class="a-fade t-lab" style="animation-delay:2.55s" x="252" y="215" text-anchor="middle">refutes</text>
+
+        <!-- n4 synthesis -->
+        <g class="a-pop" style="animation-delay:3.2s">
+          <circle cx="600" cy="160" r="26" fill="#18222e"/>
+          <text x="600" y="165" text-anchor="middle" class="t-lab" fill="#f3f6fb">syn</text>
+        </g>
+        <text class="a-fade" style="animation-delay:3.35s" x="600" y="204" text-anchor="middle">
+          <tspan class="t-lab" x="600" fill="#26323f">synthesis · high confidence</tspan>
+          <tspan class="t-it" x="600" dy="14">"tiling, not unrolling"</tspan>
+        </text>
+        <path class="a-draw" style="animation-delay:2.9s" pathLength="1" d="M 578 145 L 391 90"  fill="none" stroke="#8e9eae" stroke-width="1.2" marker-end="url(#gArr)"/>
+        <path class="a-draw" style="animation-delay:3.05s" pathLength="1" d="M 578 173 L 386 231" fill="none" stroke="#8e9eae" stroke-width="1.2" marker-end="url(#gArr)"/>
+
+        <!-- legend -->
+        <g class="a-fade" style="animation-delay:3.9s">
+          <line x1="30" y1="306" x2="730" y2="306" stroke="#dde4f0"/>
+          <circle cx="120" cy="322" r="5" fill="#2a5282"/><text x="132" y="326" class="t-small">confirmed</text>
+          <circle cx="230" cy="322" r="5" fill="#f3f6fb" stroke="#8e9eae" stroke-dasharray="2 2"/><text x="242" y="326" class="t-small">untested</text>
+          <circle cx="336" cy="322" r="5" fill="#8e9eae"/><text x="348" y="326" class="t-small">refuted</text>
+          <text x="470" y="326" class="t-it">node size = confidence · edges = supersedes / refutes / links</text>
+        </g>
+      </svg>
+    </div>
+    <p class="figcap"><strong>Fig. 3</strong> — The archive as a graph. Typed frontmatter links (<code>supersedes</code>, <code>refutes</code>) and ordinary body links become edges; the dashboard's Knowledge tab renders it live, with nodes sized by confidence and colored by claim status.</p>
+
+    <p>Three things fall out of this:</p>
+    <ul>
+      <li><strong>Claims have provenance.</strong> <code>based_on</code> and <code>evidence.attempt</code> tie every claim to the graded commits behind it — a conclusion is one hop from the experiment that produced it.</li>
+      <li><strong>Knowledge has standing.</strong> A <code>dead_end</code> with <code>status: refuted</code> reads very differently from a <code>hypothesis</code> with <code>status: untested</code> — and agents (and heartbeat prompts) can treat them differently, instead of granting every old note equal authority.</li>
+      <li><strong>The archive has structure.</strong> Typed links plus ordinary markdown/wiki links in the body become edges of a graph, so a run's intellectual history — including which lines of inquiry died — is visible at a glance.</li>
+    </ul>
+    <p>
+      Everything is backward compatible: a plain free-text note still works, and because body links also count as edges, the graph populates even on old runs. A new bundled <code>create-notes</code> skill teaches agents the schema with four note variants and a self-audit checklist, so structured notes are what agents write by default rather than something you have to prompt for.
+    </p>
+
+    <!-- ══════════ 04 · PRIVACY ══════════ -->
+    <div class="sec-eyebrow">04 · Privacy</div>
+    <h2 id="sandbox">Sandboxing, <em>enforced</em></h2>
+    <p>
+      Societies need privacy as much as they need openness: exams only work if the answer key is sealed, and no one joins a society that can rifle through their belongings. Both concerns are literal in <strong><span style="color:#E8A09A">CORAL</span></strong>. Hidden task data and the grader venv live in <code>.coral/private/</code> — an agent that can read the answer key isn't evolving, it's cheating — and the agents run on <em>your</em> machine, next to <code>~/.ssh</code> and every other run's data. Until now, both were protected by <em>policy</em>, not architecture: runtime permission settings plus instructions in CORAL.md. Privacy-by-request is fine for well-behaved runtimes; it is not a security boundary, and every new runtime we added (Codex, Cursor, Kiro, OpenCode) meant another permission dialect to keep honest.
+    </p>
+    <p>
+      Now the boundary is structural. <code>agents.sandbox</code> wraps every agent subprocess in an OS-level sandbox — <a href="https://github.com/anthropic-experimental/sandbox-runtime">Anthropic's sandbox-runtime</a> (<code>srt</code>: Seatbelt on macOS, bubblewrap on Linux) — uniformly across all runtimes.
+    </p>
+
+    <div class="fig-anim" data-anim>
+      <svg viewBox="0 0 760 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The sandbox boundary: reads inside the agent's slice succeed; reads of private data and host secrets are blocked at the OS level">
+        <defs>
+          <marker id="pArrOk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="#415060" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+
+        <!-- agent -->
+        <g class="a-rise" style="animation-delay:.1s">
+          <circle cx="130" cy="165" r="28" fill="#ffffff" stroke="#18222e" stroke-width="1.3"/>
+          <text x="130" y="169" text-anchor="middle" class="t-lab" fill="#18222e">agent</text>
+          <text x="130" y="212" text-anchor="middle" class="t-it">any runtime</text>
+        </g>
+
+        <!-- inside cards -->
+        <g class="a-rise" style="animation-delay:.3s">
+          <rect x="255" y="52" width="190" height="46" rx="5" fill="#ffffff" stroke="#bec8d8"/>
+          <text x="350" y="72" text-anchor="middle" class="t-name" style="font-size:13px">its worktree</text>
+          <text x="350" y="88" text-anchor="middle" class="t-small">+ same-island siblings</text>
+        </g>
+        <g class="a-rise" style="animation-delay:.42s">
+          <rect x="255" y="142" width="190" height="46" rx="5" fill="#ffffff" stroke="#bec8d8"/>
+          <text x="350" y="162" text-anchor="middle" class="t-name" style="font-size:13px">.coral/public/</text>
+          <text x="350" y="178" text-anchor="middle" class="t-small">attempts · notes · skills</text>
+        </g>
+        <g class="a-rise" style="animation-delay:.54s">
+          <rect x="255" y="232" width="190" height="46" rx="5" fill="#ffffff" stroke="#bec8d8"/>
+          <text x="350" y="252" text-anchor="middle" class="t-name" style="font-size:13px">grader source</text>
+          <text x="350" y="268" text-anchor="middle" class="t-small">read-only — the rules are public</text>
+        </g>
+
+        <!-- ok arrows -->
+        <path class="a-draw" style="animation-delay:.75s" pathLength="1" d="M 152 146 L 248 84"  fill="none" stroke="#415060" stroke-width="1.2" marker-end="url(#pArrOk)"/>
+        <path class="a-draw" style="animation-delay:.85s" pathLength="1" d="M 160 165 L 248 165" fill="none" stroke="#415060" stroke-width="1.2" marker-end="url(#pArrOk)"/>
+        <path class="a-draw" style="animation-delay:.95s" pathLength="1" d="M 152 184 L 248 246" fill="none" stroke="#415060" stroke-width="1.2" marker-end="url(#pArrOk)"/>
+
+        <!-- boundary -->
+        <rect class="a-fade" style="animation-delay:1.4s;animation-duration:1s" x="68" y="24" width="412" height="284" rx="16"
+          fill="none" stroke="#2a5282" stroke-width="1.5" stroke-dasharray="7 5"/>
+        <text class="a-fade t-lab acc" style="animation-delay:2.4s" x="88" y="300">sandbox — enforced by the os · seatbelt / bubblewrap</text>
+
+        <!-- outside cards -->
+        <g class="a-fade" style="animation-delay:.6s">
+          <rect x="560" y="52" width="172" height="46" rx="5" fill="#dde4f0" stroke="#bec8d8"/>
+          <text x="646" y="72" text-anchor="middle" class="t-name" style="font-size:13px">.coral/private/</text>
+          <text x="646" y="88" text-anchor="middle" class="t-small">answer keys · grader venv</text>
+        </g>
+        <g class="a-fade" style="animation-delay:.7s">
+          <rect x="560" y="142" width="172" height="46" rx="5" fill="#dde4f0" stroke="#bec8d8"/>
+          <text x="646" y="162" text-anchor="middle" class="t-name" style="font-size:13px">~/.ssh · ~/.aws</text>
+          <text x="646" y="178" text-anchor="middle" class="t-small">host secrets</text>
+        </g>
+        <g class="a-fade" style="animation-delay:.8s">
+          <rect x="560" y="232" width="172" height="46" rx="5" fill="#dde4f0" stroke="#bec8d8"/>
+          <text x="646" y="252" text-anchor="middle" class="t-name" style="font-size:13px">other runs</text>
+          <text x="646" y="268" text-anchor="middle" class="t-small">and other islands' state</text>
+        </g>
+
+        <!-- blocked attempts -->
+        <path class="a-draw" style="animation-delay:2.7s;animation-duration:.8s" pathLength="1" d="M 455 75 L 474 75" fill="none" stroke="#2a5282" stroke-width="1.4"/>
+        <g class="a-pop" style="animation-delay:3.4s">
+          <circle cx="480" cy="75" r="10" fill="#2a5282"/>
+          <path d="M 476 71 L 484 79 M 484 71 L 476 79" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+        </g>
+        <path class="a-draw" style="animation-delay:2.85s;animation-duration:.8s" pathLength="1" d="M 455 165 L 474 165" fill="none" stroke="#2a5282" stroke-width="1.4"/>
+        <g class="a-pop" style="animation-delay:3.55s">
+          <circle cx="480" cy="165" r="10" fill="#2a5282"/>
+          <path d="M 476 161 L 484 169 M 484 161 L 476 169" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+        </g>
+        <path class="a-draw" style="animation-delay:3.0s;animation-duration:.8s" pathLength="1" d="M 455 255 L 474 255" fill="none" stroke="#2a5282" stroke-width="1.4"/>
+        <g class="a-pop" style="animation-delay:3.7s">
+          <circle cx="480" cy="255" r="10" fill="#2a5282"/>
+          <path d="M 476 251 L 484 259 M 484 251 L 476 259" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+        </g>
+        <text class="a-fade t-it" style="animation-delay:4.0s" x="646" y="120" text-anchor="middle">unreadable — not by request,</text>
+        <text class="a-fade t-it" style="animation-delay:4.0s" x="646" y="134" text-anchor="middle">by construction</text>
+      </svg>
+    </div>
+    <p class="figcap"><strong>Fig. 4</strong> — The sandbox boundary. Reads inside the agent's slice of the run succeed; reads of <code>.coral/private/</code>, host secrets, and other runs are blocked by the OS — Seatbelt on macOS, bubblewrap on Linux — identically for every runtime.</p>
+
+    <ul>
+      <li><strong>Reads are confined to the agent's slice of this run:</strong> its own worktree (and same-island siblings'), the run repo, shared <code>.coral/</code> state minus <code>private/</code>, the surfaced grader source, and toolchain dotdirs.</li>
+      <li><strong>Writes are allow-listed</strong> to the same slice plus <code>/tmp</code>.</li>
+      <li><strong>Network</strong> comes in two modes: <code>open</code> (full access, mediated by an allow-all proxy the manager runs in-process) or <code>allowlist</code> (traffic restricted to <code>allowed_domains</code>).</li>
+    </ul>
+    <div class="cb">
+      <div class="cb-head"><span class="cb-lang">shell</span><button class="cb-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre>npm install -g @anthropic-ai/sandbox-runtime   <span class="cmt"># once (Linux also: bubblewrap, socat, ripgrep)</span>
+coral start -c task.yaml agents.sandbox.enabled=true
+<span class="cmt"># or in task.yaml:  preset: sandbox</span></pre>
+    </div>
+    <p>
+      A detail we're fond of: the per-agent sandbox policy lives under <code>.coral/private/sandbox/</code> — the manager reads it host-side before the sandbox exists, and the sandbox then denies the agent access to the very file that defines its own boundaries. What should be open stays open — agents can read the grader's source to understand exactly how they're judged — and what must be private stays private, without depending on anyone's good manners.
+    </p>
+    <p>
+      The provider is <strong>pluggable</strong>: <code>agents.sandbox.provider</code> takes the built-in <code>srt</code> or any <code>module.path:ClassName</code> implementing the <code>SandboxProvider</code> protocol — the hook for hosted backends like e2b or Modal. (For container-based isolation, <code>run.session=docker</code> now also runs agents as an unprivileged OS user; the two mechanisms solve the same problem and are mutually exclusive.)
+    </p>
+    <p>
+      And the institutions compose. In a multi-island sandboxed run, an agent's readable slice is defined by its island — so when migration moves an agent, the manager <em>resyncs the sandbox boundaries</em> of live bystanders on the affected islands (sessions are interrupted and resumed; no work is lost). Judged by courts, organized into city-states, recorded in archives, with privacy the OS enforces: each institution stands alone, but they were designed to govern together.
+    </p>
+
+    <!-- ══════════ 05 · PUBLIC WORKS ══════════ -->
+    <div class="sec-eyebrow">05 · Public Works</div>
+    <h2 id="workbench">The operator's <em>workbench</em></h2>
+    <p>
+      Every society also needs its unglamorous infrastructure — roads, plumbing, permits — and so does every framework. Alongside the four institutions, a steady stream of changes improved what it's like to <em>operate</em> a run: configuring tasks, wiring up runtimes, and steering long experiments.
+    </p>
+    <p><strong>Authoring &amp; setup:</strong></p>
+    <ul>
+      <li><strong>Packaged graders, everywhere.</strong> Every grader is now a proper package resolved from <code>grader.entrypoint</code> inside an isolated venv (the legacy <code>eval/grader.py</code> auto-discovery is gone — a breaking change). Hidden data is declared in <code>grader.private</code>; everything else in the grader package is deliberately <strong>surfaced read-only to agents</strong>, so they can study exactly how they're scored without being able to touch it.</li>
+      <li><strong><code>task.yaml</code> presets.</strong> A top-level <code>preset:</code> pulls in a built-in or local base config (<code>multi-island</code>, <code>sandbox</code>, <code>docker-opencode</code>, ...) with task keys always winning — common topologies become one line.</li>
+      <li><strong>User-level agent bindings.</strong> <code>coral setup</code> scans your PATH for installed runtimes and saves named bindings (<code>claude-opus</code>, <code>codex-mini</code>, ...) to <code>~/.config/coral/agents.yaml</code>; task configs reference them with <code>agents.binding</code>, and <code>coral agents doctor</code> live-checks each one with a hello ping.</li>
+      <li><strong>A multi-harness plugin.</strong> The <code>plugin/</code> directory drives CORAL from inside Claude Code or Codex — skills for quickstart, task authoring, and run babysitting, installable from the repo as a marketplace.</li>
+    </ul>
+    <p><strong>Run operations:</strong></p>
+    <ul>
+      <li><strong>Experiment DAG view + attempt export.</strong> The dashboard renders the full attempt lineage as a DAG, and <code>coral export &lt;hash&gt; -b &lt;branch&gt;</code> turns any attempt into a normal git branch for downstream use.</li>
+      <li><strong>Steer on resume.</strong> Queue instructions for a stopped run from the dashboard; <code>coral resume</code> drains them into the agents — including <code>--from &lt;hash&gt;</code> to fork an agent from any past attempt.</li>
+      <li><strong>Auto-stop limits.</strong> <code>run.stop.max_real_attempts=30</code> ends a run after N finalized attempts — budget control for unattended runs.</li>
+    </ul>
+
+    <!-- ══════════ 06 · GETTING STARTED ══════════ -->
+    <div class="sec-eyebrow">06 · Getting Started</div>
+    <h2 id="getting-started">Try it — the institutions <em>compose</em></h2>
+    <p>
+      Everything above is on <code>main</code>. The institutions compose, so a judged, partitioned, privacy-enforced run is a one-liner away:
+    </p>
+    <div class="cb">
+      <div class="cb-head"><span class="cb-lang">shell</span><button class="cb-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre>git clone https://github.com/Human-Agent-Society/CORAL && cd CORAL && uv sync
+coral setup                        <span class="cmt"># detect installed runtimes, save bindings</span>
+coral start -c examples/circle_packing/task.yaml \
+    agents.count=4 islands.count=2 agents.sandbox.enabled=true</pre>
+    </div>
+    <p>
+      Guides for each institution: <a href="https://docs.coralxyz.com/guides/rubric-judge">rubric judges</a>, <a href="https://docs.coralxyz.com/guides/multi-agent">multi-island runs</a>, and the <a href="https://docs.coralxyz.com">documentation site</a> for the rest. To port your own benchmark, <code>coral init my-task</code> scaffolds the task package and <code>coral validate my-task</code> dry-runs your grader before you spend a single agent-hour.
+    </p>
+    <p>
+      The launch post closed by asking what <em>organizational principles for machine intelligence</em> might look like. Four months in, our working answer is the one this post opened with: the same things ours needed — judges, city-states, archives, and privacy. How a society of agents is judged, partitioned, recorded, and bounded matters as much as how capable its members are. And the list of institutions agent societies don't have yet is long: peer review, reputation, markets, elections — the incentive structures human societies took centuries to invent. Some of those are less absurd than they sound, and the whole system is open — come build them with us.
+    </p>
+
+    <!-- ══════════ 07 · CITATION ══════════ -->
+    <div class="sec-eyebrow">07 · Citation</div>
+    <h2 id="citation">Citation</h2>
+    <p>To cite this post:</p>
+    <div class="cb">
+      <div class="cb-head"><span class="cb-lang">bibtex</span><button class="cb-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre>@misc{coral2026institutions,
+  title  = {Multi-agent Societies, Institutions, and Incentives},
+  author = {{The CORAL Team}},
+  year   = {2026},
+  month  = {July},
+  howpublished = {\url{https://human-agent-society.github.io/CORAL/agents-need-institutions.html}}
+}</pre>
+    </div>
+    <p>To cite the CORAL system and paper:</p>
+    <div class="cb">
+      <div class="cb-head"><span class="cb-lang">bibtex</span><button class="cb-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre>@article{coral2026,
+  title  = {CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery},
+  author = {Qu, Ao and Zheng, Han and Zhou, Zijian and Yan, Yihao and Tang, Yihong and Ong, Shao Yong and Hong, Fenglu and Zhou, Kaichen and Jiang, Chonghe and Kong, Minwei and Zhu, Jiacheng and Jiang, Xuan and Li, Sirui and Wu, Cathy and Low, Bryan Kian Hsiang and Zhao, Jinhua and Liang, Paul Pu},
+  journal = {arXiv preprint arXiv:2604.01658},
+  year   = {2026},
+  url    = {https://arxiv.org/pdf/2604.01658}
+}</pre>
+    </div>
+
+  </article>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <p>CORAL — Spawn Agents. Share Knowledge. Optimize Forever.</p>
+</footer>
+
+<script>
+  // Copy code
+  function copyCode(b){var p=b.closest('.cb').querySelector('pre');
+    navigator.clipboard.writeText(p.textContent).then(function(){
+      b.textContent='Copied!';setTimeout(function(){b.textContent='Copy'},1500)})}
+
+  // Figure animations — replay on re-entry (BP-style .active gating)
+  (function(){
+    var figs=document.querySelectorAll('[data-anim]');
+    if(!('IntersectionObserver' in window)){figs.forEach(function(f){f.classList.add('active')});return}
+    var obs=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){e.target.classList.add('active')}
+        else if(e.intersectionRatio===0){e.target.classList.remove('active')}
+      });
+    },{threshold:[0,0.35]});
+    figs.forEach(function(f){obs.observe(f)});
+  })();
+
+  // TOC visibility + scroll spy
+  (function(){
+    var tocEl=document.getElementById('toc');
+    var hero=document.querySelector('.hero');
+    var links=document.querySelectorAll('.toc a[data-section]');
+    var sections=[];
+    links.forEach(function(l){
+      var el=document.getElementById(l.getAttribute('data-section'));
+      if(el) sections.push({el:el,link:l});
+    });
+    function update(){
+      var heroBottom=hero?hero.getBoundingClientRect().bottom:0;
+      if(heroBottom<60){tocEl.classList.add('visible')}else{tocEl.classList.remove('visible')}
+      var cur=sections[0];
+      sections.forEach(function(s){
+        if(s.el.getBoundingClientRect().top<=120) cur=s;
+      });
+      links.forEach(function(l){l.classList.remove('active')});
+      if(cur) cur.link.classList.add('active');
+    }
+    window.addEventListener('scroll',update,{passive:true});
+    update();
+  })();
+</script>
+
+</body>
+</html>
