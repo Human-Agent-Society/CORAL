@@ -25,6 +25,13 @@ the assigned candidates are reduced to the best subset of at most
 balance; from an already-balanced roster, that means migration happens as
 a swap/cycle rather than as a one-way drain.
 
+Re-migration guard: because attempt records move with the migrant, a
+freshly migrated agent would immediately satisfy ``min_evals`` on its new
+island and could ping-pong between islands every cycle. The manager
+therefore passes ``last_migrated_evals`` (agent → global eval count at
+migration time) into :meth:`MigrationRunner.run_cycle`, and agents still
+inside ``remigration_cooldown`` evals are excluded from selection.
+
 What moves with an agent (mechanics in the manager): ``roles/<agent>.md``,
 ``heartbeat/<agent>.json``, that agent's attempt records, and matching
 ``eval_logs/<commit>/`` directories follow them. Notes and skills authored
@@ -39,7 +46,7 @@ from __future__ import annotations
 
 import logging
 import random
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass
 from itertools import combinations
 from pathlib import Path
@@ -154,6 +161,26 @@ def score_for_agent(
     return min(scores) if minimize else max(scores)
 
 
+def cooled_down_agents(
+    last_migrated_evals: Mapping[str, int],
+    *,
+    current_evals: int,
+    cooldown: int,
+) -> set[str]:
+    """Agents still inside their post-migration cooldown window.
+
+    An agent becomes eligible again once ``current_evals - last >= cooldown``
+    (boundary inclusive). ``cooldown <= 0`` disables the guard entirely.
+    """
+    if cooldown <= 0:
+        return set()
+    return {
+        agent_id
+        for agent_id, last in last_migrated_evals.items()
+        if current_evals - last < cooldown
+    }
+
+
 def select_candidates(
     coral_dir: str | Path,
     *,
@@ -163,6 +190,7 @@ def select_candidates(
     minimize: bool,
     roster: IslandRoster | None = None,
     current_agent_islands: dict[str, str] | None = None,
+    excluded_agents: Collection[str] | None = None,
 ) -> list[MigrationCandidate]:
     """For each source island, return its best eligible agent (at most one).
 
@@ -177,6 +205,8 @@ def select_candidates(
       * The agent has at least one real attempt with a non-None score in
         the trailing ``rank_window`` — otherwise we'd have no score to
         rank by.
+      * The agent is not in ``excluded_agents`` (e.g. still inside the
+        remigration cooldown after a recent move).
 
     Returns a candidate per island (or none for islands with no eligible
     agent), each with ``dst_island = ""`` for the assignment step to fill in.
@@ -187,6 +217,7 @@ def select_candidates(
             current_agent_islands,
             island_ids=island_ids,
         )
+    excluded = set(excluded_agents) if excluded_agents else set()
     for src in island_ids:
         attempts = read_attempts(coral_dir, island_id=src)
         per_agent: dict[str, list[Attempt]] = {}
@@ -196,6 +227,8 @@ def select_candidates(
         best_agent: str | None = None
         best_score: float | None = None
         for agent_id, agent_attempts in per_agent.items():
+            if agent_id in excluded:
+                continue
             if roster is not None and not roster.is_on(agent_id, src):
                 continue
             real = [a for a in agent_attempts if a.budget_class == BUDGET_CLASS_REAL]
@@ -248,6 +281,12 @@ def assign_destinations(
             (rich-get-richer); under ``minimize=True``, lower score →
             higher weight. Falls back to uniform when no island_best_scores
             are recorded yet (typical early in a run).
+        ``weakest`` — the FunSearch-style "rescue" policy: invert the
+            ``score`` direction so the islands furthest behind attract the
+            most migrants. Under ``minimize=False`` the lowest-score island
+            gets the most weight; under ``minimize=True`` the highest-score
+            island does. Same uniform fallback as ``score`` when no island
+            best scores are recorded yet.
     """
     if len(island_ids) <= 1:
         return []
@@ -277,6 +316,14 @@ def assign_destinations(
             weights = _score_weights(non_src, island_best_scores, minimize=minimize)
             if weights is None:
                 # No score signal yet — uniform is the only honest fallback.
+                dst = rng.choice(non_src)
+            else:
+                dst = rng.choices(non_src, weights=weights, k=1)[0]
+        elif weighting == "weakest":
+            # Rescue policy: invert the score direction so the islands
+            # furthest behind attract the most migrants.
+            weights = _score_weights(non_src, island_best_scores, minimize=not minimize)
+            if weights is None:
                 dst = rng.choice(non_src)
             else:
                 dst = rng.choices(non_src, weights=weights, k=1)[0]
@@ -459,6 +506,8 @@ class MigrationRunner:
         coral_dir: str | Path,
         island_best_scores: dict[str, float],
         current_agent_islands: dict[str, str] | None = None,
+        last_migrated_evals: Mapping[str, int] | None = None,
+        current_evals: int = 0,
     ) -> list[MigrationCandidate]:
         """Plan one migration cycle. Caller applies the returned candidates.
 
@@ -467,10 +516,16 @@ class MigrationRunner:
         ``score`` destination policy. Pass an empty dict in single-cycle
         unit tests to exercise the uniform fallback.
 
+        ``last_migrated_evals`` maps agent_id → the global eval count at
+        which that agent last migrated. Agents still inside
+        ``remigration_cooldown`` evals (measured against ``current_evals``)
+        are excluded from selection so a fresh migrant cannot ping-pong
+        back on the very next cycle.
+
         Returns up to ``max_per_cycle`` candidates, each with a non-empty
         ``dst_island``. Returns an empty list when:
             * No island has an eligible agent (everyone is below
-              ``min_evals``, or no real scored attempts exist).
+              ``min_evals``, cooled down, or no real scored attempts exist).
             * ``count == 1`` (no destinations).
             * The runner is disabled.
         """
@@ -487,6 +542,16 @@ class MigrationRunner:
             else None
         )
 
+        excluded = cooled_down_agents(
+            last_migrated_evals or {},
+            current_evals=current_evals,
+            cooldown=self.migration_config.remigration_cooldown,
+        )
+        if excluded:
+            logger.info(
+                f"Migration cycle: {len(excluded)} agent(s) excluded by remigration cooldown"
+            )
+
         raw = select_candidates(
             coral_dir,
             island_ids=island_ids,
@@ -494,6 +559,7 @@ class MigrationRunner:
             min_evals=self.migration_config.min_evals,
             minimize=self.minimize,
             roster=roster,
+            excluded_agents=excluded,
         )
         if not raw:
             return []
