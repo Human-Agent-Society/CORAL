@@ -400,8 +400,9 @@ def test_islands_defaults_single_island():
     assert cfg.islands.migration.every == 50
     assert cfg.islands.migration.rank_window == 20
     assert cfg.islands.migration.min_evals == 3
-    assert cfg.islands.migration.dest_weighting == "score"
+    assert cfg.islands.migration.dest_weighting == "weakest"
     assert cfg.islands.migration.max_per_cycle == 2
+    assert cfg.islands.migration.remigration_cooldown == 100
     assert cfg.islands.migration.notify_island is True
 
 
@@ -472,6 +473,27 @@ def test_migration_dest_weighting_validation():
                 "islands": {"migration": {"dest_weighting": "nonsense"}},
             }
         )
+
+
+def test_migration_remigration_cooldown_validation():
+    import pytest
+
+    with pytest.raises(ValueError, match="remigration_cooldown must be >= 0"):
+        CoralConfig.from_dict(
+            {
+                "task": {"name": "t", "description": "d"},
+                "islands": {"migration": {"remigration_cooldown": -1}},
+            }
+        )
+
+    # 0 is allowed — it disables the cooldown guard.
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "islands": {"migration": {"remigration_cooldown": 0}},
+        }
+    )
+    assert cfg.islands.migration.remigration_cooldown == 0
 
 
 # --- Presets ---------------------------------------------------------------
