@@ -35,6 +35,12 @@ async function postResponse<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
+async function del<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
+
 /* Types */
 
 export interface Attempt {
@@ -259,6 +265,23 @@ export interface TaskConfig {
   };
 }
 
+// Chat module. Frames are claude's stream-json output (plus a few synthetic
+// types: _user_input, awaiting_approval, approval_resolved, _closed).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ChatFrame = Record<string, any>;
+
+export interface ChatSessionInfo {
+  session_id: string;
+  workdir: string;
+  runtime?: string;
+}
+
+export interface ChatBinding {
+  name: string;
+  runtime: string;
+  model: string;
+}
+
 /* API functions */
 
 export const api = {
@@ -281,4 +304,19 @@ export const api = {
   runs: () => get<RunsResponse>("/runs"),
   switchRun: (task: string, run: string) =>
     post<{ ok: boolean; task: string; run: string }>("/runs/switch", { task, run }),
+  chatBrowse: (path?: string) =>
+    get<{ path: string; parent: string | null; entries: { name: string; path: string }[] }>(
+      `/chat/browse${path ? `?path=${encodeURIComponent(path)}` : ""}`,
+    ),
+  chatBindings: () =>
+    get<{ bindings: ChatBinding[]; default: string | null; runtimes: string[] }>("/chat/bindings"),
+  chatStart: (workdir: string, runtime?: string, model?: string) =>
+    postResponse<ChatSessionInfo>("/chat/sessions", { workdir, runtime, model }),
+  chatScaffold: (parent: string, name: string) =>
+    postResponse<{ workdir: string }>("/chat/workspaces", { parent, name }),
+  chatSend: (sid: string, text: string) =>
+    postResponse<{ ok: boolean }>(`/chat/${sid}/message`, { text }),
+  chatApprove: (sid: string, pid: string, decision: "allow" | "deny") =>
+    postResponse<{ resolved: boolean }>(`/chat/${sid}/approvals/${pid}`, { decision }),
+  chatStop: (sid: string) => del<{ closed: boolean }>(`/chat/${sid}`),
 };

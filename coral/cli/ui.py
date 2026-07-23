@@ -1,8 +1,9 @@
-"""Commands: ui."""
+"""Commands: ui, server."""
 
 from __future__ import annotations
 
 import argparse
+import os
 import socket
 import subprocess
 import sys
@@ -107,6 +108,21 @@ def _ensure_ui_deps() -> None:
         print("[coral] UI dependencies installed.")
 
 
+def _wire_chat_callbacks(app, port: int) -> None:
+    """Give the chat module a localhost URL + token for the approval hook.
+
+    The PreToolUse hook (coral/hooks/pretooluse_gate.py) calls back to the
+    running dashboard to gate `coral start`. It always targets 127.0.0.1
+    regardless of the dashboard's bind host, and authenticates with a
+    per-process token.
+    """
+    import secrets
+
+    app.state.chat_callback_base_url = f"http://127.0.0.1:{port}"
+    app.state.chat_callback_token = secrets.token_urlsafe(32)
+    app.state.chat_gate_mode = "bypass"
+
+
 def _port_available(host: str, port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         try:
@@ -170,6 +186,7 @@ def start_ui_background(
         print(f"[coral] Dashboard port {port} is in use; using {fallback_port}.")
         port = fallback_port
     url = f"http://{host}:{port}"
+    _wire_chat_callbacks(app, port)
 
     config = uvicorn.Config(app, host=host, port=port, log_level="warning")
     server = uvicorn.Server(config)
@@ -184,6 +201,112 @@ def start_ui_background(
     webbrowser.open(url)
 
 
+def _latest_run_coral_dir(results_root: Path) -> Path | None:
+    """Newest ``<task>/<run>/.coral`` under the runs root, or None."""
+    if not results_root.is_dir():
+        return None
+    candidates: list[Path] = []
+    for task_dir in results_root.iterdir():
+        if not task_dir.is_dir():
+            continue
+        for run_dir in task_dir.iterdir():
+            cd = run_dir / ".coral"
+            if cd.is_dir():
+                candidates.append(cd)
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def _server_placeholder() -> Path:
+    """A stable empty ``.coral`` used as the initial view when no run exists.
+
+    The read endpoints (attempts/notes/logs/...) read this dir and return
+    empty — no per-endpoint null-handling needed. The UI re-points to a real
+    run via ``/api/runs/switch`` once one is selected.
+    """
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    base = Path(xdg).expanduser() if xdg else Path.home() / ".config"
+    placeholder = base / "coral" / "server-placeholder" / ".coral"
+    (placeholder / "public").mkdir(parents=True, exist_ok=True)
+    return placeholder
+
+
+def _serve(
+    coral_dir: Path,
+    results_dir: Path,
+    host: str,
+    port: int | None,
+    *,
+    open_browser: bool = True,
+    pid_file: Path | None = None,
+    banner: list[str] | None = None,
+) -> None:
+    """Shared serving path for ``coral ui`` and ``coral server``.
+
+    Resolves the port, builds the app, wires the chat callbacks, prints a
+    banner (``{url}`` is substituted), optionally writes a pid file (cleaned
+    up on exit), opens the browser, and runs uvicorn.
+    """
+    _ensure_ui_deps()
+    import uvicorn
+
+    _ensure_ui_built()
+    try:
+        port = _resolve_ui_port(host, port)
+    except RuntimeError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    from coral.web import create_app
+
+    app = create_app(coral_dir, results_dir=results_dir)
+    _wire_chat_callbacks(app, port)
+    url = f"http://{host}:{port}"
+    for line in banner or []:
+        print(line.replace("{url}", url))
+
+    if pid_file is not None:
+        pid_file.parent.mkdir(parents=True, exist_ok=True)
+        pid_file.write_text(str(os.getpid()))
+    if open_browser:
+        import webbrowser
+
+        webbrowser.open(url)
+
+    try:
+        uvicorn.run(app, host=host, port=port, log_level="warning")
+    finally:
+        if pid_file is not None:
+            pid_file.unlink(missing_ok=True)
+
+
+def cmd_server(args: argparse.Namespace) -> None:
+    """Launch the host-level server (dashboard + chat, no run required).
+
+    Examples:
+      coral server
+      coral server --results ./results --port 8500
+    """
+    results_root = (
+        Path(args.results).expanduser().resolve() if args.results else Path.cwd() / "results"
+    )
+    results_root.mkdir(parents=True, exist_ok=True)
+    coral_dir = _latest_run_coral_dir(results_root) or _server_placeholder()
+    _serve(
+        coral_dir,
+        results_root,
+        args.host,
+        args.port,
+        open_browser=not args.no_open,
+        banner=[
+            "CORAL Server: {url}",
+            f"Runs root:    {results_root}",
+            "Dashboard + chat ready (no run required). Stop with Ctrl-C.\n",
+        ],
+    )
+
+
 def cmd_ui(args: argparse.Namespace) -> None:
     """Launch the web dashboard.
 
@@ -191,41 +314,19 @@ def cmd_ui(args: argparse.Namespace) -> None:
       coral ui                      Open dashboard in browser
       coral ui --port 9000          Use custom port
     """
-    _ensure_ui_deps()
-    import uvicorn
-
-    _ensure_ui_built()
-
     coral_dir = find_coral_dir(getattr(args, "task", None), getattr(args, "run", None))
-    try:
-        port = _resolve_ui_port(args.host, args.port)
-    except RuntimeError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        sys.exit(1)
-
-    from coral.web import create_app
-
     results_dir = coral_dir.resolve().parent.parent.parent
-    app = create_app(coral_dir, results_dir=results_dir)
-    url = f"http://{args.host}:{port}"
-    print(f"CORAL Dashboard: {url}")
-    print(f"Serving data from: {coral_dir}")
-
-    # Write PID so `coral stop` can kill us
-    pid_file = coral_dir / "public" / "ui.pid"
-    import os
-
-    pid_file.parent.mkdir(parents=True, exist_ok=True)
-    pid_file.write_text(str(os.getpid()))
-
-    if not args.no_open:
-        import webbrowser
-
-        webbrowser.open(url)
-
-    print("Stop with: coral stop\n")
-
-    try:
-        uvicorn.run(app, host=args.host, port=port, log_level="warning")
-    finally:
-        pid_file.unlink(missing_ok=True)
+    # Run-scoped: write ui.pid so `coral stop` can kill the dashboard.
+    _serve(
+        coral_dir,
+        results_dir,
+        args.host,
+        args.port,
+        open_browser=not args.no_open,
+        pid_file=coral_dir / "public" / "ui.pid",
+        banner=[
+            "CORAL Dashboard: {url}",
+            f"Serving data from: {coral_dir}",
+            "Stop with: coral stop\n",
+        ],
+    )

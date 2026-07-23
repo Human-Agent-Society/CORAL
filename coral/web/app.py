@@ -14,6 +14,8 @@ from starlette.responses import FileResponse, Response
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
+from coral.chat.approval import ApprovalRegistry
+from coral.chat.session import ChatSessionManager
 from coral.web.api import (
     get_agent_attempts,
     get_attempt_detail,
@@ -32,6 +34,19 @@ from coral.web.api import (
     get_steering,
     post_steer,
     switch_run,
+)
+from coral.web.chat import (
+    chat_events,
+    delete_chat_session,
+    get_chat_bindings,
+    get_chat_browse,
+    get_chat_sessions,
+    get_chat_transcript,
+    post_chat_approval,
+    post_chat_internal_approval,
+    post_chat_message,
+    post_chat_session,
+    post_chat_workspace,
 )
 from coral.web.events import FileWatcher, sse_endpoint
 
@@ -59,10 +74,13 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
         app.state._switch_lock = asyncio.Lock()
         app.state.watcher = FileWatcher(coral_dir)
         app.state._watcher_task = asyncio.create_task(app.state.watcher.run())
+        app.state.chat_manager = ChatSessionManager()
+        app.state.approvals = ApprovalRegistry()
         try:
             yield
         finally:
             # shutdown
+            app.state.chat_manager.shutdown()
             app.state.watcher.stop()
             app.state._watcher_task.cancel()
             try:
@@ -70,11 +88,14 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
             except asyncio.CancelledError:
                 pass
 
-    # SPA fallback: serve index.html for any non-API, non-static route
+    # SPA fallback: serve index.html for any non-API, non-static route.
+    # index.html must never be cached — it references content-hashed asset
+    # filenames, so a stale cached HTML would keep loading an old bundle after
+    # a rebuild. (The hashed assets themselves are safe to cache.)
     async def spa_fallback(request: Request) -> Response:
         index = static_dir / "index.html"
         if index.exists():
-            return FileResponse(index)
+            return FileResponse(index, headers={"Cache-Control": "no-cache, must-revalidate"})
         return Response("Dashboard not built. Run: cd web && npm run build", status_code=404)
 
     routes = [
@@ -97,6 +118,18 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
         Route("/api/runs", get_runs),
         Route("/api/runs/switch", switch_run, methods=["POST"]),
         Route("/api/events", sse_endpoint),
+        # Chat module (design/chat-module.md)
+        Route("/api/chat/workspaces", post_chat_workspace, methods=["POST"]),
+        Route("/api/chat/bindings", get_chat_bindings),
+        Route("/api/chat/browse", get_chat_browse),
+        Route("/api/chat/internal/approval", post_chat_internal_approval, methods=["POST"]),
+        Route("/api/chat/sessions", post_chat_session, methods=["POST"]),
+        Route("/api/chat/sessions", get_chat_sessions, methods=["GET"]),
+        Route("/api/chat/{sid}/approvals/{pid}", post_chat_approval, methods=["POST"]),
+        Route("/api/chat/{sid}/message", post_chat_message, methods=["POST"]),
+        Route("/api/chat/{sid}/transcript", get_chat_transcript),
+        Route("/api/chat/{sid}/events", chat_events),
+        Route("/api/chat/{sid}", delete_chat_session, methods=["DELETE"]),
     ]
 
     # Mount static files if the directory exists (post-build)

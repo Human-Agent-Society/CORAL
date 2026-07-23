@@ -53,6 +53,7 @@ _VISIBLE_COMMANDS = [
     "skills",
     "runs",
     "ui",
+    "server",
     "eval",
     "wait",
     "diff",
@@ -381,6 +382,21 @@ Run 'coral <command> --help' for details on any command."""
     _add_run_args(p_ui)
     p_ui.add_argument("--no-open", action="store_true", help="Don't auto-open browser")
 
+    p_server = sub.add_parser(
+        "server",
+        help="Launch the host-level server (dashboard + chat, no run required)",
+        description=(
+            "Start a localhost CORAL server: the web dashboard + chat, not tied to any "
+            "single run. Connect the UI to author tasks and chat without first launching a run."
+        ),
+        epilog="Examples:\n  coral server\n  coral server --results ./results --port 8500",
+        formatter_class=_CommandHelpFormatter,
+    )
+    p_server.add_argument("--port", type=int, default=None, help="Port (default: 8420)")
+    p_server.add_argument("--host", default="127.0.0.1", help="Host (default: 127.0.0.1)")
+    p_server.add_argument("--results", default=None, help="Runs root dir (default: ./results)")
+    p_server.add_argument("--no-open", action="store_true", help="Don't auto-open browser")
+
     # --- Agent Internals ---
 
     p_eval = sub.add_parser(
@@ -707,7 +723,7 @@ Run 'coral <command> --help' for details on any command."""
     from coral.cli.heartbeat import cmd_heartbeat
     from coral.cli.query import cmd_log, cmd_notes, cmd_runs, cmd_show, cmd_skills
     from coral.cli.start import cmd_resume, cmd_start, cmd_status, cmd_stop
-    from coral.cli.ui import cmd_ui
+    from coral.cli.ui import cmd_server, cmd_ui
 
     commands = {
         "start": cmd_start,
@@ -731,6 +747,7 @@ Run 'coral <command> --help' for details on any command."""
         "setup": cmd_setup,
         "agents": cmd_agents,
         "ui": cmd_ui,
+        "server": cmd_server,
         # Hidden aliases for backward compatibility
         "attempts": _cmd_attempts_compat,
         "attempt": cmd_show,
