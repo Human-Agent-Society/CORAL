@@ -1,8 +1,9 @@
 """Tests for CLI island scoping when invoked from an agent worktree.
 
-The agent's CORAL.md (rendered at `coral/template/coral_md.py:108-115`) tells
-the agent "you cannot see [other islands'] state directly. Each island
-evolves independently." This file pins that contract for every read- and
+The agent's CORAL.md (rendered in `coral/template/coral_md.py`) tells the
+agent that each island evolves independently and CLI reads default to their
+own island, with `coral notes --all-islands` as the explicit opt-in
+cross-island read. This file pins that contract for every read- and
 write-side CLI command: when cwd has a `.coral_island` breadcrumb, the CLI
 must scope to that island; otherwise it must aggregate across islands (the
 "global" view for users outside any worktree).
@@ -750,6 +751,37 @@ def test_notes_in_worktree_only_lists_island_notes(
     assert "Note Island 0" in out
     assert "Note Island 1" not in out
     assert "Note Island 2" not in out
+
+
+def test_notes_all_islands_flag_aggregates_from_worktree(
+    monkeypatch, multi_island_layout, worktree, capsys
+):
+    """``coral notes --all-islands`` from an island-0 worktree opts out of the
+    island scope and aggregates every island's notes, tagged by source island."""
+    monkeypatch.setattr(
+        query_module,
+        "find_coral_dir_and_island",
+        lambda task=None, run=None: (multi_island_layout, "0"),
+    )
+    args = argparse.Namespace(
+        history=False,
+        diff=None,
+        read=None,
+        search=None,
+        recent=None,
+        all_islands=True,
+        task=None,
+        run=None,
+    )
+    cmd_notes(args)
+    out = capsys.readouterr().out
+    assert "Note Island 0" in out
+    assert "Note Island 1" in out
+    assert "Note Island 2" in out
+    # Aggregated entries carry their source island so readers can tell
+    # where each idea came from.
+    assert "[island 1]" in out
+    assert "[island 2]" in out
 
 
 # --------------------------------------------------------------------------- #

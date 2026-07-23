@@ -11,6 +11,7 @@ import random
 import shutil
 import signal
 import subprocess
+import tempfile
 import threading
 import time
 from collections import deque
@@ -181,6 +182,13 @@ class AgentManager:
         # Each entry: (candidate, reason). Deferred batches retry until they
         # apply or go stale; paused agents can stay paused for arbitrarily long.
         self._deferred_candidates: list[tuple[MigrationCandidate, str]] = []
+        # agent_id → global real-eval count at the moment of its last
+        # successful migration. Feeds MigrationRunner's remigration cooldown
+        # so a migrant (whose attempt records travel with it and therefore
+        # immediately satisfy min_evals on the new island) cannot ping-pong
+        # every cycle. Persisted at public/migration_state.json so the guard
+        # survives `coral resume`.
+        self._last_migrated_eval: dict[str, int] = {}
 
     def _runtime_for(self, agent_id: str) -> AgentRuntime:
         """Return the runtime instance for an agent_id, creating one on demand.
@@ -216,6 +224,7 @@ class AgentManager:
         logger.info(f"Run directory: {self.paths.run_dir}")
         logger.info(f"  coral_dir: {self.paths.coral_dir}")
         logger.info(f"  repo_dir:  {self.paths.repo_dir}")
+        self._last_migrated_eval = _read_last_migrated_evals(self.paths.coral_dir)
 
         # 1b. Start gateway if configured
         self._start_gateway_if_enabled()
@@ -846,6 +855,7 @@ class AgentManager:
         """Resume agents into an existing run's worktrees."""
         self._start_time = datetime.now(UTC)
         self.paths = paths
+        self._last_migrated_eval = _read_last_migrated_evals(paths.coral_dir)
 
         # Start gateway if configured
         self._start_gateway_if_enabled()
@@ -1755,6 +1765,8 @@ class AgentManager:
             coral_dir=self.paths.coral_dir,
             island_best_scores=best_scores,
             current_agent_islands=dict(self._agent_island),
+            last_migrated_evals=self._last_migrated_eval,
+            current_evals=current_evals,
         )
         # Mark the cycle as done even if no candidates matched — otherwise
         # every subsequent tick would re-enter run_cycle on the same boundary.
@@ -2204,6 +2216,16 @@ class AgentManager:
         # (6) Swap spec + tracking dict so future restarts pick dst.
         self._swap_spec_island(agent_id, new_island_id=dst)
         self._agent_island[agent_id] = dst
+
+        # (6b) Stamp the remigration cooldown. The migrant's attempt records
+        # moved with it in step (3), so without this stamp min_evals would be
+        # satisfied on the new island immediately and the same top agent
+        # could be re-selected on the very next cycle (ping-pong).
+        self._last_migrated_eval[agent_id] = self._get_migration_eval_count()
+        try:
+            _write_last_migrated_evals(coral_dir, self._last_migrated_eval)
+        except OSError as e:
+            logger.warning(f"Failed to persist migration state: {e}")
 
         # (7) Drop an arrival note on dst (best-effort).
         if self.migration_config.notify_island:
@@ -2919,6 +2941,67 @@ def _refresh_runtime_settings(
         )
 
 
+def _migration_state_path(coral_dir: Path) -> Path:
+    """Canonical location of the per-run migration state document."""
+    return coral_dir / "public" / "migration_state.json"
+
+
+def _write_last_migrated_evals(coral_dir: Path, last_migrated: dict[str, int]) -> Path:
+    """Atomically persist the agent → last-migrated eval-count map.
+
+    Mirrors the tempfile + os.replace pattern of ``write_agent_state`` so
+    concurrent readers never observe a partial document.
+    """
+    target = _migration_state_path(coral_dir)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(
+        {"schema_version": 1, "last_migrated_evals": last_migrated},
+        indent=2,
+        sort_keys=True,
+    )
+    fd, tmp_path = tempfile.mkstemp(
+        prefix=".migration_state.", suffix=".tmp", dir=str(target.parent)
+    )
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(payload)
+        os.replace(tmp_path, target)
+    except Exception:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+        raise
+    return target
+
+
+def _read_last_migrated_evals(coral_dir: Path) -> dict[str, int]:
+    """Best-effort read of the agent → last-migrated eval-count map.
+
+    Missing or malformed files yield an empty map, which disables the
+    remigration cooldown (no agent has a recorded migration).
+    """
+    target = _migration_state_path(coral_dir)
+    try:
+        with open(target) as f:
+            raw = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    data = raw.get("last_migrated_evals", {})
+    if not isinstance(data, dict):
+        return {}
+    out: dict[str, int] = {}
+    for agent_id, evals in data.items():
+        try:
+            out[str(agent_id)] = int(evals)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
 def _write_arrival_note(coral_dir: Path, candidate: MigrationCandidate) -> None:
     """Drop a markdown note on the destination island announcing the arrival.
 
@@ -3037,7 +3120,8 @@ def _build_migration_prompt(candidate: MigrationCandidate, *, shared_dir: str) -
         f"What to do first:\n"
         f"1. `coral log -n 10` to see this island's current leaderboard.\n"
         f"2. `coral notes --recent` to read what your new teammates "
-        f"have been working on.\n"
+        f"have been working on, and `coral notes --all-islands` to check "
+        f"discoveries on the other islands (including your previous one).\n"
         f"3. `coral skills` to discover what tooling already exists "
         f"here so you don't reinvent it.\n\n"
         f"Then bring your strongest ideas from your previous run and "

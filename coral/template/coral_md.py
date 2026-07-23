@@ -111,9 +111,12 @@ def generate_coral_md(
         rendered += (
             "\n\n## Multi-island provenance\n\n"
             f"You are working on island `{island_id}` in a multi-island run "
-            f"({config.islands.count} islands total). Other islands exist with "
-            "their own attempts, notes, and skills, but you cannot see their "
-            "state directly. Each island evolves independently.\n"
+            f"({config.islands.count} islands total). Each island evolves "
+            "independently with its own attempts, notes, and skills; "
+            "`coral log`, `coral notes`, and `coral skills` default to your "
+            "island. Notes are the cross-pollination channel: run "
+            "`coral notes --all-islands` to read what the other islands have "
+            "discovered — build on their ideas instead of duplicating them.\n"
         )
 
     return rendered

@@ -368,6 +368,10 @@ def format_notes_list(entries: list[dict[str, Any]]) -> str:
     frontmatter field display as ``(unknown)`` so an agent who forgot the
     field sees the gap in `coral notes` output immediately instead of
     discovering it later via silent exclusion from team-level views.
+
+    Entries carrying an ``island_id`` (present when notes are aggregated
+    across islands, e.g. ``coral notes --all-islands``) display it as an
+    ``[island N]`` suffix so readers can tell where each idea came from.
     """
     if not entries:
         return "No notes yet."
@@ -375,7 +379,8 @@ def format_notes_list(entries: list[dict[str, Any]]) -> str:
     for i, e in enumerate(entries, 1):
         date_str = f"[{e['date']}] " if e.get("date") else ""
         creator = e.get("creator") or UNATTRIBUTED_CREATOR
-        lines.append(f"  {i}. {date_str}{e['title']} ({creator})")
+        island_str = f" [island {e['island_id']}]" if e.get("island_id") is not None else ""
+        lines.append(f"  {i}. {date_str}{e['title']} ({creator}){island_str}")
     return "\n".join(lines)
 
 

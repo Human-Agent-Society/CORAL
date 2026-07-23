@@ -189,3 +189,19 @@ def test_generate_coral_md_multi_island_mentions_island(tmp_path):
     md_lower = md.lower()
     assert "island" in md_lower
     assert "island `2`" in md or "island 2" in md, "expected mention of island 2"
+
+
+def test_generate_coral_md_multi_island_points_to_all_islands_notes():
+    """The multi-island hint must tell agents how to read other islands'
+    notes — the cross-pollination channel."""
+    from coral.config import CoralConfig
+    from coral.template.coral_md import generate_coral_md
+
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "islands": {"count": 4},
+        }
+    )
+    md = generate_coral_md(cfg, agent_id="2-agent-1", island_id="2")
+    assert "coral notes --all-islands" in md
