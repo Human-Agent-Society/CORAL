@@ -324,19 +324,13 @@ Run 'coral <command> --help' for details on any command."""
             "  coral notes                   List all notes\n"
             "  coral notes -n 5              Last 5 notes\n"
             "  coral notes --search 'idea'   Search notes\n"
-            "  coral notes --read 3          Read note #3\n"
-            "  coral notes --all-islands     Read every island's notes (multi-island runs)"
+            "  coral notes --read 3          Read note #3"
         ),
         formatter_class=_CommandHelpFormatter,
     )
     p_notes.add_argument("--search", "-s", help="Search notes by keyword")
     p_notes.add_argument("-n", "--recent", type=int, help="Show N most recent")
     p_notes.add_argument("--read", "-r", help="Read a specific note by number or name")
-    p_notes.add_argument(
-        "--all-islands",
-        action="store_true",
-        help="Aggregate notes from every island instead of only the current one",
-    )
     p_notes.add_argument(
         "--history", action="store_true", help="Show shared state checkpoint history"
     )

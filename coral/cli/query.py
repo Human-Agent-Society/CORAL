@@ -185,7 +185,6 @@ def cmd_notes(args: argparse.Namespace) -> None:
       coral notes -n 5              Last 5 notes
       coral notes --search "idea"   Search notes
       coral notes --read 3          Read note #3
-      coral notes --all-islands     Read every island's notes (multi-island runs)
     """
     from coral.hub.notes import (
         format_notes_list,
@@ -200,12 +199,6 @@ def cmd_notes(args: argparse.Namespace) -> None:
         getattr(args, "task", None),
         getattr(args, "run", None),
     )
-    if getattr(args, "all_islands", False):
-        # Explicit opt-out of the worktree island scope: in multi-island mode
-        # island_id=None makes the hub fan out across every island. This is
-        # the cross-pollination channel — agents read other islands' notes
-        # without waiting for a migration.
-        island_id = None
 
     if getattr(args, "history", False):
         from coral.hub.checkpoint import checkpoint_history
