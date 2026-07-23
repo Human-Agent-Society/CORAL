@@ -18,17 +18,36 @@ Research the problem thoroughly before writing code. Understand what's known, wh
 
 ```
 notes/
-├── index.md          ← table of contents for research/ and experiments/
-├── raw/              ← saved web pages, paper excerpts (immutable, never edit)
-├── research/         ← your synthesized findings (link back to raw/)
-└── experiments/      ← eval reflections and results (written by reflect heartbeat)
+├── index.md              ← table of contents for research/ and experiments/
+├── raw/                  ← saved web pages, paper excerpts (immutable, never edit)
+├── research/             ← your synthesized findings (link back to raw/)
+│   └── _coverage.md      ← the research coverage ledger (dimensions × covered/partial/missing)
+└── experiments/          ← eval reflections and results (written by reflect heartbeat)
 ```
 
 ## Process
 
-### 1. Understand the Problem
+### 1. Understand the Problem — and Map the Research Space
 
 Read the task description and key files. Identify what's being optimized, what the constraints are, and what makes it hard. Check `coral log` and `{shared_dir}/notes/` for prior work.
+
+Then **decompose the problem into 4–8 research dimensions** — the distinct things a team would need to understand to win *this* task. Derive them from the task, don't pull them from a fixed list. Useful starting prompts (not a required set): *prior art / SOTA methods*, *mechanism or theory*, *implementation / libraries*, *the evaluation & grader surface*, *failure modes*, *adjacent fields*. Drop the ones that don't apply; add task-specific ones that do.
+
+Record them in the **coverage ledger** at `{shared_dir}/notes/research/_coverage.md` — the team's map of what's been researched and what hasn't. If it doesn't exist, create it with every dimension `missing`; if it does, read it first and target the gaps rather than re-covering what's done:
+
+```markdown
+# Research Coverage — <task name>
+<!-- Owned by the research team. Update on every research pass. Dimensions are
+     derived from THIS task, not a fixed list. Status: covered | partial | missing -->
+
+| Dimension (what to understand)  | Status  | Note                                | Last touched |
+|---------------------------------|---------|-------------------------------------|--------------|
+| Prior art / SOTA methods        | missing | —                                   | —            |
+| Failure modes of approach X     | missing | —                                   | —            |
+| Evaluation surface / grader     | missing | —                                   | —            |
+```
+
+This ledger is what turns re-research into gap-targeting: every pass below updates one or more rows instead of duplicating work. `_coverage.md` is a team meta-file (the `_` prefix keeps the index/link tooling from treating it as a note) — one per task, updated in place, never forked.
 
 ### 2. Search — Cast a Wide Net, Then Focus
 
@@ -48,7 +67,11 @@ Read the task description and key files. Identify what's being optimized, what t
 
 Do 3-5 focused searches. When reading papers and articles, focus on methodology and results tables — how did they solve it, and what performance did they achieve?
 
-### 3. Save Raw Sources
+**Then take one hop out.** From your two or three best sources, follow the citation graph one step in each direction: the works they *cite* (backward — this surfaces the seminal paper the field builds on) and the works that *cite them* (forward — this surfaces the recent work that extends or contests them). Neither reliably shows up in a keyword sweep. Use `WebFetch` on a paper's reference list or its Semantic Scholar / Google Scholar "cited by" page, and fold anything new and on-topic into your set before you start writing.
+
+### 3. Save Raw Sources — Retrieve First, Then Write
+
+**The hard rule: a claim you can't point to a saved source for is a claim, not a finding.** Retrieve the source *before* you write the note that leans on it — even when you know the answer cold, fetching the actual page is a few seconds and it's the difference between a citation and a memory of a citation. Never write a number, a benchmark result, or a "X beats Y" into a research note that isn't backed by a file in `raw/`. The grounding check in step 6 enforces this mechanically.
 
 For every useful source, save the raw content so it can be verified later:
 
@@ -74,6 +97,8 @@ Identify 2-4 candidate approaches. For each, document:
 
 Pick your approach based on strength of evidence, implementation feasibility, and iteration potential. Proven methods beat novel ideas for first attempts.
 
+**"No such approach exists" is a valid finding.** If the honest answer after a real search is that nobody has solved this, or the technique you expected to find was tried and abandoned, write *that* down — it saves the next agent the same dead-end search. Don't manufacture a weak candidate to fill the table; a documented negative result is more useful than a padded one.
+
 ### 5. Write Research Notes
 
 Summarize your findings in `{shared_dir}/notes/research/`. For each technique or approach, note:
@@ -84,13 +109,11 @@ Summarize your findings in `{shared_dir}/notes/research/`. For each technique or
 
 Keep notes specific and actionable. "X might work" is weak. "X reduces Y by 30% when Z > 10 (see raw/paper-name.md)" is useful. See `references/research-note-template.md` for a structured format.
 
-After writing or substantially updating a note, **optionally** spawn the Synthesis Reviewer subagent to verify grounding before adding the note to the index. The reviewer reads the note alongside its linked raw sources and returns a per-claim verdict (`grounded` / `partially-grounded` / `inferred` / `contradicted` / `unverifiable`) — useful because the author of a synthesis cannot objectively grade its own grounding. See [`agents/synthesis-reviewer.md`](agents/synthesis-reviewer.md) for inputs and output schema. Spawn it especially when:
+After writing or substantially updating a note, spawn the Synthesis Reviewer subagent to verify grounding. The reviewer reads the note alongside its linked raw sources and returns a per-claim verdict (`grounded` / `partially-grounded` / `inferred` / `contradicted` / `unverifiable`), saved next to the note as `<slug>.review.json` — useful because the author of a synthesis cannot objectively grade its own grounding. See [`agents/synthesis-reviewer.md`](agents/synthesis-reviewer.md) for inputs and output schema.
 
-- The note synthesizes 3+ raw sources and you want confidence the merge is faithful.
-- A subsequent agent is auditing older notes during organize-files.
-- The note's `confidence` field will be set to `high` and you want to back that up.
+**Soft gate:** a note is only allowed `confidence: high` in its frontmatter *after* it has passed synthesis review — high confidence is earned by an independent grounding check, not self-declared. (The step-6 grounding check flags any `confidence: high` note that has no `.review.json`.) For `low`/`medium` notes the review is optional but still worth it when the note synthesizes 3+ raw sources, or when a later agent is auditing older notes during organize-files.
 
-### 6. Update Index
+### 6. Update the Index, the Coverage Ledger, and Check Grounding
 
 Create or update `{shared_dir}/notes/index.md`. The index only lists research notes and experiment notes — not raw sources:
 
@@ -117,6 +140,16 @@ python .coral/public/skills/organize-files/scripts/resolve_links.py {shared_dir}
 ```
 
 The `--new` flag scans every existing note for plain-text mentions of the new title and wraps them as `[[wikilinks]]` — without this, manual cross-referencing decays as the notes directory grows.
+
+**Update the coverage ledger.** For each dimension you touched this pass, flip its row in `{shared_dir}/notes/research/_coverage.md` to `partial` or `covered`, link the note, and stamp the eval count. A pass that found nothing new still updates the row (it's now been *looked* at) rather than leaving it `missing`. Update in place — never fork a second ledger.
+
+**Run the grounding check** before you consider the pass done:
+
+```bash
+python {shared_dir}/skills/deep-research/scripts/check_grounding.py {shared_dir}/notes
+```
+
+It reads only files already on disk (no network) and flags ungrounded findings: research notes that cite no `raw/` source, links to `raw/` files that don't exist, raw sources missing their `source_url` / `source_type` / `captured` frontmatter, and `confidence: high` notes that skipped synthesis review. Fix what it finds — an ungrounded note pollutes the base for every agent that reads it.
 
 ## Maintaining Notes Across Sessions
 
@@ -146,9 +179,11 @@ If a note synthesizes A + B + C and you only have time to re-verify against B, *
 
 ## Principles
 
+- **Retrieve first, then write** — a claim you can't point to a saved source for is a claim, not a finding
 - **Save raw sources** — summaries can be wrong, raw sources are ground truth
+- **Target the gaps** — read `_coverage.md` first; research what's `missing`, don't re-cover what's `covered`
 - **Breadth before depth** — survey 3+ approaches before committing to one
 - **Compare before committing** — always evaluate 2-4 candidates, don't latch onto the first result
 - **Build on what exists** — check notes and past attempts first
-- **Cite your sources** — link research notes back to `notes/raw/`
+- **Cite your sources** — link research notes back to `notes/raw/`, and run the grounding check before you're done
 - **Don't over-research** — 3-5 searches, write notes, start coding
