@@ -20,6 +20,7 @@ from coral.agent.migration import (
     MigrationCandidate,
     MigrationRunner,
     assign_destinations,
+    cooled_down_agents,
     score_for_agent,
     select_candidates,
 )
@@ -255,6 +256,144 @@ def test_select_candidates_minimize_direction_picks_lowest_score_agent():
 
 
 # ---------------------------------------------------------------------------
+# Remigration cooldown: cooled_down_agents + exclusion in selection
+# ---------------------------------------------------------------------------
+
+
+def test_cooled_down_agents_boundary():
+    """Excluded while current_evals - last < cooldown; eligible again at ==."""
+    last = {"agent-A": 100}
+    assert cooled_down_agents(last, current_evals=100, cooldown=100) == {"agent-A"}
+    assert cooled_down_agents(last, current_evals=199, cooldown=100) == {"agent-A"}
+    assert cooled_down_agents(last, current_evals=200, cooldown=100) == set()
+    assert cooled_down_agents(last, current_evals=300, cooldown=100) == set()
+
+
+def test_cooled_down_agents_zero_cooldown_disables_guard():
+    """cooldown=0 (or negative) means no agent is ever excluded."""
+    last = {"agent-A": 100}
+    assert cooled_down_agents(last, current_evals=100, cooldown=0) == set()
+
+
+def test_select_candidates_excluded_agents_falls_back_to_second_best():
+    """With the island's best agent excluded, the island's 2nd best migrates."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        _make_multi_island(coral_dir, n=1)
+        for i, (agent, score) in enumerate([("agent-A", 0.9), ("agent-B", 0.4)] * 3):
+            write_attempt(
+                coral_dir,
+                _make_attempt(f"{i}", agent, score, timestamp=f"2026-05-31T10:0{i}:00Z"),
+                island_id="0",
+            )
+
+        candidates = select_candidates(
+            coral_dir,
+            island_ids=["0"],
+            rank_window=5,
+            min_evals=2,
+            minimize=False,
+            excluded_agents={"agent-A"},
+        )
+        assert [c.agent_id for c in candidates] == ["agent-B"]
+
+
+def test_select_candidates_excluding_everyone_yields_no_candidate():
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        _make_multi_island(coral_dir, n=1)
+        for i, s in enumerate([0.3, 0.4, 0.5]):
+            write_attempt(
+                coral_dir,
+                _make_attempt(f"a{i}", "agent-A", s, timestamp=f"2026-05-31T10:0{i}:00Z"),
+                island_id="0",
+            )
+
+        candidates = select_candidates(
+            coral_dir,
+            island_ids=["0"],
+            rank_window=5,
+            min_evals=2,
+            minimize=False,
+            excluded_agents={"agent-A"},
+        )
+        assert candidates == []
+
+
+def test_run_cycle_excludes_recent_migrants():
+    """A fresh migrant inside its cooldown window is not re-selected — the
+    classic ping-pong case: attempts moved with it, so min_evals alone would
+    immediately re-pick the same agent."""
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        _make_multi_island(coral_dir, n=2)
+        for island in range(2):
+            for i, s in enumerate([0.3, 0.4, 0.5]):
+                write_attempt(
+                    coral_dir,
+                    _make_attempt(
+                        f"i{island}-{i}",
+                        f"agent-{island}",
+                        s,
+                        timestamp=f"2026-05-31T10:0{i}:0{island}Z",
+                    ),
+                    island_id=str(island),
+                )
+        mig = MigrationConfig(
+            every=10,
+            rank_window=5,
+            min_evals=2,
+            max_per_cycle=2,
+            remigration_cooldown=100,
+        )
+        cfg = IslandsConfig(count=2, migration=mig)
+        runner = MigrationRunner(cfg, minimize=False, rng=random.Random(0))
+
+        # agent-0 migrated at eval 95; we're now at eval 100 → still cooled
+        # down (100 - 95 < 100), so only agent-1 may move this cycle.
+        migrations = runner.run_cycle(
+            coral_dir=coral_dir,
+            island_best_scores={},
+            last_migrated_evals={"agent-0": 95},
+            current_evals=100,
+        )
+        assert {c.agent_id for c in migrations} == {"agent-1"}
+
+        # At eval 195 the cooldown expired (195 - 95 >= 100) → both eligible.
+        migrations = runner.run_cycle(
+            coral_dir=coral_dir,
+            island_best_scores={},
+            last_migrated_evals={"agent-0": 95},
+            current_evals=195,
+        )
+        assert {c.agent_id for c in migrations} == {"agent-0", "agent-1"}
+
+
+def test_last_migrated_evals_persistence_round_trip(tmp_path):
+    """migration_state.json survives write/read; missing/corrupt → empty map."""
+    from coral.agent.manager import (
+        _migration_state_path,
+        _read_last_migrated_evals,
+        _write_last_migrated_evals,
+    )
+
+    coral_dir = tmp_path
+    # Missing file → empty map (guard effectively disabled).
+    assert _read_last_migrated_evals(coral_dir) == {}
+
+    _write_last_migrated_evals(coral_dir, {"agent-A": 42, "agent-B": 7})
+    assert _read_last_migrated_evals(coral_dir) == {"agent-A": 42, "agent-B": 7}
+
+    # Corrupt JSON → empty map, never a crash on resume.
+    _migration_state_path(coral_dir).write_text("{not json")
+    assert _read_last_migrated_evals(coral_dir) == {}
+
+    # Well-formed but wrong shape → empty map.
+    _migration_state_path(coral_dir).write_text('{"last_migrated_evals": [1, 2]}')
+    assert _read_last_migrated_evals(coral_dir) == {}
+
+
+# ---------------------------------------------------------------------------
 # assign_destinations: dest_weighting policies
 # ---------------------------------------------------------------------------
 
@@ -361,6 +500,46 @@ def test_assign_destinations_score_weighting_minimize_inverts():
         )
         landings[out[0].dst_island] += 1
     assert landings["2"] > 3 * landings["1"]
+
+
+def test_assign_destinations_weakest_biases_toward_weakest_island():
+    """``weakest`` inverts the ``score`` direction: under maximize, the
+    lowest-score island attracts the most migrants (FunSearch-style rescue)."""
+    rng = random.Random(7)
+    best_scores = {"0": 0.0, "1": 0.1, "2": 1.0}
+    landings: dict[str, int] = {"1": 0, "2": 0}
+    for _ in range(500):
+        out = assign_destinations(
+            [_candidate("agent-A", "0")],
+            island_ids=["0", "1", "2"],
+            weighting="weakest",
+            cycle_idx=0,
+            island_best_scores=best_scores,
+            rng=rng,
+            minimize=False,
+        )
+        landings[out[0].dst_island] += 1
+    # Island 1 (0.1) is far weaker than island 2 (1.0) → island 1 dominates.
+    assert landings["1"] > 3 * landings["2"]
+
+
+def test_assign_destinations_weakest_minimize_targets_strongest():
+    """Under minimize, ``weakest`` targets the highest-score island."""
+    rng = random.Random(7)
+    best_scores = {"0": 0.5, "1": 5.0, "2": 0.1}
+    landings: dict[str, int] = {"1": 0, "2": 0}
+    for _ in range(500):
+        out = assign_destinations(
+            [_candidate("agent-A", "0")],
+            island_ids=["0", "1", "2"],
+            weighting="weakest",
+            cycle_idx=0,
+            island_best_scores=best_scores,
+            rng=rng,
+            minimize=True,
+        )
+        landings[out[0].dst_island] += 1
+    assert landings["1"] > 3 * landings["2"]
 
 
 def test_assign_destinations_falls_back_to_uniform_when_no_scores():
@@ -1393,7 +1572,14 @@ def test_maybe_run_migration_cycle_migrates_whole_swap_with_pending_attempt(tmp_
     def fake_should_run(*, current_global_evals):
         return True
 
-    def fake_run_cycle(*, coral_dir, island_best_scores, current_agent_islands=None):
+    def fake_run_cycle(
+        *,
+        coral_dir,
+        island_best_scores,
+        current_agent_islands=None,
+        last_migrated_evals=None,
+        current_evals=0,
+    ):
         return [
             MigrationCandidate(agent_id="0-agent-1", src_island="0", dst_island="1", score=0.5),
             MigrationCandidate(agent_id="1-agent-1", src_island="1", dst_island="0", score=0.7),
@@ -1424,6 +1610,13 @@ def test_maybe_run_migration_cycle_migrates_whole_swap_with_pending_attempt(tmp_
     assert moved is not None
     assert moved.status == "pending"
     assert moved.metadata["island_id"] == "1"
+
+    # Both migrants got stamped with the remigration cooldown, and the stamp
+    # was persisted so it survives a resume.
+    from coral.agent.manager import _read_last_migrated_evals
+
+    assert set(mgr._last_migrated_eval) == {"0-agent-1", "1-agent-1"}
+    assert _read_last_migrated_evals(coral_dir) == mgr._last_migrated_eval
 
 
 def test_maybe_run_migration_cycle_ignores_raw_eval_count_for_tune_only(tmp_path):

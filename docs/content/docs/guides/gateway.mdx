@@ -29,6 +29,19 @@ litellm_settings:
 
 Each entry in `model_list` defines a model the gateway will serve. The `model_name` is what agents request; `litellm_params.model` is the upstream provider model. See the [LiteLLM docs](https://docs.litellm.ai/docs/proxy/configs) for full configuration options (multiple providers, load balancing, fallbacks, etc.).
 
+### MiniMax routes
+
+The generated configuration supports `MiniMax-M3` and `MiniMax-M2.7`. Each model ID includes both global and China OpenAI-compatible routes. Use the corresponding `-anthropic` alias for Anthropic-compatible routes. The Anthropic base URLs end in `/anthropic`; LiteLLM appends `/v1/messages` when it sends the request.
+
+All generated routes use `MINIMAX_API_KEY`:
+
+| Alias | Protocol | Regions |
+|-------|----------|---------|
+| `MiniMax-M3` | OpenAI-compatible | global, China |
+| `MiniMax-M3-anthropic` | Anthropic-compatible | global, China |
+| `MiniMax-M2.7` | OpenAI-compatible | global, China |
+| `MiniMax-M2.7-anthropic` | Anthropic-compatible | global, China |
+
 **2. Enable the gateway in your task config:**
 
 ```yaml
@@ -41,7 +54,7 @@ agents:
     config: "./litellm_config.yaml"  # path relative to task.yaml
 ```
 
-**3. Point your agent at the gateway.** For OpenCode, set `baseURL` in `opencode.json` to `http://localhost:<port>/v1` (see [Agent Runtimes → OpenCode](/guides/agent-runtimes#opencode)). For Claude Code, the gateway URL is automatically injected.
+**3. Point your agent at the gateway.** For OpenCode, set `baseURL` in `opencode.json` to `http://localhost:<port>/v1` (see [Agent Runtimes → OpenCode](/docs/guides/agent-runtimes#opencode)). For Claude Code, the gateway URL is automatically injected.
 
 When you run `coral start`, the gateway starts before agents are spawned, and all agent API requests are routed through it. The gateway automatically assigns each agent a unique proxy key for per-agent request tracking.
 

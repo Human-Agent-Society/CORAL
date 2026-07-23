@@ -372,8 +372,13 @@ class MigrationConfig:
     every: int = 50  # global evals between migration cycles
     rank_window: int = 20  # "best agent" judged by max-over-last-N evals
     min_evals: int = 3  # candidate must have >= N attempts to be eligible
-    dest_weighting: str = "score"  # score | uniform | round_robin
+    dest_weighting: str = "weakest"  # weakest | uniform | round_robin | score
     max_per_cycle: int = 2
+    # Min global evals before the same agent may migrate again. Attempt
+    # records move with the migrant, so without this guard min_evals is
+    # satisfied on arrival and the same top agent can ping-pong every cycle.
+    # 0 disables the guard.
+    remigration_cooldown: int = 100
     notify_island: bool = True
     # Standard post-migration phase: interrupt+resume live bystanders on the
     # affected islands so launch-injected per-agent state follows the new
@@ -395,14 +400,19 @@ class MigrationConfig:
             )
         if self.min_evals < 1:
             raise ValueError(f"islands.migration.min_evals must be >= 1, got {self.min_evals}")
-        if self.dest_weighting not in {"score", "uniform", "round_robin"}:
+        if self.dest_weighting not in {"score", "uniform", "round_robin", "weakest"}:
             raise ValueError(
                 "islands.migration.dest_weighting must be one of "
-                f"{{score, uniform, round_robin}}, got {self.dest_weighting!r}"
+                f"{{score, uniform, round_robin, weakest}}, got {self.dest_weighting!r}"
             )
         if self.max_per_cycle < 1:
             raise ValueError(
                 f"islands.migration.max_per_cycle must be >= 1, got {self.max_per_cycle}"
+            )
+        if self.remigration_cooldown < 0:
+            raise ValueError(
+                "islands.migration.remigration_cooldown must be >= 0, "
+                f"got {self.remigration_cooldown}"
             )
 
 

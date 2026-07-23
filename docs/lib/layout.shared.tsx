@@ -18,10 +18,9 @@ export function baseOptions(): BaseLayoutProps {
       ) as ReactNode,
     },
     links: [
-      {
-        text: 'Blog',
-        url: 'https://human-agent-society.github.io/CORAL/',
-      },
+      { text: 'Home', url: '/' },
+      { text: 'Docs', url: '/docs/', active: 'nested-url' },
+      { text: 'Blogs', url: '/blogs/' },
     ],
     githubUrl: 'https://github.com/Human-Agent-Society/CORAL',
   };

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Promote dev to main"
+  short_description: "Safely promote CORAL dev releases to main"
+  default_prompt: "Use $promoting-dev-to-main to prepare and merge the CORAL dev-to-main release PR."

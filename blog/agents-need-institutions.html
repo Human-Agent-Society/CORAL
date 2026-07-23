@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,64 +7,101 @@
 <meta name="description" content="Four months after launch, CORAL gains the four institutions every society of agents turns out to need: rubric judges, multi-island city-states, provenance-tracked archives, and OS-level privacy." />
 <meta name="author" content="The CORAL Team" />
 <link rel="icon" href="coral_logo.png" />
-<link rel="canonical" href="https://human-agent-society.github.io/CORAL/agents-need-institutions.html" />
+<link rel="canonical" href="https://coral.compounding-intelligence.ai/blogs/agents-need-institutions/" />
 <!-- Open Graph -->
 <meta property="og:type" content="article" />
 <meta property="og:site_name" content="CORAL" />
 <meta property="og:title" content="Multi-agent Societies, Institutions, and Incentives" />
 <meta property="og:description" content="Four months after launch, CORAL gains the four institutions every society of agents needs: rubric judges, multi-island city-states, provenance-tracked archives, and OS-level privacy." />
-<meta property="og:url" content="https://human-agent-society.github.io/CORAL/agents-need-institutions.html" />
-<meta property="og:image" content="https://human-agent-society.github.io/CORAL/coral_logo.png" />
+<meta property="og:url" content="https://coral.compounding-intelligence.ai/blogs/agents-need-institutions/" />
+<meta property="og:image" content="https://coral.compounding-intelligence.ai/blogs/agents-need-institutions/coral_logo.png" />
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Multi-agent Societies, Institutions, and Incentives" />
 <meta name="twitter:description" content="Four months after launch, CORAL gains the four institutions every society of agents needs: rubric judges, multi-island city-states, provenance-tracked archives, and OS-level privacy." />
-<meta name="twitter:image" content="https://human-agent-society.github.io/CORAL/coral_logo.png" />
+<meta name="twitter:image" content="https://coral.compounding-intelligence.ai/blogs/agents-need-institutions/coral_logo.png" />
+<script>
+(function(){
+  var saved=localStorage.getItem('theme');
+  var prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var theme=saved==='dark'||(saved!=='light'&&prefersDark)?'dark':'light';
+  document.documentElement.dataset.theme=theme;
+  document.documentElement.style.colorScheme=theme;
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,600&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
   :root{
-    --bg:         #f3f6fb;
-    --bg-elev:    #ffffff;
-    --ink:        #18222e;
-    --ink-2:      #26323f;
-    --ink-mute:   #415060;
-    --ink-fade:   #8e9eae;
-    --rule:       #bec8d8;
-    --rule-soft:  #dde4f0;
-    --accent:     #2a5282;
-    --accent-deep:#18222e;
-    --accent-soft:#dde4f0;
-    --code-bg:    #1a1e24;
-    --code-t:     #ced4dc;
     --serif: "Source Serif 4",Georgia,serif;
     --sans:  "DM Sans",-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
     --mono:  "DM Mono","SF Mono",ui-monospace,Consolas,monospace;
-    --nav-h: 56px;
+    --r:14px;--r-sm:10px;--r-pill:20px;
+    --nav-h:56px;
+  }
+  [data-theme="light"]{
+    --bg:#f3f6fb;--card:#e8edf6;--elevated:#dde4f0;--deep:#d2daea;
+    --code-bg:#1a1e24;--border:#bec8d8;--line:#aab4c6;
+    --t1:#18222e;--t2:#26323f;--t3:#415060;--t4:#647585;--t5:#8e9eae;
+    --code-t:#ced4dc;--badge-bg:#18222e;--badge-t:#f3f6fb;
+    --link:#2a5282;--link-h:#18222e;--nav-active:rgba(190,200,216,.5);
+    --bg-elev:var(--card);--ink:var(--t1);--ink-2:var(--t2);--ink-mute:var(--t3);
+    --ink-fade:var(--t5);--rule:var(--border);--rule-soft:var(--elevated);
+    --accent:var(--link);--accent-deep:var(--link-h);--accent-soft:var(--elevated);
+  }
+  [data-theme="dark"]{
+    --bg:#111821;--card:#18222e;--elevated:#202b38;--deep:#263442;
+    --code-bg:#0b1016;--border:#344454;--line:#647585;
+    --t1:#edf2f7;--t2:#c7d1dc;--t3:#aebbc8;--t4:#9eacba;--t5:#788898;
+    --code-t:#d7dfe8;--badge-bg:#edf2f7;--badge-t:#111821;
+    --link:#a9c7e8;--link-h:#edf2f7;--nav-active:rgba(52,68,84,.5);
+    --bg-elev:var(--card);--ink:var(--t1);--ink-2:var(--t2);--ink-mute:var(--t3);
+    --ink-fade:var(--t5);--rule:var(--border);--rule-soft:var(--elevated);
+    --accent:var(--link);--accent-deep:var(--link-h);--accent-soft:var(--elevated);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth;scroll-padding-top:calc(var(--nav-h) + 28px)}
   body{background:var(--bg);color:var(--ink-2);font-family:var(--sans);font-size:17px;line-height:1.72;
     -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
-    font-feature-settings:"kern" 1,"liga" 1,"onum" 1}
+    font-feature-settings:"kern" 1,"liga" 1,"onum" 1;transition:background .2s,color .2s}
   a{color:var(--accent);text-decoration:none;transition:color .15s}
   a:hover{color:var(--accent-deep)}
-  ::selection{background:var(--accent-soft);color:var(--accent-deep)}
+  ::selection{background:var(--badge-bg);color:var(--badge-t)}
 
   .eyebrow{font-family:var(--sans);font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--accent);font-weight:600}
   .label{font-family:var(--sans);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-fade);font-weight:600}
 
-  /* ─── Chrome ─── */
-  .nav{position:sticky;top:0;z-index:100;height:var(--nav-h);display:flex;align-items:center;justify-content:space-between;
-    padding:0 40px;background:rgba(243,246,251,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--rule)}
-  .wordmark{display:flex;align-items:center;gap:10px;color:var(--ink)}
-  .wordmark img{height:24px;width:auto;display:block}
-  .wordmark .name{font-family:var(--sans);font-size:11.5px;letter-spacing:0.32em;text-transform:uppercase;font-weight:600;color:var(--ink)}
-  .nav-r{display:flex;align-items:center;gap:26px}
-  .nav-r a{font-family:var(--sans);font-size:10.5px;letter-spacing:0.16em;text-transform:uppercase;font-weight:600;color:var(--ink-mute)}
-  .nav-r a:hover{color:var(--accent)}
-  .nav-r a.here{color:var(--ink)}
+  /* ─── Global navigation ─── */
+  .nav{position:sticky;top:0;z-index:100;height:var(--nav-h);display:flex;align-items:center;padding:0 24px;
+    background:var(--bg);border-bottom:.7px solid var(--border);transition:background .2s,border-color .2s}
+  .nav-logo{font-family:var(--sans);font-size:17px;font-weight:700;color:var(--t1);
+    display:flex;align-items:center;gap:10px;letter-spacing:.02em;transition:color .2s}
+  .nav-logo:hover{color:var(--t1)}
+  .nav-logo img{width:28px;height:28px;object-fit:contain}
+  .nav-links{display:flex;align-items:center;gap:2px;margin-left:22px}
+  .nav-link{font-size:14px;font-weight:500;color:var(--t4);padding:7px 9px;border-radius:6px;transition:all .15s}
+  .nav-link:hover{color:var(--t2);background:var(--nav-active)}
+  .nav-link.active{color:var(--t1);background:var(--nav-active)}
+  .nav-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .theme-toggle{display:inline-flex;align-items:center;padding:4px;border:.7px solid var(--border);border-radius:999px;
+    background:transparent;color:var(--t4);cursor:pointer;transition:border-color .2s}
+  .theme-icon{display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:6px;border-radius:999px}
+  .theme-icon svg{width:14px;height:14px}
+  [data-theme="light"] .theme-sun,[data-theme="dark"] .theme-moon{background:var(--nav-active);color:var(--t1)}
+  .gh-link{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--t1);transition:background .15s}
+  .gh-link:hover{color:var(--t1);background:var(--nav-active)}
+  .gh-link svg{width:18px;height:18px}
+  .nav-menu{display:none;margin-left:auto;position:relative}
+  .nav-menu summary{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border:.7px solid var(--border);
+    border-radius:8px;color:var(--t1);cursor:pointer;list-style:none}
+  .nav-menu summary::-webkit-details-marker{display:none}
+  .nav-menu summary svg{width:20px;height:20px;transition:transform .2s}
+  .nav-menu[open] summary svg{transform:rotate(180deg)}
+  .nav-menu-panel{position:absolute;top:46px;right:-8px;width:210px;padding:10px;border:.7px solid var(--border);
+    border-radius:12px;background:var(--bg);box-shadow:0 16px 40px rgba(0,0,0,.14)}
+  .nav-menu-panel .nav-link{display:block;margin-bottom:2px}
+  .nav-menu-tools{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:.7px solid var(--border)}
 
   /* ─── Layout ─── */
   .page{max-width:720px;margin:0 auto;padding:0 28px 96px}
@@ -127,14 +164,14 @@
   /* ─── Code blocks ─── */
   .cb{background:var(--code-bg);border-radius:14px;margin:20px 0 24px;overflow:hidden}
   .cb-head{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
-  .cb-lang{font-family:var(--sans);font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:#647585;font-weight:600}
-  .cb-copy{background:none;border:none;font-family:var(--sans);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:#647585;cursor:pointer;padding:2px 8px;border-radius:3px;transition:all .15s;font-weight:600}
-  .cb-copy:hover{background:rgba(255,255,255,.07);color:#aab4c6}
+  .cb-lang{font-family:var(--sans);font-size:9.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--t4);font-weight:600}
+  .cb-copy{background:none;border:none;font-family:var(--sans);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t4);cursor:pointer;padding:2px 8px;border-radius:3px;transition:all .15s;font-weight:600}
+  .cb-copy:hover{background:rgba(255,255,255,.07);color:var(--t5)}
   .cb pre{padding:15px 18px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.7;color:var(--code-t)}
   .cb .kw{color:#9ec0d0}.cb .str{color:#b5c4a8}.cb .cmt{color:#5c6370;font-style:italic}.cb .num{color:#d4a0a0}
 
   /* ─── Figures ─── */
-  .fig-anim{margin:30px 0 8px;border:1px solid var(--rule);border-radius:14px;background:var(--bg-elev);padding:26px 22px 18px;overflow:hidden}
+  .fig-anim{margin:30px 0 8px;border:1px solid var(--rule);border-radius:14px;background:var(--bg-elev);padding:26px 22px 18px;overflow:hidden;transition:background .2s,border-color .2s}
   .fig-anim svg{width:100%;height:auto;display:block;overflow:visible}
   .figcap{font-family:var(--sans);font-size:12.5px;line-height:1.55;color:var(--ink-mute);margin:12px 2px 34px}
   .figcap strong{color:var(--ink-2);font-weight:600}
@@ -143,11 +180,11 @@
 
   /* ─── Callout ─── */
   .callout{background:var(--bg-elev);border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:0 14px 14px 0;
-    padding:18px 22px;margin:24px 0;font-size:14.5px;line-height:1.62}
+    padding:18px 22px;margin:24px 0;font-size:14.5px;line-height:1.62;transition:background .2s,border-color .2s}
   .callout .c-lab{font-family:var(--sans);font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:6px}
 
   /* ─── Footer ─── */
-  .footer{border-top:1px solid var(--rule);margin-top:80px;padding:30px 40px 40px;text-align:center}
+  .footer{border-top:1px solid var(--rule);margin-top:80px;padding:30px 40px 40px;text-align:center;transition:border-color .2s}
   .footer p{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--ink-mute)}
 
   /* ─── Animation primitives (BP-style) ─── */
@@ -185,10 +222,10 @@
   .t-mono{font-family:var(--mono);font-size:10px;fill:var(--ink-mute)}
 
   /* ─── Mobile ─── */
-  @media (max-width:640px){
-    .nav{padding:0 20px}
-    .nav-r{gap:16px}
-    .nav-r a:not(.here){display:none}
+  @media (max-width:768px){
+    .nav{padding:0 16px}
+    .nav-links,.nav-actions{display:none}
+    .nav-menu{display:block}
     .page{padding:0 18px 64px}
     .hero{padding:56px 0 0}
     .hero h1{font-size:clamp(32px,9vw,40px)}
@@ -205,16 +242,38 @@
 
 <!-- NAV -->
 <nav class="nav">
-  <a class="wordmark" href="index.html">
-    <img src="coral_logo.png" alt="" />
-    <span class="name">Coral</span>
-  </a>
-  <div class="nav-r">
-    <a href="https://docs.coralxyz.com">Docs</a>
-    <a href="index.html">Launch Post</a>
-    <a href="#" class="here">Latest Post</a>
-    <a href="https://github.com/Human-Agent-Society/CORAL">GitHub</a>
+  <a href="/" class="nav-logo"><img src="/coral_logo.png" alt="">CORAL</a>
+  <div class="nav-links">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/docs/" class="nav-link">Docs</a>
+    <a href="/blogs/" class="nav-link active" aria-current="page">Blogs</a>
   </div>
+  <div class="nav-actions">
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle Theme">
+      <span class="theme-icon theme-sun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg></span>
+      <span class="theme-icon theme-moon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+    </button>
+    <a href="https://github.com/Human-Agent-Society/CORAL" class="gh-link" aria-label="GitHub">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    </a>
+  </div>
+  <details class="nav-menu">
+    <summary aria-label="Toggle Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <div class="nav-menu-panel">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/docs/" class="nav-link">Docs</a>
+      <a href="/blogs/" class="nav-link active" aria-current="page">Blogs</a>
+      <div class="nav-menu-tools">
+        <a href="https://github.com/Human-Agent-Society/CORAL" class="gh-link" aria-label="GitHub">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle Theme">
+          <span class="theme-icon theme-sun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg></span>
+          <span class="theme-icon theme-moon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        </button>
+      </div>
+    </div>
+  </details>
 </nav>
 
 <div class="page">
@@ -234,7 +293,7 @@
   <!-- TL;DR -->
   <div class="tldr">
     <div class="eyebrow">TL;DR</div>
-    <p>Since the <a href="index.html">launch post</a>, <strong><span style="color:#E8A09A">CORAL</span></strong> was accepted to <strong>COLM 2026</strong>, placed top-3 on several kernels of <a href="https://research.nvidia.com/benchmarks/sol-execbench/collection/4">NVIDIA's SOL-ExecBench</a> — and gained the four institutions every society of agents turns out to need. <strong>Judges</strong>: rubric graders that score open-ended work no function can compute a number for. <strong>City-states</strong>: multi-island runs that keep shared knowledge from collapsing into groupthink, with migration to mix it. <strong>Archives</strong>: typed notes with provenance that turn agent memory into a knowledge graph. And <strong>privacy</strong>: OS-level sandboxing that makes secrets unreadable rather than politely off-limits.</p>
+    <p>Since the <a href="/blogs/evolve-like-coral/">launch post</a>, <strong><span style="color:#E8A09A">CORAL</span></strong> was accepted to <strong>COLM 2026</strong>, placed top-3 on several kernels of <a href="https://research.nvidia.com/benchmarks/sol-execbench/collection/4">NVIDIA's SOL-ExecBench</a> — and gained the four institutions every society of agents turns out to need. <strong>Judges</strong>: rubric graders that score open-ended work no function can compute a number for. <strong>City-states</strong>: multi-island runs that keep shared knowledge from collapsing into groupthink, with migration to mix it. <strong>Archives</strong>: typed notes with provenance that turn agent memory into a knowledge graph. And <strong>privacy</strong>: OS-level sandboxing that makes secrets unreadable rather than politely off-limits.</p>
   </div>
 
   <!-- TOC -->
@@ -253,7 +312,7 @@
   <article class="article">
 
     <p class="lede" style="margin-top:56px">
-      When we <a href="index.html">introduced CORAL</a> in March, the most striking findings weren't the benchmark numbers. They were the social behaviors: agents copying each other's breakthroughs within minutes, spontaneously authoring consensus documents, cross-referencing each other's codebases like reviewers. Give a population of autonomous agents shared memory and a scoreboard, and something that looks unmistakably like a small research community assembles itself.
+      When we <a href="/blogs/evolve-like-coral/">introduced CORAL</a> in March, the most striking findings weren't the benchmark numbers. They were the social behaviors: agents copying each other's breakthroughs within minutes, spontaneously authoring consensus documents, cross-referencing each other's codebases like reviewers. Give a population of autonomous agents shared memory and a scoreboard, and something that looks unmistakably like a small research community assembles itself.
     </p>
     <p>
       Watching those communities for four months — the paper is now accepted at <strong>COLM 2026</strong> — pushed us toward a question that sounds more like political economy than machine learning: <em>what does a society of self-improving agents actually need?</em> Every answer we arrived at was something human societies had already invented. Not smarter individuals — <strong>institutions</strong>: courts to render judgment where measurement fails, city-states where distinct cultures can develop, archives that make knowledge cumulative instead of anecdotal, and privacy that is enforced rather than promised. A society of agents without them hits the same walls ours would — it can only value what it can measure, it converges on monoculture, it forgets what it learned, and it keeps its secrets on the honor system.
@@ -281,33 +340,33 @@
       <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A rubric judge reads an artifact and returns per-criterion verdicts plus a weighted aggregate">
         <defs>
           <marker id="jArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="#415060" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="var(--t3)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
           </marker>
         </defs>
 
         <!-- artifact window -->
         <g class="a-rise" style="animation-delay:.1s">
-          <rect x="30" y="70" width="150" height="168" rx="6" fill="#ffffff" stroke="#bec8d8"/>
-          <rect x="30" y="70" width="150" height="24" rx="6" fill="#dde4f0"/>
-          <rect x="30" y="86" width="150" height="8" fill="#dde4f0"/>
-          <circle cx="44" cy="82" r="3" fill="#bec8d8"/><circle cx="55" cy="82" r="3" fill="#bec8d8"/><circle cx="66" cy="82" r="3" fill="#bec8d8"/>
-          <text x="105" y="115" text-anchor="middle" class="t-mono" fill="#26323f">report.md</text>
-          <rect x="46" y="130" width="118" height="5" rx="2.5" fill="#bec8d8"/>
-          <rect x="46" y="145" width="98"  height="5" rx="2.5" fill="#dde4f0"/>
-          <rect x="46" y="160" width="112" height="5" rx="2.5" fill="#dde4f0"/>
-          <rect x="46" y="175" width="84"  height="5" rx="2.5" fill="#bec8d8"/>
-          <rect x="46" y="190" width="106" height="5" rx="2.5" fill="#dde4f0"/>
-          <rect x="46" y="205" width="70"  height="5" rx="2.5" fill="#dde4f0"/>
+          <rect x="30" y="70" width="150" height="168" rx="6" fill="var(--card)" stroke="var(--border)"/>
+          <rect x="30" y="70" width="150" height="24" rx="6" fill="var(--elevated)"/>
+          <rect x="30" y="86" width="150" height="8" fill="var(--elevated)"/>
+          <circle cx="44" cy="82" r="3" fill="var(--border)"/><circle cx="55" cy="82" r="3" fill="var(--border)"/><circle cx="66" cy="82" r="3" fill="var(--border)"/>
+          <text x="105" y="115" text-anchor="middle" class="t-mono" fill="var(--t2)">report.md</text>
+          <rect x="46" y="130" width="118" height="5" rx="2.5" fill="var(--border)"/>
+          <rect x="46" y="145" width="98"  height="5" rx="2.5" fill="var(--elevated)"/>
+          <rect x="46" y="160" width="112" height="5" rx="2.5" fill="var(--elevated)"/>
+          <rect x="46" y="175" width="84"  height="5" rx="2.5" fill="var(--border)"/>
+          <rect x="46" y="190" width="106" height="5" rx="2.5" fill="var(--elevated)"/>
+          <rect x="46" y="205" width="70"  height="5" rx="2.5" fill="var(--elevated)"/>
           <text x="105" y="258" text-anchor="middle" class="t-lab">the artifact</text>
         </g>
 
         <!-- arrow to judge -->
-        <path class="a-draw" style="animation-delay:.5s" pathLength="1" d="M 188 154 L 258 154" stroke="#415060" stroke-width="1.3" fill="none" marker-end="url(#jArr)"/>
+        <path class="a-draw" style="animation-delay:.5s" pathLength="1" d="M 188 154 L 258 154" stroke="var(--t3)" stroke-width="1.3" fill="none" marker-end="url(#jArr)"/>
 
         <!-- judge -->
         <g class="a-pop" style="animation-delay:.75s">
-          <circle cx="302" cy="154" r="32" fill="#f3f6fb" stroke="#18222e" stroke-width="1.3"/>
-          <text x="302" y="151" text-anchor="middle" class="t-lab" fill="#18222e">judge</text>
+          <circle cx="302" cy="154" r="32" fill="var(--bg)" stroke="var(--t1)" stroke-width="1.3"/>
+          <text x="302" y="151" text-anchor="middle" class="t-lab" fill="var(--t1)">judge</text>
           <text x="302" y="165" text-anchor="middle" class="t-it">an LLM</text>
         </g>
         <text class="a-fade" style="animation-delay:.95s" x="302" y="212" text-anchor="middle">
@@ -316,42 +375,42 @@
         </text>
 
         <!-- arrow to verdicts -->
-        <path class="a-draw" style="animation-delay:1.1s" pathLength="1" d="M 340 154 L 405 154" stroke="#415060" stroke-width="1.3" fill="none" marker-end="url(#jArr)"/>
+        <path class="a-draw" style="animation-delay:1.1s" pathLength="1" d="M 340 154 L 405 154" stroke="var(--t3)" stroke-width="1.3" fill="none" marker-end="url(#jArr)"/>
 
         <!-- verdict rows -->
         <g class="a-rise" style="animation-delay:1.3s">
           <text x="428" y="78" class="t-name">Accuracy</text>
           <text x="512" y="78" class="t-small">× 2.0</text>
-          <line x1="556" y1="74" x2="668" y2="74" stroke="#dde4f0" stroke-width="1"/>
+          <line x1="556" y1="74" x2="668" y2="74" stroke="var(--elevated)" stroke-width="1"/>
         </g>
         <g class="a-pop" style="animation-delay:1.55s">
-          <circle cx="694" cy="73" r="12" fill="#2a5282"/>
-          <path d="M 688.5 73 L 692.5 77.5 L 700 68.5" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="694" cy="73" r="12" fill="var(--link)"/>
+          <path d="M 688.5 73 L 692.5 77.5 L 700 68.5" fill="none" stroke="var(--badge-t)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </g>
 
         <g class="a-rise" style="animation-delay:1.75s">
           <text x="428" y="128" class="t-name">Coverage</text>
           <text x="512" y="128" class="t-small">× 1.0</text>
-          <line x1="556" y1="124" x2="668" y2="124" stroke="#dde4f0" stroke-width="1"/>
+          <line x1="556" y1="124" x2="668" y2="124" stroke="var(--elevated)" stroke-width="1"/>
         </g>
         <g class="a-pop" style="animation-delay:2.0s">
-          <circle cx="694" cy="123" r="12" fill="#2a5282"/>
-          <path d="M 688.5 123 L 692.5 127.5 L 700 118.5" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="694" cy="123" r="12" fill="var(--link)"/>
+          <path d="M 688.5 123 L 692.5 127.5 L 700 118.5" fill="none" stroke="var(--badge-t)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </g>
 
         <g class="a-rise" style="animation-delay:2.2s">
           <text x="428" y="178" class="t-name">Clarity</text>
           <text x="512" y="178" class="t-small">× 1.0</text>
-          <line x1="556" y1="174" x2="668" y2="174" stroke="#dde4f0" stroke-width="1"/>
+          <line x1="556" y1="174" x2="668" y2="174" stroke="var(--elevated)" stroke-width="1"/>
         </g>
         <g class="a-pop" style="animation-delay:2.45s">
-          <circle cx="694" cy="173" r="12" fill="#ffffff" stroke="#8e9eae" stroke-width="1.3"/>
-          <path d="M 689.5 168.5 L 698.5 177.5 M 698.5 168.5 L 689.5 177.5" stroke="#8e9eae" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="694" cy="173" r="12" fill="var(--card)" stroke="var(--t5)" stroke-width="1.3"/>
+          <path d="M 689.5 168.5 L 698.5 177.5 M 698.5 168.5 L 689.5 177.5" stroke="var(--t5)" stroke-width="1.8" stroke-linecap="round"/>
         </g>
 
         <!-- aggregate -->
-        <line x1="428" y1="232" x2="706" y2="232" stroke="#dde4f0" stroke-width="7" stroke-linecap="round"/>
-        <line class="a-scalex" style="animation-delay:2.8s" x1="428" y1="232" x2="636" y2="232" stroke="#2a5282" stroke-width="7" stroke-linecap="round"/>
+        <line x1="428" y1="232" x2="706" y2="232" stroke="var(--elevated)" stroke-width="7" stroke-linecap="round"/>
+        <line class="a-scalex" style="animation-delay:2.8s" x1="428" y1="232" x2="636" y2="232" stroke="var(--link)" stroke-width="7" stroke-linecap="round"/>
         <text class="a-fade" style="animation-delay:3.5s" x="428" y="262">
           <tspan class="t-lab acc">aggregated · 0.75</tspan>
           <tspan class="t-it" dx="10">weight-normalized pass fraction</tspan>
@@ -390,7 +449,7 @@
     </p>
     <div class="callout">
       <div class="c-lab">When to judge, when to compute</div>
-      If you <em>can</em> compute the number (accuracy, speedup, pass-rate), use a code grader every time — judges are slower, cost LLM calls per eval, and are noisier. Reach for a judge only when the thing you care about is quality of prose, structure, or argument. Full guide: <a href="https://docs.coralxyz.com/guides/rubric-judge">docs.coralxyz.com/guides/rubric-judge</a>; working examples at <code>examples/race-japan-elderly/</code> and <code>examples/apex-eggshell-skull/</code>.
+      If you <em>can</em> compute the number (accuracy, speedup, pass-rate), use a code grader every time — judges are slower, cost LLM calls per eval, and are noisier. Reach for a judge only when the thing you care about is quality of prose, structure, or argument. Full guide: <a href="https://coral.compounding-intelligence.ai/docs/guides/rubric-judge/">coral.compounding-intelligence.ai/docs/guides/rubric-judge</a>; working examples at <code>examples/race-japan-elderly/</code> and <code>examples/apex-eggshell-skull/</code>.
     </div>
 
     <!-- ══════════ 02 · CITY-STATES ══════════ -->
@@ -406,95 +465,95 @@
 <span class="cmt"># or in task.yaml:  preset: multi-island</span></pre>
     </div>
     <p>
-      Agents on the same island share everything — attempts, notes, skills, heartbeat state. Agents on different islands can't see each other's shared state at all: each island is a city-state that develops its own culture of approaches. Islands are named after legendary isles (<code>atlantis</code>, <code>avalon</code>, <code>lemuria</code>, ...), and an agent's id carries its birthplace as readable provenance — <code>poseidon-from-avalon</code> stays <code>poseidon-from-avalon</code> even after emigrating. Inside a worktree, every CLI command (<code>coral status</code>, <code>coral log</code>, <code>coral notes</code>) automatically scopes to the agent's current island.
+      Agents on the same island share everything — attempts, notes, skills, heartbeat state. Agents on different islands receive separate shared-state views through their normal workspace and CLI interfaces, so each island can develop its own culture of approaches. Islands are named after legendary isles (<code>atlantis</code>, <code>avalon</code>, <code>lemuria</code>, ...), and an agent's id carries its birthplace as readable provenance — <code>poseidon-from-avalon</code> stays <code>poseidon-from-avalon</code> even after emigrating. Inside a worktree, every CLI command (<code>coral status</code>, <code>coral log</code>, <code>coral notes</code>) automatically scopes to the agent's current island.
     </p>
 
     <div class="fig-anim" data-anim>
       <svg viewBox="0 0 760 350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two islands with isolated shared state; a strong agent migrates while its notes stay behind">
         <defs>
           <marker id="bArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="#2a5282" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="var(--link)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
           </marker>
         </defs>
 
         <!-- island atlantis -->
         <text class="a-fade t-lab" style="animation-delay:.1s" x="34" y="66">island · atlantis</text>
-        <rect class="a-fade" style="animation-delay:.15s" x="26" y="78" width="322" height="240" rx="14" fill="none" stroke="#8e9eae" stroke-width="1" stroke-dasharray="5 5"/>
+        <rect class="a-fade" style="animation-delay:.15s" x="26" y="78" width="322" height="240" rx="14" fill="none" stroke="var(--t5)" stroke-width="1" stroke-dasharray="5 5"/>
         <!-- island avalon -->
         <text class="a-fade t-lab" style="animation-delay:.3s" x="422" y="66">island · avalon</text>
-        <rect class="a-fade" style="animation-delay:.35s" x="414" y="78" width="322" height="240" rx="14" fill="none" stroke="#8e9eae" stroke-width="1" stroke-dasharray="5 5"/>
+        <rect class="a-fade" style="animation-delay:.35s" x="414" y="78" width="322" height="240" rx="14" fill="none" stroke="var(--t5)" stroke-width="1" stroke-dasharray="5 5"/>
 
         <!-- agents atlantis -->
         <g class="a-pop" style="animation-delay:.65s">
-          <circle cx="110" cy="136" r="12" fill="#ffffff" stroke="#18222e" stroke-width="1.2"/>
-          <circle cx="110" cy="136" r="3.5" fill="#18222e"/>
+          <circle cx="110" cy="136" r="12" fill="var(--card)" stroke="var(--t1)" stroke-width="1.2"/>
+          <circle cx="110" cy="136" r="3.5" fill="var(--t1)"/>
         </g>
         <text class="a-fade t-small" style="animation-delay:.75s" x="110" y="168" text-anchor="middle">captain-nemo</text>
         <g class="a-dim" style="animation-delay:2.7s">
           <g class="a-pop" style="animation-delay:.8s">
-            <circle cx="252" cy="136" r="12" fill="#dde4f0" stroke="#2a5282" stroke-width="1.3"/>
-            <circle cx="252" cy="136" r="3.5" fill="#2a5282"/>
+            <circle cx="252" cy="136" r="12" fill="var(--elevated)" stroke="var(--link)" stroke-width="1.3"/>
+            <circle cx="252" cy="136" r="3.5" fill="var(--link)"/>
           </g>
           <text class="a-fade t-small" style="animation-delay:.9s" x="252" y="168" text-anchor="middle">poseidon</text>
         </g>
 
         <!-- agents avalon -->
         <g class="a-pop" style="animation-delay:.65s">
-          <circle cx="498" cy="136" r="12" fill="#ffffff" stroke="#18222e" stroke-width="1.2"/>
-          <circle cx="498" cy="136" r="3.5" fill="#18222e"/>
+          <circle cx="498" cy="136" r="12" fill="var(--card)" stroke="var(--t1)" stroke-width="1.2"/>
+          <circle cx="498" cy="136" r="3.5" fill="var(--t1)"/>
         </g>
         <text class="a-fade t-small" style="animation-delay:.75s" x="498" y="168" text-anchor="middle">captain-ahab</text>
         <g class="a-pop" style="animation-delay:.8s">
-          <circle cx="590" cy="136" r="12" fill="#ffffff" stroke="#18222e" stroke-width="1.2"/>
-          <circle cx="590" cy="136" r="3.5" fill="#18222e"/>
+          <circle cx="590" cy="136" r="12" fill="var(--card)" stroke="var(--t1)" stroke-width="1.2"/>
+          <circle cx="590" cy="136" r="3.5" fill="var(--t1)"/>
         </g>
         <text class="a-fade t-small" style="animation-delay:.9s" x="590" y="168" text-anchor="middle">jack-sparrow</text>
 
         <!-- shared bars -->
         <g class="a-rise" style="animation-delay:1.05s">
-          <rect x="52" y="230" width="270" height="46" rx="8" fill="#dde4f0" stroke="#bec8d8"/>
-          <line x1="142" y1="238" x2="142" y2="268" stroke="#bec8d8"/>
-          <line x1="232" y1="238" x2="232" y2="268" stroke="#bec8d8"/>
-          <text x="97"  y="257" text-anchor="middle" class="t-lab" fill="#26323f">attempts</text>
-          <text x="187" y="257" text-anchor="middle" class="t-lab" fill="#26323f">notes</text>
-          <text x="277" y="257" text-anchor="middle" class="t-lab" fill="#26323f">skills</text>
+          <rect x="52" y="230" width="270" height="46" rx="8" fill="var(--elevated)" stroke="var(--border)"/>
+          <line x1="142" y1="238" x2="142" y2="268" stroke="var(--border)"/>
+          <line x1="232" y1="238" x2="232" y2="268" stroke="var(--border)"/>
+          <text x="97"  y="257" text-anchor="middle" class="t-lab" fill="var(--t2)">attempts</text>
+          <text x="187" y="257" text-anchor="middle" class="t-lab" fill="var(--t2)">notes</text>
+          <text x="277" y="257" text-anchor="middle" class="t-lab" fill="var(--t2)">skills</text>
         </g>
         <g class="a-rise" style="animation-delay:1.15s">
-          <rect x="440" y="230" width="270" height="46" rx="8" fill="#dde4f0" stroke="#bec8d8"/>
-          <line x1="530" y1="238" x2="530" y2="268" stroke="#bec8d8"/>
-          <line x1="620" y1="238" x2="620" y2="268" stroke="#bec8d8"/>
-          <text x="485" y="257" text-anchor="middle" class="t-lab" fill="#26323f">attempts</text>
-          <text x="575" y="257" text-anchor="middle" class="t-lab" fill="#26323f">notes</text>
-          <text x="665" y="257" text-anchor="middle" class="t-lab" fill="#26323f">skills</text>
+          <rect x="440" y="230" width="270" height="46" rx="8" fill="var(--elevated)" stroke="var(--border)"/>
+          <line x1="530" y1="238" x2="530" y2="268" stroke="var(--border)"/>
+          <line x1="620" y1="238" x2="620" y2="268" stroke="var(--border)"/>
+          <text x="485" y="257" text-anchor="middle" class="t-lab" fill="var(--t2)">attempts</text>
+          <text x="575" y="257" text-anchor="middle" class="t-lab" fill="var(--t2)">notes</text>
+          <text x="665" y="257" text-anchor="middle" class="t-lab" fill="var(--t2)">skills</text>
         </g>
 
         <!-- migration arc -->
         <path class="a-draw" style="animation-delay:1.6s;animation-duration:1.3s" pathLength="1"
-          d="M 260 120 C 320 34 560 30 664 116" fill="none" stroke="#2a5282" stroke-width="1.5" marker-end="url(#bArr)"/>
-        <text class="a-fade t-lab acc" style="animation-delay:2.1s" x="452" y="36" text-anchor="middle">migration · every N evals</text>
+          d="M 260 120 C 320 34 560 30 664 116" fill="none" stroke="var(--link)" stroke-width="1.5" marker-end="url(#bArr)"/>
+        <text class="a-fade t-lab acc" style="animation-delay:2.1s" x="452" y="36" text-anchor="middle">migration cycle · every N real evals</text>
 
         <!-- arrival -->
         <g class="a-pop" style="animation-delay:3.0s">
-          <circle cx="672" cy="136" r="12" fill="#dde4f0" stroke="#2a5282" stroke-width="1.3"/>
-          <circle cx="672" cy="136" r="3.5" fill="#2a5282"/>
+          <circle cx="672" cy="136" r="12" fill="var(--elevated)" stroke="var(--link)" stroke-width="1.3"/>
+          <circle cx="672" cy="136" r="3.5" fill="var(--link)"/>
         </g>
         <text class="a-fade" style="animation-delay:3.15s" x="672" y="168" text-anchor="middle">
-          <tspan class="t-small" fill="#2a5282">poseidon</tspan><tspan class="t-small" x="672" dy="12">-from-atlantis</tspan>
+          <tspan class="t-small" fill="var(--link)">poseidon</tspan><tspan class="t-small" x="672" dy="12">-from-atlantis</tspan>
         </text>
 
         <!-- notes stay -->
         <text class="a-fade t-it" style="animation-delay:3.5s" x="187" y="298" text-anchor="middle">its notes stay behind — island-local knowledge</text>
         <g class="a-pop" style="animation-delay:3.7s">
-          <rect x="596" y="288" width="118" height="20" rx="10" fill="#ffffff" stroke="#2a5282" stroke-width="1"/>
+          <rect x="596" y="288" width="118" height="20" rx="10" fill="var(--card)" stroke="var(--link)" stroke-width="1"/>
           <text x="655" y="301" text-anchor="middle" class="t-lab acc" style="font-size:8.5px">+ arrival note</text>
         </g>
       </svg>
     </div>
-    <p class="figcap"><strong>Fig. 2</strong> — Two islands, each with its own shared knowledge layer. Every <code>migration.every</code> evals, a strong agent relocates; its worktree and eval history travel with it, its notes stay behind, and it announces itself with an arrival note under <code>notes/migrations/</code>.</p>
+    <p class="figcap"><strong>Fig. 2</strong> — Two islands, each with its own shared knowledge layer. Every <code>migration.every</code> finalized real evaluations, CORAL runs a migration cycle that may relocate eligible agents; a migrant's worktree and eval history travel with it, its notes stay behind, and it announces itself with an arrival note under <code>notes/migrations/</code>.</p>
 
     <h3>Migration</h3>
     <p>
-      Isolation without mixing just gives you N smaller runs — what made the city-states fertile was the <em>travelers</em> between them. Migration is enabled by default whenever <code>islands.count &gt; 1</code>: every <code>migration.every</code> global evals, <strong><span style="color:#E8A09A">CORAL</span></strong> ranks agents by their best score over a recent window and relocates up to <code>max_per_cycle</code> strong agents to another island (weighted by destination score by default), without worsening roster balance. The migrant's worktree, branch, and eval history travel with it — but its <strong>notes stay on the source island</strong>. Ideas travel in the migrant's head, not as a bulk export of the old island's library.
+      Isolation without mixing just gives you N smaller runs — what made the city-states fertile was the <em>travelers</em> between them. Migration is enabled by default whenever <code>islands.count &gt; 1</code>: every <code>migration.every</code> finalized real evaluations, <strong><span style="color:#E8A09A">CORAL</span></strong> runs a cycle that ranks agents by their best score over a recent window and may relocate up to <code>max_per_cycle</code> eligible agents to another island (weighted toward the weakest eligible destination by default), without worsening roster balance. A 100-real-evaluation remigration cooldown prevents the same high-scoring agent from immediately bouncing between islands. The migrant's worktree, branch, and eval history travel with it — but its <strong>notes stay on the source island</strong>. Ideas travel in the migrant's head, not as a bulk export of the old island's library.
     </p>
     <p>
       That design choice took us a few iterations to get right, and it raises the question the next institution answers: if knowledge belongs to the island rather than the agent, <em>what exactly is a unit of knowledge?</em>
@@ -528,13 +587,13 @@
       <svg viewBox="0 0 760 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Notes form a knowledge graph: typed claims linked by supersedes and refutes edges">
         <defs>
           <marker id="gArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="#8e9eae" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="var(--t5)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
           </marker>
         </defs>
 
         <!-- n1 hypothesis (untested) -->
         <g class="a-pop" style="animation-delay:.15s">
-          <circle cx="150" cy="150" r="17" fill="#f3f6fb" stroke="#8e9eae" stroke-width="1.3" stroke-dasharray="3 3"/>
+          <circle cx="150" cy="150" r="17" fill="var(--bg)" stroke="var(--t5)" stroke-width="1.3" stroke-dasharray="3 3"/>
         </g>
         <text class="a-fade" style="animation-delay:.3s" x="150" y="186" text-anchor="middle">
           <tspan class="t-lab" x="150">hypothesis</tspan>
@@ -543,8 +602,8 @@
 
         <!-- n2 experiment (confirmed) -->
         <g class="a-pop" style="animation-delay:1.0s">
-          <circle cx="365" cy="82" r="22" fill="#2a5282"/>
-          <path d="M 356 82 L 362.5 89 L 375 71" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="365" cy="82" r="22" fill="var(--link)"/>
+          <path d="M 356 82 L 362.5 89 L 375 71" fill="none" stroke="var(--badge-t)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
         </g>
         <text class="a-fade" style="animation-delay:1.15s" x="365" y="42" text-anchor="middle">
           <tspan class="t-lab acc" x="365">experiment · confirmed</tspan>
@@ -554,8 +613,8 @@
 
         <!-- n3 dead_end (refuted) -->
         <g class="a-pop" style="animation-delay:1.9s">
-          <circle cx="365" cy="238" r="17" fill="#8e9eae"/>
-          <path d="M 358.5 231.5 L 371.5 244.5 M 371.5 231.5 L 358.5 244.5" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round"/>
+          <circle cx="365" cy="238" r="17" fill="var(--t5)"/>
+          <path d="M 358.5 231.5 L 371.5 244.5 M 371.5 231.5 L 358.5 244.5" stroke="var(--badge-t)" stroke-width="2.1" stroke-linecap="round"/>
         </g>
         <text class="a-fade" style="animation-delay:2.05s" x="365" y="274" text-anchor="middle">
           <tspan class="t-lab" x="365">dead_end · refuted</tspan>
@@ -563,29 +622,29 @@
         </text>
 
         <!-- edges from n2/n3 back to n1 -->
-        <path class="a-draw" style="animation-delay:1.45s" pathLength="1" d="M 344 92 L 172 141" fill="none" stroke="#8e9eae" stroke-width="1.2" marker-end="url(#gArr)"/>
+        <path class="a-draw" style="animation-delay:1.45s" pathLength="1" d="M 344 92 L 172 141" fill="none" stroke="var(--t5)" stroke-width="1.2" marker-end="url(#gArr)"/>
         <text class="a-fade t-lab" style="animation-delay:1.7s" x="252" y="106" text-anchor="middle">supersedes</text>
-        <path class="a-fade" style="animation-delay:2.3s" d="M 346 231 L 172 159" fill="none" stroke="#8e9eae" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#gArr)"/>
+        <path class="a-fade" style="animation-delay:2.3s" d="M 346 231 L 172 159" fill="none" stroke="var(--t5)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#gArr)"/>
         <text class="a-fade t-lab" style="animation-delay:2.55s" x="252" y="215" text-anchor="middle">refutes</text>
 
         <!-- n4 synthesis -->
         <g class="a-pop" style="animation-delay:3.2s">
-          <circle cx="600" cy="160" r="26" fill="#18222e"/>
-          <text x="600" y="165" text-anchor="middle" class="t-lab" fill="#f3f6fb">syn</text>
+          <circle cx="600" cy="160" r="26" fill="var(--t1)"/>
+          <text x="600" y="165" text-anchor="middle" class="t-lab" fill="var(--bg)">syn</text>
         </g>
         <text class="a-fade" style="animation-delay:3.35s" x="600" y="204" text-anchor="middle">
-          <tspan class="t-lab" x="600" fill="#26323f">synthesis · high confidence</tspan>
+          <tspan class="t-lab" x="600" fill="var(--t2)">synthesis · high confidence</tspan>
           <tspan class="t-it" x="600" dy="14">"tiling, not unrolling"</tspan>
         </text>
-        <path class="a-draw" style="animation-delay:2.9s" pathLength="1" d="M 578 145 L 391 90"  fill="none" stroke="#8e9eae" stroke-width="1.2" marker-end="url(#gArr)"/>
-        <path class="a-draw" style="animation-delay:3.05s" pathLength="1" d="M 578 173 L 386 231" fill="none" stroke="#8e9eae" stroke-width="1.2" marker-end="url(#gArr)"/>
+        <path class="a-draw" style="animation-delay:2.9s" pathLength="1" d="M 578 145 L 391 90"  fill="none" stroke="var(--t5)" stroke-width="1.2" marker-end="url(#gArr)"/>
+        <path class="a-draw" style="animation-delay:3.05s" pathLength="1" d="M 578 173 L 386 231" fill="none" stroke="var(--t5)" stroke-width="1.2" marker-end="url(#gArr)"/>
 
         <!-- legend -->
         <g class="a-fade" style="animation-delay:3.9s">
-          <line x1="30" y1="306" x2="730" y2="306" stroke="#dde4f0"/>
-          <circle cx="120" cy="322" r="5" fill="#2a5282"/><text x="132" y="326" class="t-small">confirmed</text>
-          <circle cx="230" cy="322" r="5" fill="#f3f6fb" stroke="#8e9eae" stroke-dasharray="2 2"/><text x="242" y="326" class="t-small">untested</text>
-          <circle cx="336" cy="322" r="5" fill="#8e9eae"/><text x="348" y="326" class="t-small">refuted</text>
+          <line x1="30" y1="306" x2="730" y2="306" stroke="var(--elevated)"/>
+          <circle cx="120" cy="322" r="5" fill="var(--link)"/><text x="132" y="326" class="t-small">confirmed</text>
+          <circle cx="230" cy="322" r="5" fill="var(--bg)" stroke="var(--t5)" stroke-dasharray="2 2"/><text x="242" y="326" class="t-small">untested</text>
+          <circle cx="336" cy="322" r="5" fill="var(--t5)"/><text x="348" y="326" class="t-small">refuted</text>
           <text x="470" y="326" class="t-it">node size = confidence · edges = supersedes / refutes / links</text>
         </g>
       </svg>
@@ -616,76 +675,76 @@
       <svg viewBox="0 0 760 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The sandbox boundary: reads inside the agent's slice succeed; reads of private data and host secrets are blocked at the OS level">
         <defs>
           <marker id="pArrOk" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="#415060" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M1.5 1.5 L8.5 5 L1.5 8.5" fill="none" stroke="var(--t3)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
           </marker>
         </defs>
 
         <!-- agent -->
         <g class="a-rise" style="animation-delay:.1s">
-          <circle cx="130" cy="165" r="28" fill="#ffffff" stroke="#18222e" stroke-width="1.3"/>
-          <text x="130" y="169" text-anchor="middle" class="t-lab" fill="#18222e">agent</text>
+          <circle cx="130" cy="165" r="28" fill="var(--card)" stroke="var(--t1)" stroke-width="1.3"/>
+          <text x="130" y="169" text-anchor="middle" class="t-lab" fill="var(--t1)">agent</text>
           <text x="130" y="212" text-anchor="middle" class="t-it">any runtime</text>
         </g>
 
         <!-- inside cards -->
         <g class="a-rise" style="animation-delay:.3s">
-          <rect x="255" y="52" width="190" height="46" rx="5" fill="#ffffff" stroke="#bec8d8"/>
+          <rect x="255" y="52" width="190" height="46" rx="5" fill="var(--card)" stroke="var(--border)"/>
           <text x="350" y="72" text-anchor="middle" class="t-name" style="font-size:13px">its worktree</text>
           <text x="350" y="88" text-anchor="middle" class="t-small">+ same-island siblings</text>
         </g>
         <g class="a-rise" style="animation-delay:.42s">
-          <rect x="255" y="142" width="190" height="46" rx="5" fill="#ffffff" stroke="#bec8d8"/>
+          <rect x="255" y="142" width="190" height="46" rx="5" fill="var(--card)" stroke="var(--border)"/>
           <text x="350" y="162" text-anchor="middle" class="t-name" style="font-size:13px">.coral/public/</text>
           <text x="350" y="178" text-anchor="middle" class="t-small">attempts · notes · skills</text>
         </g>
         <g class="a-rise" style="animation-delay:.54s">
-          <rect x="255" y="232" width="190" height="46" rx="5" fill="#ffffff" stroke="#bec8d8"/>
+          <rect x="255" y="232" width="190" height="46" rx="5" fill="var(--card)" stroke="var(--border)"/>
           <text x="350" y="252" text-anchor="middle" class="t-name" style="font-size:13px">grader source</text>
           <text x="350" y="268" text-anchor="middle" class="t-small">read-only — the rules are public</text>
         </g>
 
         <!-- ok arrows -->
-        <path class="a-draw" style="animation-delay:.75s" pathLength="1" d="M 152 146 L 248 84"  fill="none" stroke="#415060" stroke-width="1.2" marker-end="url(#pArrOk)"/>
-        <path class="a-draw" style="animation-delay:.85s" pathLength="1" d="M 160 165 L 248 165" fill="none" stroke="#415060" stroke-width="1.2" marker-end="url(#pArrOk)"/>
-        <path class="a-draw" style="animation-delay:.95s" pathLength="1" d="M 152 184 L 248 246" fill="none" stroke="#415060" stroke-width="1.2" marker-end="url(#pArrOk)"/>
+        <path class="a-draw" style="animation-delay:.75s" pathLength="1" d="M 152 146 L 248 84"  fill="none" stroke="var(--t3)" stroke-width="1.2" marker-end="url(#pArrOk)"/>
+        <path class="a-draw" style="animation-delay:.85s" pathLength="1" d="M 160 165 L 248 165" fill="none" stroke="var(--t3)" stroke-width="1.2" marker-end="url(#pArrOk)"/>
+        <path class="a-draw" style="animation-delay:.95s" pathLength="1" d="M 152 184 L 248 246" fill="none" stroke="var(--t3)" stroke-width="1.2" marker-end="url(#pArrOk)"/>
 
         <!-- boundary -->
         <rect class="a-fade" style="animation-delay:1.4s;animation-duration:1s" x="68" y="24" width="412" height="284" rx="16"
-          fill="none" stroke="#2a5282" stroke-width="1.5" stroke-dasharray="7 5"/>
+          fill="none" stroke="var(--link)" stroke-width="1.5" stroke-dasharray="7 5"/>
         <text class="a-fade t-lab acc" style="animation-delay:2.4s" x="88" y="300">sandbox — enforced by the os · seatbelt / bubblewrap</text>
 
         <!-- outside cards -->
         <g class="a-fade" style="animation-delay:.6s">
-          <rect x="560" y="52" width="172" height="46" rx="5" fill="#dde4f0" stroke="#bec8d8"/>
+          <rect x="560" y="52" width="172" height="46" rx="5" fill="var(--elevated)" stroke="var(--border)"/>
           <text x="646" y="72" text-anchor="middle" class="t-name" style="font-size:13px">.coral/private/</text>
           <text x="646" y="88" text-anchor="middle" class="t-small">answer keys · grader venv</text>
         </g>
         <g class="a-fade" style="animation-delay:.7s">
-          <rect x="560" y="142" width="172" height="46" rx="5" fill="#dde4f0" stroke="#bec8d8"/>
+          <rect x="560" y="142" width="172" height="46" rx="5" fill="var(--elevated)" stroke="var(--border)"/>
           <text x="646" y="162" text-anchor="middle" class="t-name" style="font-size:13px">~/.ssh · ~/.aws</text>
           <text x="646" y="178" text-anchor="middle" class="t-small">host secrets</text>
         </g>
         <g class="a-fade" style="animation-delay:.8s">
-          <rect x="560" y="232" width="172" height="46" rx="5" fill="#dde4f0" stroke="#bec8d8"/>
+          <rect x="560" y="232" width="172" height="46" rx="5" fill="var(--elevated)" stroke="var(--border)"/>
           <text x="646" y="252" text-anchor="middle" class="t-name" style="font-size:13px">other runs</text>
-          <text x="646" y="268" text-anchor="middle" class="t-small">and other islands' state</text>
+          <text x="646" y="268" text-anchor="middle" class="t-small">outside this run</text>
         </g>
 
         <!-- blocked attempts -->
-        <path class="a-draw" style="animation-delay:2.7s;animation-duration:.8s" pathLength="1" d="M 455 75 L 474 75" fill="none" stroke="#2a5282" stroke-width="1.4"/>
+        <path class="a-draw" style="animation-delay:2.7s;animation-duration:.8s" pathLength="1" d="M 455 75 L 474 75" fill="none" stroke="var(--link)" stroke-width="1.4"/>
         <g class="a-pop" style="animation-delay:3.4s">
-          <circle cx="480" cy="75" r="10" fill="#2a5282"/>
-          <path d="M 476 71 L 484 79 M 484 71 L 476 79" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="480" cy="75" r="10" fill="var(--link)"/>
+          <path d="M 476 71 L 484 79 M 484 71 L 476 79" stroke="var(--badge-t)" stroke-width="1.8" stroke-linecap="round"/>
         </g>
-        <path class="a-draw" style="animation-delay:2.85s;animation-duration:.8s" pathLength="1" d="M 455 165 L 474 165" fill="none" stroke="#2a5282" stroke-width="1.4"/>
+        <path class="a-draw" style="animation-delay:2.85s;animation-duration:.8s" pathLength="1" d="M 455 165 L 474 165" fill="none" stroke="var(--link)" stroke-width="1.4"/>
         <g class="a-pop" style="animation-delay:3.55s">
-          <circle cx="480" cy="165" r="10" fill="#2a5282"/>
-          <path d="M 476 161 L 484 169 M 484 161 L 476 169" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="480" cy="165" r="10" fill="var(--link)"/>
+          <path d="M 476 161 L 484 169 M 484 161 L 476 169" stroke="var(--badge-t)" stroke-width="1.8" stroke-linecap="round"/>
         </g>
-        <path class="a-draw" style="animation-delay:3.0s;animation-duration:.8s" pathLength="1" d="M 455 255 L 474 255" fill="none" stroke="#2a5282" stroke-width="1.4"/>
+        <path class="a-draw" style="animation-delay:3.0s;animation-duration:.8s" pathLength="1" d="M 455 255 L 474 255" fill="none" stroke="var(--link)" stroke-width="1.4"/>
         <g class="a-pop" style="animation-delay:3.7s">
-          <circle cx="480" cy="255" r="10" fill="#2a5282"/>
-          <path d="M 476 251 L 484 259 M 484 251 L 476 259" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="480" cy="255" r="10" fill="var(--link)"/>
+          <path d="M 476 251 L 484 259 M 484 251 L 476 259" stroke="var(--badge-t)" stroke-width="1.8" stroke-linecap="round"/>
         </g>
         <text class="a-fade t-it" style="animation-delay:4.0s" x="646" y="120" text-anchor="middle">unreadable — not by request,</text>
         <text class="a-fade t-it" style="animation-delay:4.0s" x="646" y="134" text-anchor="middle">by construction</text>
@@ -694,8 +753,8 @@
     <p class="figcap"><strong>Fig. 4</strong> — The sandbox boundary. Reads inside the agent's slice of the run succeed; reads of <code>.coral/private/</code>, host secrets, and other runs are blocked by the OS — Seatbelt on macOS, bubblewrap on Linux — identically for every runtime.</p>
 
     <ul>
-      <li><strong>Reads are confined to the agent's slice of this run:</strong> its own worktree (and same-island siblings'), the run repo, shared <code>.coral/</code> state minus <code>private/</code>, the surfaced grader source, and toolchain dotdirs.</li>
-      <li><strong>Writes are allow-listed</strong> to the same slice plus <code>/tmp</code>.</li>
+      <li><strong>Reads are allow-listed:</strong> the agent's own worktree (and same-island siblings'), the run repo, shared <code>.coral/</code> state minus <code>private/</code>, the surfaced grader source, and toolchain dotdirs.</li>
+      <li><strong>Writes are allow-listed</strong> to the agent's worktree, the run's non-private <code>.coral/</code> state, repository metadata needed for commits, toolchain dotdirs, and <code>/tmp</code>.</li>
       <li><strong>Network</strong> comes in two modes: <code>open</code> (full access, mediated by an allow-all proxy the manager runs in-process) or <code>allowlist</code> (traffic restricted to <code>allowed_domains</code>).</li>
     </ul>
     <div class="cb">
@@ -711,7 +770,7 @@ coral start -c task.yaml agents.sandbox.enabled=true
       The provider is <strong>pluggable</strong>: <code>agents.sandbox.provider</code> takes the built-in <code>srt</code> or any <code>module.path:ClassName</code> implementing the <code>SandboxProvider</code> protocol — the hook for hosted backends like e2b or Modal. (For container-based isolation, <code>run.session=docker</code> now also runs agents as an unprivileged OS user; the two mechanisms solve the same problem and are mutually exclusive.)
     </p>
     <p>
-      And the institutions compose. In a multi-island sandboxed run, an agent's readable slice is defined by its island — so when migration moves an agent, the manager <em>resyncs the sandbox boundaries</em> of live bystanders on the affected islands (sessions are interrupted and resumed; no work is lost). Judged by courts, organized into city-states, recorded in archives, with privacy the OS enforces: each institution stands alone, but they were designed to govern together.
+      And the institutions compose. In a multi-island sandboxed run, the sandbox's worktree allow-list follows island membership — so when migration moves an agent, the manager <em>resyncs the sandbox boundaries</em> of live bystanders on the affected islands (sessions are interrupted and resumed; no work is lost). Judged by courts, organized into city-states, recorded in archives, with privacy the OS enforces: each institution stands alone, but they were designed to govern together.
     </p>
 
     <!-- ══════════ 05 · PUBLIC WORKS ══════════ -->
@@ -748,7 +807,7 @@ coral start -c examples/circle_packing/task.yaml \
     agents.count=4 islands.count=2 agents.sandbox.enabled=true</pre>
     </div>
     <p>
-      Guides for each institution: <a href="https://docs.coralxyz.com/guides/rubric-judge">rubric judges</a>, <a href="https://docs.coralxyz.com/guides/multi-agent">multi-island runs</a>, and the <a href="https://docs.coralxyz.com">documentation site</a> for the rest. To port your own benchmark, <code>coral init my-task</code> scaffolds the task package and <code>coral validate my-task</code> dry-runs your grader before you spend a single agent-hour.
+      Guides for each institution: <a href="https://coral.compounding-intelligence.ai/docs/guides/rubric-judge/">rubric judges</a>, <a href="https://coral.compounding-intelligence.ai/docs/guides/multi-agent/">multi-island runs</a>, and the <a href="https://coral.compounding-intelligence.ai/docs/">documentation site</a> for the rest. To port your own benchmark, <code>coral init my-task</code> scaffolds the task package and <code>coral validate my-task</code> dry-runs your grader before you spend a single agent-hour.
     </p>
     <p>
       The launch post closed by asking what <em>organizational principles for machine intelligence</em> might look like. Four months in, our working answer is the one this post opened with: the same things ours needed — judges, city-states, archives, and privacy. How a society of agents is judged, partitioned, recorded, and bounded matters as much as how capable its members are. And the list of institutions agent societies don't have yet is long: peer review, reputation, markets, elections — the incentive structures human societies took centuries to invent. Some of those are less absurd than they sound, and the whole system is open — come build them with us.
@@ -765,7 +824,7 @@ coral start -c examples/circle_packing/task.yaml \
   author = {{The CORAL Team}},
   year   = {2026},
   month  = {July},
-  howpublished = {\url{https://human-agent-society.github.io/CORAL/agents-need-institutions.html}}
+  howpublished = {\url{https://coral.compounding-intelligence.ai/blogs/agents-need-institutions/}}
 }</pre>
     </div>
     <p>To cite the CORAL system and paper:</p>
@@ -789,6 +848,17 @@ coral start -c examples/circle_packing/task.yaml \
 </footer>
 
 <script>
+  function setTheme(theme){
+    document.documentElement.dataset.theme=theme;
+    document.documentElement.style.colorScheme=theme;
+    localStorage.setItem('theme',theme);
+  }
+  document.querySelectorAll('[data-theme-toggle]').forEach(function(button){
+    button.addEventListener('click',function(){
+      setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+    });
+  });
+
   // Copy code
   function copyCode(b){var p=b.closest('.cb').querySelector('pre');
     navigator.clipboard.writeText(p.textContent).then(function(){

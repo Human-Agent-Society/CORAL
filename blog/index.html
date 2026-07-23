@@ -7,19 +7,28 @@
 <meta name="description" content="An autonomous infrastructure for self-evolving coding agents — reaching 2.5× higher improvement rates and 10× faster evolution than structured evolutionary search, across math, ML, and kernel tasks.">
 <meta name="author" content="The CORAL Team">
 <link rel="icon" href="coral_logo.png">
-<link rel="canonical" href="https://human-agent-society.github.io/CORAL/">
+<link rel="canonical" href="https://coral.compounding-intelligence.ai/blogs/evolve-like-coral/">
 <!-- Open Graph -->
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="CORAL">
 <meta property="og:title" content="Evolve Like Coral: Towards Autonomous Multi-Agent Evolution">
 <meta property="og:description" content="An autonomous infrastructure for self-evolving coding agents — 2.5× higher improvement rates and 10× faster evolution than structured evolutionary search.">
-<meta property="og:url" content="https://human-agent-society.github.io/CORAL/">
-<meta property="og:image" content="https://human-agent-society.github.io/CORAL/coral_logo.png">
+<meta property="og:url" content="https://coral.compounding-intelligence.ai/blogs/evolve-like-coral/">
+<meta property="og:image" content="https://coral.compounding-intelligence.ai/blogs/evolve-like-coral/coral_logo.png">
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Evolve Like Coral: Towards Autonomous Multi-Agent Evolution">
 <meta name="twitter:description" content="An autonomous infrastructure for self-evolving coding agents — 2.5× higher improvement rates and 10× faster evolution than structured evolutionary search.">
-<meta name="twitter:image" content="https://human-agent-society.github.io/CORAL/coral_logo.png">
+<meta name="twitter:image" content="https://coral.compounding-intelligence.ai/blogs/evolve-like-coral/coral_logo.png">
+<script>
+(function(){
+  var saved=localStorage.getItem('theme');
+  var prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var theme=saved==='dark'||(saved!=='light'&&prefersDark)?'dark':'light';
+  document.documentElement.dataset.theme=theme;
+  document.documentElement.style.colorScheme=theme;
+})();
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
 
@@ -28,7 +37,7 @@
   --serif:'Source Serif 4',Georgia,serif;
   --mono:'DM Mono','SF Mono',Consolas,monospace;
   --r:14px;--r-sm:10px;--r-pill:20px;
-  --nav-h:52px;--toc-w:180px;
+  --nav-h:56px;--toc-w:180px;
 }
 [data-theme="light"]{
   --bg:#f3f6fb;--card:#e8edf6;--elevated:#dde4f0;--deep:#d2daea;
@@ -36,6 +45,15 @@
   --t1:#18222e;--t2:#26323f;--t3:#415060;--t4:#647585;--t5:#8e9eae;
   --code-t:#ced4dc;--badge-bg:#18222e;--badge-t:#f3f6fb;
   --link:#2a5282;--link-h:#18222e;
+  --nav-active:rgba(190,200,216,.5);
+}
+[data-theme="dark"]{
+  --bg:#111821;--card:#18222e;--elevated:#202b38;--deep:#263442;
+  --code-bg:#0b1016;--border:#344454;--line:#647585;
+  --t1:#edf2f7;--t2:#c7d1dc;--t3:#aebbc8;--t4:#9eacba;--t5:#788898;
+  --code-t:#d7dfe8;--badge-bg:#edf2f7;--badge-t:#111821;
+  --link:#a9c7e8;--link-h:#edf2f7;
+  --nav-active:rgba(52,68,84,.5);
 }
 
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -48,17 +66,35 @@ a:hover{color:var(--link-h)}
 
 /* NAV */
 .nav{position:sticky;top:0;z-index:100;height:var(--nav-h);display:flex;
-  align-items:center;justify-content:space-between;padding:0 28px;
+  align-items:center;padding:0 24px;
   background:var(--bg);border-bottom:.7px solid var(--border);transition:background .2s,border-color .2s}
 .nav-logo{font-family:var(--sans);font-size:17px;font-weight:700;color:var(--t1);
-  display:flex;align-items:center;letter-spacing:.02em;transition:color .2s}
-.nav-r{display:flex;align-items:center;gap:10px}
-.nav-link{font-size:12.5px;font-weight:500;color:var(--t4);padding:5px 10px;border-radius:var(--r-sm);transition:all .15s}
-.nav-link:hover{color:var(--t2);background:var(--card)}
-.gh-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:var(--r-pill);
-  background:var(--badge-bg);color:var(--badge-t);font-size:11px;font-weight:500;letter-spacing:.02em;transition:opacity .15s}
-.gh-pill:hover{opacity:.85;color:var(--badge-t)}
-.gh-pill svg{flex-shrink:0}
+  display:flex;align-items:center;gap:10px;letter-spacing:.02em;transition:color .2s}
+.nav-logo:hover{color:var(--t1)}
+.nav-logo img{width:28px;height:28px;object-fit:contain}
+.nav-links{display:flex;align-items:center;gap:2px;margin-left:22px}
+.nav-link{font-size:14px;font-weight:500;color:var(--t4);padding:7px 9px;border-radius:6px;transition:all .15s}
+.nav-link:hover{color:var(--t2);background:var(--nav-active)}
+.nav-link.active{color:var(--t1);background:var(--nav-active)}
+.nav-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+.theme-toggle{display:inline-flex;align-items:center;padding:4px;border:.7px solid var(--border);border-radius:999px;
+  background:transparent;color:var(--t4);cursor:pointer;transition:border-color .2s}
+.theme-icon{display:flex;align-items:center;justify-content:center;width:26px;height:26px;padding:6px;border-radius:999px}
+.theme-icon svg{width:14px;height:14px}
+[data-theme="light"] .theme-sun,[data-theme="dark"] .theme-moon{background:var(--nav-active);color:var(--t1)}
+.gh-link{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--t1);transition:background .15s}
+.gh-link:hover{color:var(--t1);background:var(--nav-active)}
+.gh-link svg{width:18px;height:18px}
+.nav-menu{display:none;margin-left:auto;position:relative}
+.nav-menu summary{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border:.7px solid var(--border);
+  border-radius:8px;color:var(--t1);cursor:pointer;list-style:none}
+.nav-menu summary::-webkit-details-marker{display:none}
+.nav-menu summary svg{width:20px;height:20px;transition:transform .2s}
+.nav-menu[open] summary svg{transform:rotate(180deg)}
+.nav-menu-panel{position:absolute;top:46px;right:-8px;width:210px;padding:10px;border:.7px solid var(--border);
+  border-radius:12px;background:var(--bg);box-shadow:0 16px 40px rgba(0,0,0,.14)}
+.nav-menu-panel .nav-link{display:block;margin-bottom:2px}
+.nav-menu-tools{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:.7px solid var(--border)}
 
 /* HERO */
 .hero-wrap{max-width:900px;margin:0 auto;padding:0 28px}
@@ -221,7 +257,7 @@ a:hover{color:var(--link-h)}
 @media(max-width:768px){
   .hero-wrap{padding:0 16px}
   .layout{padding:0 16px 56px}
-  .nav{padding:0 16px}.nav-link{display:none}
+  .nav{padding:0 16px}.nav-links,.nav-actions{display:none}.nav-menu{display:block}
   .hero h1{font-size:42px}
   .hero{padding:48px 0 28px}
   .hero-sub{font-size:14px}
@@ -261,16 +297,38 @@ a:hover{color:var(--link-h)}
 
 <!-- NAV -->
 <nav class="nav">
-  <a href="https://docs.coralxyz.com" class="nav-logo">CORAL</a>
-  <div class="nav-r">
-    <a href="https://docs.coralxyz.com" class="nav-link">Docs</a>
-    <a href="#" class="nav-link" style="color:var(--t1)">Blog</a>
-    <a href="agents-need-institutions.html" class="nav-link">Latest Post</a>
-    <a href="https://github.com/Human-Agent-Society/CORAL" class="gh-pill">
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-      GitHub
+  <a href="/" class="nav-logo"><img src="/coral_logo.png" alt="">CORAL</a>
+  <div class="nav-links">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/docs/" class="nav-link">Docs</a>
+    <a href="/blogs/" class="nav-link active" aria-current="page">Blogs</a>
+  </div>
+  <div class="nav-actions">
+    <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle Theme">
+      <span class="theme-icon theme-sun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg></span>
+      <span class="theme-icon theme-moon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+    </button>
+    <a href="https://github.com/Human-Agent-Society/CORAL" class="gh-link" aria-label="GitHub">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
     </a>
   </div>
+  <details class="nav-menu">
+    <summary aria-label="Toggle Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <div class="nav-menu-panel">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/docs/" class="nav-link">Docs</a>
+      <a href="/blogs/" class="nav-link active" aria-current="page">Blogs</a>
+      <div class="nav-menu-tools">
+        <a href="https://github.com/Human-Agent-Society/CORAL" class="gh-link" aria-label="GitHub">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle Theme">
+          <span class="theme-icon theme-sun"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg></span>
+          <span class="theme-icon theme-moon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        </button>
+      </div>
+    </div>
+  </details>
 </nav>
 
 <!-- HERO -->
@@ -317,7 +375,7 @@ a:hover{color:var(--link-h)}
     <div class="hero-btns">
       <a href="https://arxiv.org/abs/2604.01658v1" class="btn btn-dark">Paper</a>
       <a href="https://github.com/Human-Agent-Society/CORAL" class="btn btn-dark">Code</a>
-      <a href="https://docs.coralxyz.com" class="btn btn-dark">Documentation</a>
+      <a href="https://coral.compounding-intelligence.ai/docs/" class="btn btn-dark">Documentation</a>
     </div>
   </header>
 
@@ -651,6 +709,17 @@ a:hover{color:var(--link-h)}
 </footer>
 
 <script>
+
+function setTheme(theme){
+  document.documentElement.dataset.theme=theme;
+  document.documentElement.style.colorScheme=theme;
+  localStorage.setItem('theme',theme);
+}
+document.querySelectorAll('[data-theme-toggle]').forEach(function(button){
+  button.addEventListener('click',function(){
+    setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+  });
+});
 
 // Copy code
 function copyCode(b){var p=b.closest('.cb').querySelector('pre');

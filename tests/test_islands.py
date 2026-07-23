@@ -187,6 +187,31 @@ def test_recent_notes_multi_island_uses_global_date_order():
         assert [entry["island_id"] for entry in recent] == ["1", "0"]
 
 
+def test_list_notes_aggregates_string_named_islands():
+    """island_id=None must aggregate notes from name-based islands.
+
+    Regression: the aggregation path filtered view roots with
+    ``r.name.isdigit()``, so runs using named islands (``atlantis``,
+    ``avalon``, ... — the ``coral start`` default) listed zero notes.
+    """
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        for island in ("atlantis", "avalon"):
+            (coral_dir / "islands" / island / "notes").mkdir(parents=True)
+        (coral_dir / "islands" / "atlantis" / "notes" / "a.md").write_text(
+            "---\ncreator: agent-1\ncreated: 2026-05-31\n---\n# A\nbody A\n"
+        )
+        (coral_dir / "islands" / "avalon" / "notes" / "b.md").write_text(
+            "---\ncreator: agent-2\ncreated: 2026-05-31\n---\n# B\nbody B\n"
+        )
+
+        entries = {e["filename"]: e for e in list_notes(coral_dir)}
+
+        assert set(entries) == {"a.md", "b.md"}
+        assert entries["a.md"]["island_id"] == "atlantis"
+        assert entries["b.md"]["island_id"] == "avalon"
+
+
 def test_notes_by_returns_creator_matched_paths():
     with tempfile.TemporaryDirectory() as d:
         coral_dir = Path(d)

@@ -157,6 +157,33 @@ def test_agent_filter_scans_migrated_agent_current_island():
         assert len(get_agent_attempts(coral_dir, "0-agent-1")) == 1
 
 
+def test_agent_filter_scans_string_named_islands():
+    """island_id=None must scan name-based islands, not only numeric ones.
+
+    Regression: the run-wide scan filtered view roots with
+    ``r.name.isdigit()``, returning nothing for named islands (the
+    ``coral start`` default: ``atlantis``, ``avalon``, ...).
+    """
+    with tempfile.TemporaryDirectory() as d:
+        coral_dir = Path(d)
+        for island in ("atlantis", "avalon"):
+            (coral_dir / "islands" / island / "attempts").mkdir(parents=True)
+
+        write_attempt(
+            coral_dir, _make_attempt("h1", agent="ahab-from-atlantis"), island_id="atlantis"
+        )
+        write_attempt(
+            coral_dir, _make_attempt("h2", agent="sparrow-from-avalon"), island_id="avalon"
+        )
+
+        assert [a.commit_hash for a in get_agent_attempts(coral_dir, "ahab-from-atlantis")] == [
+            "h1"
+        ]
+        assert [a.commit_hash for a in get_agent_attempts(coral_dir, "sparrow-from-avalon")] == [
+            "h2"
+        ]
+
+
 def test_search():
     with tempfile.TemporaryDirectory() as d:
         write_attempt(d, _make_attempt("a", title="learning rate tuning"))

@@ -51,7 +51,10 @@ htmlcov/
 site/
 docs/.next/
 docs/node_modules/
+docs/public/blog/
+docs/public/blogs/
 docs/.source/
+docs/tsconfig.tsbuildinfo
 docs/superpowers/
 
 # OS

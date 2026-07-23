@@ -111,10 +111,10 @@ coral start -c examples/swebench-verified/task.yaml
 coral start -c examples/terminal-bench/task.yaml
 ```
 
-Each task's seed includes a `solve.py` baseline (a Terminus2-based Harbor agent) and a grader that invokes `uvx harbor run -d <dataset>` with tiered evaluation (5 → 30 → all instances). See the [Benchmarks guide](/guides/benchmarks) for details.
+Each task's seed includes a `solve.py` baseline (a Terminus2-based Harbor agent) and a grader that invokes `uvx harbor run -d <dataset>` with tiered evaluation (5 → 30 → all instances). See the [Benchmarks guide](/docs/guides/benchmarks) for details.
 
 > **Docker-in-Docker is not supported.** Because Harbor spawns Docker containers, CORAL itself must run on the host machine (not inside a container) for these benchmarks. Other examples that don't use Harbor are unaffected.
 
 ## Next steps
 
-Once installed, head to the [Quick Start](/getting-started/quickstart) to run your first task.
+Once installed, head to the [Quick Start](/docs/getting-started/quickstart) to run your first task.

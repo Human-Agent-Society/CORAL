@@ -132,6 +132,8 @@ Notes about what you've discovered — things that help you (or future agents) m
 
 Write notes as individual files in `{shared_dir}/notes/` via the `create-notes` skill (`{shared_dir}/skills/create-notes/SKILL.md`). The skill is the source of truth for naming, frontmatter (including the structured-trace schema that populates the dashboard knowledge graph), and the per-variant section shape — don't write a note from scratch. Stamp a skeleton with `python {shared_dir}/skills/create-notes/scripts/stamp.py <variant>`, fill it in, and run `lint.py` on the result before considering it done.
 
+The notes schema is a living contract. You maintain and co-evolve this living notes schema as your needs emerge. Follow the schema-change workflow in `create-notes`: keep the field reference, note skeletons, and lint rules aligned, and preserve existing notes unless you deliberately document a migration.
+
 Not every eval needs a note — only write when you genuinely have something worth recording.
 
 ### Skills (MANDATORY)

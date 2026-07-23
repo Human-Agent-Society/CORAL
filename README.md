@@ -6,7 +6,7 @@
 ## Robust, lightweight infrastructure for multi-agent self-evolution, built for autoresearch.
 
 [![Paper](https://img.shields.io/badge/Paper-arXiv%3A2604.01658-B31B1B.svg?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2604.01658v1)
-[![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://human-agent-society.github.io/CORAL/)
+[![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://coral.compounding-intelligence.ai/blogs/)
 [![Apache 2.0 License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
 
@@ -15,7 +15,7 @@
 </div>
 
 <p align="center">
-<a href="#installation">Installation</a> · <a href="#plugin-drive-coral-from-your-own-agent">Plugin</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#how-it-works">How It Works</a> · <a href="#examples">Examples</a> · <a href="https://docs.coralxyz.com/">Docs</a> · <a href="https://arxiv.org/abs/2604.01658v1">Paper</a>
+<a href="#installation">Installation</a> · <a href="#plugin-drive-coral-from-your-own-agent">Plugin</a> · <a href="#supported-agents">Supported Agents</a> · <a href="#how-it-works">How It Works</a> · <a href="#examples">Examples</a> · <a href="https://coral.compounding-intelligence.ai/docs/">Docs</a> · <a href="https://arxiv.org/abs/2604.01658v1">Paper</a>
 </p>
 
 **CORAL** is infrastructure for **autonomous AI agent organizations** that run experiments, share knowledge, and continuously improve solutions. Give it a codebase and a grader, and CORAL handles the rest: isolated workspaces, safe evaluation, persistent shared state, and multi-agent collaboration. Natively integrated with Claude Code, OpenCode, Codex, Cursor Agent, and Kiro.
@@ -24,11 +24,11 @@
 
 - **[2026-07-08]** **CORAL** has been accepted to **COLM 2026**! 🎉
 - **[2026-06-24]** The Docker session now isolates the agent from the grader: each agent runs as an unprivileged user (manager and grader stay root), so agents can no longer read `.coral/private/` (grader venv, answer keys) — not even via Bash. On the host this stays opt-in via `agents.isolate_user`.
-- **[2026-06-13]** Legacy `eval/grader.py` grader auto-discovery is deprecated and removed — wire graders via `grader.entrypoint` pointing at a packaged grader. See the [custom grader guide](https://docs.coralxyz.com/guides/custom-grader).
+- **[2026-06-13]** Legacy `eval/grader.py` grader auto-discovery is deprecated and removed — wire graders via `grader.entrypoint` pointing at a packaged grader. See the [custom grader guide](https://coral.compounding-intelligence.ai/docs/guides/custom-grader).
 - **[2026-06-06]** CORAL v0.6.0 adds multi-island runs: partition agents into isolated islands with scoped attempts, notes, skills, heartbeat state, and migration between islands for broader exploration.
-- **[2026-04-24]** Rubric judges — two reusable LLM-judge grader packages for open-ended tasks (reports, memos, legal analysis). See the [Rubric Judges guide](https://docs.coralxyz.com/guides/rubric-judge).
+- **[2026-04-24]** Rubric judges — two reusable LLM-judge grader packages for open-ended tasks (reports, memos, legal analysis). See the [Rubric Judges guide](https://coral.compounding-intelligence.ai/docs/guides/rubric-judge).
 - **[2026-04-03]** Our paper, "CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery," is now out! Check it out on [Arxiv](https://arxiv.org/abs/2604.01658v1).
-- **[2026-03-18]** CORAL is released! Check out our [blog post](https://human-agent-society.github.io/CORAL/).
+- **[2026-03-18]** CORAL is released! Check out our [blog post](https://coral.compounding-intelligence.ai/blogs/evolve-like-coral/).
 
 ![CORAL demo — autonomous AI coding agents running in parallel git worktrees, sharing knowledge through a common state directory](assets/demo.gif)
 
@@ -38,7 +38,7 @@
 curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
 ```
 
-Installs the **latest `coral` release** globally via `uv tool install`. Pin a specific release with `CORAL_VERSION=<tag>` if you need to. See [Installation docs](https://docs.coralxyz.com/getting-started/installation) for manual install, dev setup, and prerequisites.
+Installs the **latest `coral` release** globally via `uv tool install`. Pin a specific release with `CORAL_VERSION=<tag>` if you need to. See [Installation docs](https://coral.compounding-intelligence.ai/docs/getting-started/installation) for manual install, dev setup, and prerequisites.
 
 ```bash
 coral init my-task                       # scaffold a task
@@ -73,7 +73,7 @@ use coral to optimize this — make sample() in saga/decode.py faster without ch
 
 The plugin scaffolds a gitignored `.coral_workspace/`, drops your code into a `seed/`, writes a grader for your metric, and loops `coral validate` until the task is launch-ready — then hands you the `coral start` command. On Claude Code a `coral-task-author` subagent does the whole grind autonomously (and a `coral-run-doctor` triages a stuck run); on any harness the bundled skills walk the same path.
 
-Skills: `coral-quickstart` (install → setup → `.coral_workspace/`), `setting-up-coral` (runtime bindings), `creating-a-coral-task` (grader authoring), `running-coral-experiments` (operate a run). See the [Harness Plugin guide](https://docs.coralxyz.com/guides/plugin) or [`plugin/README.md`](plugin/README.md) for agents, the skills-dir alternative, and other harnesses.
+Skills: `coral-quickstart` (install → setup → `.coral_workspace/`), `setting-up-coral` (runtime bindings), `creating-a-coral-task` (grader authoring), `running-coral-experiments` (operate a run). See the [Harness Plugin guide](https://coral.compounding-intelligence.ai/docs/guides/plugin) or [`plugin/README.md`](plugin/README.md) for agents, the skills-dir alternative, and other harnesses.
 
 ### Supported Agents
 
@@ -85,7 +85,7 @@ Skills: `coral-quickstart` (install → setup → `.coral_workspace/`), `setting
 | [Kiro](https://kiro.dev) | `kiro` |
 | [OpenCode](https://github.com/opencode-ai/opencode) | `opencode` |
 
-Each agent must be installed and authenticated separately. Per-runtime config — including the [LiteLLM gateway](https://docs.coralxyz.com/guides/gateway) for custom models — is documented at [Agent Runtimes](https://docs.coralxyz.com/guides/agent-runtimes).
+Each agent must be installed and authenticated separately. Per-runtime config — including the [LiteLLM gateway](https://coral.compounding-intelligence.ai/docs/guides/gateway) for custom models — is documented at [Agent Runtimes](https://coral.compounding-intelligence.ai/docs/guides/agent-runtimes).
 
 ### How It Works
 
@@ -95,7 +95,7 @@ Each agent must be installed and authenticated separately. Per-runtime config �
 
 Each agent runs in its own git worktree. Shared state (attempts, notes, skills) lives in `.coral/public/` and is symlinked into every worktree — agents see each other's work in real time. A grader daemon scores every commit. The manager interrupts agents with heartbeat prompts (`reflect`, `consolidate`, `pivot`).
 
-Deeper dive: [Concepts](https://docs.coralxyz.com/concepts) · [Multi-agent runs](https://docs.coralxyz.com/guides/multi-agent) · [Eval loop](https://docs.coralxyz.com/concepts/eval-loop)
+Deeper dive: [Concepts](https://coral.compounding-intelligence.ai/docs/concepts) · [Multi-agent runs](https://coral.compounding-intelligence.ai/docs/guides/multi-agent) · [Eval loop](https://coral.compounding-intelligence.ai/docs/concepts/eval-loop)
 
 ### Examples
 
@@ -111,7 +111,7 @@ Ready-to-run task configurations in `examples/`:
 | **spaceship_titanic**      | ML           | Kaggle competition                                          |
 | **stanford_covid_vaccine** | Bio/ML       | mRNA degradation prediction                                 |
 
-Full catalogue and walkthroughs at [Examples docs](https://docs.coralxyz.com/examples).
+Full catalogue and walkthroughs at [Examples docs](https://coral.compounding-intelligence.ai/docs/examples).
 
 ### Development
 
@@ -155,11 +155,13 @@ This project is released under the Apache 2.0 [LICENSE](LICENSE).
 }
 ```
 
-<a href="https://www.star-history.com/?repos=Human-Agent-Society%2FCoral&type=date&legend=top-left">
+## Star History
+
+<a href="https://www.star-history.com/?repos=Human-Agent-Society%2FCORAL&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/Coral&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/Coral&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Human-Agent-Society/Coral&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/CORAL&type=date&theme=dark&legend=top-left&sealed_token=_Mr1XWVeoHdhN5RB0i4Fz-C0qC_ci1us7BViejAd73QFLQB7w_FW2o-3uWeM_nqAmLucjkLC8pNTEHRR1MVZ7LKGHYmhes0XBWUMTHuAWyJUJeYjB5XCNw" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/CORAL&type=date&legend=top-left&sealed_token=_Mr1XWVeoHdhN5RB0i4Fz-C0qC_ci1us7BViejAd73QFLQB7w_FW2o-3uWeM_nqAmLucjkLC8pNTEHRR1MVZ7LKGHYmhes0XBWUMTHuAWyJUJeYjB5XCNw" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Human-Agent-Society/CORAL&type=date&legend=top-left&sealed_token=_Mr1XWVeoHdhN5RB0i4Fz-C0qC_ci1us7BViejAd73QFLQB7w_FW2o-3uWeM_nqAmLucjkLC8pNTEHRR1MVZ7LKGHYmhes0XBWUMTHuAWyJUJeYjB5XCNw" />
  </picture>
 </a>
 
