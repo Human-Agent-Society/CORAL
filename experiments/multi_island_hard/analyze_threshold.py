@@ -352,6 +352,9 @@ def main() -> int:
             and row.get("meets_reference_threshold")
         }
     )
+    threshold_status = (
+        "incomplete" if failures else ("positive" if threshold_budgets else "null")
+    )
     audit = {
         "schema_version": 1,
         "expected_cells_per_budget": expected_cells,
@@ -361,7 +364,7 @@ def main() -> int:
         "expected_attempts_per_budget": args.budgets,
         "practical_delta": PRACTICAL_DELTA,
         "operational_threshold_budget": threshold_budgets[0] if threshold_budgets else None,
-        "threshold_status": "positive" if threshold_budgets else "null",
+        "threshold_status": threshold_status,
         "reference_method": "fixed diagnostic multi-start greedy ascent; approximate, not global optimum",
         "integrity_failures": failures,
     }
