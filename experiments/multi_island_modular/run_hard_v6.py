@@ -12,6 +12,19 @@ ROOT = Path(__file__).resolve().parent
 TASK_DIR = ROOT / "tasks/hard_active_modular_landscape_v6"
 ROLE_FILE = ROOT / "hard_v6_eval_protocol.md"
 
+# The framework's normal heartbeat reflects after every agent evaluation.
+# That is useful for open-ended tasks, but it makes a fixed-budget landscape
+# threshold study measure reflection latency instead of search.  Keep sparse
+# reflection/consolidation reminders in every topology so the communication
+# affordance is still present, while making the cadence part of the audited
+# command rather than an implicit default.
+HEARTBEAT_OVERRIDE = (
+    '[{"name":"reflect","every":16},'
+    '{"name":"consolidate","every":32,"is_global":true},'
+    '{"name":"pivot","every":16,"trigger":"plateau"},'
+    '{"name":"lint_wiki","every":32,"is_global":true}]'
+)
+
 base.DEFAULT_RESULTS_ROOT = Path("/var/tmp/coral-institutions-results/modular-hard-v6")
 base.TOPOLOGIES["global_8"] = {"count": 1, "migration": False}
 base.TASKS = {
@@ -60,6 +73,7 @@ def build_command(spec, condition, run_dir):
             command[index] = "grader.parallel.max_workers=4"
         elif condition in {"global_8", "partition", "multi_island"} and item == "agents.count=4":
             command[index] = "agents.count=8"
+    command.append(f"agents.heartbeat={HEARTBEAT_OVERRIDE}")
     command.append(f"grader.args.seed_index={seed_index}")
     command.append(f"grader.args.mode={'smooth' if spec.name.startswith('smooth_') else 'rugged'}")
     return command

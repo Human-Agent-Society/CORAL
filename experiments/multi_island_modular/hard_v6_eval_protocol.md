@@ -10,6 +10,15 @@ tune evaluations are disabled. The candidate is a 48-module artifact: each
 module is a literal 32-bit string and only the declared `ACTIVE_MODULE` gets
 local search feedback.
 
+This is a throughput-controlled run. Do not spend a turn writing a reflection
+or experiment note after every submission; the run has sparse reflection and
+consolidation heartbeats (16/32 evaluations). After the mandatory first
+baseline, use a local loop or a compact sequence of ordinary `coral eval`
+calls whenever possible. The loop must still wait for each real score and
+must stop before the declared budget. A slow interactive strategy that leaves
+most of the budget unused is an underpowered cell, not evidence about island
+topology.
+
 **Startup rule:** your first action must be the deterministic all-zero baseline
 submission for your mapped module. Do not inspect the grader source, hidden
 paths, or optional skills before that first real eval. Startup work that does

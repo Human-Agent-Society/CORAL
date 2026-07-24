@@ -45,6 +45,13 @@ base.TOPOLOGY_AGENT_COUNTS = {
     "partition": "8",
     "multi_island": "8",
 }
+
+HEARTBEAT_OVERRIDE = (
+    '[{"name":"reflect","every":16},'
+    '{"name":"consolidate","every":32,"is_global":true},'
+    '{"name":"pivot","every":16,"trigger":"plateau"},'
+    '{"name":"lint_wiki","every":32,"is_global":true}]'
+)
 base.TASKS = ("smooth_hard_v6", "rugged_hard_v6")
 base.REPETITIONS = 8
 base.BLOCKS = BLOCKS
@@ -154,6 +161,9 @@ def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> 
 
 def integrity(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> list[str]:
     errors = base._ORIGINAL_INTEGRITY(run_dir, identity, task, budget)
+    overrides = base.overrides(identity)
+    if overrides.get("agents.heartbeat") != HEARTBEAT_OVERRIDE:
+        errors.append("wrong fixed-budget heartbeat cadence")
     records = base.real_records(run_dir)
     payloads = [_eval_payload(record) for record in records]
     if len([item for item in payloads if item is not None]) != len(records):
