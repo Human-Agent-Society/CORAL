@@ -113,6 +113,7 @@ export default function Knowledge() {
                 <p className="font-mono text-[10px] text-muted-fg mt-0.5 mb-3">
                   {selectedNote.relative_path}
                 </p>
+                <NoteMeta note={selectedNote} />
                 <div className="border-l-2 border-border pl-3 font-body text-[13px] leading-relaxed whitespace-pre-wrap text-muted-fg">
                   {selectedNote.body}
                 </div>
@@ -162,6 +163,7 @@ export default function Knowledge() {
                       {expandedNote === note.index && (
                         <div className="pb-4 pl-10 pr-4">
                           <div className="border-l-2 border-border pl-4">
+                            <NoteMeta note={note} />
                             <div className="font-body text-[13px] leading-relaxed whitespace-pre-wrap text-muted-fg">
                               {note.body}
                             </div>
@@ -212,6 +214,62 @@ export default function Knowledge() {
         )}
       </div>
     </>
+  );
+}
+
+/* Complete frontmatter block — renders every field the author wrote (raw
+   sources and research notes alike), so nothing the agent recorded is hidden.
+   URL-valued fields become clickable links. Renders nothing when there is no
+   frontmatter. */
+const _URL_RE = /^(https?:\/\/|file:\/\/|local:)/i;
+
+function MetaValue({ value }: { value: unknown }) {
+  if (Array.isArray(value)) {
+    return (
+      <ul className="space-y-0.5">
+        {value.map((v, i) => (
+          <li key={i}>
+            <MetaValue value={v} />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  if (value && typeof value === "object") {
+    return <span className="break-all">{JSON.stringify(value)}</span>;
+  }
+  const s = String(value);
+  if (_URL_RE.test(s)) {
+    return (
+      <a
+        href={s}
+        target="_blank"
+        rel="noreferrer"
+        className="text-foreground underline decoration-border hover:decoration-foreground break-all"
+      >
+        {s}
+      </a>
+    );
+  }
+  return <span className="break-all text-foreground">{s}</span>;
+}
+
+function NoteMeta({ note }: { note: Note }) {
+  const fm = note.frontmatter;
+  if (!fm || Object.keys(fm).length === 0) return null;
+  return (
+    <dl className="mb-3 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 rounded-lg border border-border bg-muted/40 px-3 py-2 font-mono text-[11px] leading-relaxed">
+      {Object.entries(fm).map(([key, value]) => (
+        <div key={key} className="contents">
+          <dt className="text-muted-fg uppercase tracking-wider text-[10px] pt-0.5 whitespace-nowrap">
+            {key.replace(/_/g, " ")}
+          </dt>
+          <dd className="min-w-0">
+            <MetaValue value={value} />
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

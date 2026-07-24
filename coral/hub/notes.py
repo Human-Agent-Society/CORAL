@@ -126,6 +126,23 @@ def _iter_user_note_files(notes_dir: Path) -> list[Path]:
     return files
 
 
+def _iter_raw_source_files(notes_dir: Path) -> list[Path]:
+    """Return raw source captures under notes/raw/ (excluding ``_``-prefixed meta).
+
+    Raw sources are pruned from _iter_user_note_files on purpose — they are
+    immutable reference material, not agent-authored notes, and other consumers
+    (index generation, dedup, grounding) rely on that exclusion. This is the
+    opt-in path for surfacing them in read-only display (the dashboard), never
+    treating them as user notes.
+    """
+    raw_dir = notes_dir / "raw"
+    if not raw_dir.is_dir():
+        return []
+    return sorted(
+        p for p in raw_dir.rglob("*.md") if p.is_file() and not p.name.startswith("_")
+    )
+
+
 def _lenient_frontmatter(front: str) -> dict[str, Any]:
     """Flat ``key: value`` parse — the pre-YAML fallback for malformed blocks."""
     meta: dict[str, Any] = {}
@@ -198,13 +215,18 @@ def _parse_note_file(path: Path) -> dict[str, Any]:
     text = path.read_text()
     meta, body = _parse_frontmatter(text)
 
-    # Extract title from first # heading
-    title = path.stem.replace("-", " ").replace("_", " ").title()
+    # Title: prefer a body `# heading`, then a frontmatter `title:`, then the
+    # filename. Raw source captures often carry their title only in frontmatter.
+    title = ""
     for line in body.splitlines():
         line = line.strip()
         if line.startswith("# "):
             title = line[2:].strip()
             break
+    if not title:
+        title = str(meta.get("title", "") or "").strip()
+    if not title:
+        title = path.stem.replace("-", " ").replace("_", " ").title()
 
     creator_raw = str(meta.get("creator", "") or "").strip()
     entry: dict[str, Any] = {
@@ -221,6 +243,55 @@ def _parse_note_file(path: Path) -> dict[str, Any]:
         val = meta.get(key)
         if val not in (None, "", [], {}):
             entry[key] = _jsonsafe(val)
+
+    # Full frontmatter passthrough (JSON-safe), so the dashboard can show every
+    # field an agent wrote — raw sources and research notes use different
+    # vocabularies, and a curated allowlist silently drops whatever it misses.
+    # Keyed as ``frontmatter`` so it never collides with derived entry fields.
+    frontmatter = {
+        str(k): _jsonsafe(v) for k, v in meta.items() if v not in (None, "", [], {})
+    }
+    if frontmatter:
+        entry["frontmatter"] = frontmatter
+    return entry
+
+
+def _first_present(meta: dict[str, Any], keys: tuple[str, ...]) -> str:
+    """First non-empty value among ``keys`` (raw sources use varied field names)."""
+    for k in keys:
+        v = str(meta.get(k, "") or "").strip()
+        if v:
+            return v
+    return ""
+
+
+def _parse_raw_source_file(path: Path) -> dict[str, Any]:
+    """Parse a raw/ source capture, surfacing its provenance frontmatter.
+
+    Raw sources use a source vocabulary (``source_url`` / ``source_type`` /
+    ``captured`` / ``retrieved_by`` / ``also_confirmed_by``) rather than the
+    note schema, so _parse_note_file would drop the one field that matters most
+    for a source — where it came from. Surface those, and map capture/retriever
+    into the shared ``date`` / ``creator`` slots the dashboard already renders.
+    """
+    entry = _parse_note_file(path)
+    meta, _ = _parse_frontmatter(path.read_text())
+
+    url = _first_present(meta, ("source_url", "url"))
+    if url:
+        entry["source_url"] = url
+    stype = _first_present(meta, ("source_type", "type"))
+    if stype:
+        entry["source_type"] = stype
+    captured = _first_present(meta, ("captured", "fetched"))
+    if captured and not entry.get("date"):
+        entry["date"] = captured
+    who = _first_present(meta, ("retrieved_by", "captured_by"))
+    if who and entry.get("creator") in (UNATTRIBUTED_CREATOR, "", None):
+        entry["creator"] = who
+    confirmed = meta.get("also_confirmed_by")
+    if confirmed not in (None, "", [], {}):
+        entry["also_confirmed_by"] = _jsonsafe(confirmed)
     return entry
 
 
@@ -266,6 +337,8 @@ def _sort_key(entry: dict[str, Any]) -> datetime:
 def list_notes(
     coral_dir: str | Path,
     island_id: str | int | None = None,
+    *,
+    include_raw: bool = False,
 ) -> list[dict[str, Any]]:
     """List all note entries from the notes directory.
 
@@ -274,14 +347,21 @@ def list_notes(
 
     With ``island_id=None`` in multi-island mode, aggregates notes from
     every island so ``coral notes`` shows the whole team's research.
+
+    ``include_raw`` additionally surfaces immutable ``raw/`` source captures
+    (category ``"raw"``) for read-only display. It defaults to False so
+    agent-facing consumers (``coral notes``, search, recent-note summaries)
+    keep seeing only authored notes; only the dashboard opts in.
     """
     coral_dir = Path(coral_dir)
     if island_id is not None or not (coral_dir / "islands").exists():
-        return _list_notes_single(coral_dir, island_id)
+        return _list_notes_single(coral_dir, island_id, include_raw=include_raw)
 
     entries: list[dict[str, Any]] = []
     for view_root in all_view_roots(coral_dir):
-        sub = _list_notes_single(coral_dir, island_id=view_root.name, clean=False)
+        sub = _list_notes_single(
+            coral_dir, island_id=view_root.name, clean=False, include_raw=include_raw
+        )
         for entry in sub:
             entry["island_id"] = view_root.name
         entries.extend(sub)
@@ -291,7 +371,11 @@ def list_notes(
 
 
 def _list_notes_single(
-    coral_dir: Path, island_id: str | int | None, *, clean: bool = True
+    coral_dir: Path,
+    island_id: str | int | None,
+    *,
+    clean: bool = True,
+    include_raw: bool = False,
 ) -> list[dict[str, Any]]:
     notes_dir = _notes_dir(coral_dir, island_id)
     entries = _collect_from_dir(notes_dir)
@@ -303,6 +387,11 @@ def _list_notes_single(
         for e in _collect_from_dir(insights_dir):
             if e["filename"] not in seen:
                 entries.append(e)
+
+    # Opt-in: surface raw source captures for read-only display. Parsed the same
+    # way as notes, so _clean_note_entries derives category="raw" from the path.
+    if include_raw:
+        entries.extend(_parse_raw_source_file(f) for f in _iter_raw_source_files(notes_dir))
 
     entries.sort(key=_sort_key)
 
