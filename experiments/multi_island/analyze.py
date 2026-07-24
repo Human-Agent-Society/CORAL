@@ -159,6 +159,7 @@ def configuration_errors(run_dir: Path, identity: dict[str, Any]) -> list[str]:
         "multi_island": ("2", "true"),
         "independent": ("4", "false"),
     }[condition]
+    relocated = _is_relocated_run(run_dir, identity)
     expected = {
         "agents.count": "4",
         "agents.runtime": "opencode",
@@ -178,8 +179,9 @@ def configuration_errors(run_dir: Path, identity: dict[str, Any]) -> list[str]:
         "islands.migration.remigration_cooldown": str(MIGRATION_COOLDOWN),
         "run.session": "local",
         "run.stop.max_real_attempts": str(EXPECTED_ATTEMPTS),
-        "workspace.run_dir": str(run_dir),
     }
+    if not relocated:
+        expected["workspace.run_dir"] = str(run_dir)
     errors = [
         f"{key}={overrides.get(key)!r}, expected {value!r}"
         for key, value in expected.items()
@@ -221,8 +223,9 @@ def configuration_errors(run_dir: Path, identity: dict[str, Any]) -> list[str]:
                 "islands.migration.remigration_cooldown": MIGRATION_COOLDOWN,
                 "run.session": "local",
                 "run.stop.max_real_attempts": EXPECTED_ATTEMPTS,
-                "workspace.run_dir": str(run_dir),
             }
+            if not relocated:
+                expected_resolved["workspace.run_dir"] = str(run_dir)
             for key, expected_value in expected_resolved.items():
                 value: Any = resolved
                 for part in key.split("."):
@@ -263,6 +266,28 @@ def configuration_errors(run_dir: Path, identity: dict[str, Any]) -> list[str]:
         if not copied.is_file() or copied.read_bytes() != frozen.read_bytes():
             errors.append(f"private {task}.json does not match frozen landscape")
     return errors
+
+
+def _is_relocated_run(run_dir: Path, identity: dict[str, Any]) -> bool:
+    """Accept a run moved into a declared result slice without hiding drift.
+
+    Early budget pilots were launched at the sweep root before the runner
+    gained automatic ``budget-*`` slices.  Moving a completed run is safe if
+    a sibling ``relocation.json`` records the exact source and destination
+    roots and the relative cell path is unchanged.  Any mismatch remains a
+    configuration error, so an accidental path override cannot pass merely
+    because it lives under a slice directory.
+    """
+    marker = run_dir.parents[2] / "relocation.json"
+    try:
+        data = json.loads(marker.read_text())
+        source_root = Path(str(data["source_root"]))
+        destination_root = Path(str(data["destination_root"]))
+        recorded = Path(str(identity["run_dir"]))
+        relative = recorded.relative_to(source_root)
+    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return False
+    return run_dir == destination_root / relative
 
 
 def git_source(run_dir: Path, commit_hash: str, filename: str) -> str:

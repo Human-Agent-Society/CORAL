@@ -114,6 +114,27 @@ def test_threshold_contrast_chart_has_budget_and_task_axes() -> None:
     assert "rugged128_k24" in rendered
 
 
+def test_relocated_run_requires_explicit_manifest(tmp_path: Path) -> None:
+    source = tmp_path / "threshold-v1"
+    destination = source / "budget-24"
+    run_dir = destination / "smooth128" / "global" / "rep-01"
+    run_dir.mkdir(parents=True)
+    (destination / "relocation.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "source_root": str(source),
+                "destination_root": str(destination),
+            }
+        )
+    )
+    identity = {"run_dir": str(source / "smooth128" / "global" / "rep-01")}
+    assert analyze._is_relocated_run(run_dir, identity)
+    assert not analyze._is_relocated_run(
+        run_dir, {"run_dir": str(source / "other" / "rep-01")}
+    )
+
+
 def test_kernel_candidate_timeout_becomes_task_level_failure(monkeypatch) -> None:
     def raise_timeout(*args, **kwargs):
         raise subprocess.TimeoutExpired(cmd=kwargs.get("args", "python"), timeout=120)
