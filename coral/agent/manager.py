@@ -2792,7 +2792,7 @@ def _move_agent_files(
         dst_attempt = dst_root / "attempts" / attempt_path.name
         dst_attempt.parent.mkdir(parents=True, exist_ok=True)
         _move_path_replace(attempt_path, dst_attempt)
-        _stamp_attempt_file_island(dst_attempt, dst)
+        _stamp_attempt_file_island(dst_attempt, dst, origin_island_id=src)
 
         commit_hash = attempt_path.stem
         src_eval_log = src_root / "eval_logs" / commit_hash
@@ -2827,7 +2827,12 @@ def _attempt_file_belongs_to_agent(path: Path, agent_id: str) -> bool:
     return data.get("agent_id") == agent_id
 
 
-def _stamp_attempt_file_island(path: Path, island_id: str) -> None:
+def _stamp_attempt_file_island(
+    path: Path,
+    island_id: str,
+    *,
+    origin_island_id: str | None = None,
+) -> None:
     """Update a moved attempt record so later consumers see its current island."""
     try:
         if path.suffix == ".jsonl":
@@ -2839,6 +2844,10 @@ def _stamp_attempt_file_island(path: Path, island_id: str) -> None:
                 metadata = data.get("metadata")
                 if not isinstance(metadata, dict):
                     metadata = {}
+                metadata.setdefault(
+                    "origin_island_id",
+                    metadata.get("island_id", origin_island_id or island_id),
+                )
                 metadata["island_id"] = island_id
                 data["metadata"] = metadata
                 records.append(data)
@@ -2849,6 +2858,10 @@ def _stamp_attempt_file_island(path: Path, island_id: str) -> None:
         metadata = data.get("metadata")
         if not isinstance(metadata, dict):
             metadata = {}
+        metadata.setdefault(
+            "origin_island_id",
+            metadata.get("island_id", origin_island_id or island_id),
+        )
         metadata["island_id"] = island_id
         data["metadata"] = metadata
         path.write_text(json.dumps(data, indent=2))

@@ -889,10 +889,12 @@ def test_move_agent_files_moves_agent_state_attempts_and_eval_logs():
         moved_attempt = read_attempt(coral_dir, "aaa", island_id="1")
         assert moved_attempt is not None
         assert moved_attempt.metadata["island_id"] == "1"
+        assert moved_attempt.metadata["origin_island_id"] == "0"
         moved_jsonl = json.loads(
             (coral_dir / "islands" / "1" / "attempts" / "ccc.jsonl").read_text()
         )
         assert moved_jsonl["metadata"]["island_id"] == "1"
+        assert moved_jsonl["metadata"]["origin_island_id"] == "0"
         assert (coral_dir / "islands" / "1" / "eval_logs" / "aaa" / "metrics.json").exists()
         assert not (coral_dir / "islands" / "0" / "eval_logs" / "aaa").exists()
         assert (coral_dir / "islands" / "1" / "eval_logs" / "ccc" / "metrics.json").exists()

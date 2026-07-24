@@ -272,6 +272,11 @@ def submit_eval(
             metadata["budget_class"] = BUDGET_CLASS_TUNE
         if island_id is not None:
             metadata["island_id"] = island_id
+            # Preserve where this attempt was first submitted.  Migration
+            # intentionally moves the live attempt record to the destination
+            # island, but research analyzers need the origin to distinguish
+            # discovery from later transfer/reuse.
+            metadata["origin_island_id"] = island_id
         attempt = Attempt(
             commit_hash=commit_hash,
             agent_id=agent_id,
