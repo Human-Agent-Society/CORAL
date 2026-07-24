@@ -59,6 +59,8 @@ def build_command(spec, condition, run_dir):
             command[index] = f"islands.migration.rank_window={every}"
         elif item.startswith("islands.migration.remigration_cooldown="):
             command[index] = "islands.migration.remigration_cooldown=16"
+        elif item.startswith("grader.parallel.max_workers="):
+            command[index] = "grader.parallel.max_workers=4"
         elif condition == "global_8" and item == "agents.count=4":
             command[index] = "agents.count=8"
     command.append(f"grader.args.seed_index={seed_index}")

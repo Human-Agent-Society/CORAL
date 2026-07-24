@@ -57,6 +57,10 @@ missing migration event in a multi-island cell. A complete cell must also
 select at least eight distinct modules; otherwise the result is reported as
 an allocation failure rather than topology evidence.
 
+Each cell uses four grader workers for throughput. This is fixed across all
+topologies and does not change the real-attempt budget; the analyzer records
+the worker setting as part of the integrity identity.
+
 The primary outcomes are final provenance-backed exact-module count and
 assembled score. Pooled provenance, assembly gap, module coverage, and
 migration count are diagnostics. No oracle recomputation of untested bits is

@@ -212,6 +212,7 @@ def integrity(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -
     expected = {
         "agents.runtime": "opencode",
         "agents.model": "mafia/glm-5.2",
+        "grader.parallel.max_workers": "4",
         "grader.args.disable_tune": "true",
         "grader.args.mode": mode_for(task),
         "run.stop.max_real_attempts": str(budget),
