@@ -10,6 +10,11 @@ tune evaluations are disabled. The candidate is a 48-module artifact: each
 module is a literal 32-bit string and only the declared `ACTIVE_MODULE` gets
 local search feedback.
 
+**Startup rule:** your first action must be the deterministic all-zero baseline
+submission for your mapped module. Do not inspect the grader source, hidden
+paths, or optional skills before that first real eval. Startup work that does
+not produce a submitted baseline is not useful experimental progress.
+
 Every feedback JSON also contains `artifact_exact_count`. This is an actual
 grader reward for exact modules carried by the complete candidate, not an
 operator-only diagnostic. It does not reveal which inactive modules are
