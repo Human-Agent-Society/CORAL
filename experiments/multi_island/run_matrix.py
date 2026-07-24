@@ -71,9 +71,16 @@ def budget_results_root(root: Path, budget: int | None) -> Path:
     layout and prevents one budget from being mistaken for another.
     """
     resolved = root.resolve()
-    if budget is None or resolved.name == f"budget-{budget}":
+    if budget is None:
         return resolved
-    return resolved / f"budget-{budget}"
+    expected_name = f"budget-{budget}"
+    if resolved.name == expected_name:
+        return resolved
+    if resolved.name.startswith("budget-"):
+        raise ValueError(
+            f"results root {resolved} is a different budget slice; expected {expected_name}"
+        )
+    return resolved / expected_name
 
 
 def parse_args() -> argparse.Namespace:

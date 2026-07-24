@@ -88,6 +88,8 @@ def test_budget_results_root_isolates_sweep_slices(tmp_path: Path) -> None:
     assert run_matrix.budget_results_root(root, 24) == root.resolve() / "budget-24"
     sliced = root / "budget-64"
     assert run_matrix.budget_results_root(sliced, 64) == sliced.resolve()
+    with pytest.raises(ValueError, match="different budget slice"):
+        run_matrix.budget_results_root(sliced, 24)
     assert run_matrix.budget_results_root(root, None) == root.resolve()
 
 
