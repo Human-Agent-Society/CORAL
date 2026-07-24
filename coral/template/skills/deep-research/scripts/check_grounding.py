@@ -73,7 +73,9 @@ _WIKILINK_RE = re.compile(r"\[\[[^\]]+\]\]")
 # A line "makes a quantitative claim" if it has a bare percentage, a number
 # with a unit/multiplier, or a comparative verb sitting next to a number.
 _PERCENT_RE = re.compile(r"\d+(?:\.\d+)?\s*%")
-_NUM_UNIT_RE = re.compile(r"\b\d+(?:\.\d+)?\s*(?:x|×|fold|ms|s|GB|MB|K|M|B|params|epochs|cycles|AUC)\b")
+_NUM_UNIT_RE = re.compile(
+    r"\b\d+(?:\.\d+)?\s*(?:x|×|fold|ms|s|GB|MB|K|M|B|params|epochs|cycles|AUC)\b"
+)
 _COMPARATIVE_RE = re.compile(
     r"\b(?:reduc|improv|outperform|beat|achiev|speedup|faster|slower|higher|lower|"
     r"increase|decrease|better|worse)\w*\b",
@@ -178,9 +180,7 @@ def _raw_links(note: Path, notes_root: Path) -> tuple[list[str], list[str]]:
         if not clean or "://" in clean:
             continue  # external URL, not a local source link
         resolved = (note.parent / clean).resolve()
-        points_to_raw = "raw/" in clean.replace("\\", "/") or str(resolved).startswith(
-            str(raw_dir)
-        )
+        points_to_raw = "raw/" in clean.replace("\\", "/") or str(resolved).startswith(str(raw_dir))
         if not points_to_raw:
             continue
         raw_targets.append(clean)
@@ -231,7 +231,11 @@ def check_notes(notes_root: Path) -> dict[str, Any]:
 
     def add(file: Path, category: str, detail: str) -> None:
         findings.append(
-            {"file": file.relative_to(notes_root).as_posix(), "category": category, "detail": detail}
+            {
+                "file": file.relative_to(notes_root).as_posix(),
+                "category": category,
+                "detail": detail,
+            }
         )
 
     research = _research_notes(notes_root)
@@ -321,9 +325,7 @@ def main() -> int:
             continue
         report = check_notes(root)
         reports.append(report)
-        hard_total += sum(
-            report["summary"][c] for c in HARD_CATEGORIES
-        )
+        hard_total += sum(report["summary"][c] for c in HARD_CATEGORIES)
 
     if args.json:
         print(json.dumps(reports if len(reports) != 1 else reports[0], indent=2))

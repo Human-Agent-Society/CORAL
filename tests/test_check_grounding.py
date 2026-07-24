@@ -77,8 +77,12 @@ def test_check_notes_flags_each_problem(tmp_path):
     assert summary["broken-source-link"] == 1
     assert summary["missing-source-frontmatter"] == 1
     assert summary["unreviewed-high-confidence"] == 1
-    assert {"orphan-finding", "broken-source-link", "missing-source-frontmatter",
-            "unreviewed-high-confidence"} <= cats
+    assert {
+        "orphan-finding",
+        "broken-source-link",
+        "missing-source-frontmatter",
+        "unreviewed-high-confidence",
+    } <= cats
 
     # _coverage.md is a meta file: it must not be counted as a research note and
     # must never itself be flagged as an orphan finding.

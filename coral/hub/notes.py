@@ -138,9 +138,7 @@ def _iter_raw_source_files(notes_dir: Path) -> list[Path]:
     raw_dir = notes_dir / "raw"
     if not raw_dir.is_dir():
         return []
-    return sorted(
-        p for p in raw_dir.rglob("*.md") if p.is_file() and not p.name.startswith("_")
-    )
+    return sorted(p for p in raw_dir.rglob("*.md") if p.is_file() and not p.name.startswith("_"))
 
 
 def _lenient_frontmatter(front: str) -> dict[str, Any]:
@@ -248,9 +246,7 @@ def _parse_note_file(path: Path) -> dict[str, Any]:
     # field an agent wrote — raw sources and research notes use different
     # vocabularies, and a curated allowlist silently drops whatever it misses.
     # Keyed as ``frontmatter`` so it never collides with derived entry fields.
-    frontmatter = {
-        str(k): _jsonsafe(v) for k, v in meta.items() if v not in (None, "", [], {})
-    }
+    frontmatter = {str(k): _jsonsafe(v) for k, v in meta.items() if v not in (None, "", [], {})}
     if frontmatter:
         entry["frontmatter"] = frontmatter
     return entry

@@ -366,9 +366,7 @@ def test_list_notes_include_raw_surfaces_sources_only_when_asked():
 
         # Default: raw is still excluded (CLI / search / heartbeat unchanged).
         default = list_notes(d)
-        assert {e["relative_path"] for e in default} == {
-            str(Path("research") / "useful-idea.md")
-        }
+        assert {e["relative_path"] for e in default} == {str(Path("research") / "useful-idea.md")}
 
         # Opt-in: the raw source shows up, tagged category "raw"; the note stays.
         with_raw = list_notes(d, include_raw=True)
@@ -404,9 +402,7 @@ def test_raw_source_surfaces_provenance_frontmatter():
             "---\n\nbody text\n"
         )
 
-        entry = next(
-            e for e in list_notes(d, include_raw=True) if e["category"] == "raw"
-        )
+        entry = next(e for e in list_notes(d, include_raw=True) if e["category"] == "raw")
         assert entry["source_url"] == "https://pastebin.com/raw/5ucHpK7v"
         assert entry["source_type"] == "code"
         assert entry["date"] == "2026-07-24"  # captured -> date
