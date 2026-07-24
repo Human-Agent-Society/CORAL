@@ -4,19 +4,22 @@
 
 The v1/v2 packages and the v3 hard package are design audits. They must not
 be used as evidence for or against institutions. v4 is an independent,
-harder candidate package intended to locate a budget interval in which
-migration can improve assembly of independently tested modules.
+harder package intended to locate a budget interval in which migration can
+improve assembly of independently tested modules. It also remains a design
+audit because the launched roster differed from the intended fixed-roster
+specification (see the launch audit below).
 
-The narrow question is:
+The intended narrow question is:
 
 > At a fixed total evaluation budget and fixed eight-agent roster, does
 > migration between two partially independent islands increase
 > provenance-backed assembly relative to partition without migration?
 
-The primary contrast is `multi_island - partition`. `multi_island - global_8`
-is a secondary contrast with the same eight-agent roster. The original
-four-agent `global` condition remains a reference, not a clean causal
-contrast.
+The historical `multi_island - partition` contrast holds a four-agent total
+fixed. The intended `multi_island - global_8` secondary contrast was not
+realized because the partitioned cells had four total agents rather than
+eight; the original four-agent `global` condition is the clean roster
+reference for those runs.
 
 ## v4 task construction
 
@@ -49,6 +52,15 @@ topologies are:
 * `global_8`: one island with eight agents;
 * `partition`: two islands with four agents each and no migration;
 * `multi_island`: two islands with four agents each and migration enabled.
+
+**Launch audit:** the v4 runner passed `agents.count=4` for `partition` and
+`multi_island`. In CORAL, `agents.count` is the total run roster and is then
+partitioned across islands, so those historical v4 cells actually had two
+agents per island (four total), not four per island. The v4
+`multi_island - partition` contrast still holds the four-agent total fixed,
+but `multi_island - global_8` is not a fixed-roster contrast and must not be
+used as such. The v5 runner corrects this by passing eight total agents to all
+three eight-agent conditions.
 
 Migration cadence is `max(16, min(64, budget // 8))`. The analyzer rejects a
 cell with a wrong mode/seed/budget/topology, a private-bundle mismatch, a

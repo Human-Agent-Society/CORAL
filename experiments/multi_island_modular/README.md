@@ -67,6 +67,9 @@ targets, and a `global_8` control that holds the eight-agent roster fixed.
 `analyze_hard_v4.py` adds malformed-candidate, mode/seed, migration, and
 module-coverage gates. The v4 research design and calibration are in
 `research_design_v4.md` and `hard_v4_calibration.json`.
+An audit found that v4's partitioned conditions had four total agents (two per
+island), so its fixed-eight-agent secondary comparison is invalid; v4 remains
+design-audit material.
 
 ## Hard v5 threshold package
 
