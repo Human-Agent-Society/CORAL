@@ -10,6 +10,7 @@ import json
 import statistics
 import subprocess
 import sys
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -142,6 +143,7 @@ def all_records(run_dir: Path) -> list[dict[str, Any]]:
             continue
         commit = record.get("commit_hash")
         if isinstance(commit, str):
+            record["_attempt_path"] = str(path)
             records[commit] = record
     return sorted(records.values(), key=lambda item: (str(item.get("timestamp", "")), str(item.get("commit_hash", ""))))
 
@@ -165,6 +167,17 @@ def source_at(run_dir: Path, commit: str) -> str:
     if result.returncode:
         raise ValueError(result.stderr.strip())
     return result.stdout
+
+
+def record_island(record: dict[str, Any]) -> str:
+    """Recover the island scope from the attempt path when available."""
+    path = Path(str(record.get("_attempt_path", "")))
+    parts = path.parts
+    try:
+        index = parts.index("islands")
+    except ValueError:
+        return "global"
+    return parts[index + 1] if index + 1 < len(parts) else "unknown"
 
 
 def overrides(identity: dict[str, Any]) -> dict[str, str]:
@@ -236,11 +249,13 @@ def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> 
     known: dict[int, str] = {}
     parsed: list[tuple[dict[str, Any], str, int]] = []
     parse_errors: list[str] = []
+    island_modules: defaultdict[str, set[int]] = defaultdict(set)
     records = real_records(run_dir)
     for record in records:
         try:
             candidate, active = parse_artifact(source_at(run_dir, str(record["commit_hash"])))
             parsed.append((record, candidate, active))
+            island_modules[record_island(record)].add(active)
             if record.get("score") == 1.0:
                 known[active] = candidate[active * WIDTH : (active + 1) * WIDTH]
         except (OSError, ValueError, SyntaxError, KeyError, TypeError):
@@ -256,6 +271,10 @@ def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> 
         pooled_candidate[block * WIDTH : (block + 1) * WIDTH] = bits
     pooled_score, pooled_exact = assembled_score("".join(pooled_candidate), task, seed, known)
     coverage = len({active for _, _, active in parsed})
+    island_coverage = {island: len(modules) for island, modules in island_modules.items()}
+    multi_island_gate = str(identity["condition"]) != "multi_island" or (
+        len(island_coverage) >= 2 and min(island_coverage.values()) >= 4
+    )
     return {
         "task": task,
         "condition": str(identity["condition"]),
@@ -270,7 +289,8 @@ def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> 
         "pooled_tested_blocks": pooled_exact,
         "assembly_gap": pooled_score - (best[0] if parsed else baseline),
         "module_coverage": coverage,
-        "coverage_gate": coverage >= min(8, BLOCKS),
+        "island_coverage": json.dumps(island_coverage, sort_keys=True),
+        "coverage_gate": coverage >= min(8, BLOCKS) and multi_island_gate,
         "parse_errors": ";".join(parse_errors),
     }
 
@@ -325,7 +345,7 @@ def main() -> int:
         "expected_rows": len(args.tasks) * len(args.conditions) * args.repetitions * len(args.budgets),
         "integrity_failures": failures,
         "primary_metric": "provenance-backed assembly",
-        "coverage_gate": "at least 8 distinct active modules and no malformed real candidate",
+        "coverage_gate": "at least 8 distinct active modules; multi-island also needs at least 4 per island",
     }
     (output / "audit.json").write_text(json.dumps(audit, indent=2) + "\n")
     print(f"Audited {len(rows)} complete cells; failures={len(failures)}")
