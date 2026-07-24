@@ -342,7 +342,27 @@ def main() -> int:
                     if reasons:
                         failures.append({"budget": budget, "task": task, "condition": condition, "repetition": repetition, "run_dir": str(run_dir), "reasons": reasons})
                     else:
-                        rows.append(collect(run_dir, identity, budget))
+                        row = collect(run_dir, identity, budget)
+                        row_errors: list[str] = []
+                        if row["parse_errors"]:
+                            row_errors.append(f"candidate parse errors: {row['parse_errors']}")
+                        if row["numeric_scores"] != row["real_attempts"]:
+                            row_errors.append(
+                                f"numeric scores={row['numeric_scores']}, real attempts={row['real_attempts']}"
+                            )
+                        if row_errors:
+                            failures.append(
+                                {
+                                    "budget": budget,
+                                    "task": task,
+                                    "condition": condition,
+                                    "repetition": repetition,
+                                    "run_dir": str(run_dir),
+                                    "reasons": row_errors,
+                                }
+                            )
+                        else:
+                            rows.append(row)
     grouped: dict[tuple[int, str, str], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         grouped[(int(row["budget"]), str(row["task"]), str(row["condition"]))].append(row)
