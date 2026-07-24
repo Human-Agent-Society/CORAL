@@ -58,6 +58,16 @@ def test_v7_dimensions_and_parser(tmp_path: Path) -> None:
     assert active == 47
 
 
+def test_v7_all_task_variants_parse() -> None:
+    from coral.config import CoralConfig
+
+    task_dir = ROOT / "experiments/multi_island_modular/tasks/hard_active_modular_landscape_v7"
+    for name in ("task.yaml", "task_smooth_v7.yaml", "task_rugged_v7.yaml"):
+        config = CoralConfig.from_yaml(task_dir / name)
+        assert config.task.tips
+        assert config.grader.direction == "maximize"
+
+
 def test_v7_feedback_has_no_inactive_assembly_oracle(tmp_path: Path) -> None:
     seed = json.loads(TASKDATA.read_text())["seeds"][0]
     targets = GRADER.targets_for(seed, "smooth")

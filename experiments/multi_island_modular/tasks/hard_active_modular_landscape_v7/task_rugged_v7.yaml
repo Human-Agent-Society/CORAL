@@ -5,11 +5,10 @@ task:
     target is one of 4096 public 64-bit codebook entries under a private
     per-seed permutation. Only the selected module is scored; assembly is
     computed offline from exact tested discoveries.
-  tips:
-    - Ordered enumeration of a full artifact costs roughly 100k evals.
-    - Use the staged budget ladder; a zero-exact low-budget cell is
-      underpowered, not a topology result.
-    - Use ordinary coral eval only; tune mode is disabled.
+  tips: |
+    Ordered enumeration of a full artifact costs roughly 100k evals. Use the
+    staged budget ladder; a zero-exact low-budget cell is underpowered, not a
+    topology result. Use ordinary coral eval only; tune mode is disabled.
 
 grader:
   entrypoint: "hard_active_modular_landscape_v7_grader.grader:Grader"

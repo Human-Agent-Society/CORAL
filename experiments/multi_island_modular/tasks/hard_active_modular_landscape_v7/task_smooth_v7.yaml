@@ -4,9 +4,9 @@ task:
     High-dimensional separable control with 48 independent 64-bit modules.
     Active feedback is Hamming-based and only the selected module is scored.
     Full-artifact exactness is an offline assembly outcome, not feedback.
-  tips:
-    - The coordinate/provenance anchor is 48 * (64 + 2) = 3168 evals.
-    - Use ordinary coral eval only; tune mode is disabled.
+  tips: |
+    The coordinate/provenance anchor is 48 * (64 + 2) = 3168 evals.
+    Use ordinary coral eval only; tune mode is disabled.
 
 grader:
   entrypoint: "hard_active_modular_landscape_v7_grader.grader:Grader"
