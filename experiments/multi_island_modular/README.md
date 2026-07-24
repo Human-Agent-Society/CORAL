@@ -1,8 +1,8 @@
 # Modular multi-island follow-up
 
-Status: the modular-v1 and active-v2 runs are design audits, not topology
-evidence. The harder v3 package below is the current candidate for a
-confirmatory threshold study; it has not yet produced a conclusion.
+Status: the modular-v1, active-v2, v3, and v4 runs are design audits, not
+topology evidence. The high-dimensional v5 package below is the current
+candidate for a threshold study; it has not yet produced a conclusion.
 
 The old NK cells remain useful black-box stress controls, but they do not
 exercise the blog's stronger mechanism: carrying a tested sub-artifact and its
@@ -68,6 +68,18 @@ targets, and a `global_8` control that holds the eight-agent roster fixed.
 module-coverage gates. The v4 research design and calibration are in
 `research_design_v4.md` and `hard_v4_calibration.json`.
 
+## Hard v5 threshold package
+
+`run_hard_v5.py` is an independent higher-dimensional package. It uses
+32×32-bit modules (1,024 bits), a 1,024-entry rugged codebook, unique private
+targets, and the same-roster `global_8` control. Smooth provenance cost is
+1,088 evaluations for a full artifact; rugged ordered enumeration costs
+13,018–18,917 across the frozen seeds. The ladder is smooth
+256/512/1,024/1,536 and rugged 4,096/8,192/16,384/24,576. The rugged decoy is
+below a wrong nonzero proposal so migration selection does not reward a
+stalled agent. See `research_design_v5.md`, `hard_v5_calibration.json`, and
+`hard_v5_eval_protocol.md`.
+
 ## Files
 
 ```text
@@ -79,4 +91,8 @@ run_hard_matrix.py                   v3 budget-isolated launcher
 calibrate_hard.py                    v3 operator-side threshold calibration
 analyze_hard_active.py               v3 integrity and topology analysis
 hard_eval_protocol.md                v3 agent-facing protocol
+run_hard_v5.py                       v5 high-dimensional launcher
+calibrate_hard_v5.py                 v5 threshold calibration
+analyze_hard_v5.py                   v5 integrity/provenance analyzer
+hard_v5_eval_protocol.md             v5 agent-facing protocol
 ```

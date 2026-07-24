@@ -1,0 +1,16 @@
+{
+  "schema_version": 3,
+  "blocks": 32,
+  "block_width": 32,
+  "codebook_size": 1024,
+  "seeds": [
+    "9c6e59e1c7f1e4d077a4280fe130bf53b85eb08ea4b9946d8488b535b2a10213",
+    "ab680b8a542aaf2b0d1ec9d9917cb960bc3deb44f0bbf3395b89ca5e66bb2ee1",
+    "3fa5c239f58da30f2b4f9766c92283c9f2726bd5da0fcad5a4df886ea7bbc3bf",
+    "cedf1462016a7847e2265152e7c30d5b8f6b1cecad48c6434ac31b677b637123",
+    "bbbf29235adcba9d01bca42e693bea5fdde5bc6ae106afee4ea232f91314afa3",
+    "40ecb9073bfb65c7f023fedbbf0dd805ce5ec98987bd5c2eccc674162a56bcd4",
+    "86b7d40844a7b1907fd81e038553484966d7328303287b9b7ab4b6b3a1d8d58d",
+    "e713962ac78750c3780d264f50b00cb6b12e450bbe557ed96d93653c9dd02046d"
+  ]
+}

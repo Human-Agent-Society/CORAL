@@ -1,0 +1,62 @@
+task:
+  name: "Hard Active Modular Landscape v5 — Rugged 32,768"
+  description: |
+    Maintain a 1024-bit artifact as 32 literal 32-bit modules. Each real
+    evaluation scores only ACTIVE_MODULE. The private target is one of 1024
+    entries in a public codebook; non-target proposals have no gradient and
+    the public all-zero decoy is lower than a wrong nonzero code. Targets are
+    unique within a repetition, so a discovered module cannot silently
+    duplicate another.
+  tips: |
+    - CANDIDATE should be a tuple/list of 32 literal 32-bit strings.
+    - ACTIVE_MODULE must be an integer from 0 through 31.
+    - The codebook construction is public and can be enumerated, but the
+      target permutation and seed are private.
+    - Use a distinct, agent-specific enumeration offset and record it in a
+      note; avoid repeating a failed (module, code) pair.
+    - Use ordinary coral eval only; tune mode is disabled.
+
+grader:
+  entrypoint: "hard_active_modular_landscape_v5_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  private:
+    - "taskdata/hard_v5_seed_bundle.json"
+  args:
+    program_file: "candidate.py"
+    seed_bundle_file: "hard_v5_seed_bundle.json"
+    seed_index: 0
+    mode: "rugged"
+  direction: maximize
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../hard_v5_eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 32768
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 64
+    rank_window: 64
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 16

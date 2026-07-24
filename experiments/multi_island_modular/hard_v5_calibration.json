@@ -1,0 +1,66 @@
+{
+  "schema_version": 3,
+  "method": "smooth provenance coordinate probe and rugged ordered public-codebook anchors",
+  "budgets": [256, 512, 1024, 1536, 4096, 8192, 16384, 24576],
+  "seed_count": 8,
+  "idealized_oracle": {
+    "smooth": [
+      {"budget": 256, "serial_exact_modules": 7},
+      {"budget": 512, "serial_exact_modules": 15},
+      {"budget": 1024, "serial_exact_modules": 30},
+      {"budget": 1088, "serial_exact_modules": 32},
+      {"budget": 1536, "serial_exact_modules": 32}
+    ],
+    "rugged": [
+      {"budget": 4096, "breadth_first_exact_modules": [4, 7, 5, 2, 5, 5, 4, 4], "mean": 4.5, "min": 2, "max": 7},
+      {"budget": 8192, "breadth_first_exact_modules": [7, 9, 9, 5, 11, 8, 14, 5], "mean": 8.5, "min": 5, "max": 14},
+      {"budget": 16384, "breadth_first_exact_modules": [19, 19, 11, 12, 21, 13, 22, 14], "mean": 16.375, "min": 11, "max": 22},
+      {"budget": 24576, "breadth_first_exact_modules": [26, 25, 19, 25, 28, 20, 30, 25], "mean": 24.75, "min": 19, "max": 30},
+      {"budget": 32768, "breadth_first_exact_modules": [32, 32, 32, 32, 32, 32, 32, 32], "mean": 32.0, "min": 32, "max": 32}
+    ]
+  },
+  "tasks": [
+    {
+      "task": "smooth_hard_v5",
+      "mode": "smooth",
+      "blocks": 32,
+      "block_width": 32,
+      "codebook_size": null,
+      "public_codebook_sha256": null,
+      "per_seed": [
+        {"seed_index": 0, "zero_mean_active_score": 0.51943359375, "optimum_mean_active_score": 1.0, "target_sha256": "8c752515c9c86549a0d8eb26d14db6011e5311c44eeafab478b268a0944c2381", "smooth_provenance_cost": 1088, "rugged_ordered_codebook_cost": null, "unique_target_count": 32},
+        {"seed_index": 1, "zero_mean_active_score": 0.517578125, "optimum_mean_active_score": 1.0, "target_sha256": "10c43e412e1b1252ca43e4342d7f4711dc1044873a0d790dfc91f63e9aef50e1", "smooth_provenance_cost": 1088, "rugged_ordered_codebook_cost": null, "unique_target_count": 32},
+        {"seed_index": 2, "zero_mean_active_score": 0.520361328125, "optimum_mean_active_score": 1.0, "target_sha256": "53ffdec5249e5bfba57d6112f3a92d23047e318ded9b1c743841623a07bd0b99", "smooth_provenance_cost": 1088, "rugged_ordered_codebook_cost": null, "unique_target_count": 32},
+        {"seed_index": 3, "zero_mean_active_score": 0.542626953125, "optimum_mean_active_score": 1.0, "target_sha256": "926a20c88e4c5bb253913707648fc51f88d5dea79129c33fb4189a7ba7d6edd9", "smooth_provenance_cost": 1088, "rugged_ordered_codebook_cost": null, "unique_target_count": 32},
+        {"seed_index": 4, "zero_mean_active_score": 0.525, "optimum_mean_active_score": 1.0, "target_sha256": "72d234da13e87f755f97d6ab75c0daa0dccabfc3d77077678b6fe3e9776fa42d", "smooth_provenance_cost": 1088, "rugged_ordered_codebook_cost": null, "unique_target_count": 32},
+        {"seed_index": 5, "zero_mean_active_score": 0.532421875, "optimum_mean_active_score": 1.0, "target_sha256": "6fc244cc238bb14c6ecd2650189b95bde9853e0b53aa8ba9ffb909b0d4a9cf26", "smooth_provenance_cost": 1088, "rugged_ordered_codebook_cost": null, "unique_target_count": 32},
+        {"seed_index": 6, "zero_mean_active_score": 0.51943359375, "optimum_mean_active_score": 1.0, "target_sha256": "d5220e5fd298a59050aaa0431ce0d51ad3244bf11957f62ee291271544778187", "smooth_provenance_cost": 1088, "rugged_ordered_codebook_cost": null, "unique_target_count": 32},
+        {"seed_index": 7, "zero_mean_active_score": 0.514794921875, "optimum_mean_active_score": 1.0, "target_sha256": "542b2131e93df9242537ccb8f29f372cd97314d948afe0beed31fad5d072b426", "smooth_provenance_cost": 1088, "rugged_ordered_codebook_cost": null, "unique_target_count": 32}
+      ],
+      "cost_mean": 1088.0,
+      "cost_min": 1088,
+      "cost_max": 1088
+    },
+    {
+      "task": "rugged_hard_v5",
+      "mode": "rugged",
+      "blocks": 32,
+      "block_width": 32,
+      "codebook_size": 1024,
+      "public_codebook_sha256": "e7c55b85ca269130e1ffe6028b765ae0828ebc291f7e139755b93ca68818968c",
+      "per_seed": [
+        {"seed_index": 0, "zero_mean_active_score": 0.38, "optimum_mean_active_score": 1.0, "target_sha256": "32bdac3bd8227d297f76a1f99c7aba3ce793b1ef6b96cb119ed92b3021b7c760", "smooth_provenance_cost": null, "rugged_ordered_codebook_cost": 15411, "unique_target_count": 32},
+        {"seed_index": 1, "zero_mean_active_score": 0.38, "optimum_mean_active_score": 1.0, "target_sha256": "6411e4aa5ed778361a0ee0ab233fe40016562294ea8f8ea3b0462601d014b677", "smooth_provenance_cost": null, "rugged_ordered_codebook_cost": 15098, "unique_target_count": 32},
+        {"seed_index": 2, "zero_mean_active_score": 0.38, "optimum_mean_active_score": 1.0, "target_sha256": "63af3e7a8f199fa5e2212e5203abd652e910363d1415b95cb040addbdb63d092", "smooth_provenance_cost": null, "rugged_ordered_codebook_cost": 18917, "unique_target_count": 32},
+        {"seed_index": 3, "zero_mean_active_score": 0.38, "optimum_mean_active_score": 1.0, "target_sha256": "48be57693df90a526219aabba2a5bbf4cadcf0150ee149b69bbef25684ae155c", "smooth_provenance_cost": null, "rugged_ordered_codebook_cost": 18086, "unique_target_count": 32},
+        {"seed_index": 4, "zero_mean_active_score": 0.38, "optimum_mean_active_score": 1.0, "target_sha256": "f7d0b8dbb1a1454b6199753600ffc7f61d8eba1625227f2e1ff97fd2a1fbb7ee", "smooth_provenance_cost": null, "rugged_ordered_codebook_cost": 13279, "unique_target_count": 32},
+        {"seed_index": 5, "zero_mean_active_score": 0.38, "optimum_mean_active_score": 1.0, "target_sha256": "673a4ee3adcadcb6a0589abf4436d30de2f7eacd092b567b8d934db8feda8ca2", "smooth_provenance_cost": null, "rugged_ordered_codebook_cost": 18306, "unique_target_count": 32},
+        {"seed_index": 6, "zero_mean_active_score": 0.38, "optimum_mean_active_score": 1.0, "target_sha256": "3d2f6f2364b0104e6bf3b019205b5917104603beced9c4ebbd1db01aca5935de", "smooth_provenance_cost": null, "rugged_ordered_codebook_cost": 13018, "unique_target_count": 32},
+        {"seed_index": 7, "zero_mean_active_score": 0.38, "optimum_mean_active_score": 1.0, "target_sha256": "cde70ecccbbb99638ac2858f8e116820ebddf7d1aedf23fb86f2e3a9f28e752f", "smooth_provenance_cost": null, "rugged_ordered_codebook_cost": 17343, "unique_target_count": 32}
+      ],
+      "cost_mean": 16182.25,
+      "cost_min": 13018,
+      "cost_max": 18917
+    }
+  ]
+}

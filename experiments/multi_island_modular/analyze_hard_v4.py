@@ -16,6 +16,15 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 TASKDATA = ROOT / "tasks/hard_active_modular_landscape_v4/taskdata/hard_v4_seed_bundle.json"
+SEED_BUNDLE_FILENAME = "hard_v4_seed_bundle.json"
+SEED_SCHEMA_VERSION = 2
+ROLE_PROTOCOL_FILENAME = "hard_v4_eval_protocol.md"
+MIN_MODULE_COVERAGE = 8
+MIN_ISLAND_COVERAGE = 4
+MIGRATION_DIVISOR = 8
+MIGRATION_MIN = 16
+MIGRATION_MAX = 64
+REMIGRATION_COOLDOWN = 16
 TASKS = ("smooth_hard_v4", "rugged_hard_v4")
 CONDITIONS = ("global", "global_8", "partition", "multi_island")
 REPETITIONS = 8
@@ -58,7 +67,7 @@ def bundle() -> dict[str, Any]:
     value = load_json(TASKDATA)
     if (
         value is None
-        or value.get("schema_version") != 2
+        or value.get("schema_version") != SEED_SCHEMA_VERSION
         or value.get("blocks") != BLOCKS
         or value.get("block_width") != WIDTH
         or value.get("codebook_size") != CODEBOOK_SIZE
@@ -208,7 +217,7 @@ def integrity(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -
         ):
             if values.get(key) != expected:
                 errors.append(f"{key}={values.get(key)!r}, expected {expected!r}")
-    every = max(16, min(64, budget // 8))
+    every = max(MIGRATION_MIN, min(MIGRATION_MAX, budget // MIGRATION_DIVISOR))
     expected = {
         "agents.runtime": "opencode",
         "agents.model": "mafia/glm-5.2",
@@ -219,14 +228,14 @@ def integrity(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -
         "grader.args.seed_index": str(int(identity.get("repetition", 1)) - 1),
         "islands.migration.every": str(every),
         "islands.migration.rank_window": str(every),
-        "islands.migration.remigration_cooldown": "16",
+        "islands.migration.remigration_cooldown": str(REMIGRATION_COOLDOWN),
     }
     for key, expected_value in expected.items():
         if values.get(key) != expected_value:
             errors.append(f"{key}={values.get(key)!r}, expected {expected_value!r}")
-    if values.get("agents.runtime_options.role_file") != str(ROOT / "hard_v4_eval_protocol.md"):
+    if values.get("agents.runtime_options.role_file") != str(ROOT / ROLE_PROTOCOL_FILENAME):
         errors.append("wrong v4 role protocol")
-    private = run_dir / ".coral/private" / "hard_v4_seed_bundle.json"
+    private = run_dir / ".coral/private" / SEED_BUNDLE_FILENAME
     if not private.is_file() or private.read_bytes() != TASKDATA.read_bytes():
         errors.append("private v4 seed bundle mismatch")
     records = real_records(run_dir)
@@ -274,7 +283,7 @@ def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> 
     coverage = len({active for _, _, active in parsed})
     island_coverage = {island: len(modules) for island, modules in island_modules.items()}
     multi_island_gate = str(identity["condition"]) != "multi_island" or (
-        len(island_coverage) >= 2 and min(island_coverage.values()) >= 4
+        len(island_coverage) >= 2 and min(island_coverage.values()) >= MIN_ISLAND_COVERAGE
     )
     return {
         "task": task,
@@ -297,7 +306,7 @@ def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> 
         "assembly_gap": pooled_score - (best[0] if parsed else baseline),
         "module_coverage": coverage,
         "island_coverage": json.dumps(island_coverage, sort_keys=True),
-        "coverage_gate": coverage >= min(8, BLOCKS) and multi_island_gate,
+        "coverage_gate": coverage >= min(MIN_MODULE_COVERAGE, BLOCKS) and multi_island_gate,
         "parse_errors": ";".join(parse_errors),
     }
 
@@ -336,7 +345,9 @@ def main() -> int:
                     if row["real_attempts"] == budget and row["score_range"] <= 1e-12:
                         reasons.append("degenerate score range")
                     if row["real_attempts"] == budget and not row["coverage_gate"]:
-                        reasons.append(f"module coverage={row['module_coverage']}, need at least 8")
+                        reasons.append(
+                            f"module coverage={row['module_coverage']}, need at least {MIN_MODULE_COVERAGE}"
+                        )
                     if reasons:
                         failures.append(
                             {
@@ -364,7 +375,10 @@ def main() -> int:
         "expected_rows": len(args.tasks) * len(args.conditions) * args.repetitions * len(args.budgets),
         "integrity_failures": failures,
         "primary_metric": "provenance-backed assembly",
-        "coverage_gate": "at least 8 distinct active modules; multi-island also needs at least 4 per island",
+        "coverage_gate": (
+            f"at least {MIN_MODULE_COVERAGE} distinct active modules; multi-island "
+            f"also needs at least {MIN_ISLAND_COVERAGE} per island"
+        ),
     }
     (output / "audit.json").write_text(json.dumps(audit, indent=2) + "\n")
     print(f"Audited {len(rows)} complete cells; failures={len(failures)}")
