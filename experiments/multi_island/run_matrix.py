@@ -62,6 +62,20 @@ def now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
+def budget_results_root(root: Path, budget: int | None) -> Path:
+    """Return the isolated result slice for a budgeted matrix.
+
+    A caller may pass either the sweep root (``.../threshold-v1``) or an
+    already-sliced path (``.../threshold-v1/budget-64``).  Keeping this
+    normalization in one place makes launches and resumes use the same
+    layout and prevents one budget from being mistaken for another.
+    """
+    resolved = root.resolve()
+    if budget is None or resolved.name == f"budget-{budget}":
+        return resolved
+    return resolved / f"budget-{budget}"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-root", type=Path, default=DEFAULT_RESULTS_ROOT)
@@ -346,7 +360,12 @@ async def async_main(args: argparse.Namespace) -> int:
         EXPECTED_REAL_ATTEMPTS = args.budget
     if args.repetitions < 1 or args.max_parallel < 1 or args.timeout_hours <= 0:
         raise SystemExit("repetitions, max-parallel, and timeout-hours must be positive")
-    results_root = args.results_root.resolve()
+    results_root = budget_results_root(args.results_root, args.budget)
+    # Keep each budget in an isolated result slice.  A budget sweep is often
+    # resumed one budget at a time; sharing the same task/condition paths
+    # would let a completed cell from one budget be mistaken for another.
+    # Preserve an explicitly supplied ``budget-*`` path so callers that
+    # already use the slice layout remain idempotent.
     if str(results_root).startswith(str(Path.home().resolve())):
         raise SystemExit(
             "SRT runs must use a results root outside $HOME; use "

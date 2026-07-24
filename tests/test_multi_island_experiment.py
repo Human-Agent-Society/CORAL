@@ -83,6 +83,14 @@ def test_grader_error_and_unguarded_tune_invalidate_run(tmp_path: Path) -> None:
     }
 
 
+def test_budget_results_root_isolates_sweep_slices(tmp_path: Path) -> None:
+    root = tmp_path / "threshold-v1"
+    assert run_matrix.budget_results_root(root, 24) == root.resolve() / "budget-24"
+    sliced = root / "budget-64"
+    assert run_matrix.budget_results_root(sliced, 64) == sliced.resolve()
+    assert run_matrix.budget_results_root(root, None) == root.resolve()
+
+
 def test_kernel_candidate_timeout_becomes_task_level_failure(monkeypatch) -> None:
     def raise_timeout(*args, **kwargs):
         raise subprocess.TimeoutExpired(cmd=kwargs.get("args", "python"), timeout=120)
