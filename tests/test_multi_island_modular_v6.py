@@ -153,3 +153,19 @@ def test_v6_transfer_metric_uses_origin_and_destination(monkeypatch, tmp_path: P
     result = analyzer._observed_transfer(tmp_path, "smooth_hard_v6", 1)
     assert result["transfer_events"] == 1
     assert result["transferred_blocks"] == 1
+
+
+def test_v6_provenance_uses_active_tested_flag_not_combined_score() -> None:
+    from experiments.multi_island_modular import analyze_hard_v6 as analyzer
+
+    record = {
+        "score": 0.559375,
+        "feedback": (
+            'eval: {"active_module":0,"active_score":1.0,'
+            '"artifact_exact_count":1,"artifact_score":0.02083333,'
+            '"combined_score":0.559375,"tested":true}'
+        ),
+    }
+    assert analyzer._record_is_exact(record) is True
+    record["feedback"] = record["feedback"].replace('"tested":true', '"tested":false')
+    assert analyzer._record_is_exact(record) is False

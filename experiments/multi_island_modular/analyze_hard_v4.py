@@ -198,6 +198,16 @@ def record_island(record: dict[str, Any]) -> str:
     return parts[index + 1] if index + 1 < len(parts) else "unknown"
 
 
+def record_is_exact(record: dict[str, Any]) -> bool:
+    """Return whether the active module was verified by this evaluation.
+
+    v4/v5/v7 return the active score directly, so an exact result is 1.0.
+    Packages that wrap the active score in a combined objective may replace
+    this hook after importing the analyzer.
+    """
+    return record.get("score") == 1.0
+
+
 def overrides(identity: dict[str, Any]) -> dict[str, str]:
     return {
         item.split("=", 1)[0]: item.split("=", 1)[1]
@@ -283,7 +293,7 @@ def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> 
         try:
             candidate, active = parse_artifact(source_at(run_dir, str(record["commit_hash"])))
             island_modules[record_island(record)].add(active)
-            if record.get("score") == 1.0:
+            if record_is_exact(record):
                 known[active] = candidate[active * WIDTH : (active + 1) * WIDTH]
             score, exact = assembled_score(candidate, task, seed, known)
             parsed.append((record, candidate, active, score, exact))

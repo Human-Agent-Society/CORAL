@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import sys
 from collections import defaultdict
@@ -23,6 +24,8 @@ from hard_active_modular_landscape_v6_grader.grader import (  # noqa: E402
 )
 
 from experiments.multi_island_modular import analyze_hard_v4 as base  # noqa: E402
+
+base = importlib.reload(base)
 
 base.ROOT = ROOT
 base.TASKDATA = ROOT / "tasks/hard_active_modular_landscape_v6/taskdata/hard_v6_seed_bundle.json"
@@ -78,6 +81,14 @@ def _eval_payload(record: dict[str, Any]) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
+def _record_is_exact(record: dict[str, Any]) -> bool:
+    """Use v6's active tested flag, not its combined top-level score."""
+    payload = _eval_payload(record)
+    if payload is None:
+        return record.get("score") == 1.0
+    return payload.get("tested") is True and payload.get("active_score") == 1.0
+
+
 def _observed_transfer(run_dir: Path, task: str, repetition: int) -> dict[str, Any]:
     """Measure exact modules carried from their discovery island to another."""
     seed = str(base.bundle()["seeds"][repetition - 1])
@@ -101,8 +112,8 @@ def _observed_transfer(run_dir: Path, task: str, repetition: int) -> dict[str, A
             continue
         metadata = record.get("metadata")
         metadata = metadata if isinstance(metadata, dict) else {}
-        origin = str(metadata.get("origin_island_id") or "unknown")
         current = base.record_island(record)
+        origin = str(metadata.get("origin_island_id") or current)
         origin_coverage[origin].add(active)
         carried_here = False
         for block in range(BLOCKS):
@@ -115,11 +126,14 @@ def _observed_transfer(run_dir: Path, task: str, repetition: int) -> dict[str, A
             ):
                 transferred.add(block)
                 carried_here = True
-            if bits == target_list[block] and block not in known:
-                known[block] = bits
-                known_origin[block] = origin
-        # The active exact result is the discovery event; the carried exact
-        # modules above are the observable post-migration reuse event.
+        # Only an active exact response creates a provenance-backed discovery.
+        # Exact inactive bits cannot enter the transfer ledger just because
+        # the operator can reconstruct the hidden target offline.
+        if _record_is_exact(record):
+            bits = candidate[active * WIDTH : (active + 1) * WIDTH]
+            if bits == target_list[active] and active not in known:
+                known[active] = bits
+                known_origin[active] = origin
         if carried_here:
             transfer_events += 1
     return {
@@ -184,6 +198,7 @@ def integrity(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -
 # retaining the original callables so the wrappers above can delegate cleanly.
 base._ORIGINAL_COLLECT = base.collect
 base._ORIGINAL_INTEGRITY = base.integrity
+base.record_is_exact = _record_is_exact
 base.collect = collect
 base.integrity = integrity
 
