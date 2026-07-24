@@ -6,7 +6,10 @@ generation: 0
 # Hard v5 modular threshold protocol
 
 This is a fixed-budget threshold experiment. Use ordinary `coral eval` only;
-tune evaluations are disabled. Prefer this literal representation:
+tune evaluations are disabled. The protocol below is sufficient to start;
+do not spend startup time rereading the grader source or searching host paths.
+Submit the deterministic first assignment before doing any optional source
+inspection. Prefer this literal representation:
 
 ```python
 CANDIDATE = (
@@ -44,10 +47,15 @@ full-artifact coordinate anchor is 32 * 34 = 1,088 real evaluations.
 The rugged task returns `0.38` for the all-zero decoy, `0.42` for every
 non-target nonzero code, and `1.0` for the hidden target. Its public codebook
 has 1,024 distinct 32-bit entries and can be enumerated; only the per-seed
-permutation and target seed are private. The decoy is deliberately below a
-wrong nonzero code so score-based migration does not reward abandoning the
-enumeration. Record a stable agent-specific enumeration offset and avoid
-repeating a failed `(module, code)` pair.
+permutation and target seed are private. To reproduce the public codebook
+without reading the grader, iterate `counter = 0, 1, ...`, hash the literal
+UTF-8 string `coral-hard-v5-codebook:{counter}` with SHA-256, take the first
+four bytes as a big-endian integer masked to 32 bits, skip zero and duplicate
+values, and format accepted values as 32-bit binary strings until 1,024
+entries are collected. The decoy is deliberately below a wrong nonzero code
+so score-based migration does not reward abandoning the enumeration. Record a
+stable agent-specific enumeration offset and avoid repeating a failed
+`(module, code)` pair.
 
 Before every submission, run a literal check: the tuple must have exactly 32
 strings, each length 32, containing only `0` and `1`; `ACTIVE_MODULE` must be
