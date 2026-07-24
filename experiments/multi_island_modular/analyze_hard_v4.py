@@ -265,23 +265,31 @@ def integrity(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -
 
 def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> dict[str, Any]:
     seed = str(bundle()["seeds"][int(identity["repetition"]) - 1])
+    # Keep the provenance ledger in temporal order.  It is tempting to build
+    # ``known`` from every exact result first and then score every candidate
+    # against that final ledger, but that gives an early candidate credit for
+    # a module that nobody had tested yet.  Such retrospective credit is
+    # especially damaging to the migration contrast: it can turn lucky bits
+    # into apparent transferred knowledge.  A candidate may use exact bits
+    # known before its submission and the module tested by its own submission;
+    # future exact discoveries must not affect it.
+    parsed: list[tuple[dict[str, Any], str, int, float, int]] = []
     known: dict[int, str] = {}
-    parsed: list[tuple[dict[str, Any], str, int]] = []
     parse_errors: list[str] = []
     island_modules: defaultdict[str, set[int]] = defaultdict(set)
     records = real_records(run_dir)
     for record in records:
         try:
             candidate, active = parse_artifact(source_at(run_dir, str(record["commit_hash"])))
-            parsed.append((record, candidate, active))
             island_modules[record_island(record)].add(active)
             if record.get("score") == 1.0:
                 known[active] = candidate[active * WIDTH : (active + 1) * WIDTH]
+            score, exact = assembled_score(candidate, task, seed, known)
+            parsed.append((record, candidate, active, score, exact))
         except (OSError, ValueError, SyntaxError, KeyError, TypeError):
             parse_errors.append(str(record.get("commit_hash")))
     best = (0.0, 0, "")
-    for _, candidate, _ in parsed:
-        score, exact = assembled_score(candidate, task, seed, known)
+    for _, candidate, _, score, exact in parsed:
         if (score, exact) > (best[0], best[1]):
             best = (score, exact, candidate)
     baseline, _ = assembled_score("0" * TOTAL_WIDTH, task, seed, {})
@@ -289,7 +297,7 @@ def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> 
     for block, bits in known.items():
         pooled_candidate[block * WIDTH : (block + 1) * WIDTH] = bits
     pooled_score, pooled_exact = assembled_score("".join(pooled_candidate), task, seed, known)
-    coverage = len({active for _, _, active in parsed})
+    coverage = len({active for _, _, active, _, _ in parsed})
     island_coverage = {island: len(modules) for island, modules in island_modules.items()}
     multi_island_gate = str(identity["condition"]) != "multi_island" or (
         len(island_coverage) >= 2 and min(island_coverage.values()) >= MIN_ISLAND_COVERAGE

@@ -82,6 +82,13 @@ score ranges, insufficient module coverage, missing migration events, and cells
 with no provenance-backed exact module. A cell with zero exact modules is kept
 as a calibration failure, never as a topology result.
 
+Provenance is scored online in attempt order: an exact module becomes
+available to a candidate only when that submission (or an earlier submission)
+has tested the same module and returned `1.0`. The final exact ledger is used
+only for the pooled-discovery diagnostic. Scoring every historical candidate
+against the final ledger would turn lucky, untested bits into apparent
+transferred knowledge.
+
 Primary outcomes are provenance-backed exact-module count and the best
 single-candidate assembled score. Pooled provenance and the assembly gap are
 diagnostics. For rugged, a raw assembled score near 0.38 is the decoy baseline
