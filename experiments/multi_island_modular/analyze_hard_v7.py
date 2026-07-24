@@ -35,6 +35,7 @@ base.ROLE_PROTOCOL_FILENAME = "hard_v7_eval_protocol.md"
 base.MIN_MODULE_COVERAGE = 16
 base.MIN_ISLAND_COVERAGE = 8
 base.MIN_EXACT_SIGNAL = 1
+base.MAX_MALFORMED_ATTEMPTS = 1
 base.MIGRATION_DIVISOR = 4
 base.MIGRATION_MIN = 256
 base.MIGRATION_MAX = 2048
@@ -173,6 +174,11 @@ def integrity(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -
     if task not in base.TASKS:
         errors.append("unknown v7 task")
     records = base.real_records(run_dir)
+    for record in records:
+        feedback = str(record.get("feedback") or "")
+        if '"invalid_candidate"' in feedback and record.get("score") != 0.0:
+            errors.append("invalid v7 candidate did not receive numeric zero score")
+            break
     balance = _agent_balance(run_dir, budget)
     if len(records) == budget and not balance["agent_quota_gate"]:
         errors.append(

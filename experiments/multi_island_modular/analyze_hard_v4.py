@@ -28,6 +28,7 @@ REMIGRATION_COOLDOWN = 16
 ANALYZER_LABEL = "Hard v4"
 PRIMARY_METRIC = "provenance-backed assembly"
 MIN_EXACT_SIGNAL = 0
+MAX_MALFORMED_ATTEMPTS = 0
 TOPOLOGY_AGENT_COUNTS = {
     "global": "4",
     "global_8": "8",
@@ -354,6 +355,7 @@ def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> 
         "island_coverage": json.dumps(island_coverage, sort_keys=True),
         "coverage_gate": coverage >= min(MIN_MODULE_COVERAGE, BLOCKS) and multi_island_gate,
         "parse_errors": ";".join(parse_errors),
+        "parse_error_count": len(parse_errors),
     }
 
 
@@ -384,8 +386,12 @@ def main() -> int:
                         continue
                     reasons = integrity(run_dir, identity, task, budget)
                     row = collect(run_dir, identity, task, budget)
-                    if row["parse_errors"]:
-                        reasons.append(f"candidate parse errors: {row['parse_errors']}")
+                    if row["parse_error_count"] > MAX_MALFORMED_ATTEMPTS:
+                        reasons.append(
+                            "candidate parse errors="
+                            f"{row['parse_error_count']}, allowed {MAX_MALFORMED_ATTEMPTS}: "
+                            f"{row['parse_errors']}"
+                        )
                     if row["numeric_scores"] != row["real_attempts"]:
                         reasons.append("non-numeric real score present")
                     if row["real_attempts"] == budget and row["score_range"] <= 1e-12:
@@ -430,6 +436,7 @@ def main() -> int:
             f"also needs at least {MIN_ISLAND_COVERAGE} per island"
         ),
         "exact_signal_gate": f"at least {MIN_EXACT_SIGNAL} provenance-backed exact modules",
+        "malformed_attempt_gate": f"at most {MAX_MALFORMED_ATTEMPTS} malformed real attempts",
     }
     (output / "audit.json").write_text(json.dumps(audit, indent=2) + "\n")
     print(f"Audited {len(rows)} complete cells; failures={len(failures)}")

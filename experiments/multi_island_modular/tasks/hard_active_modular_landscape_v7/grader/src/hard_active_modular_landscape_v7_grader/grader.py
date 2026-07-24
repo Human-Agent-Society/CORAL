@@ -185,6 +185,16 @@ def load_seed(private_dir: Path, filename: str, index: int) -> str:
 
 
 class Grader(TaskGrader):
+    def invalid_candidate(self, message: str) -> ScoreBundle:
+        """Charge malformed agent output as a real, worst-score attempt."""
+        return self.score(
+            0.0,
+            json.dumps(
+                {"invalid_candidate": message, "tested": False},
+                separators=(",", ":"),
+            ),
+        )
+
     def evaluate(self) -> ScoreBundle:
         if self.tune:
             return self.fail("Tune mode is disabled; submit an ordinary coral eval.")
@@ -197,11 +207,14 @@ class Grader(TaskGrader):
             return self.fail("seed_index must be an integer")
         program_path = Path(self.codebase_path) / program_file
         if not program_path.is_file():
-            return self.fail(f"Program file not found: {program_file}")
+            return self.invalid_candidate(f"Program file not found: {program_file}")
         try:
             if mode not in {"smooth", "rugged"}:
                 raise ValueError("mode must be smooth or rugged")
             seed = load_seed(Path(self.private_dir), bundle_file, seed_index)
+        except (KeyError, TypeError, ValueError, OSError, json.JSONDecodeError) as exc:
+            return self.fail(f"Invalid grader configuration: {exc}")
+        try:
             candidate, active = parse_candidate(program_path)
             target = targets_for(seed, mode)[active]
             value = active_score(
@@ -209,8 +222,8 @@ class Grader(TaskGrader):
                 mode=mode,
                 target=target,
             )
-        except (KeyError, TypeError, ValueError, SyntaxError, OSError, json.JSONDecodeError) as exc:
-            return self.fail(f"Invalid candidate: {exc}")
+        except (TypeError, ValueError, SyntaxError, OSError) as exc:
+            return self.invalid_candidate(str(exc))
         return self.score(
             value,
             json.dumps(

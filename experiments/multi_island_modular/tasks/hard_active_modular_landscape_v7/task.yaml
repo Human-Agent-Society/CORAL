@@ -11,6 +11,8 @@ task:
     - ACTIVE_MODULE must be an integer from 0 through 47.
     - Preserve exact tested modules while probing another module and record
       their active-eval provenance in a note.
+    - A malformed candidate receives numeric score 0 and still consumes the
+      agent's fixed real-evaluation quota.
     - Use ordinary coral eval only; tune mode is disabled.
 
 grader:

@@ -31,6 +31,12 @@ of the feedback-side assembly oracle. Neither task has semantic interfaces or
 epistasis; they remain controls for search allocation and verified state
 transfer.
 
+Malformed agent candidates receive numeric score 0 and consume a normal real
+evaluation. The analyzer permits at most one malformed attempt in a completed
+cell and reports its commit. This treats a single formatting error as agent
+performance rather than a grader outage, while preventing a cell with repeated
+invalid output from entering a topology contrast.
+
 ## Pre-registered ladder
 
 | task | budgets | idealized purpose |

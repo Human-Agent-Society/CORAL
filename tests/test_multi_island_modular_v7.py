@@ -84,6 +84,39 @@ def test_v7_feedback_has_no_inactive_assembly_oracle(tmp_path: Path) -> None:
     assert "artifact_exact_count" not in explanation
 
 
+def test_v7_malformed_candidate_is_numeric_agent_penalty(tmp_path: Path) -> None:
+    from coral.config import GraderConfig
+    from coral.types import Task
+
+    private = tmp_path / "private-invalid"
+    codebase = tmp_path / "codebase-invalid"
+    private.mkdir()
+    codebase.mkdir()
+    shutil.copy(TASKDATA, private / "hard_v7_seed_bundle.json")
+    (codebase / "candidate.py").write_text(
+        'CANDIDATE = tuple("0" * 64 for _ in range(48))\nACTIVE_MODULE = 0\n'
+    )
+    grader = GRADER.Grader(
+        GraderConfig(
+            args={
+                "program_file": "candidate.py",
+                "seed_bundle_file": "hard_v7_seed_bundle.json",
+                "seed_index": 0,
+                "mode": "smooth",
+            }
+        )
+    )
+    grader.private_dir = str(private)
+    grader.codebase_path = str(codebase)
+    grader.tasks = [Task(id="v7", name="v7", description="invalid candidate")]
+    result = grader.evaluate()
+    assert result.aggregated == 0.0
+    explanation = result.scores["eval"].explanation
+    assert explanation is not None
+    assert json.loads(explanation)["tested"] is False
+    assert "invalid_candidate" in explanation
+
+
 def test_v7_smooth_anchor_and_rugged_codebook() -> None:
     assert GRADER.BLOCKS * (GRADER.WIDTH + 2) == 3168
     assert len(GRADER.CODEBOOK) == 4096
@@ -163,6 +196,7 @@ def test_v7_analyzer_uses_preregistered_default_budgets(monkeypatch) -> None:
     assert args.budgets == list(analyzer.base.DEFAULT_BUDGETS)
     assert args.budgets[:6] == [1024, 2048, 3072, 4096, 6144, 8192]
     assert args.budgets[-1] == 196608
+    assert analyzer.base.MAX_MALFORMED_ATTEMPTS == 1
 
 
 def test_v7_duplicate_query_diagnostics(monkeypatch, tmp_path: Path) -> None:

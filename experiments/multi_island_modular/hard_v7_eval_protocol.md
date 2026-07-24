@@ -55,7 +55,9 @@ evidence of a tested building block.
 
 Before every submission, verify that `CANDIDATE` has exactly 48 binary
 strings of length 64 and `ACTIVE_MODULE` is in `[0, 48)`. A malformed
-submission consumes a real attempt and supplies no evidence. Preserve every
+submission receives score 0, consumes a real attempt, and supplies no
+evidence. Do not replace the literal tuple with a comprehension, repetition,
+function call, or computed expression. Preserve every
 exact module while probing another one; do not reset it to zero in a later
 candidate.
 
