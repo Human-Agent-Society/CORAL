@@ -59,6 +59,15 @@ pooled and best-single-candidate assembly, separating failure to discover
 modules from failure to transfer/assemble them. Oracle recomputation is a
 secondary diagnostic, never a substitute for provenance.
 
+## Hard v4 threshold package
+
+`run_hard_v4.py` is the next independent package. It uses 24×24-bit modules,
+tuple-form candidates, a 512-entry rugged codebook with unique per-seed
+targets, and a `global_8` control that holds the eight-agent roster fixed.
+`analyze_hard_v4.py` adds malformed-candidate, mode/seed, migration, and
+module-coverage gates. The v4 research design and calibration are in
+`research_design_v4.md` and `hard_v4_calibration.json`.
+
 ## Files
 
 ```text

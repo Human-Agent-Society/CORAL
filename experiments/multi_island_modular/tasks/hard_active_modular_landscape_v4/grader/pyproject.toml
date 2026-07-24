@@ -1,0 +1,9 @@
+[project]
+name = "hard-active-modular-landscape-v4-grader"
+version = "0.1.0"
+description = "Harder active-module grader for the modular multi-island threshold study."
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hard_active_modular_landscape_grader"]

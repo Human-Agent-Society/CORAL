@@ -1,0 +1,53 @@
+task:
+  name: "Hard Active Modular Landscape v4"
+  description: |
+    Maintain 24 independent 24-bit modules as a literal tuple/list in
+    CANDIDATE and select one with ACTIVE_MODULE. The task-specific config
+    supplies smooth or rugged feedback while the operator scores only
+    provenance-backed assembly.
+  tips: |
+    - Prefer a literal tuple of 24 strings, each exactly 24 binary digits.
+    - Only the selected module is scored; other modules are not feedback.
+
+grader:
+  entrypoint: "hard_active_modular_landscape_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  private:
+    - "taskdata/hard_v4_seed_bundle.json"
+  args:
+    program_file: "candidate.py"
+    seed_bundle_file: "hard_v4_seed_bundle.json"
+    seed_index: 0
+    mode: "smooth"
+  direction: maximize
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../hard_v4_eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 32
+    rank_window: 32
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 16

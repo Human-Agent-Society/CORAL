@@ -1,0 +1,185 @@
+{
+  "schema_version": 2,
+  "method": "coordinate-probe and ordered-public-codebook anchors with unique rugged targets",
+  "budgets": [
+    384,
+    768,
+    1536,
+    3072,
+    6144,
+    8192
+  ],
+  "seed_count": 8,
+  "tasks": [
+    {
+      "task": "smooth_hard_v4",
+      "mode": "smooth",
+      "blocks": 24,
+      "block_width": 24,
+      "codebook_size": null,
+      "public_codebook_sha256": null,
+      "per_seed": [
+        {
+          "seed_index": 0,
+          "zero_mean_active_score": 0.5332465277777777,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "2c3ce64b4399c9145ce8905dd0bc14c7b7f4e80c3ea31c3e400ab2ef34f73aad",
+          "coordinate_probe_cost": 600,
+          "ordered_codebook_cost": null,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 1,
+          "zero_mean_active_score": 0.5052083333333334,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "be8d6248fcf632e99b88235a63640bcd7e1171ab4ee063b49ed4fb3b327a5ad1",
+          "coordinate_probe_cost": 600,
+          "ordered_codebook_cost": null,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 2,
+          "zero_mean_active_score": 0.5497395833333333,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "6d2a8d6b83a70cf252e1d9122241c7d5d7d0378765adfb63b1c1d9466625ec0a",
+          "coordinate_probe_cost": 600,
+          "ordered_codebook_cost": null,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 3,
+          "zero_mean_active_score": 0.513454861111111,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "f80f786673304d510fa5521a5901a23e8810b76c8eac4a8a381582541c46c8b1",
+          "coordinate_probe_cost": 600,
+          "ordered_codebook_cost": null,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 4,
+          "zero_mean_active_score": 0.53984375,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "de44c4789e694b229b9156a5d845c0d7b7da2728562b82aaeb109bb370584a86",
+          "coordinate_probe_cost": 600,
+          "ordered_codebook_cost": null,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 5,
+          "zero_mean_active_score": 0.5085069444444444,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "1e6819b133d22ae11b99a2904130769c6ed13f854fd60f3c651a2251e73e9828",
+          "coordinate_probe_cost": 600,
+          "ordered_codebook_cost": null,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 6,
+          "zero_mean_active_score": 0.5447916666666667,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "c6302e2cfc2c60796b2e53d96e99246916dba423be9a65108b120451fc9cdcdb",
+          "coordinate_probe_cost": 600,
+          "ordered_codebook_cost": null,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 7,
+          "zero_mean_active_score": 0.5167534722222222,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "df1dcb5117f9fa5e42b4420bb5347f71ead80ddbeb7629f8dce08afd10f397b0",
+          "coordinate_probe_cost": 600,
+          "ordered_codebook_cost": null,
+          "unique_target_count": 24
+        }
+      ],
+      "cost_mean": 600.0,
+      "cost_min": 600,
+      "cost_max": 600
+    },
+    {
+      "task": "rugged_hard_v4",
+      "mode": "rugged",
+      "blocks": 24,
+      "block_width": 24,
+      "codebook_size": 512,
+      "public_codebook_sha256": "aa298a3e44cf8d196fb7d5dda24525bd04a14f429a5a60bb9aa632616581bc60",
+      "per_seed": [
+        {
+          "seed_index": 0,
+          "zero_mean_active_score": 0.7799999999999999,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "e8ae59bd51516a189e8d91dbfc86ef195549ee09d3af0a37991ad45afbcf59c2",
+          "coordinate_probe_cost": null,
+          "ordered_codebook_cost": 7102,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 1,
+          "zero_mean_active_score": 0.7799999999999999,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "a1e47e4deb52f5f74b9dbfab32f54b3325c52c29e909e7c8f02f7747b640cc08",
+          "coordinate_probe_cost": null,
+          "ordered_codebook_cost": 7692,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 2,
+          "zero_mean_active_score": 0.7799999999999999,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "4883b65f77e2522ab892b14a5639710cd7b86bf8c616c8e36f156e040bad14b9",
+          "coordinate_probe_cost": null,
+          "ordered_codebook_cost": 7134,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 3,
+          "zero_mean_active_score": 0.7799999999999999,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "e38659b591317f42550718017e484e0402ad5cb84f5d4270c57ade272cd0c6cf",
+          "coordinate_probe_cost": null,
+          "ordered_codebook_cost": 6395,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 4,
+          "zero_mean_active_score": 0.7799999999999999,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "ce8ebd25726e81b897659f5ccc140d3394e88c9d02e69ac41f455817c9738dc3",
+          "coordinate_probe_cost": null,
+          "ordered_codebook_cost": 8522,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 5,
+          "zero_mean_active_score": 0.7799999999999999,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "7fa560bb9016b3394250a8933adc465b7830cae85e2b58a4af84c89ddf4bb22c",
+          "coordinate_probe_cost": null,
+          "ordered_codebook_cost": 5945,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 6,
+          "zero_mean_active_score": 0.7799999999999999,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "54c7c29e0faab4eb2e36bf8b37b3a224361ad5e5442e5c16a777bc1c54894bad",
+          "coordinate_probe_cost": null,
+          "ordered_codebook_cost": 6274,
+          "unique_target_count": 24
+        },
+        {
+          "seed_index": 7,
+          "zero_mean_active_score": 0.7799999999999999,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "101cf41ba221c4ca5a962b8070be3dad3c6dcebd86033efa6bb16599b79a6daa",
+          "coordinate_probe_cost": null,
+          "ordered_codebook_cost": 4530,
+          "unique_target_count": 24
+        }
+      ],
+      "cost_mean": 6699.25,
+      "cost_min": 4530,
+      "cost_max": 8522
+    }
+  ]
+}
