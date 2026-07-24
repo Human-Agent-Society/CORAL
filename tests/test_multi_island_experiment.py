@@ -12,6 +12,7 @@ import pytest
 
 from examples.kernel_builder.grader.src.kernel_builder_grader import grader as kernel_grader
 from experiments.multi_island import analyze, run_matrix
+from experiments.multi_island_hard.analyze_threshold import contrast_chart
 
 
 def _write_attempt(
@@ -91,6 +92,26 @@ def test_budget_results_root_isolates_sweep_slices(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="different budget slice"):
         run_matrix.budget_results_root(sliced, 24)
     assert run_matrix.budget_results_root(root, None) == root.resolve()
+
+
+def test_threshold_contrast_chart_has_budget_and_task_axes() -> None:
+    rows = [
+        {
+            "budget": budget,
+            "task": task,
+            "contrast": f"multi_island_minus_{reference}",
+            "reference_gain_difference": 0.08,
+            "reference_gain_ci_low": -0.01,
+            "reference_gain_ci_high": 0.15,
+        }
+        for budget in (24, 64)
+        for task in ("smooth128", "rugged128_k24")
+        for reference in ("global", "partition")
+    ]
+    rendered = contrast_chart(rows)
+    assert "Multi-island contrast by feedback budget" in rendered
+    assert "B=24" in rendered and "B=64" in rendered
+    assert "rugged128_k24" in rendered
 
 
 def test_kernel_candidate_timeout_becomes_task_level_failure(monkeypatch) -> None:
