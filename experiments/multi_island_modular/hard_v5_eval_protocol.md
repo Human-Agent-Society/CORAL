@@ -60,5 +60,10 @@ stable agent-specific enumeration offset and avoid repeating a failed
 Before every submission, run a literal check: the tuple must have exactly 32
 strings, each length 32, containing only `0` and `1`; `ACTIVE_MODULE` must be
 an integer in `[0, 32)`. A malformed candidate consumes a real attempt and
-cannot provide evidence. Continue until the manager reaches the declared
+cannot provide evidence. After the first probe, it is allowed (and encouraged
+for the threshold ladder) to automate a sequence of ordinary `coral eval`
+calls with a small local script. Every call must still go through `coral eval`,
+wait for its returned score, preserve the tested modules and provenance, and
+stop before the declared real-evaluation budget; do not call the grader
+directly or use tune mode. Continue until the manager reaches the declared
 real-evaluation stop.
