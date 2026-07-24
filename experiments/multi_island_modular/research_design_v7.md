@@ -70,6 +70,12 @@ positive window only after enough budget exists for both communities to find
 complementary modules but before partition saturates. Smooth is a negative
 control and need not show a positive contrast.
 
+The standard roster follows deterministic module lanes `base_index + 8*k`.
+Agents advance after an exact result or after exhausting the 66-evaluation
+Smooth coordinate allowance on a module. This makes coverage a protocol
+property rather than relying on eight independent LLMs to negotiate the next
+uncovered index correctly.
+
 ## Interpretation safeguards
 
 1. The v7 feedback change prevents inactive exact-count differential probing.

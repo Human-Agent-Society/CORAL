@@ -32,11 +32,16 @@ horatio-hornblower -> 6 jack-aubrey -> 7
 ```
 
 For an unexpected base id, use the first two bytes of its SHA-256 digest
-modulo 48. After the first claim, allocate uncovered modules using notes and
-verified attempts in the current island. After migration, inspect the arrival
-note and `coral log --recent`; carry exact modules with their original bits and
-record the source island. Never claim a module merely because untested bits
-happen to match a candidate.
+modulo 8. Treat that value as `base_index`. Probe modules in the deterministic
+sequence `base_index, base_index + 8, base_index + 16, ...` modulo 48. Move to
+the next module immediately after an exact active result, or after 66 real
+attempts on one Smooth module without an exact result. Do not spend the whole
+per-agent quota repeatedly verifying the same module. Notes may skip a module
+that the current island has already verified, but they must not send every
+agent back to module 0. After migration, inspect the arrival note and
+`coral log --recent`; carry exact modules with their original bits and record
+the source island. Never claim a module merely because untested bits happen to
+match a candidate.
 
 The Smooth coordinate/provenance anchor is `48 * (64 + 2) = 3168` real
 evaluations. The Rugged public codebook has 4096 distinct 64-bit entries. To
