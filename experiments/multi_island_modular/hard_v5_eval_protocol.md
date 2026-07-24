@@ -25,9 +25,13 @@ because its bits happen to occur in a candidate.
 
 To keep the threshold pilot from measuring simultaneous startup collisions,
 use a deterministic first assignment. Read your own `.coral_agent_id`, strip
-the `-from-<island>` suffix when present, hash the remaining base id with
-SHA-256, and set the first `ACTIVE_MODULE` to the integer represented by the
-first two digest bytes modulo 32. Do not default every agent to module 0.
+the `-from-<island>` suffix when present, and use this canonical mapping for
+the standard eight-agent roster: `captain-nemo→0`, `captain-ahab→1`,
+`jack-sparrow→2`, `davy-jones→3`, `long-john-silver→4`,
+`sinbad-the-sailor→5`, `horatio-hornblower→6`, `jack-aubrey→7`. For an
+unexpected base id, use the first two bytes of its SHA-256 digest modulo 32.
+Set the first `ACTIVE_MODULE` from that mapping; do not default every agent to
+module 0.
 After the first claim is recorded, agents may reallocate modules using their
 island's notes and verified attempts. This fixed initial allocation is part of
 the protocol, not a post-hoc rescue.
