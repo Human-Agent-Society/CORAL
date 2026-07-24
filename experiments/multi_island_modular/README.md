@@ -1,9 +1,10 @@
 # Modular multi-island follow-up
 
-Status: the modular-v1, active-v2, v3, and v4 runs are design audits, not
-topology evidence. v5 is also retained as an audit because its assembly metric
-was operator-side. The v6 verified-assembly package below is the current
-candidate for a threshold study; it has not yet produced a conclusion.
+Status: the modular-v1 through v6 runs are design or operational audits, not
+topology evidence. v6 exposed an inactive exact-module count and its first
+fixed-budget pilot remained throughput-imbalanced. The oracle-free v7 package
+below is the current candidate for a higher-difficulty threshold study; it has
+not yet produced a conclusion.
 
 The old NK cells remain useful black-box stress controls, but they do not
 exercise the blog's stronger mechanism: carrying a tested sub-artifact and its
@@ -100,6 +101,28 @@ institutional interpretation. The v6 runner also fixes a sparse 16/32
 heartbeat cadence across all topologies; the normal per-eval reflection
 heartbeat is an operational confound for fixed-budget threshold cells.
 
+v6 is retained as a mechanism audit because `artifact_exact_count` can be
+differenced across inactive-module edits and therefore acts as an unintended
+group-testing signal. A v6 score difference cannot isolate migration from that
+extra feedback channel.
+
+## Hard v7 oracle-free threshold package
+
+`run_hard_v7.py` doubles module width to 64 bits, keeps 48 modules, and grows
+the rugged public codebook to 4,096 entries. Smooth's full provenance anchor is
+3,168 evaluations; rugged ordered enumeration costs 80,146–111,613 across the
+eight paired seeds. The staged ladder is smooth
+1,024/2,048/3,072/4,096/6,144/8,192 and rugged
+16,384/32,768/65,536/98,304/131,072/196,608.
+
+Only the selected module is scored during search. Offline chronological
+provenance remains the primary assembly metric, so inactive exact-count
+differencing cannot guide the agents. `analyze_hard_v7.py` also reports an
+agent-quota gate in addition to coverage, exact-signal, and migration gates;
+the runner atomically reserves exactly one eighth of the global budget for
+each agent, and quota-failing cells remain operational audits. See `research_design_v7.md`,
+`hard_v7_calibration.json`, and `hard_v7_eval_protocol.md`.
+
 ## Files
 
 ```text
@@ -119,4 +142,8 @@ run_hard_v6.py                        v6 verified-assembly launcher
 calibrate_hard_v6.py                  v6 difficulty calibration
 analyze_hard_v6.py                    v6 observed assembly/transfer analyzer
 hard_v6_eval_protocol.md              v6 agent-facing protocol
+run_hard_v7.py                        v7 oracle-free high-difficulty launcher
+calibrate_hard_v7.py                  v7 difficulty calibration
+analyze_hard_v7.py                    v7 provenance/transfer/quota analyzer
+hard_v7_eval_protocol.md              v7 agent-facing protocol
 ```

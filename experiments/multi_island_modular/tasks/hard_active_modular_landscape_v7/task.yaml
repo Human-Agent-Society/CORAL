@@ -1,0 +1,59 @@
+task:
+  name: "Hard Active Modular Landscape v7 — oracle-free threshold"
+  description: |
+    Maintain a 3072-bit artifact as 48 literal 64-bit modules. Every ordinary
+    evaluation scores only ACTIVE_MODULE. Inactive modules are not counted or
+    rewarded by the grader; assembly is computed offline from exact,
+    chronology-backed discoveries. This is a fixed-budget search/transfer
+    study, not a semantic collaboration benchmark.
+  tips: |
+    - CANDIDATE should be a tuple/list of 48 literal 64-bit strings.
+    - ACTIVE_MODULE must be an integer from 0 through 47.
+    - Preserve exact tested modules while probing another module and record
+      their active-eval provenance in a note.
+    - Use ordinary coral eval only; tune mode is disabled.
+
+grader:
+  entrypoint: "hard_active_modular_landscape_v7_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  private:
+    - "taskdata/hard_v7_seed_bundle.json"
+  args:
+    program_file: "candidate.py"
+    seed_bundle_file: "hard_v7_seed_bundle.json"
+    seed_index: 0
+    mode: "smooth"
+  direction: maximize
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../hard_v7_eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 8192
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 256
+    rank_window: 256
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 256

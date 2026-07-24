@@ -1,0 +1,54 @@
+task:
+  name: "Hard Active Modular Landscape v7 — Smooth 48x64"
+  description: |
+    High-dimensional separable control with 48 independent 64-bit modules.
+    Active feedback is Hamming-based and only the selected module is scored.
+    Full-artifact exactness is an offline assembly outcome, not feedback.
+  tips:
+    - The coordinate/provenance anchor is 48 * (64 + 2) = 3168 evals.
+    - Use ordinary coral eval only; tune mode is disabled.
+
+grader:
+  entrypoint: "hard_active_modular_landscape_v7_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  private:
+    - "taskdata/hard_v7_seed_bundle.json"
+  args:
+    program_file: "candidate.py"
+    seed_bundle_file: "hard_v7_seed_bundle.json"
+    seed_index: 0
+    mode: "smooth"
+  direction: maximize
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../hard_v7_eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 12288
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 256
+    rank_window: 256
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 256
