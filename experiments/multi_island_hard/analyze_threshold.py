@@ -219,6 +219,106 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def contrast_chart(rows: list[dict[str, Any]]) -> str:
+    """Render the pre-registered topology contrasts by feedback budget."""
+    width, height = 980, 500
+    left, right, top, bottom = 78, 28, 58, 76
+    plot_width, plot_height = width - left - right, height - top - bottom
+    tasks = ("smooth128", "rugged128_k24")
+    references = ("global", "partition")
+    colors = {"smooth128": "#0F766E", "rugged128_k24": "#D97706"}
+    dashes = {"global": "", "partition": "6 4"}
+    budgets = sorted({int(row["budget"]) for row in rows})
+    if not budgets:
+        return "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"980\" height=\"500\"><text x=\"20\" y=\"30\">No valid contrasts</text></svg>\n"
+    values = [
+        float(row["reference_gain_difference"])
+        for row in rows
+        if "reference_gain_difference" in row
+    ]
+    max_abs = max([PRACTICAL_DELTA, *(abs(value) for value in values)]) * 1.35
+    low, high = -max_abs, max_abs
+
+    def x(budget: int) -> float:
+        if len(budgets) == 1:
+            return left + plot_width / 2
+        return left + (budget - budgets[0]) / (budgets[-1] - budgets[0]) * plot_width
+
+    def y(value: float) -> float:
+        return top + (high - value) / (high - low) * plot_height
+
+    body = [
+        f'<rect width="{width}" height="{height}" fill="#FFFFFF"/>',
+        f'<text x="{width / 2:.1f}" y="28" text-anchor="middle" font-family="Inter, sans-serif" font-size="19" font-weight="700">Multi-island contrast by feedback budget</text>',
+        f'<text transform="translate(18 {top + plot_height / 2:.1f}) rotate(-90)" text-anchor="middle" font-family="Inter, sans-serif" font-size="12">Δ normalized reference gain</text>',
+        f'<rect x="{left}" y="{y(PRACTICAL_DELTA):.1f}" width="{plot_width}" height="{y(-PRACTICAL_DELTA) - y(PRACTICAL_DELTA):.1f}" fill="#ECFDF3"/>',
+        f'<line x1="{left}" y1="{y(0):.1f}" x2="{left + plot_width}" y2="{y(0):.1f}" stroke="#98A2B3"/>',
+        f'<line x1="{left}" y1="{y(PRACTICAL_DELTA):.1f}" x2="{left + plot_width}" y2="{y(PRACTICAL_DELTA):.1f}" stroke="#12B76A" stroke-dasharray="5 4"/>',
+    ]
+    for budget in budgets:
+        xpos = x(budget)
+        body.extend(
+            [
+                f'<line x1="{xpos:.1f}" y1="{top}" x2="{xpos:.1f}" y2="{top + plot_height}" stroke="#EAECF0"/>',
+                f'<text x="{xpos:.1f}" y="{top + plot_height + 24}" text-anchor="middle" font-family="Inter, sans-serif" font-size="12">B={budget}</text>',
+            ]
+        )
+    for task in tasks:
+        for reference in references:
+            points: list[str] = []
+            for budget in budgets:
+                row = next(
+                    (
+                        item
+                        for item in rows
+                        if int(item["budget"]) == budget
+                        and item["task"] == task
+                        and item["contrast"] == f"multi_island_minus_{reference}"
+                    ),
+                    None,
+                )
+                if row is None:
+                    continue
+                value = float(row["reference_gain_difference"])
+                xpos, ypos = x(budget), y(value)
+                low_y, high_y = y(float(row["reference_gain_ci_high"])), y(float(row["reference_gain_ci_low"]))
+                stroke = colors[task]
+                body.append(
+                    f'<line x1="{xpos:.1f}" y1="{low_y:.1f}" x2="{xpos:.1f}" y2="{high_y:.1f}" stroke="{stroke}" stroke-width="2"/>'
+                )
+                body.append(
+                    f'<circle cx="{xpos:.1f}" cy="{ypos:.1f}" r="5" fill="{stroke}" stroke="#FFFFFF" stroke-width="1.2"/>'
+                )
+                points.append(f"{xpos:.1f},{ypos:.1f}")
+            if len(points) > 1:
+                stroke = colors[task]
+                dash_attr = f' stroke-dasharray="{dashes[reference]}"' if dashes[reference] else ""
+                body.append(
+                    f'<polyline points="{" ".join(points)}" fill="none" stroke="{stroke}" stroke-width="2"{dash_attr}/>'
+                )
+    legend_y = height - 24
+    body.extend(
+        [
+            f'<line x1="{left}" y1="{legend_y}" x2="{left + 24}" y2="{legend_y}" stroke="#0F766E" stroke-width="2"/>',
+            f'<text x="{left + 31}" y="{legend_y + 4}" font-family="Inter, sans-serif" font-size="12">smooth128</text>',
+            f'<line x1="{left + 130}" y1="{legend_y}" x2="{left + 154}" y2="{legend_y}" stroke="#D97706" stroke-width="2"/>',
+            f'<text x="{left + 161}" y="{legend_y + 4}" font-family="Inter, sans-serif" font-size="12">rugged128_k24</text>',
+            f'<line x1="{left + 330}" y1="{legend_y}" x2="{left + 354}" y2="{legend_y}" stroke="#344054" stroke-width="2"/>',
+            f'<text x="{left + 361}" y="{legend_y + 4}" font-family="Inter, sans-serif" font-size="12">vs global</text>',
+            f'<line x1="{left + 460}" y1="{legend_y}" x2="{left + 484}" y2="{legend_y}" stroke="#344054" stroke-width="2" stroke-dasharray="6 4"/>',
+            f'<text x="{left + 491}" y="{legend_y + 4}" font-family="Inter, sans-serif" font-size="12">vs partition</text>',
+        ]
+    )
+    return "\n".join(
+        [
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" role="img" aria-label="Topology contrasts by budget">',
+            *body,
+            "</svg>",
+            "",
+        ]
+    )
+
+
 def main() -> int:
     args = parse_args()
     if any(budget < 1 for budget in args.budgets):
@@ -242,6 +342,16 @@ def main() -> int:
     write_csv(output / "runs.csv", all_rows)
     write_csv(output / "summary.csv", summary)
     write_csv(output / "contrasts.csv", contrasts)
+    if contrasts:
+        (output / "contrasts.svg").write_text(contrast_chart(contrasts))
+    threshold_budgets = sorted(
+        {
+            int(row["budget"])
+            for row in contrasts
+            if row.get("contrast") == "multi_island_minus_global"
+            and row.get("meets_reference_threshold")
+        }
+    )
     audit = {
         "schema_version": 1,
         "expected_cells_per_budget": expected_cells,
@@ -250,6 +360,8 @@ def main() -> int:
         "expected_rows": expected_cells * len(args.budgets),
         "expected_attempts_per_budget": args.budgets,
         "practical_delta": PRACTICAL_DELTA,
+        "operational_threshold_budget": threshold_budgets[0] if threshold_budgets else None,
+        "threshold_status": "positive" if threshold_budgets else "null",
         "reference_method": "fixed diagnostic multi-start greedy ascent; approximate, not global optimum",
         "integrity_failures": failures,
     }
