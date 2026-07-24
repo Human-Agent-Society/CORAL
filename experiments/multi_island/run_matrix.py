@@ -70,6 +70,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--max-parallel", type=int, default=2)
     parser.add_argument("--timeout-hours", type=float, default=4.0)
+    parser.add_argument(
+        "--budget",
+        type=int,
+        help="Override run.stop.max_real_attempts for every cell in this matrix",
+    )
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 
@@ -334,6 +339,11 @@ def ordered_cells(tasks: list[str], conditions: list[str] | None, repetitions: i
 
 
 async def async_main(args: argparse.Namespace) -> int:
+    global EXPECTED_REAL_ATTEMPTS
+    if args.budget is not None:
+        if args.budget < 1:
+            raise SystemExit("budget must be positive")
+        EXPECTED_REAL_ATTEMPTS = args.budget
     if args.repetitions < 1 or args.max_parallel < 1 or args.timeout_hours <= 0:
         raise SystemExit("repetitions, max-parallel, and timeout-hours must be positive")
     results_root = args.results_root.resolve()

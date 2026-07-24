@@ -38,13 +38,22 @@ _BASE_BUILD_COMMAND = base.build_command
 
 
 def build_command(spec, condition, run_dir):
-    """Use the ladder's 24-evaluation protocol instead of the 16-eval pilot."""
+    """Use the ladder protocol and scale migration cadence with the budget."""
     command = _BASE_BUILD_COMMAND(spec, condition, run_dir)
     prefix = "agents.runtime_options.role_file="
     for index, item in enumerate(command):
         if item.startswith(prefix):
             command[index] = f"{prefix}{ROLE_FILE}"
             break
+    every = max(6, base.EXPECTED_REAL_ATTEMPTS // 4)
+    cooldown = 6
+    for index, item in enumerate(command):
+        if item.startswith("islands.migration.every="):
+            command[index] = f"islands.migration.every={every}"
+        elif item.startswith("islands.migration.rank_window="):
+            command[index] = f"islands.migration.rank_window={every}"
+        elif item.startswith("islands.migration.remigration_cooldown="):
+            command[index] = f"islands.migration.remigration_cooldown={cooldown}"
     return command
 
 

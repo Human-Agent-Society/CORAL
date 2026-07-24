@@ -28,6 +28,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESULTS_ROOT = Path("/var/tmp/coral-institutions-results/matrix")
 EXPECTED_ATTEMPTS = 16
 REPETITIONS = 3
+MIGRATION_EVERY = 6
+MIGRATION_RANK_WINDOW = 6
+MIGRATION_COOLDOWN = 6
 TASK_CONDITIONS = {
     "kernel": ("global", "partition", "multi_island", "independent"),
     "smooth": ("global", "partition", "multi_island"),
@@ -168,11 +171,11 @@ def configuration_errors(run_dir: Path, identity: dict[str, Any]) -> list[str]:
         "grader.args.disable_tune": "true",
         "islands.count": topology[0],
         "islands.migration.enabled": topology[1],
-        "islands.migration.every": "6",
-        "islands.migration.rank_window": "6",
+        "islands.migration.every": str(MIGRATION_EVERY),
+        "islands.migration.rank_window": str(MIGRATION_RANK_WINDOW),
         "islands.migration.min_evals": "1",
         "islands.migration.max_per_cycle": "2",
-        "islands.migration.remigration_cooldown": "6",
+        "islands.migration.remigration_cooldown": str(MIGRATION_COOLDOWN),
         "run.session": "local",
         "run.stop.max_real_attempts": str(EXPECTED_ATTEMPTS),
         "workspace.run_dir": str(run_dir),
@@ -211,11 +214,11 @@ def configuration_errors(run_dir: Path, identity: dict[str, Any]) -> list[str]:
                 "grader.args.disable_tune": True,
                 "islands.count": int(topology[0]),
                 "islands.migration.enabled": topology[1] == "true",
-                "islands.migration.every": 6,
-                "islands.migration.rank_window": 6,
+                "islands.migration.every": MIGRATION_EVERY,
+                "islands.migration.rank_window": MIGRATION_RANK_WINDOW,
                 "islands.migration.min_evals": 1,
                 "islands.migration.max_per_cycle": 2,
-                "islands.migration.remigration_cooldown": 6,
+                "islands.migration.remigration_cooldown": MIGRATION_COOLDOWN,
                 "run.session": "local",
                 "run.stop.max_real_attempts": EXPECTED_ATTEMPTS,
                 "workspace.run_dir": str(run_dir),

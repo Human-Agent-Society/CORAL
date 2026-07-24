@@ -209,6 +209,16 @@ def _set_grader_config(repo: Path, **fields) -> None:
         yaml.dump(cfg, f)
 
 
+def _set_run_stop(repo: Path, **fields) -> None:
+    """Rewrite the run.stop section in the test task configuration."""
+    cfg_path = repo / ".coral" / "config.yaml"
+    with open(cfg_path) as f:
+        cfg = yaml.safe_load(f)
+    cfg.setdefault("run", {}).setdefault("stop", {}).update(fields)
+    with open(cfg_path, "w") as f:
+        yaml.dump(cfg, f)
+
+
 def _head_hash(repo: Path) -> str:
     return subprocess.run(
         ["git", "-C", str(repo), "rev-parse", "HEAD"],
@@ -328,6 +338,39 @@ def test_submit_eval_unlimited_when_zero():
             # All five sit in the queue as pending; nothing was rejected.
             attempts_dir = repo / ".coral" / "public" / "attempts"
             assert len(list(attempts_dir.glob("*.json"))) == 5
+        finally:
+            sys.path.pop(0)
+
+
+def test_submit_eval_admits_exact_real_budget():
+    """Concurrent producers cannot enqueue a real attempt past the run budget."""
+    import sys
+
+    with tempfile.TemporaryDirectory() as d:
+        repo = _setup_repo_with_config(Path(d))
+        _set_run_stop(repo, max_real_attempts=1)
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "hello.py").write_text("print('v1')\n")
+            first = submit_eval(
+                message="v1",
+                agent_id="agent-a",
+                workdir=str(repo),
+                wait=False,
+            )
+            assert first.status == "pending"
+            head_after_first = _head_hash(repo)
+
+            (repo / "hello.py").write_text("print('v2')\n")
+            with pytest.raises(RuntimeError, match="real evaluation budget exhausted"):
+                submit_eval(
+                    message="v2",
+                    agent_id="agent-b",
+                    workdir=str(repo),
+                    wait=False,
+                )
+            assert _head_hash(repo) == head_after_first
+            assert len(list((repo / ".coral" / "public" / "attempts").glob("*.json"))) == 1
         finally:
             sys.path.pop(0)
 

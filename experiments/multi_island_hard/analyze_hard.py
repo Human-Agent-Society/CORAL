@@ -57,6 +57,9 @@ def load_diagnostics(path: Path) -> dict[str, dict[str, float]]:
 def configure_base() -> None:
     """Reuse the proven run/attempt parser with ladder-specific constants."""
     base.EXPECTED_ATTEMPTS = EXPECTED_ATTEMPTS
+    base.MIGRATION_EVERY = max(6, EXPECTED_ATTEMPTS // 4)
+    base.MIGRATION_RANK_WINDOW = max(6, EXPECTED_ATTEMPTS // 4)
+    base.MIGRATION_COOLDOWN = 6
     base.REPETITIONS = REPETITIONS
     base.TASK_CONDITIONS = {task: CONDITIONS for task in TASKS}
     base.TASK_LABELS = TASK_LABELS
