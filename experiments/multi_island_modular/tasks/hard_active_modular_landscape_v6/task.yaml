@@ -1,0 +1,59 @@
+task:
+  name: "Hard Active Modular Landscape v6 — verified assembly"
+  description: |
+    Maintain a 1536-bit artifact as 48 literal 32-bit modules. Every real
+    evaluation gives local feedback for ACTIVE_MODULE and an observable
+    exact-module assembly reward for the complete candidate. The reward is
+    exact-only for inactive modules, so it encourages carrying verified
+    building blocks without leaking their bitwise targets.
+  tips: |
+    - CANDIDATE should be a tuple/list of 48 literal 32-bit strings.
+    - ACTIVE_MODULE must be an integer from 0 through 47.
+    - Preserve exact modules while probing another module and record their
+      active-eval provenance in a note.
+    - Use ordinary coral eval only; tune mode is disabled.
+
+grader:
+  entrypoint: "hard_active_modular_landscape_v6_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  private:
+    - "taskdata/hard_v6_seed_bundle.json"
+  args:
+    program_file: "candidate.py"
+    seed_bundle_file: "hard_v6_seed_bundle.json"
+    seed_index: 0
+    mode: "smooth"
+  direction: maximize
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../hard_v6_eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 3072
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 128
+    rank_window: 128
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 128

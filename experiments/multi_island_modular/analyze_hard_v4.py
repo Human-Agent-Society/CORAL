@@ -26,6 +26,7 @@ MIGRATION_MIN = 16
 MIGRATION_MAX = 64
 REMIGRATION_COOLDOWN = 16
 ANALYZER_LABEL = "Hard v4"
+PRIMARY_METRIC = "provenance-backed assembly"
 MIN_EXACT_SIGNAL = 0
 TOPOLOGY_AGENT_COUNTS = {
     "global": "4",
@@ -395,7 +396,7 @@ def main() -> int:
         "complete_rows": len(rows),
         "expected_rows": len(args.tasks) * len(args.conditions) * args.repetitions * len(args.budgets),
         "integrity_failures": failures,
-        "primary_metric": "provenance-backed assembly",
+        "primary_metric": PRIMARY_METRIC,
         "coverage_gate": (
             f"at least {MIN_MODULE_COVERAGE} distinct active modules; multi-island "
             f"also needs at least {MIN_ISLAND_COVERAGE} per island"

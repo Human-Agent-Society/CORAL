@@ -1,0 +1,55 @@
+task:
+  name: "Hard Active Modular Landscape v6 — Smooth 48x32"
+  description: |
+    High-dimensional separable control with 48 independent 32-bit modules.
+    Active feedback is Hamming-based; exact inactive modules contribute to
+    the observable assembly reward.
+  tips: |
+    - A coordinate/provenance oracle needs 48 * 34 = 1632 evaluations for a
+      complete artifact.
+    - Use ordinary coral eval only; tune mode is disabled.
+
+grader:
+  entrypoint: "hard_active_modular_landscape_v6_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  private:
+    - "taskdata/hard_v6_seed_bundle.json"
+  args:
+    program_file: "candidate.py"
+    seed_bundle_file: "hard_v6_seed_bundle.json"
+    seed_index: 0
+    mode: "smooth"
+  direction: maximize
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../hard_v6_eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 3072
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 128
+    rank_window: 128
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 128

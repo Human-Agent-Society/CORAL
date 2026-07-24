@@ -1,0 +1,59 @@
+task:
+  name: "Hard Active Modular Landscape v6 — Rugged 48x2048"
+  description: |
+    High-dimensional equality-only control with 48 independent modules. Each
+    target is one of 2048 public codebook entries under a private permutation.
+    Exact modules contribute to the observable assembly reward; wrong probes
+    have no gradient.
+  tips: |
+    - Enumerate the public codebook with an agent-specific offset and never
+      repeat a failed (module, code) pair.
+    - Ordered enumeration is roughly 49k evaluations for a full artifact;
+      use the staged budget ladder rather than treating zero exact modules at
+      a low budget as a topology result.
+    - Use ordinary coral eval only; tune mode is disabled.
+
+grader:
+  entrypoint: "hard_active_modular_landscape_v6_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  private:
+    - "taskdata/hard_v6_seed_bundle.json"
+  args:
+    program_file: "candidate.py"
+    seed_bundle_file: "hard_v6_seed_bundle.json"
+    seed_index: 0
+    mode: "rugged"
+  direction: maximize
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../hard_v6_eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 65536
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 128
+    rank_window: 128
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 128

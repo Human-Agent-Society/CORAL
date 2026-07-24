@@ -1,7 +1,8 @@
 # Modular multi-island follow-up
 
 Status: the modular-v1, active-v2, v3, and v4 runs are design audits, not
-topology evidence. The high-dimensional v5 package below is the current
+topology evidence. v5 is also retained as an audit because its assembly metric
+was operator-side. The v6 verified-assembly package below is the current
 candidate for a threshold study; it has not yet produced a conclusion.
 
 The old NK cells remain useful black-box stress controls, but they do not
@@ -83,6 +84,20 @@ below a wrong nonzero proposal so migration selection does not reward a
 stalled agent. See `research_design_v5.md`, `hard_v5_calibration.json`, and
 `hard_v5_eval_protocol.md`.
 
+## Hard v6 verified-assembly package
+
+`run_hard_v6.py` is the current research package. It uses 48×32-bit modules,
+an observable exact-module assembly reward, a 2,048-entry rugged codebook, and
+origin-preserving migration provenance. Smooth has a 1,632-evaluation
+coordinate/provenance anchor; rugged ordered enumeration costs about
+45.5k–57.5k evaluations across the paired seeds. The staged ladder is smooth
+512/1,024/1,536/2,048/3,072 and rugged 8,192/16,384/32,768/49,152/65,536.
+
+The analyzer's primary outcomes come from the grader's assembly feedback, not
+only retrospective reconstruction. `research_design_v6.md` specifies the
+gates, transfer diagnostics, and communication ablation required before any
+institutional interpretation.
+
 ## Files
 
 ```text
@@ -98,4 +113,8 @@ run_hard_v5.py                       v5 high-dimensional launcher
 calibrate_hard_v5.py                 v5 threshold calibration
 analyze_hard_v5.py                   v5 integrity/provenance analyzer
 hard_v5_eval_protocol.md             v5 agent-facing protocol
+run_hard_v6.py                        v6 verified-assembly launcher
+calibrate_hard_v6.py                  v6 difficulty calibration
+analyze_hard_v6.py                    v6 observed assembly/transfer analyzer
+hard_v6_eval_protocol.md              v6 agent-facing protocol
 ```
