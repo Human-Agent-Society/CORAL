@@ -23,6 +23,15 @@ modules when probing a different module, and record the candidate, module,
 score, and provenance in a note. Do not claim an untested module merely
 because its bits happen to occur in a candidate.
 
+To keep the threshold pilot from measuring simultaneous startup collisions,
+use a deterministic first assignment. Read your own `.coral_agent_id`, strip
+the `-from-<island>` suffix when present, hash the remaining base id with
+SHA-256, and set the first `ACTIVE_MODULE` to the integer represented by the
+first two digest bytes modulo 32. Do not default every agent to module 0.
+After the first claim is recorded, agents may reallocate modules using their
+island's notes and verified attempts. This fixed initial allocation is part of
+the protocol, not a post-hoc rescue.
+
 The smooth task returns deterministic Hamming-match feedback. A coordinate
 probe needs 32 modules times 33 probes (one all-zero plus 32 one-bit probes),
 and a further exact submission is needed per module for provenance. Thus the

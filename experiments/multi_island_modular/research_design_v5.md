@@ -18,6 +18,12 @@ protocol and does not establish a universal institution effect.
 Both tasks use 32 contiguous 32-bit modules (1,024 bits), active-module-only
 feedback, and eight paired private seeds.
 
+The agent protocol fixes the first module assignment from a hash of each
+agent's stable base id (the island suffix is ignored), preventing a burst of
+eight identical module-0 probes from being mistaken for landscape difficulty.
+Subsequent allocation is driven by same-island notes and provenance-backed
+attempts, so migration still has an opportunity to transfer discoveries.
+
 * `smooth_hard_v5` returns deterministic Hamming feedback. A coordinate search
   needs 32 × 33 = 1,056 probes to identify all modules and one additional exact
   submission per module for provenance, giving a 1,088-evaluation full-artifact
