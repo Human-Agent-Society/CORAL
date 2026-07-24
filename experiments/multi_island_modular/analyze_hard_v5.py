@@ -33,10 +33,12 @@ base.ROLE_PROTOCOL_FILENAME = "hard_v5_eval_protocol.md"
 base.MIN_MODULE_COVERAGE = 12
 base.MIN_ISLAND_COVERAGE = 6
 base.MIN_EXACT_SIGNAL = 1
-base.MIGRATION_DIVISOR = 32
-base.MIGRATION_MIN = 32
-base.MIGRATION_MAX = 128
-base.REMIGRATION_COOLDOWN = 32
+# Keep the analyzer's launch identity in lockstep with run_hard_v5: migration
+# must not happen before agents have had room to make module-level progress.
+base.MIGRATION_DIVISOR = 4
+base.MIGRATION_MIN = 64
+base.MIGRATION_MAX = 256
+base.REMIGRATION_COOLDOWN = 64
 base.ANALYZER_LABEL = "Hard v5"
 base.__doc__ = __doc__
 base.TOPOLOGY_AGENT_COUNTS = {

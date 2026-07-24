@@ -35,6 +35,14 @@ def test_v5_smooth_provenance_anchor() -> None:
     assert GRADER.active_score("0" * GRADER.WIDTH, mode="smooth", target="1" * GRADER.WIDTH) == 0.05
 
 
+def test_v5_migration_cadence_leaves_room_for_module_progress() -> None:
+    from experiments.multi_island_modular.run_hard_v5 import migration_every
+
+    assert migration_every(256) == 64
+    assert migration_every(512) == 128
+    assert migration_every(4096) == 256
+
+
 def test_v5_rugged_codebook_and_unique_targets() -> None:
     bundle = json.loads(TASKDATA.read_text())
     assert bundle["schema_version"] == 3

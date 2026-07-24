@@ -30,6 +30,11 @@ base.TASKS = {
 _BASE_BUILD_COMMAND = base.build_command
 
 
+def migration_every(budget: int) -> int:
+    """Return the pre-registered budget-scaled migration cadence."""
+    return max(64, min(256, budget // 4))
+
+
 def repetition_seed_index(run_dir: Path) -> int:
     match = re.search(r"rep-(\d+)", run_dir.name)
     if match is None:
@@ -41,9 +46,13 @@ def build_command(spec, condition, run_dir):
     """Use the v5 role, paired seed, and budget-scaled migration cadence."""
     command = _BASE_BUILD_COMMAND(spec, condition, run_dir)
     budget = base.EXPECTED_REAL_ATTEMPTS
-    # Give the treatment a migration opportunity after roughly four global
-    # attempts per agent, while capping restart overhead at 128 evaluations.
-    every = max(32, min(128, budget // 32))
+    # Let an agent spend enough evaluations to make meaningful progress on a
+    # module before moving it.  The smooth coordinate/provenance anchor is 34
+    # evaluations per module; a 128-evaluation minimum at B=512 avoids
+    # measuring repeated startup/reorientation instead of transfer.  Rugged
+    # enumeration uses the same pre-registered cadence and caps it at 256 so
+    # large-budget cells still receive several migration opportunities.
+    every = migration_every(budget)
     seed_index = repetition_seed_index(run_dir)
     for index, item in enumerate(command):
         if item.startswith("agents.runtime_options.role_file="):
@@ -53,7 +62,7 @@ def build_command(spec, condition, run_dir):
         elif item.startswith("islands.migration.rank_window="):
             command[index] = f"islands.migration.rank_window={every}"
         elif item.startswith("islands.migration.remigration_cooldown="):
-            command[index] = "islands.migration.remigration_cooldown=32"
+            command[index] = "islands.migration.remigration_cooldown=64"
         elif item.startswith("grader.parallel.max_workers="):
             command[index] = "grader.parallel.max_workers=4"
         elif condition in {"global_8", "partition", "multi_island"} and item == "agents.count=4":

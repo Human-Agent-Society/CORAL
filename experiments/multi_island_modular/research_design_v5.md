@@ -67,10 +67,13 @@ island for multi-island. Only that budget is expanded to three pilot
 repetitions, and only a pre-registered budget with a clean pilot is expanded
 to eight confirmatory repetitions.
 
-Migration cadence is `max(32, min(128, budget // 32))`, giving roughly four
-global attempts per agent between treatment opportunities while capping
-restart overhead. The same cadence and four grader workers are used in every
-topology. `global_8`, `partition`, and `multi_island` each use eight total
+Migration cadence is `max(64, min(256, budget // 4))`, with a 64-evaluation
+re-migration cooldown. At the smooth B=512 threshold candidate this gives one
+treatment opportunity per 128 global evaluations, allowing agents to finish a
+substantial module probe before restart; rugged cells receive several
+opportunities while capping restart overhead at 256 evaluations. The same
+cadence and four grader workers are used in every topology. `global_8`,
+`partition`, and `multi_island` each use eight total
 agents; partitioned conditions therefore have four agents per island. The
 eight-agent roster is held fixed in the primary comparison.
 
