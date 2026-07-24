@@ -96,7 +96,9 @@ coordinate/provenance anchor; rugged ordered enumeration costs about
 The analyzer's primary outcomes come from the grader's assembly feedback, not
 only retrospective reconstruction. `research_design_v6.md` specifies the
 gates, transfer diagnostics, and communication ablation required before any
-institutional interpretation.
+institutional interpretation. The v6 runner also fixes a sparse 16/32
+heartbeat cadence across all topologies; the normal per-eval reflection
+heartbeat is an operational confound for fixed-budget threshold cells.
 
 ## Files
 

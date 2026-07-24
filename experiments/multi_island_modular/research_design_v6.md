@@ -58,6 +58,13 @@ The pre-registered ladder is:
 same paired seed. The primary contrast is `multi_island - partition`; the
 secondary contrast is `multi_island - global_8`.
 
+All topology cells use the same fixed heartbeat override: reflection every 16
+agent evaluations, consolidation every 32 global evaluations, and the same
+16/32 plateau/wiki reminders. The framework default reflects after every
+evaluation; leaving that implicit would make a fixed-budget threshold study
+measure deliberation latency rather than landscape search. The override is
+recorded in the launch command and checked by the v6 analyzer.
+
 The prediction is not that multi-island must win everywhere:
 
 * Smooth should remain a negative control or show a small migration cost.
