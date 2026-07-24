@@ -1,0 +1,57 @@
+task:
+  name: "Institutional Landscape — Rugged 128 K24"
+  description: |
+    Optimize the 128-bit literal CANDIDATE in candidate.py. Each evaluation
+    returns one deterministic scalar fitness; higher is better. This is an
+    adjacent NK landscape with N=128 and K=24, the hardest level in this
+    ladder and a strong local-interaction stress test.
+  tips: |
+    - CANDIDATE must remain a literal string of exactly 128 binary digits.
+    - The grader parses candidate.py with AST and never executes it.
+    - Only scalar fitness is revealed and the landscape seed is hidden.
+    - The seed is an independently sampled 256-bit token; do not attempt seed recovery.
+    - Use ordinary coral eval only; tune mode is disabled.
+    - The global budget is deliberately small, so preserve useful attempts.
+
+grader:
+  entrypoint: "institutional_landscape_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  direction: maximize
+  private:
+    - "taskdata/rugged128_k24.json"
+  args:
+    program_file: "candidate.py"
+    landscape_file: "rugged128_k24.json"
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../../../experiments/multi_island_hard/eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 24
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 6
+    rank_window: 6
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 6

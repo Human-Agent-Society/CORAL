@@ -576,6 +576,41 @@
       Two early controlled-task smoke cells used human-readable hidden seeds. Agents began trying to reconstruct those seeds from scalar scores, so we excluded both cells before the authoritative comparison, replaced the seeds with independent random 256-bit values, and marked the old directories invalid rather than deleting them. Exhaustive checks over all 1,048,576 candidates found one one-bit local maximum for the frozen <code>K=0</code> instance and 626 for <code>K=4</code>. We likewise excluded a Kernel pilot after a candidate-level timeout raced the grader's identical outer deadline and was misclassified as free infrastructure failure; retries keep the candidate at 120 seconds but give the grader 30 seconds to record the failure against the real budget. A later Kernel cell exposed a subtler boundary: candidate Python was executing in the grader process and could import the private simulator, then write it back into its worktree. We invalidated every Kernel cell launched before that discovery. In the final protocol, untrusted candidate code builds an instruction stream inside a second bubblewrap namespace with no taskdata or host paths; only its JSON output enters the private simulator process, which never executes candidate source. The tables below contain only post-fix Kernel cells.
     </div>
 
+    <h3>Why the two synthetic controls are not enough</h3>
+    <p>
+      The original Smooth/Rugged pair is a sanity check, not a decisive test of
+      when migration should help. Exhaustive enumeration finds one strict
+      one-bit local maximum for the 20-bit <code>K=0</code> landscape and 626
+      for <code>K=4</code>. The first is intentionally separable; the second is
+      rugged but gives four agents only 16 scalar queries, so it can be
+      feedback-starved. Both tasks expose only a literal bit string and a
+      scalar, which tests black-box parallel search more than semantic
+      institution-building. They also use one frozen seed per K, and their raw
+      fitness gains are not comparable across unrelated landscapes.
+    </p>
+    <p>
+      We therefore added a separate high-dimensional difficulty ladder (kept
+      separate from the 30-cell sanity matrix): <code>N=128</code> with
+      <code>K=0,4,12,24</code>, 24 finalized real evaluations per cell, and the
+      same global/partition/multi-island ablations. The ladder uses a declared
+      operator-side greedy reference and random-baseline z-scores; the
+      reference is approximate and is never called a global optimum. Its
+      results are reported below as a stress test, with the remaining
+      one-seed limitation made explicit.
+    </p>
+    <p>
+      This is a stricter control, not a magic repair. At <code>N=128</code>, 24
+      scalar queries cannot even estimate every independent bit in the
+      <code>K=0</code> case, so a null topology effect there is still
+      feedback-limited. Increasing <code>N</code> makes the search harder but
+      does not make the task more semantic: the ladder remains a black-box
+      optimization stress test. A stronger test of the institution needs
+      replicated seeds, a budget scaled to the number of modules, and a task
+      whose scoreable artifacts have reusable structure (for example, a
+      modular code or research deliverable where migration can carry a tested
+      component and its provenance).
+    </p>
+
     <h3>Results: distance helped one search, not every search</h3>
     <div class="result-figure">
       <img src="multi-island-performance.svg" alt="Performance gain for global, partition, multi-island, and independent topologies across Kernel Builder and two NK landscapes">
