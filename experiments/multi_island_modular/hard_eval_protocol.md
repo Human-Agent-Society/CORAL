@@ -30,6 +30,10 @@ entries and avoid repeating a failed `(module, code)` pair. Claim modules in
 notes before probing so teammates do not spend the same budget, and preserve
 every exact module when changing `ACTIVE_MODULE`.
 
+Before every submission, run a local literal-length check (the candidate must
+have length 256 and contain only `0`/`1`); a malformed candidate consumes a
+real attempt but cannot provide evidence.
+
 Different islands have separate notes and skills. Share candidate/provenance
 information through normal island interfaces and inspect migration arrivals.
 A null score is still a real attempt and consumes budget. Continue until the
