@@ -25,6 +25,7 @@ MIGRATION_DIVISOR = 8
 MIGRATION_MIN = 16
 MIGRATION_MAX = 64
 REMIGRATION_COOLDOWN = 16
+ANALYZER_LABEL = "Hard v4"
 TASKS = ("smooth_hard_v4", "rugged_hard_v4")
 CONDITIONS = ("global", "global_8", "partition", "multi_island")
 REPETITIONS = 8
@@ -383,7 +384,7 @@ def main() -> int:
     (output / "audit.json").write_text(json.dumps(audit, indent=2) + "\n")
     print(f"Audited {len(rows)} complete cells; failures={len(failures)}")
     if failures and not args.allow_incomplete:
-        raise SystemExit(f"Hard v4 matrix incomplete; see {output / 'audit.json'}")
+        raise SystemExit(f"{ANALYZER_LABEL} matrix incomplete; see {output / 'audit.json'}")
     return 0
 
 
