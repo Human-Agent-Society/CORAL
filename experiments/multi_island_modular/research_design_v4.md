@@ -62,6 +62,24 @@ assembled score. Pooled provenance, assembly gap, module coverage, and
 migration count are diagnostics. No oracle recomputation of untested bits is
 used as primary evidence.
 
+## Staged execution
+
+The full budget ladder is a preregistered search space, not a promise to run
+every cell. To keep the study feasible, execute sequentially:
+
+1. Run one paired seed at a low pilot budget (currently `B=32`) for
+   `global_8`, `partition`, and `multi_island`; use it only to check parser,
+   score range, coverage, and migration mechanics.
+2. Run one paired smooth budget near the first nonzero-assembly threshold
+   (start with `B=128`), then repeat only the first budget whose three
+   topologies pass all gates.
+3. Run rugged calibration pilots at `B=1024` and `B=2048`; choose the first
+   budget with nondegenerate scores and at least four modules per island
+   before expanding to paired repetitions.
+4. Use three repetitions to estimate a pilot contrast and eight only for a
+   pre-registered confirmatory budget. Never pool cells from different package
+   versions or promote a rejected coverage cell to evidence.
+
 ## Falsifiers and interpretation
 
 * If `multi_island` does not exceed `partition` in the rugged threshold
