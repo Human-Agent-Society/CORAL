@@ -105,6 +105,82 @@ def test_clean_tree_has_no_hard_findings(tmp_path):
     assert report["summary"]["grounding_score"] == 1.0
 
 
+def test_coverage_ledger_dangling_rows_are_flagged(tmp_path):
+    """A ledger row claiming `covered` via a link to a note that doesn't exist is
+    a false coverage claim. The ledger is exempt from the *note* checks, so
+    without this its links were the one unvalidated thing in the notes tree."""
+    mod = _load_script(SCRIPT)
+    notes = tmp_path / "notes"
+    _write(
+        notes / "research" / "real.md",
+        "---\ncreator: a\n---\n# Real\nClaim [s](../raw/s.md).\n",
+    )
+    _write(
+        notes / "raw" / "s.md",
+        "---\nsource_url: http://e.com\nsource_type: paper\ncaptured: 2026-01-01\n---\nx\n",
+    )
+    _write(
+        notes / "research" / "_coverage.md",
+        "# Coverage\n"
+        "| # | Dimension | Status | Note |\n|---|---|---|---|\n"
+        "| 1 | Prior art | covered | [real](real.md) |\n"
+        "| 2 | Cost model | covered | [renamed-away](cost-model-mechanics.md) |\n",
+    )
+
+    report = mod.check_notes(notes)
+    assert report["summary"]["broken-ledger-link"] == 1
+    broken = [f for f in report["findings"] if f["category"] == "broken-ledger-link"]
+    assert broken[0]["file"] == "research/_coverage.md"
+    assert "cost-model-mechanics.md" in broken[0]["detail"]
+    # it is a hard finding, so it drags the headline score below clean
+    assert "broken-ledger-link" in mod.HARD_CATEGORIES
+    assert report["summary"]["grounding_score"] < 1.0
+
+
+def test_grounding_score_never_saturates_and_stays_monotonic(tmp_path):
+    """A linear `1 - rate` score clipped at 0, so every bad run reported exactly
+    0.0 and effect size vanished when averaging replicates. The score must stay
+    strictly decreasing and strictly positive no matter how bad the tree is."""
+    mod = _load_script(SCRIPT)
+
+    def score_with(n_orphans: int) -> float:
+        notes = tmp_path / f"n{n_orphans}" / "notes"
+        _write(
+            notes / "raw" / "s.md",
+            "---\nsource_url: http://e.com\nsource_type: paper\ncaptured: 2026-01-01\n---\nx\n",
+        )
+        for i in range(n_orphans):
+            _write(notes / "research" / f"orphan{i}.md", "---\ncreator: a\n---\n# O\nno sources\n")
+        return mod.check_notes(notes)["summary"]["grounding_score"]
+
+    bad, worse, awful = score_with(5), score_with(20), score_with(60)
+    assert 1.0 > bad > worse > awful > 0.0, (bad, worse, awful)
+
+
+def test_advisory_uncited_claims_do_not_move_the_headline_score(tmp_path):
+    """uncited-claim is a deliberately noisy heuristic and grows with how much a
+    run wrote. Folding it in let it dominate grounding_score and penalized the
+    more productive condition, so it must be reported separately only."""
+    mod = _load_script(SCRIPT)
+    notes = tmp_path / "notes"
+    _write(
+        notes / "raw" / "s.md",
+        "---\nsource_url: http://e.com\nsource_type: paper\ncaptured: 2026-01-01\n---\nx\n",
+    )
+    # grounded note (links a real source) that is stuffed with bare numeric claims
+    claims = "".join(f"Method {i} reduces makespan by {i}% overall.\n" for i in range(1, 15))
+    _write(
+        notes / "research" / "loud.md",
+        f"---\ncreator: a\nconfidence: low\n---\n# Loud\nGrounded [s](../raw/s.md).\n{claims}",
+    )
+
+    summary = mod.check_notes(notes)["summary"]
+    assert summary["uncited-claim"] > 10, summary["uncited-claim"]
+    assert summary["hard_findings"] == 0
+    assert summary["grounding_score"] == 1.0  # advisory noise must not touch it
+    assert summary["uncited_per_note"] > 0  # but it is still reported
+
+
 def test_strict_exit_codes(tmp_path):
     notes = _dirty_notes(tmp_path)
     dirty = subprocess.run(

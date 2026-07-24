@@ -149,7 +149,9 @@ The `--new` flag scans every existing note for plain-text mentions of the new ti
 python {shared_dir}/skills/deep-research/scripts/check_grounding.py {shared_dir}/notes
 ```
 
-It reads only files already on disk (no network) and flags ungrounded findings: research notes that cite no `raw/` source, links to `raw/` files that don't exist, raw sources missing their `source_url` / `source_type` / `captured` frontmatter, and `confidence: high` notes that skipped synthesis review. Fix what it finds — an ungrounded note pollutes the base for every agent that reads it.
+It reads only files already on disk (no network) and flags ungrounded findings: research notes that cite no `raw/` source, links to `raw/` files that don't exist, raw sources missing their `source_url` / `source_type` / `captured` frontmatter, `confidence: high` notes that skipped synthesis review, and **`_coverage.md` rows linking to a note that doesn't exist** (rename a note and the ledger silently claims coverage it no longer has). Fix what it finds — an ungrounded note pollutes the base for every agent that reads it.
+
+It also reports an advisory `uncited-claim` count. That one is a deliberately noisy heuristic — treat it as a prompt to re-read those lines, not a gate. It is not folded into `grounding_score`.
 
 ## Maintaining Notes Across Sessions
 

@@ -14,6 +14,11 @@ What it checks:
   at all. A synthesis with nothing under it is a claim, not a finding.
 - **broken-source-link** — a `[...](.../raw/x.md)` whose target is missing on
   disk (link rot inside the notes base).
+- **broken-ledger-link** — a `_`-prefixed meta file in `research/` (i.e. the
+  `_coverage.md` ledger) whose row links to a note that does not exist. The
+  ledger is the one file agents *assert* coverage in, so an unchecked dangling
+  row reads as `covered` while covering nothing — notes get renamed and the
+  ledger is not updated.
 - **missing-source-frontmatter** — a `raw/*.md` source lacking a URL, a type,
   and a capture timestamp (accepts either the `source_url/source_type/captured`
   or the older `url/type/fetched` field names).
@@ -51,6 +56,7 @@ DEFAULT_NOTES_DIR = ".coral/public/notes"
 HARD_CATEGORIES = {
     "orphan-finding",
     "broken-source-link",
+    "broken-ledger-link",
     "missing-source-frontmatter",
     "unreviewed-high-confidence",
 }
@@ -130,6 +136,32 @@ def _research_notes(notes_root: Path) -> list[Path]:
 
 def _raw_sources(notes_root: Path) -> list[Path]:
     return _iter_md(notes_root / "raw")
+
+
+def _meta_ledgers(notes_root: Path) -> list[Path]:
+    """`_`-prefixed meta files under research/ — the coverage ledger and friends.
+    They are not findings (see _research_notes), but their links are load-bearing:
+    a row claiming `covered` via a link to a note that does not exist is a false
+    coverage claim, so the links get checked even though the file does not."""
+    return [p for p in _iter_md(notes_root / "research") if p.name.startswith("_")]
+
+
+def _broken_local_links(doc: Path) -> list[str]:
+    """Local `.md` link targets in `doc` that do not resolve on disk."""
+    try:
+        text = doc.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    broken: list[str] = []
+    for target in _LINK_RE.findall(text):
+        clean = target.split("#", 1)[0].split(" ", 1)[0].strip()
+        if not clean or "://" in clean or clean.startswith(("#", "mailto:")):
+            continue  # external URL or in-page anchor
+        if not clean.endswith(".md"):
+            continue
+        if not (doc.parent / clean).resolve().exists():
+            broken.append(clean)
+    return broken
 
 
 def _raw_links(note: Path, notes_root: Path) -> tuple[list[str], list[str]]:
@@ -223,6 +255,10 @@ def check_notes(notes_root: Path) -> dict[str, Any]:
         for ln in _uncited_claim_lines(note):
             add(note, "uncited-claim", f"line {ln}: quantitative claim with no citation link")
 
+    for ledger in _meta_ledgers(notes_root):
+        for b in _broken_local_links(ledger):
+            add(ledger, "broken-ledger-link", f"row links to `{b}` which does not exist on disk")
+
     for src in raw:
         meta, _ = _parse_frontmatter(src.read_text(encoding="utf-8", errors="replace"))
         missing = []
@@ -239,15 +275,29 @@ def check_notes(notes_root: Path) -> dict[str, Any]:
     for f in findings:
         summary[f["category"]] += 1
     summary["total"] = len(findings)
-    # A rough 0..1 cleanliness proxy for the ablation. Hard findings cost 1,
-    # the heuristic uncited-claim costs 0.25, normalized by opportunities.
-    opportunities = max(1, len(research) + len(raw))
-    weighted = sum(
-        1.0 if f["category"] in HARD_CATEGORIES else 0.25 for f in findings
-    )
     summary["research_notes"] = len(research)
     summary["raw_sources"] = len(raw)
-    summary["grounding_score"] = round(max(0.0, 1.0 - weighted / opportunities), 3)
+
+    # Headline cleanliness, built from HARD findings only.
+    #
+    # Two things this deliberately does NOT do:
+    #  - It does not fold in uncited-claim. That check is a noisy heuristic by
+    #    design (see above), and mixing it in made it *dominate* the score while
+    #    the authoritative hard findings barely moved it. Worse, uncited-claim
+    #    grows with how much you write, so blending it penalized the condition
+    #    that produced more notes. It is reported separately, as advisory.
+    #  - It does not clip. `1 - rate` bottoms out at 0, so every bad run reports
+    #    exactly 0.0 and you cannot tell a slightly-bad run from a disastrous
+    #    one — that censoring wipes out effect size when averaging replicates.
+    #    `1/(1+rate)` is strictly decreasing over the whole range and stays in
+    #    (0, 1], so it never saturates.
+    opportunities = max(1, len(research) + len(raw))
+    hard = sum(summary[c] for c in HARD_CATEGORIES)
+    summary["hard_findings"] = hard
+    summary["hard_per_item"] = round(hard / opportunities, 3)
+    summary["grounding_score"] = round(1.0 / (1.0 + hard / opportunities), 3)
+    # Advisory only — reported, never folded into grounding_score.
+    summary["uncited_per_note"] = round(summary["uncited-claim"] / max(1, len(research)), 3)
 
     return {"notes_dir": str(notes_root), "findings": findings, "summary": summary}
 
@@ -293,11 +343,14 @@ def main() -> int:
             print("  ok — no grounding findings")
         print(
             f"\n{s['research_notes']} research note(s), {s['raw_sources']} raw source(s); "
-            f"{s['total']} finding(s) "
-            f"(orphan={s['orphan-finding']}, broken={s['broken-source-link']}, "
+            f"{s['hard_findings']} hard finding(s) "
+            f"(orphan={s['orphan-finding']}, broken-source={s['broken-source-link']}, "
+            f"broken-ledger={s['broken-ledger-link']}, "
             f"missing-frontmatter={s['missing-source-frontmatter']}, "
-            f"unreviewed-high-conf={s['unreviewed-high-confidence']}, "
-            f"uncited={s['uncited-claim']}); grounding_score={s['grounding_score']}"
+            f"unreviewed-high-conf={s['unreviewed-high-confidence']}); "
+            f"grounding_score={s['grounding_score']}\n"
+            f"advisory: uncited={s['uncited-claim']} "
+            f"({s['uncited_per_note']}/note) — not counted in grounding_score"
         )
 
     return 1 if (args.strict and hard_total) else 0
