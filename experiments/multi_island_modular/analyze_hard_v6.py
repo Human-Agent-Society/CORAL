@@ -57,6 +57,18 @@ HEARTBEAT_OVERRIDE = (
 )
 base.TASKS = ("smooth_hard_v6", "rugged_hard_v6")
 base.REPETITIONS = 8
+base.DEFAULT_BUDGETS = (
+    512,
+    1024,
+    1536,
+    2048,
+    3072,
+    8192,
+    16384,
+    32768,
+    49152,
+    65536,
+)
 base.BLOCKS = BLOCKS
 base.WIDTH = WIDTH
 base.CODEBOOK_SIZE = CODEBOOK_SIZE

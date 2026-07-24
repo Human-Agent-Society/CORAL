@@ -151,3 +151,66 @@ def test_v7_agent_balance_gate(monkeypatch, tmp_path: Path) -> None:
     records.extend({"agent_id": "agent-0"} for _ in range(8))
     imbalanced = analyzer._agent_balance(tmp_path, 72)
     assert imbalanced["agent_quota_gate"] is False
+
+
+def test_v7_analyzer_uses_preregistered_default_budgets(monkeypatch) -> None:
+    import sys
+
+    from experiments.multi_island_modular import analyze_hard_v7 as analyzer
+
+    monkeypatch.setattr(sys, "argv", ["analyze_hard_v7.py"])
+    args = analyzer.base.parse_args()
+    assert args.budgets == list(analyzer.base.DEFAULT_BUDGETS)
+    assert args.budgets[:6] == [1024, 2048, 3072, 4096, 6144, 8192]
+    assert args.budgets[-1] == 196608
+
+
+def test_v7_duplicate_query_diagnostics(monkeypatch, tmp_path: Path) -> None:
+    from experiments.multi_island_modular import analyze_hard_v7 as analyzer
+
+    zero = "0" * analyzer.WIDTH
+    source = candidate_source([zero] * analyzer.BLOCKS, active=0)
+    records = [
+        {
+            "commit_hash": "first",
+            "agent_id": "agent-a",
+            "score": 0.5,
+            "timestamp": "1",
+            "metadata": {"budget_class": "real"},
+            "_attempt_path": str(
+                tmp_path / "islands" / "atlantis" / "attempts" / "first.json"
+            ),
+        },
+        {
+            "commit_hash": "same-island",
+            "agent_id": "agent-b",
+            "score": 0.5,
+            "timestamp": "2",
+            "metadata": {"budget_class": "real"},
+            "_attempt_path": str(
+                tmp_path / "islands" / "atlantis" / "attempts" / "same.json"
+            ),
+        },
+        {
+            "commit_hash": "other-island",
+            "agent_id": "agent-c",
+            "score": 0.5,
+            "timestamp": "3",
+            "metadata": {"budget_class": "real"},
+            "_attempt_path": str(
+                tmp_path / "islands" / "avalon" / "attempts" / "other.json"
+            ),
+        },
+    ]
+    monkeypatch.setattr(analyzer.base, "real_records", lambda _run_dir: records)
+    monkeypatch.setattr(analyzer.base, "source_at", lambda _run_dir, _commit: source)
+    row = analyzer._BASE_COLLECT(
+        tmp_path,
+        {"condition": "multi_island", "repetition": 1},
+        "smooth_hard_v7",
+        budget=3,
+    )
+    assert row["unique_queries"] == 1
+    assert row["duplicate_queries"] == 2
+    assert row["duplicate_query_rate"] == 2 / 3
+    assert row["cross_island_duplicate_queries"] == 1

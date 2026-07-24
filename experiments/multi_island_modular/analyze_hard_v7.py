@@ -46,6 +46,20 @@ base.CONDITIONS = ("global_8", "partition", "multi_island")
 base.TOPOLOGY_AGENT_COUNTS = {name: "8" for name in base.CONDITIONS}
 base.TASKS = ("smooth_hard_v7", "rugged_hard_v7")
 base.REPETITIONS = 8
+base.DEFAULT_BUDGETS = (
+    1024,
+    2048,
+    3072,
+    4096,
+    6144,
+    8192,
+    16384,
+    32768,
+    65536,
+    98304,
+    131072,
+    196608,
+)
 base.BLOCKS = BLOCKS
 base.WIDTH = WIDTH
 base.CODEBOOK_SIZE = CODEBOOK_SIZE

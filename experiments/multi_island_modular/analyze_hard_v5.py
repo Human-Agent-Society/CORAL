@@ -49,6 +49,7 @@ base.TOPOLOGY_AGENT_COUNTS = {
 }
 base.TASKS = ("smooth_hard_v5", "rugged_hard_v5")
 base.REPETITIONS = 8
+base.DEFAULT_BUDGETS = (256, 512, 1024, 1536, 4096, 8192, 16384, 24576)
 base.BLOCKS = BLOCKS
 base.WIDTH = WIDTH
 base.CODEBOOK_SIZE = CODEBOOK_SIZE

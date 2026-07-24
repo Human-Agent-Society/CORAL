@@ -37,6 +37,7 @@ TOPOLOGY_AGENT_COUNTS = {
 TASKS = ("smooth_hard_v4", "rugged_hard_v4")
 CONDITIONS = ("global", "global_8", "partition", "multi_island")
 REPETITIONS = 8
+DEFAULT_BUDGETS = (384, 768, 1536, 3072, 6144, 8192)
 GRADER_SRC = ROOT / "tasks/hard_active_modular_landscape_v4/grader/src"
 sys.path.insert(0, str(GRADER_SRC))
 from hard_active_modular_landscape_grader.grader import (  # noqa: E402
@@ -58,7 +59,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--results-root", type=Path, default=Path("/var/tmp/coral-institutions-results/modular-hard-v4")
     )
-    parser.add_argument("--budgets", type=int, nargs="+", default=[384, 768, 1536, 3072, 6144, 8192])
+    parser.add_argument("--budgets", type=int, nargs="+", default=list(DEFAULT_BUDGETS))
     parser.add_argument("--output-dir", type=Path, default=ROOT / "hard-v4-analysis")
     parser.add_argument("--allow-incomplete", action="store_true")
     return parser.parse_args()
@@ -310,6 +311,19 @@ def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> 
     pooled_score, pooled_exact = assembled_score("".join(pooled_candidate), task, seed, known)
     coverage = len({active for _, _, active, _, _ in parsed})
     island_coverage = {island: len(modules) for island, modules in island_modules.items()}
+    seen_queries: defaultdict[tuple[int, str], set[str]] = defaultdict(set)
+    duplicate_queries = 0
+    cross_island_duplicate_queries = 0
+    for record, candidate, active, _, _ in parsed:
+        bits = candidate[active * WIDTH : (active + 1) * WIDTH]
+        key = (active, bits)
+        island = record_island(record)
+        if seen_queries[key]:
+            duplicate_queries += 1
+            if island not in seen_queries[key]:
+                cross_island_duplicate_queries += 1
+        seen_queries[key].add(island)
+    parsed_count = len(parsed)
     multi_island_gate = str(identity["condition"]) != "multi_island" or (
         len(island_coverage) >= 2 and min(island_coverage.values()) >= MIN_ISLAND_COVERAGE
     )
@@ -333,6 +347,10 @@ def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> 
         "pooled_tested_blocks": pooled_exact,
         "assembly_gap": pooled_score - (best[0] if parsed else baseline),
         "module_coverage": coverage,
+        "unique_queries": len(seen_queries),
+        "duplicate_queries": duplicate_queries,
+        "duplicate_query_rate": duplicate_queries / parsed_count if parsed_count else 0.0,
+        "cross_island_duplicate_queries": cross_island_duplicate_queries,
         "island_coverage": json.dumps(island_coverage, sort_keys=True),
         "coverage_gate": coverage >= min(MIN_MODULE_COVERAGE, BLOCKS) and multi_island_gate,
         "parse_errors": ";".join(parse_errors),
