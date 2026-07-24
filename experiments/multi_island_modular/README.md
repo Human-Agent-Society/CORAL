@@ -104,7 +104,9 @@ heartbeat is an operational confound for fixed-budget threshold cells.
 v6 is retained as a mechanism audit because `artifact_exact_count` can be
 differenced across inactive-module edits and therefore acts as an unintended
 group-testing signal. A v6 score difference cannot isolate migration from that
-extra feedback channel.
+extra feedback channel. The incomplete B=1024 run, its throughput imbalance,
+and the analyzer bugs found during inspection are recorded in
+`hard_v6_operational_audit.md`.
 
 ## Hard v7 oracle-free threshold package
 

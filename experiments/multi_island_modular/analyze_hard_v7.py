@@ -72,8 +72,9 @@ def _observed_transfer(run_dir: Path, task: str, repetition: int) -> dict[str, A
         for block in range(BLOCKS)
     ]
     known: dict[int, str] = {}
-    known_origin: dict[int, str] = {}
+    known_origins: defaultdict[int, set[str]] = defaultdict(set)
     transferred: set[int] = set()
+    observed_destinations: set[tuple[int, str]] = set()
     transfer_events = 0
     origin_coverage: defaultdict[str, set[int]] = defaultdict(set)
     for record in base.real_records(run_dir):
@@ -89,19 +90,24 @@ def _observed_transfer(run_dir: Path, task: str, repetition: int) -> dict[str, A
         origin = str(metadata.get("origin_island_id") or current)
         origin_coverage[origin].add(active)
         carried_here = False
+        active_exact = record.get("score") == 1.0
         for block in range(BLOCKS):
             bits = candidate[block * WIDTH : (block + 1) * WIDTH]
-            prior_origin = known_origin.get(block)
             if (
-                prior_origin is not None
-                and prior_origin != current
+                known_origins.get(block)
+                and current not in known_origins[block]
                 and known.get(block) == bits
+                and not (active_exact and block == active)
+                and (block, current) not in observed_destinations
             ):
                 transferred.add(block)
+                observed_destinations.add((block, current))
                 carried_here = True
-            if bits == target_list[block] and block not in known:
-                known[block] = bits
-                known_origin[block] = origin
+        if active_exact:
+            bits = candidate[active * WIDTH : (active + 1) * WIDTH]
+            if bits == target_list[active]:
+                known.setdefault(active, bits)
+                known_origins[active].add(origin)
         if carried_here:
             transfer_events += 1
     return {
@@ -134,7 +140,11 @@ def _agent_balance(run_dir: Path, budget: int) -> dict[str, Any]:
 
 def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> dict[str, Any]:
     row = _BASE_COLLECT(run_dir, identity, task, budget)
-    row.update(_observed_transfer(run_dir, task, int(identity["repetition"])))
+    transfer = _observed_transfer(run_dir, task, int(identity["repetition"]))
+    if str(identity["condition"]) != "multi_island":
+        transfer["transfer_events"] = 0
+        transfer["transferred_blocks"] = 0
+    row.update(transfer)
     row.update(_agent_balance(run_dir, budget))
     return row
 
