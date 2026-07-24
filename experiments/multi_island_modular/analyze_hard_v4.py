@@ -282,6 +282,12 @@ def collect(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -> 
         "budget": budget,
         "real_attempts": len(records),
         "numeric_scores": sum(isinstance(record.get("score"), (int, float)) for record in records),
+        "score_range": (
+            max(float(record["score"]) for record in records if isinstance(record.get("score"), (int, float)))
+            - min(float(record["score"]) for record in records if isinstance(record.get("score"), (int, float)))
+            if any(isinstance(record.get("score"), (int, float)) for record in records)
+            else 0.0
+        ),
         "best_assembled_score": best[0] if parsed else baseline,
         "best_tested_blocks": best[1] if parsed else 0,
         "final_known_blocks": len(known),
@@ -326,6 +332,8 @@ def main() -> int:
                         reasons.append(f"candidate parse errors: {row['parse_errors']}")
                     if row["numeric_scores"] != row["real_attempts"]:
                         reasons.append("non-numeric real score present")
+                    if row["real_attempts"] == budget and row["score_range"] <= 1e-12:
+                        reasons.append("degenerate score range")
                     if row["real_attempts"] == budget and not row["coverage_gate"]:
                         reasons.append(f"module coverage={row['module_coverage']}, need at least 8")
                     if reasons:
