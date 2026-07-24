@@ -27,6 +27,12 @@ MIGRATION_MAX = 64
 REMIGRATION_COOLDOWN = 16
 ANALYZER_LABEL = "Hard v4"
 MIN_EXACT_SIGNAL = 0
+TOPOLOGY_AGENT_COUNTS = {
+    "global": "4",
+    "global_8": "8",
+    "partition": "4",
+    "multi_island": "4",
+}
 TASKS = ("smooth_hard_v4", "rugged_hard_v4")
 CONDITIONS = ("global", "global_8", "partition", "multi_island")
 REPETITIONS = 8
@@ -203,11 +209,12 @@ def integrity(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -
     errors: list[str] = []
     values = overrides(identity)
     condition = str(identity.get("condition"))
+    agent_count = TOPOLOGY_AGENT_COUNTS.get(condition)
     topology = {
-        "global": ("1", "false", "4"),
-        "global_8": ("1", "false", "8"),
-        "partition": ("2", "false", "4"),
-        "multi_island": ("2", "true", "4"),
+        "global": ("1", "false"),
+        "global_8": ("1", "false"),
+        "partition": ("2", "false"),
+        "multi_island": ("2", "true"),
     }.get(condition)
     if topology is None:
         errors.append("unknown topology")
@@ -215,7 +222,7 @@ def integrity(run_dir: Path, identity: dict[str, Any], task: str, budget: int) -
         for key, expected in (
             ("islands.count", topology[0]),
             ("islands.migration.enabled", topology[1]),
-            ("agents.count", topology[2]),
+            ("agents.count", agent_count),
         ):
             if values.get(key) != expected:
                 errors.append(f"{key}={values.get(key)!r}, expected {expected!r}")

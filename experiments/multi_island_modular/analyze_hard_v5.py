@@ -39,6 +39,12 @@ base.MIGRATION_MAX = 128
 base.REMIGRATION_COOLDOWN = 32
 base.ANALYZER_LABEL = "Hard v5"
 base.__doc__ = __doc__
+base.TOPOLOGY_AGENT_COUNTS = {
+    "global": "4",
+    "global_8": "8",
+    "partition": "8",
+    "multi_island": "8",
+}
 base.TASKS = ("smooth_hard_v5", "rugged_hard_v5")
 base.REPETITIONS = 8
 base.BLOCKS = BLOCKS

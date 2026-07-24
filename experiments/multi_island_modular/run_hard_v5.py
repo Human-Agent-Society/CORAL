@@ -56,7 +56,7 @@ def build_command(spec, condition, run_dir):
             command[index] = "islands.migration.remigration_cooldown=32"
         elif item.startswith("grader.parallel.max_workers="):
             command[index] = "grader.parallel.max_workers=4"
-        elif condition == "global_8" and item == "agents.count=4":
+        elif condition in {"global_8", "partition", "multi_island"} and item == "agents.count=4":
             command[index] = "agents.count=8"
     command.append(f"grader.args.seed_index={seed_index}")
     mode = "smooth" if spec.name.startswith("smooth_") else "rugged"

@@ -63,7 +63,9 @@ to eight confirmatory repetitions.
 Migration cadence is `max(32, min(128, budget // 32))`, giving roughly four
 global attempts per agent between treatment opportunities while capping
 restart overhead. The same cadence and four grader workers are used in every
-topology. The eight-agent roster is held fixed in the primary comparison.
+topology. `global_8`, `partition`, and `multi_island` each use eight total
+agents; partitioned conditions therefore have four agents per island. The
+eight-agent roster is held fixed in the primary comparison.
 
 ## Integrity and outcomes
 
