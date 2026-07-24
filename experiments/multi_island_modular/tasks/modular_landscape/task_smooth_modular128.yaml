@@ -1,0 +1,57 @@
+task:
+  name: "Modular Landscape — Smooth 128"
+  description: |
+    Optimize a 128-bit literal CANDIDATE divided into sixteen contiguous
+    8-bit modules. Each evaluation returns an aggregate score and a diagnostic
+    score for every module. The hidden target code for each module is different;
+    preserve tested modules while exploring the remaining modules. This is the
+    additive, low-epistasis control for the modular institution experiment.
+  tips: |
+    - CANDIDATE must remain a literal string of exactly 128 binary digits.
+    - The grader parses candidate.py with AST and never executes it.
+    - Module diagnostics are feedback, not hidden answers; the target seed is private.
+    - Use ordinary coral eval only; tune mode is disabled.
+    - Record tested module candidates and their provenance in notes.
+
+grader:
+  entrypoint: "modular_landscape_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  direction: maximize
+  private:
+    - "taskdata/smooth_modular128.json"
+  args:
+    program_file: "candidate.py"
+    landscape_file: "smooth_modular128.json"
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 128
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 32
+    rank_window: 32
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 8

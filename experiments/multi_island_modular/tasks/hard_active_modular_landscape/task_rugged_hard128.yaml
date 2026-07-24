@@ -1,0 +1,59 @@
+task:
+  name: "Hard Active Modular Landscape — Rugged 256"
+  description: |
+    Maintain a 256-bit artifact split into sixteen 16-bit modules and an
+    ACTIVE_MODULE integer. Each real evaluation scores only the selected
+    module. The hidden target is one member of a public 256-code codebook;
+    non-target proposals receive no gradient and the all-zero code is a
+    deceptive local trap. Preserve exact modules and their provenance while
+    enumerating the public codebook.
+  tips: |
+    - CANDIDATE must be exactly 256 binary digits and ACTIVE_MODULE must be 0..15.
+    - Only the selected module is scored; the other fifteen modules are not
+      feedback channels.
+    - The 256-code codebook construction is public, but the target index and
+      seed are private. A deterministic enumeration is a valid search strategy.
+    - Use ordinary coral eval only; tune mode is disabled.
+
+grader:
+  entrypoint: "hard_active_modular_landscape_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  private:
+    - "taskdata/hard_seed_bundle.json"
+  args:
+    program_file: "candidate.py"
+    seed_bundle_file: "hard_seed_bundle.json"
+    seed_index: 0
+    mode: "rugged"
+  direction: maximize
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../hard_eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+run:
+  session: local
+  stop:
+    max_real_attempts: 256
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 64
+    rank_window: 64
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 16

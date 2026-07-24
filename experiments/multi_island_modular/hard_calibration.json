@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "method": "conservative coordinate-probe and ordered-public-codebook anchors",
+  "budgets": [
+    256,
+    512,
+    1024,
+    2048,
+    4096
+  ],
+  "seed_count": 8,
+  "tasks": [
+    {
+      "task": "smooth_hard256",
+      "mode": "smooth",
+      "blocks": 16,
+      "block_width": 16,
+      "codebook_size": null,
+      "public_codebook_sha256": null,
+      "per_seed": [
+        {
+          "seed_index": 0,
+          "zero_mean_active_score": 0.5324218749999999,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "d242f69908faad9fb84b16b4cdc78d54ff5ea9bcc3308af05249752061141078",
+          "smooth_coordinate_cost": 272,
+          "rugged_ordered_codebook_cost": null
+        },
+        {
+          "seed_index": 1,
+          "zero_mean_active_score": 0.5435546875,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "b6bda961df4524183f7c0bfcb4ecb331ce0054ba1b68e7c468fcaaccce2f24da",
+          "smooth_coordinate_cost": 272,
+          "rugged_ordered_codebook_cost": null
+        },
+        {
+          "seed_index": 2,
+          "zero_mean_active_score": 0.5435546875,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "232087be4ef14eeaafab68db438e47c078a133310659d7f5553bed1394e11592",
+          "smooth_coordinate_cost": 272,
+          "rugged_ordered_codebook_cost": null
+        },
+        {
+          "seed_index": 3,
+          "zero_mean_active_score": 0.532421875,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "5af0724bbff2d569756f0c096c30cdb7e568263fd521379d9542f0bc54c5cb07",
+          "smooth_coordinate_cost": 272,
+          "rugged_ordered_codebook_cost": null
+        },
+        {
+          "seed_index": 4,
+          "zero_mean_active_score": 0.584375,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "58335513cde4eb8bd277a6f4e7b721d01a21638cd88d0907964ce21686d2711a",
+          "smooth_coordinate_cost": 272,
+          "rugged_ordered_codebook_cost": null
+        },
+        {
+          "seed_index": 5,
+          "zero_mean_active_score": 0.547265625,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "3a1a35d1495aede33c2f70afb0ed050e23e03969a20cb2a0693cf5ea62476ab1",
+          "smooth_coordinate_cost": 272,
+          "rugged_ordered_codebook_cost": null
+        },
+        {
+          "seed_index": 6,
+          "zero_mean_active_score": 0.502734375,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "74871b04638f9686ea19f1e0f86f74ffdc742c4c76b4d84b5651fa69d1f202cc",
+          "smooth_coordinate_cost": 272,
+          "rugged_ordered_codebook_cost": null
+        },
+        {
+          "seed_index": 7,
+          "zero_mean_active_score": 0.547265625,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "f7ff7fc58dadd8c683820879bccb170e0db90ffaeac6e14b216e974e6460c894",
+          "smooth_coordinate_cost": 272,
+          "rugged_ordered_codebook_cost": null
+        }
+      ],
+      "cost_mean": 272.0,
+      "cost_min": 272,
+      "cost_max": 272
+    },
+    {
+      "task": "rugged_hard256",
+      "mode": "rugged",
+      "blocks": 16,
+      "block_width": 16,
+      "codebook_size": 256,
+      "public_codebook_sha256": "d9cff9f8e25be4332040ad8a71cf030b4c1e5db00cff27d7e373b2d4fa306aa9",
+      "per_seed": [
+        {
+          "seed_index": 0,
+          "zero_mean_active_score": 0.72,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "e2a56e9a977c88d7cba353a4d2422947448878b2f4c0bbb5edaf3a5e564a199f",
+          "smooth_coordinate_cost": null,
+          "rugged_ordered_codebook_cost": 1238
+        },
+        {
+          "seed_index": 1,
+          "zero_mean_active_score": 0.72,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "d9b23bf0ba5d2a311578b3747a767130ce40548ca6f45e3b35a7409e8d9bf8ed",
+          "smooth_coordinate_cost": null,
+          "rugged_ordered_codebook_cost": 1706
+        },
+        {
+          "seed_index": 2,
+          "zero_mean_active_score": 0.72,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "6977a3908bbc2354efcfb2ecef73f38351a9e2bf00ade4c044e1d6f42079f7e5",
+          "smooth_coordinate_cost": null,
+          "rugged_ordered_codebook_cost": 2395
+        },
+        {
+          "seed_index": 3,
+          "zero_mean_active_score": 0.72,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "8b6f6750bcb9189a3f740206d651de6d09a59c4fabf73886d808d79b9fa74faa",
+          "smooth_coordinate_cost": null,
+          "rugged_ordered_codebook_cost": 2228
+        },
+        {
+          "seed_index": 4,
+          "zero_mean_active_score": 0.72,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "d8d48ba445169a6df6bfad7859cbe4bc8ec55d57945fd355941d28b90440f350",
+          "smooth_coordinate_cost": null,
+          "rugged_ordered_codebook_cost": 1886
+        },
+        {
+          "seed_index": 5,
+          "zero_mean_active_score": 0.72,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "d351934b87c8ee406971bdbb0f4291501282de8821e039e1a03d9fc40bf6f8a4",
+          "smooth_coordinate_cost": null,
+          "rugged_ordered_codebook_cost": 1773
+        },
+        {
+          "seed_index": 6,
+          "zero_mean_active_score": 0.72,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "88e5381661c569eda5061b7570d86b23cc2461a547a3a3a03297eff9d26bad30",
+          "smooth_coordinate_cost": null,
+          "rugged_ordered_codebook_cost": 1917
+        },
+        {
+          "seed_index": 7,
+          "zero_mean_active_score": 0.72,
+          "optimum_mean_active_score": 1.0,
+          "target_sha256": "dcad14df32733c96ebe3fbc6a5ac177780129ffd1b686e9638c3e78476e69152",
+          "smooth_coordinate_cost": null,
+          "rugged_ordered_codebook_cost": 2345
+        }
+      ],
+      "cost_mean": 1936.0,
+      "cost_min": 1238,
+      "cost_max": 2395
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+[project]
+name = "modular-landscape-grader"
+version = "0.1.0"
+description = "Hidden-seed modular landscape grader for multi-island experiments."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.entry-points]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/modular_landscape_grader"]

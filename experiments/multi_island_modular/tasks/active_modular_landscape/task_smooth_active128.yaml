@@ -1,0 +1,52 @@
+task:
+  name: "Active Modular Landscape — Smooth 128"
+  description: |
+    Maintain a 128-bit artifact split into sixteen 8-bit modules and an
+    ACTIVE_MODULE integer. Each real evaluation tests only the selected module
+    and returns only that module's score. Build a complete artifact by keeping
+    tested modules and their provenance while selecting different modules.
+  tips: |
+    - CANDIDATE must be exactly 128 binary digits and ACTIVE_MODULE must be 0..15.
+    - Only the selected module is scored; do not infer scores for other modules.
+    - The target seed is private; use ordinary coral eval only.
+
+grader:
+  entrypoint: "active_modular_landscape_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  direction: maximize
+  private:
+    - "taskdata/smooth_active128.json"
+  args:
+    program_file: "candidate.py"
+    landscape_file: "smooth_active128.json"
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+run:
+  session: local
+  stop:
+    max_real_attempts: 128
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 32
+    rank_window: 32
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 8

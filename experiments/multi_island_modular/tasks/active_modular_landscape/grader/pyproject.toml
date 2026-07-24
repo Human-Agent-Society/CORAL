@@ -1,0 +1,9 @@
+[project]
+name = "active-modular-landscape-grader"
+version = "0.1.0"
+description = "Active-module grader for the modular multi-island follow-up."
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/active_modular_landscape_grader"]

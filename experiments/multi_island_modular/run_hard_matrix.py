@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+"""Run the hard, seed-bundled modular matrix."""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+from experiments.multi_island import run_matrix as base
+
+ROOT = Path(__file__).resolve().parent
+TASK_DIR = ROOT / "tasks/hard_active_modular_landscape"
+ROLE_FILE = ROOT / "hard_eval_protocol.md"
+
+base.DEFAULT_RESULTS_ROOT = Path("/var/tmp/coral-institutions-results/modular-hard-v3")
+base.TASKS = {
+    name: base.TaskSpec(
+        name=name,
+        config=TASK_DIR / config,
+        cwd=TASK_DIR,
+        conditions=("global", "partition", "multi_island"),
+    )
+    for name, config in {
+        "smooth_hard256": "task_smooth_hard128.yaml",
+        "rugged_hard256": "task_rugged_hard128.yaml",
+    }.items()
+}
+
+_BASE_BUILD_COMMAND = base.build_command
+
+
+def repetition_seed_index(run_dir: Path) -> int:
+    match = re.search(r"rep-(\d+)", run_dir.name)
+    if match is None:
+        raise ValueError(f"run directory has no repetition index: {run_dir}")
+    return int(match.group(1)) - 1
+
+
+def build_command(spec, condition, run_dir):
+    """Use the hard role, paired seed index, and budget-scaled migration."""
+    command = _BASE_BUILD_COMMAND(spec, condition, run_dir)
+    every = max(16, base.EXPECTED_REAL_ATTEMPTS // 4)
+    seed_index = repetition_seed_index(run_dir)
+    for index, item in enumerate(command):
+        if item.startswith("agents.runtime_options.role_file="):
+            command[index] = f"agents.runtime_options.role_file={ROLE_FILE}"
+        elif item.startswith("islands.migration.every="):
+            command[index] = f"islands.migration.every={every}"
+        elif item.startswith("islands.migration.rank_window="):
+            command[index] = f"islands.migration.rank_window={every}"
+        elif item.startswith("islands.migration.remigration_cooldown="):
+            command[index] = "islands.migration.remigration_cooldown=16"
+    command.append(f"grader.args.seed_index={seed_index}")
+    return command
+
+
+base.build_command = build_command
+
+
+if __name__ == "__main__":
+    raise SystemExit(base.main())
