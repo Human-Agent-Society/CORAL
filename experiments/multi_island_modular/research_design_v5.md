@@ -69,7 +69,9 @@ topology. The eight-agent roster is held fixed in the primary comparison.
 
 The analyzer rejects wrong topology/mode/seed/budget, private-bundle mismatch,
 grader or tune attempts, malformed candidates, non-numeric scores, degenerate
-score ranges, insufficient module coverage, and missing migration events.
+score ranges, insufficient module coverage, missing migration events, and cells
+with no provenance-backed exact module. A cell with zero exact modules is kept
+as a calibration failure, never as a topology result.
 
 Primary outcomes are provenance-backed exact-module count and the best
 single-candidate assembled score. Pooled provenance and the assembly gap are

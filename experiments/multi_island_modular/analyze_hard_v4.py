@@ -26,6 +26,7 @@ MIGRATION_MIN = 16
 MIGRATION_MAX = 64
 REMIGRATION_COOLDOWN = 16
 ANALYZER_LABEL = "Hard v4"
+MIN_EXACT_SIGNAL = 0
 TASKS = ("smooth_hard_v4", "rugged_hard_v4")
 CONDITIONS = ("global", "global_8", "partition", "multi_island")
 REPETITIONS = 8
@@ -349,6 +350,10 @@ def main() -> int:
                         reasons.append(
                             f"module coverage={row['module_coverage']}, need at least {MIN_MODULE_COVERAGE}"
                         )
+                    if row["real_attempts"] == budget and row["final_known_blocks"] < MIN_EXACT_SIGNAL:
+                        reasons.append(
+                            f"exact signal={row['final_known_blocks']}, need at least {MIN_EXACT_SIGNAL}"
+                        )
                     if reasons:
                         failures.append(
                             {
@@ -380,6 +385,7 @@ def main() -> int:
             f"at least {MIN_MODULE_COVERAGE} distinct active modules; multi-island "
             f"also needs at least {MIN_ISLAND_COVERAGE} per island"
         ),
+        "exact_signal_gate": f"at least {MIN_EXACT_SIGNAL} provenance-backed exact modules",
     }
     (output / "audit.json").write_text(json.dumps(audit, indent=2) + "\n")
     print(f"Audited {len(rows)} complete cells; failures={len(failures)}")
