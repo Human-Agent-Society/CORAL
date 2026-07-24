@@ -60,9 +60,9 @@ def _real_budget_lock(coral_dir: Path) -> Iterator[None]:
             fcntl.flock(lock_file, fcntl.LOCK_UN)
 
 
-def _real_attempt_count(coral_dir: Path) -> int:
-    """Count queued and finalized non-archived real attempts across islands."""
-    count = 0
+def _real_attempt_count(coral_dir: Path, *, agent_id: str | None = None) -> int:
+    """Count queued/final real attempts, optionally for one stable agent id."""
+    commits: set[str] = set()
     for root in all_view_roots(coral_dir):
         attempts_dir = root / "attempts"
         if not attempts_dir.is_dir():
@@ -75,9 +75,14 @@ def _real_attempt_count(coral_dir: Path) -> int:
             metadata = data.get("metadata") or {}
             if metadata.get("archived") is True:
                 continue
-            if get_budget_class(metadata) == BUDGET_CLASS_REAL:
-                count += 1
-    return count
+            if get_budget_class(metadata) != BUDGET_CLASS_REAL:
+                continue
+            if agent_id is not None and data.get("agent_id") != agent_id:
+                continue
+            commit = data.get("commit_hash")
+            if isinstance(commit, str):
+                commits.add(commit)
+    return len(commits)
 
 
 def _git_add_and_commit(message: str, workdir: str) -> str:
@@ -229,9 +234,11 @@ def submit_eval(
     # intentionally producer-side: the manager's post-grading stop check is
     # too late to prevent concurrent submissions from overshooting the budget.
     max_real_attempts = config.run.stop.max_real_attempts
+    max_real_attempts_per_agent = config.run.stop.max_real_attempts_per_agent
     admission = (
         _real_budget_lock(coral_dir)
-        if max_real_attempts is not None and not tune
+        if (max_real_attempts is not None or max_real_attempts_per_agent is not None)
+        and not tune
         else nullcontext()
     )
     with admission:
@@ -241,6 +248,14 @@ def submit_eval(
                 raise RuntimeError(
                     "real evaluation budget exhausted: "
                     f"{current}/{max_real_attempts} real attempts already queued or finalized"
+                )
+        if max_real_attempts_per_agent is not None and not tune:
+            agent_current = _real_attempt_count(coral_dir, agent_id=agent_id)
+            if agent_current >= max_real_attempts_per_agent:
+                raise RuntimeError(
+                    "per-agent real evaluation quota exhausted: "
+                    f"{agent_current}/{max_real_attempts_per_agent} real attempts already "
+                    "queued or finalized for this agent"
                 )
 
         # Git add + commit

@@ -338,11 +338,20 @@ class RunStopConfig:
 
     score_threshold: float | None = None
     max_real_attempts: int | None = None
+    max_real_attempts_per_agent: int | None = None
 
     def __post_init__(self) -> None:
         if self.max_real_attempts is not None and self.max_real_attempts <= 0:
             raise ValueError(
                 f"run.stop.max_real_attempts must be > 0, got {self.max_real_attempts}"
+            )
+        if (
+            self.max_real_attempts_per_agent is not None
+            and self.max_real_attempts_per_agent <= 0
+        ):
+            raise ValueError(
+                "run.stop.max_real_attempts_per_agent must be > 0, got "
+                f"{self.max_real_attempts_per_agent}"
             )
 
 

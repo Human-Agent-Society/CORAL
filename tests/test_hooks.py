@@ -375,6 +375,49 @@ def test_submit_eval_admits_exact_real_budget():
             sys.path.pop(0)
 
 
+def test_submit_eval_enforces_per_agent_real_quota_without_blocking_peers():
+    """One fast producer cannot consume another agent's fixed-budget share."""
+    import sys
+
+    with tempfile.TemporaryDirectory() as d:
+        repo = _setup_repo_with_config(Path(d))
+        _set_grader_config(repo, max_pending_per_agent=0)
+        _set_run_stop(repo, max_real_attempts=4, max_real_attempts_per_agent=1)
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "hello.py").write_text("print('a1')\n")
+            first = submit_eval(
+                message="a1",
+                agent_id="agent-a",
+                workdir=str(repo),
+                wait=False,
+            )
+            assert first.status == "pending"
+            head_after_first = _head_hash(repo)
+
+            (repo / "hello.py").write_text("print('a2')\n")
+            with pytest.raises(RuntimeError, match="per-agent real evaluation quota exhausted"):
+                submit_eval(
+                    message="a2",
+                    agent_id="agent-a",
+                    workdir=str(repo),
+                    wait=False,
+                )
+            assert _head_hash(repo) == head_after_first
+
+            (repo / "hello.py").write_text("print('b1')\n")
+            peer = submit_eval(
+                message="b1",
+                agent_id="agent-b",
+                workdir=str(repo),
+                wait=False,
+            )
+            assert peer.status == "pending"
+            assert peer.agent_id == "agent-b"
+        finally:
+            sys.path.pop(0)
+
+
 def test_submit_eval_per_agent_isolation():
     """A pending submission from agent-A must not block agent-B from submitting."""
     import sys
