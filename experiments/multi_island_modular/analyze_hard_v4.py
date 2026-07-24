@@ -329,7 +329,17 @@ def main() -> int:
                     if row["real_attempts"] == budget and not row["coverage_gate"]:
                         reasons.append(f"module coverage={row['module_coverage']}, need at least 8")
                     if reasons:
-                        failures.append({"budget": budget, "task": task, "condition": condition, "repetition": repetition, "run_dir": str(run_dir), "reasons": reasons})
+                        failures.append(
+                            {
+                                "budget": budget,
+                                "task": task,
+                                "condition": condition,
+                                "repetition": repetition,
+                                "run_dir": str(run_dir),
+                                "reasons": reasons,
+                                "observed": row,
+                            }
+                        )
                     else:
                         rows.append(row)
     output = args.output_dir.resolve()
