@@ -100,6 +100,20 @@ def test_v6_migration_cadence_is_budget_scaled() -> None:
     assert migration_every(65536) == 512
 
 
+def test_v6_fixed_heartbeat_override_is_in_runner_and_analyzer(tmp_path: Path) -> None:
+    from experiments.multi_island_modular import analyze_hard_v6 as analyzer
+    from experiments.multi_island_modular import run_hard_v6 as runner
+
+    assert runner.HEARTBEAT_OVERRIDE == analyzer.HEARTBEAT_OVERRIDE
+    command = runner.build_command(
+        runner.base.TASKS["smooth_hard_v6"],
+        "global_8",
+        tmp_path / "rep-01",
+    )
+    heartbeat = next(item for item in command if item.startswith("agents.heartbeat="))
+    assert heartbeat == f"agents.heartbeat={runner.HEARTBEAT_OVERRIDE}"
+
+
 def test_v6_transfer_metric_uses_origin_and_destination(monkeypatch, tmp_path: Path) -> None:
     import sys
 
