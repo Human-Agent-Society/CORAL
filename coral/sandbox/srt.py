@@ -53,9 +53,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# srt overrides TMPDIR to this path inside the sandbox (unless
-# CLAUDE_CODE_TMPDIR is set); it must exist or every mktemp fails.
+# sandbox-runtime's default TMPDIR.  It is shared host-wide, so agents must
+# never use it directly: :meth:`SrtSandbox.prepare_agent` overrides
+# ``CLAUDE_CODE_TMPDIR`` with a directory inside that agent's worktree.
 _SRT_TMPDIR = Path("/tmp/claude")
+_AGENT_TMPDIR_NAME = ".coral-tmp"
 
 _INSTALL_HINT = "npm install -g @anthropic-ai/sandbox-runtime"
 
@@ -64,6 +66,24 @@ _LINUX_DEPS = {
     "socat": "socat",
     "rg": "ripgrep",
 }
+
+# sandbox-runtime protects these paths in the command's cwd even when they do
+# not exist.  Some bubblewrap versions cannot create a bind-mount destination
+# after the cwd has been re-bound read-only, so materialize inert mount points
+# before entering the sandbox.  Existing task files are never overwritten.
+_SRT_PROTECTED_FILES = (
+    ".gitconfig",
+    ".gitmodules",
+    ".bashrc",
+    ".bash_profile",
+    ".zshrc",
+    ".zprofile",
+    ".profile",
+    ".ripgreprc",
+    ".mcp.json",
+)
+_SRT_PROTECTED_DIRS = (".vscode", ".idea")
+_SRT_CLAUDE_PROTECTED_DIRS = (".claude/commands", ".claude/agents")
 
 
 class SrtSandbox:
@@ -102,6 +122,11 @@ class SrtSandbox:
         (see :func:`_cli_pythonpath_shim`), when one is needed, plus the
         TLS bundle override for rustls clients (:func:`_tls_cert_env`).
         """
+        _prepare_srt_mountpoints(
+            ctx.worktree_path,
+            ctx.repo_dir,
+            shared_dir_name=ctx.shared_dir_name,
+        )
         settings = build_srt_settings(
             self.cfg,
             worktree_path=ctx.worktree_path,
@@ -116,10 +141,11 @@ class SrtSandbox:
         settings_path = settings_dir / f"{ctx.agent_id}.json"
         settings_path.write_text(json.dumps(settings, indent=2) + "\n")
 
+        agent_tmpdir = ctx.worktree_path / _AGENT_TMPDIR_NAME
         try:
-            _SRT_TMPDIR.mkdir(exist_ok=True)
+            agent_tmpdir.mkdir(exist_ok=True)
         except OSError:
-            pass  # srt/tools will surface a clearer error if /tmp is unusable
+            pass  # srt/tools will surface a clearer error if the worktree is unusable
 
         import coral
 
@@ -128,11 +154,64 @@ class SrtSandbox:
             Path(coral.__file__).resolve().parent,
             Path(sys.prefix).resolve(),
         )
+        # srt otherwise maps every sandbox to /tmp/claude.  Keeping temporary
+        # state in the worktree gives it the same visibility boundary as the
+        # agent's other files (global, island-local, or independent).
+        env["CLAUDE_CODE_TMPDIR"] = str(agent_tmpdir.resolve())
         env.update(_tls_cert_env())
         return AgentSandboxSpec(
             command_prefix=srt_command_prefix(self.cfg.srt_command, settings_path),
             env=env,
         )
+
+
+def _prepare_srt_mountpoints(
+    worktree_path: Path,
+    repo_dir: Path,
+    *,
+    shared_dir_name: str,
+) -> None:
+    """Create inert destinations required by sandbox-runtime on Linux.
+
+    The files are locally excluded from git so ``coral eval`` cannot include
+    compatibility-only placeholders in an attempt.  Claude's ``.claude`` is
+    the live shared-state symlink, so only other runtimes get the two empty
+    directories sandbox-runtime protects below that name.
+    """
+    if not sys.platform.startswith("linux"):
+        return
+
+    created_files: list[str] = []
+    for relative in _SRT_PROTECTED_FILES:
+        target = worktree_path / relative
+        if target.exists() or target.is_symlink():
+            continue
+        target.touch()
+        created_files.append(relative)
+
+    protected_dirs = list(_SRT_PROTECTED_DIRS)
+    if shared_dir_name != ".claude":
+        protected_dirs.extend(_SRT_CLAUDE_PROTECTED_DIRS)
+    for relative in protected_dirs:
+        target = worktree_path / relative
+        if not target.exists() and not target.is_symlink():
+            target.mkdir(parents=True)
+
+    agent_tmpdir = worktree_path / _AGENT_TMPDIR_NAME
+    agent_tmpdir.mkdir(exist_ok=True)
+    tmpdir_exclude = f"/{_AGENT_TMPDIR_NAME}/"
+
+    exclude_path = repo_dir / ".git" / "info" / "exclude"
+    exclude_path.parent.mkdir(parents=True, exist_ok=True)
+    existing = exclude_path.read_text() if exclude_path.exists() else ""
+    additions = [f"/{relative}" for relative in created_files if f"/{relative}" not in existing]
+    if tmpdir_exclude not in existing:
+        additions.append(tmpdir_exclude)
+    if not additions:
+        return
+    if additions:
+        separator = "" if not existing or existing.endswith("\n") else "\n"
+        exclude_path.write_text(existing + separator + "\n".join(additions) + "\n")
 
 
 def ensure_sandbox_supported(agents: AgentConfig) -> None:
@@ -200,18 +279,23 @@ def _runtime_home_paths(shared_dir_name: str) -> list[str]:
     Reads are confined to the run dir, so everything under ``$HOME`` the
     agent toolchain legitimately needs must be allowed back explicitly:
     the runtime CLI's own state dir (sessions/credentials — Claude Code
-    cannot run without reading ``~/.claude.json``), and the tool caches the
-    stack lives off (uv/coral under ``~/.local`` + ``~/.cache``, node under
-    ``~/.nvm`` or npm's cache). Deliberately narrow: broad creds dirs like
-    ``~/.ssh``, ``~/.aws``, ``~/.config`` (gh/gcloud tokens) stay denied.
+    cannot run without reading ``~/.claude.json``), and that runtime's XDG
+    cache/data directories.  Never allow the XDG parents wholesale: uv's
+    cache can contain full source checkouts, including taskdata that the
+    current run deliberately hides.  The manager's interpreter and CORAL
+    package are granted separately by :func:`_coral_install_reads`.
+
+    Deliberately narrow: broad creds dirs like ``~/.ssh``, ``~/.aws``,
+    ``~/.config`` (gh/gcloud tokens), and broad tool roots like ``~/.cache``
+    and ``~/.local`` stay denied.
     srt's mandatory protections still deny writes to ``.gitconfig``, shell
     rc files, etc. within these grants.
     """
     home = Path.home()
+    runtime_name = shared_dir_name.removeprefix(".")
     paths = [
-        str(home / ".cache"),  # uv, pip, and friends
-        str(home / ".local"),  # uv tools (incl. coral), uv-managed pythons
-        str(home / ".npm"),
+        str(home / ".cache" / runtime_name),
+        str(home / ".local" / "share" / runtime_name),
         str(home / ".nvm"),  # node itself, when nvm-managed
         str(home / ".gitconfig"),  # git aborts on an unreadable existing config
         str(home / shared_dir_name),  # runtime state: ~/.claude, ~/.codex, ...
@@ -219,7 +303,11 @@ def _runtime_home_paths(shared_dir_name: str) -> list[str]:
     if shared_dir_name == ".claude":
         paths += [str(home / ".claude.json"), str(home / ".claude.json.backup")]
     elif shared_dir_name == ".opencode":
-        paths += [str(home / ".config" / "opencode"), str(home / ".opencode")]
+        paths += [
+            str(home / ".config" / "opencode"),
+            str(home / ".opencode"),
+            str(home / ".local" / "share" / "opentui"),
+        ]
     return paths
 
 
@@ -237,11 +325,12 @@ def _worktree_reads(
     """Agent worktrees this agent may read.
 
     Reading (not writing) siblings' trees is part of the shared-knowledge
-    design, so single-island runs grant the whole ``agents/`` dir — which
-    also covers agents spawned later. Multi-island runs stop at the island
-    boundary: islands evolve independently and exchange work only through
-    migration, so a cross-island read would defeat the diversity the
-    partition exists to create. The island-mate roster comes from the
+    design.  Grant each rostered worktree exactly rather than their
+    ``agents/`` parent: a broad read grant can override a narrower write
+    grant when an ancestor results directory is denied. Multi-island runs
+    stop at the island boundary: islands evolve independently and exchange
+    work only through migration, so a cross-island read would defeat the
+    diversity the partition exists to create. The island-mate roster comes from the
     manager (``ctx.sibling_worktrees`` — correct even before those
     worktrees exist on disk; srt rules are plain path patterns); without
     one, membership falls back to each worktree's ``.coral_island``
@@ -250,11 +339,11 @@ def _worktree_reads(
     bystanders pick up the new boundary at their own next restart.
     """
     agents_dir = worktree_path.parent
-    if not (coral_dir / "islands").exists():
-        return [str(agents_dir.resolve())]
     reads = {str(worktree_path.resolve())}
     if sibling_worktrees:
         reads.update(str(p.resolve()) for p in sibling_worktrees)
+    elif not (coral_dir / "islands").exists():
+        reads.update(str(p.resolve()) for p in agents_dir.iterdir() if p.is_dir())
     else:
         own = _worktree_island(worktree_path)
         for sibling in agents_dir.iterdir() if own is not None else ():
@@ -275,7 +364,10 @@ def _run_dir_reads(
     """
     reads = [
         *_worktree_reads(worktree_path, coral_dir, sibling_worktrees),
-        str(repo_dir.resolve()),  # run repo (worktree git ops read its .git)
+        # Worktree git operations need the run repo's object/ref store, not
+        # its working-tree parent.  Keeping this exact avoids a broad read
+        # bind masking the narrower writable .git bind under a denied root.
+        str((repo_dir / ".git").resolve()),
         str((coral_dir / "public").resolve()),
         str((coral_dir / "islands").resolve()),  # multi-island shared state
         str((coral_dir / ".git").resolve()),  # checkpoint history (coral notes --history)
@@ -313,10 +405,19 @@ def _coral_install_reads() -> list[str]:
     """
     import coral
 
-    return [
-        str(Path(sys.prefix).resolve()),
+    prefix = Path(sys.prefix).resolve()
+    executable = Path(sys.executable).resolve()
+    reads = [
+        str(prefix),
         str(Path(coral.__file__).resolve().parent),
     ]
+    # uv-managed venvs symlink ``<venv>/bin/python`` through a stable link under
+    # ~/.local/share/uv/python before reaching the versioned interpreter. Grant
+    # that interpreter collection so both links resolve, not ~/.local or uv's
+    # cache (which can contain full source/taskdata checkouts).
+    if not executable.is_relative_to(prefix):
+        reads.append(str(executable.parent.parent.parent))
+    return reads
 
 
 def _cli_pythonpath_shim(run_dir: Path, package_dir: Path, prefix: Path) -> dict[str, str]:
@@ -394,7 +495,18 @@ def build_srt_settings(
             # private_dir is listed even though home already covers the
             # default layout — runs placed outside $HOME (workspace.run_dir)
             # must still hide it.
-            "denyRead": [str(Path.home()), private_dir, *cfg.deny_read],
+            "denyRead": [
+                str(Path.home()),
+                private_dir,
+                # srt's default temp directory is host-wide.  An agent gets a
+                # private replacement under its worktree in prepare_agent().
+                # sandbox-runtime always re-binds the parent as a mandatory
+                # write path, so mask this runtime's conventional child as
+                # well (e.g. /tmp/claude/opencode).
+                str(_SRT_TMPDIR),
+                str(_SRT_TMPDIR / shared_dir_name.removeprefix(".")),
+                *cfg.deny_read,
+            ],
             "allowRead": [
                 *_run_dir_reads(worktree_path, coral_dir, repo_dir, sibling_worktrees or []),
                 *_coral_install_reads(),
@@ -411,8 +523,6 @@ def build_srt_settings(
                 # .git/hooks and .git/config within it.
                 str((repo_dir / ".git").resolve()),
                 *home_paths,
-                "/tmp",
-                "/private/tmp",  # macOS: /tmp resolves here
                 *cfg.allow_write,
             ],
             "denyWrite": [private_dir],

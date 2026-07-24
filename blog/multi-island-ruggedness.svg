@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="410" viewBox="0 0 760 410" role="img" aria-labelledby="title desc">
+<title id="title">Topology by landscape ruggedness interaction</title>
+<desc id="desc">Run-level points, means, and replicate-bootstrap intervals.</desc>
+<style>text{font-family:Inter,ui-sans-serif,system-ui,sans-serif;fill:#1D2939}.axis{stroke:#98A2B3;stroke-width:1}.grid{stroke:#EAECF0;stroke-width:1}.mean{stroke:#101828;stroke-width:1.5}.ci{stroke:#344054;stroke-width:2}.point{stroke:white;stroke-width:1.2}</style>
+<rect width="760" height="410" fill="#FFFFFF"/>
+<text x="380.0" y="29" text-anchor="middle" font-size="19" font-weight="700">Topology × landscape ruggedness</text>
+<text transform="translate(19 203.5) rotate(-90)" text-anchor="middle" font-size="12">Fitness gain from seed (percentage points)</text>
+<line class="grid" x1="78" y1="342.0" x2="722" y2="342.0"/>
+<text x="69" y="346.0" text-anchor="end" font-size="10">-2.3</text>
+<line class="grid" x1="78" y1="272.8" x2="722" y2="272.8"/>
+<text x="69" y="276.8" text-anchor="end" font-size="10">2.0</text>
+<line class="grid" x1="78" y1="203.5" x2="722" y2="203.5"/>
+<text x="69" y="207.5" text-anchor="end" font-size="10">6.3</text>
+<line class="grid" x1="78" y1="134.2" x2="722" y2="134.2"/>
+<text x="69" y="138.2" text-anchor="end" font-size="10">10.6</text>
+<line class="grid" x1="78" y1="65.0" x2="722" y2="65.0"/>
+<text x="69" y="69.0" text-anchor="end" font-size="10">14.9</text>
+<line class="axis" x1="78" y1="305.3" x2="722" y2="305.3"/>
+<text x="232.56" y="371" text-anchor="middle" font-size="12" font-weight="650">Smooth NK (K=0)</text>
+<text x="567.44" y="371" text-anchor="middle" font-size="12" font-weight="650">Rugged NK (K=4)</text>
+<path d="M 232.6 168.8 L 567.4 145.9" fill="none" stroke="#667085" stroke-width="3"/>
+<circle class="point" cx="232.6" cy="168.8" r="6" fill="#667085"/>
+<circle class="point" cx="567.4" cy="145.9" r="6" fill="#667085"/>
+<path d="M 232.6 101.7 L 567.4 167.9" fill="none" stroke="#D97706" stroke-width="3"/>
+<circle class="point" cx="232.6" cy="101.7" r="6" fill="#D97706"/>
+<circle class="point" cx="567.4" cy="167.9" r="6" fill="#D97706"/>
+<path d="M 232.6 211.9 L 567.4 184.8" fill="none" stroke="#0F766E" stroke-width="3"/>
+<circle class="point" cx="232.6" cy="211.9" r="6" fill="#0F766E"/>
+<circle class="point" cx="567.4" cy="184.8" r="6" fill="#0F766E"/>
+<line x1="86" y1="48" x2="108" y2="48" stroke="#667085" stroke-width="3"/>
+<text x="115" y="52" font-size="11">Global</text>
+<line x1="256" y1="48" x2="278" y2="48" stroke="#D97706" stroke-width="3"/>
+<text x="285" y="52" font-size="11">Partition</text>
+<line x1="426" y1="48" x2="448" y2="48" stroke="#0F766E" stroke-width="3"/>
+<text x="455" y="52" font-size="11">Multi-island</text>
+</svg>

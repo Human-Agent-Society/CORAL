@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="410" viewBox="0 0 1120 410" role="img" aria-labelledby="title desc">
+<title id="title">Multi-island performance across real and controlled tasks</title>
+<desc id="desc">Run-level points, means, and replicate-bootstrap intervals.</desc>
+<style>text{font-family:Inter,ui-sans-serif,system-ui,sans-serif;fill:#1D2939}.axis{stroke:#98A2B3;stroke-width:1}.grid{stroke:#EAECF0;stroke-width:1}.mean{stroke:#101828;stroke-width:1.5}.ci{stroke:#344054;stroke-width:2}.point{stroke:white;stroke-width:1.2}</style>
+<rect width="1120" height="410" fill="#FFFFFF"/>
+<text x="560.0" y="28" text-anchor="middle" font-size="19" font-weight="700">Multi-island performance across real and controlled tasks</text>
+<text transform="translate(17 195.0) rotate(-90)" text-anchor="middle" font-size="12">Gain from seed (% fewer cycles / fitness points)</text>
+<line class="grid" x1="65.0" y1="328.0" x2="385.7" y2="328.0"/>
+<text x="58.0" y="332.0" text-anchor="end" font-size="10">-13.1</text>
+<line class="grid" x1="65.0" y1="261.5" x2="385.7" y2="261.5"/>
+<text x="58.0" y="265.5" text-anchor="end" font-size="10">13.9</text>
+<line class="grid" x1="65.0" y1="195.0" x2="385.7" y2="195.0"/>
+<text x="58.0" y="199.0" text-anchor="end" font-size="10">40.8</text>
+<line class="grid" x1="65.0" y1="128.5" x2="385.7" y2="128.5"/>
+<text x="58.0" y="132.5" text-anchor="end" font-size="10">67.8</text>
+<line class="grid" x1="65.0" y1="62.0" x2="385.7" y2="62.0"/>
+<text x="58.0" y="66.0" text-anchor="end" font-size="10">94.8</text>
+<line class="axis" x1="65.0" y1="62" x2="65.0" y2="328"/>
+<line class="axis" x1="65.0" y1="295.8" x2="385.7" y2="295.8"/>
+<text x="225.3" y="48" text-anchor="middle" font-size="13" font-weight="650">Kernel Builder</text>
+<line class="ci" x1="105.1" y1="295.8" x2="105.1" y2="127.4"/>
+<line class="mean" x1="92.1" y1="194.3" x2="118.1" y2="194.3"/>
+<circle class="point" cx="98.1" cy="295.8" r="4.2" fill="#667085"/>
+<circle class="point" cx="105.1" cy="127.4" r="4.2" fill="#667085"/>
+<circle class="point" cx="112.1" cy="159.9" r="4.2" fill="#667085"/>
+<text transform="translate(103.1 346) rotate(-35)" text-anchor="end" font-size="10">Global</text>
+<line class="ci" x1="185.2" y1="263.9" x2="185.2" y2="138.6"/>
+<line class="mean" x1="172.2" y1="218.4" x2="198.2" y2="218.4"/>
+<circle class="point" cx="178.2" cy="252.6" r="4.2" fill="#D97706"/>
+<circle class="point" cx="185.2" cy="263.9" r="4.2" fill="#D97706"/>
+<circle class="point" cx="192.2" cy="138.6" r="4.2" fill="#D97706"/>
+<text transform="translate(183.2 346) rotate(-35)" text-anchor="end" font-size="10">Partition</text>
+<line class="ci" x1="265.4" y1="263.2" x2="265.4" y2="128.0"/>
+<line class="mean" x1="252.4" y1="173.1" x2="278.4" y2="173.1"/>
+<circle class="point" cx="258.4" cy="128.0" r="4.2" fill="#0F766E"/>
+<circle class="point" cx="265.4" cy="263.2" r="4.2" fill="#0F766E"/>
+<circle class="point" cx="272.4" cy="128.0" r="4.2" fill="#0F766E"/>
+<text transform="translate(263.4 346) rotate(-35)" text-anchor="end" font-size="10">Multi-island</text>
+<line class="ci" x1="345.6" y1="295.1" x2="345.6" y2="94.2"/>
+<line class="mean" x1="332.6" y1="217.8" x2="358.6" y2="217.8"/>
+<circle class="point" cx="338.6" cy="94.2" r="4.2" fill="#7C3AED"/>
+<circle class="point" cx="345.6" cy="295.1" r="4.2" fill="#7C3AED"/>
+<circle class="point" cx="352.6" cy="263.9" r="4.2" fill="#7C3AED"/>
+<text transform="translate(343.6 346) rotate(-35)" text-anchor="end" font-size="10">Independent</text>
+<line class="grid" x1="419.7" y1="328.0" x2="740.3" y2="328.0"/>
+<text x="412.7" y="332.0" text-anchor="end" font-size="10">-2.3</text>
+<line class="grid" x1="419.7" y1="261.5" x2="740.3" y2="261.5"/>
+<text x="412.7" y="265.5" text-anchor="end" font-size="10">2.4</text>
+<line class="grid" x1="419.7" y1="195.0" x2="740.3" y2="195.0"/>
+<text x="412.7" y="199.0" text-anchor="end" font-size="10">7.2</text>
+<line class="grid" x1="419.7" y1="128.5" x2="740.3" y2="128.5"/>
+<text x="412.7" y="132.5" text-anchor="end" font-size="10">11.9</text>
+<line class="grid" x1="419.7" y1="62.0" x2="740.3" y2="62.0"/>
+<text x="412.7" y="66.0" text-anchor="end" font-size="10">16.6</text>
+<line class="axis" x1="419.7" y1="62" x2="419.7" y2="328"/>
+<line class="axis" x1="419.7" y1="295.8" x2="740.3" y2="295.8"/>
+<text x="580.0" y="48" text-anchor="middle" font-size="13" font-weight="650">Smooth NK (K=0)</text>
+<line class="ci" x1="473.1" y1="201.7" x2="473.1" y2="151.0"/>
+<line class="mean" x1="460.1" y1="176.7" x2="486.1" y2="176.7"/>
+<circle class="point" cx="466.1" cy="177.4" r="4.2" fill="#667085"/>
+<circle class="point" cx="473.1" cy="151.0" r="4.2" fill="#667085"/>
+<circle class="point" cx="480.1" cy="201.7" r="4.2" fill="#667085"/>
+<text transform="translate(471.1 346) rotate(-35)" text-anchor="end" font-size="10">Global</text>
+<line class="ci" x1="580.0" y1="137.4" x2="580.0" y2="94.2"/>
+<line class="mean" x1="567.0" y1="118.2" x2="593.0" y2="118.2"/>
+<circle class="point" cx="573.0" cy="123.0" r="4.2" fill="#D97706"/>
+<circle class="point" cx="580.0" cy="94.2" r="4.2" fill="#D97706"/>
+<circle class="point" cx="587.0" cy="137.4" r="4.2" fill="#D97706"/>
+<text transform="translate(578.0 346) rotate(-35)" text-anchor="end" font-size="10">Partition</text>
+<line class="ci" x1="686.9" y1="242.8" x2="686.9" y2="164.6"/>
+<line class="mean" x1="673.9" y1="214.3" x2="699.9" y2="214.3"/>
+<circle class="point" cx="679.9" cy="164.6" r="4.2" fill="#0F766E"/>
+<circle class="point" cx="686.9" cy="235.6" r="4.2" fill="#0F766E"/>
+<circle class="point" cx="693.9" cy="242.8" r="4.2" fill="#0F766E"/>
+<text transform="translate(684.9 346) rotate(-35)" text-anchor="end" font-size="10">Multi-island</text>
+<line class="grid" x1="774.3" y1="328.0" x2="1095.0" y2="328.0"/>
+<text x="767.3" y="332.0" text-anchor="end" font-size="10">-2.1</text>
+<line class="grid" x1="774.3" y1="261.5" x2="1095.0" y2="261.5"/>
+<text x="767.3" y="265.5" text-anchor="end" font-size="10">2.3</text>
+<line class="grid" x1="774.3" y1="195.0" x2="1095.0" y2="195.0"/>
+<text x="767.3" y="199.0" text-anchor="end" font-size="10">6.6</text>
+<line class="grid" x1="774.3" y1="128.5" x2="1095.0" y2="128.5"/>
+<text x="767.3" y="132.5" text-anchor="end" font-size="10">11.0</text>
+<line class="grid" x1="774.3" y1="62.0" x2="1095.0" y2="62.0"/>
+<text x="767.3" y="66.0" text-anchor="end" font-size="10">15.4</text>
+<line class="axis" x1="774.3" y1="62" x2="774.3" y2="328"/>
+<line class="axis" x1="774.3" y1="295.8" x2="1095.0" y2="295.8"/>
+<text x="934.7" y="48" text-anchor="middle" font-size="13" font-weight="650">Rugged NK (K=4)</text>
+<line class="ci" x1="827.8" y1="182.9" x2="827.8" y2="94.2"/>
+<line class="mean" x1="814.8" y1="145.3" x2="840.8" y2="145.3"/>
+<circle class="point" cx="820.8" cy="94.2" r="4.2" fill="#667085"/>
+<circle class="point" cx="827.8" cy="182.9" r="4.2" fill="#667085"/>
+<circle class="point" cx="834.8" cy="158.8" r="4.2" fill="#667085"/>
+<text transform="translate(825.8 346) rotate(-35)" text-anchor="end" font-size="10">Global</text>
+<line class="ci" x1="934.7" y1="205.5" x2="934.7" y2="103.4"/>
+<line class="mean" x1="921.7" y1="166.1" x2="947.7" y2="166.1"/>
+<circle class="point" cx="927.7" cy="189.5" r="4.2" fill="#D97706"/>
+<circle class="point" cx="934.7" cy="103.4" r="4.2" fill="#D97706"/>
+<circle class="point" cx="941.7" cy="205.5" r="4.2" fill="#D97706"/>
+<text transform="translate(932.7 346) rotate(-35)" text-anchor="end" font-size="10">Partition</text>
+<line class="ci" x1="1041.6" y1="195.7" x2="1041.6" y2="159.9"/>
+<line class="mean" x1="1028.6" y1="182.0" x2="1054.6" y2="182.0"/>
+<circle class="point" cx="1034.6" cy="159.9" r="4.2" fill="#0F766E"/>
+<circle class="point" cx="1041.6" cy="195.7" r="4.2" fill="#0F766E"/>
+<circle class="point" cx="1048.6" cy="190.4" r="4.2" fill="#0F766E"/>
+<text transform="translate(1039.6 346) rotate(-35)" text-anchor="end" font-size="10">Multi-island</text>
+</svg>

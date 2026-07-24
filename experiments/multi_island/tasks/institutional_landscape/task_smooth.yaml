@@ -1,0 +1,60 @@
+task:
+  name: "Institutional Landscape — Smooth"
+  description: |
+    Optimize the 20-bit literal CANDIDATE in candidate.py. Each evaluation
+    returns one deterministic scalar fitness; higher is better. The hidden
+    landscape is an NK landscape with K=0, so each bit contributes independently
+    and there is a single additive optimum.
+
+    Edit only the CANDIDATE string, commit it, and use `coral eval` to measure
+    it. Learn from scored attempts and keep exploring until the run stops.
+  tips: |
+    - CANDIDATE must remain a literal string of exactly 20 zero/one characters.
+    - The grader parses candidate.py with AST and never executes it.
+    - Only scalar fitness is revealed; the landscape seed is hidden.
+    - Use ordinary `coral eval` only. `coral eval --tune` is disabled.
+    - The global run budget is deliberately small, so use evaluations carefully.
+
+grader:
+  entrypoint: "institutional_landscape_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  direction: maximize
+  private:
+    - "taskdata/smooth.json"
+    - "taskdata/rugged.json"
+  args:
+    program_file: "candidate.py"
+    landscape_file: "smooth.json"
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: open
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 16
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 6
+    rank_window: 6
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 6

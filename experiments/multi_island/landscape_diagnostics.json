@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "landscapes": [
+    {
+      "config": "smooth.json",
+      "config_sha256": "2ef2efcffdd0f3fbf95f01af0a031c5a8266c3e45bbfdfcd0b6f478c3e41d65f",
+      "n": 20,
+      "k": 0,
+      "candidate_count": 1048576,
+      "one_bit_local_maxima": 1,
+      "global_optimum_fitness": 0.6170507229285456,
+      "global_optimum_candidate_sha256": "c298e9125102ddc3a675397d546b5af96c09c627a5032ce132c5f7579b02ede0",
+      "seed_candidate_fitness": 0.4666190822082781,
+      "fitness_mean": 0.456823682720578,
+      "fitness_sd": 0.044095021354151415
+    },
+    {
+      "config": "rugged.json",
+      "config_sha256": "ff7d108e104f90fddac09832af8c57d896d1fe0374180d04bcb973f193131eed",
+      "n": 20,
+      "k": 4,
+      "candidate_count": 1048576,
+      "one_bit_local_maxima": 626,
+      "global_optimum_fitness": 0.7980306037858891,
+      "global_optimum_candidate_sha256": "31cb7c6cc7edc792c7c7ed425c8875899434890a79461741537a37e1f407954e",
+      "seed_candidate_fitness": 0.5475238572303641,
+      "fitness_mean": 0.5251877097006806,
+      "fitness_sd": 0.06222980190970006
+    }
+  ]
+}

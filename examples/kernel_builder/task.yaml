@@ -4,6 +4,7 @@ task:
     Optimize a VLIW SIMD kernel for a tree traversal algorithm on a simulated machine.
 
     The machine has the following engines and slot limits per cycle:
+    - 8 identical cores execute the same instruction stream (`N_CORES = 8`)
     - alu: 12 scalar operations
     - valu: 6 vector operations (VLEN=8, processes 8 elements at once)
     - load: 2 memory reads
@@ -33,6 +34,7 @@ task:
     - Correctness is mandatory — incorrect output scores 0.
     - Score is linearly interpolated: 0.0 at baseline (147,734 cycles), 1.0 at best known (1,363 cycles).
     - The simulator is frozen — you cannot modify it, only optimize how you build instructions.
+    - `N_CORES = 8` is public; use the `coreid` flow operation to divide work between cores.
     - Focus on VLIW packing: fill all engine slots each cycle.
     - Use SIMD (valu) operations to process 8 batch elements at once.
     - The hash function has 6 stages with 3 ops each — look for ILP within and across stages.
@@ -46,12 +48,15 @@ preset: multi-island
 
 grader:
   entrypoint: "kernel_builder_grader.grader:Grader"
-  timeout: 120
+  # Keep the candidate's 120s limit below the grader daemon's outer deadline
+  # so candidate timeouts return a normal null score instead of grader_error.
+  timeout: 150
   direction: minimize
   private:
     - "taskdata"   # hidden grader fixtures → .coral/private/taskdata (read via self.private_dir)
   args:
     program_file: "kernel_builder.py"
+    evaluation_timeout: 120
 
 workspace:
   results_dir: "./results"

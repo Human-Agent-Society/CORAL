@@ -10,7 +10,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from coral.agent.exit_classifier import classify_by_uptime
+from coral.agent.exit_classifier import classify_by_uptime, log_has_unrecoverable_session_error
 from coral.agent.process import open_agent_stderr_for_log_dir
 from coral.agent.runtime import (
     AgentHandle,
@@ -80,6 +80,8 @@ class OpenCodeRuntime:
         so we use the conservative uptime heuristic: `exit_code==0` is clean
         only when the agent ran for at least `min_clean_runtime_seconds`.
         """
+        if log_has_unrecoverable_session_error(log_path):
+            return "session_error"
         return classify_by_uptime(exit_code, uptime_seconds, min_clean_runtime_seconds)
 
     def start(
@@ -131,6 +133,8 @@ class OpenCodeRuntime:
             model,
             "--format",
             "json",
+            "--dir",
+            str(worktree_path),
         ]
 
         if resume_session_id:

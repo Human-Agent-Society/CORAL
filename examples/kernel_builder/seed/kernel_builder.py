@@ -23,6 +23,7 @@ from dataclasses import dataclass
 
 # Constants for the VLIW SIMD machine
 SCRATCH_SIZE = 1536
+N_CORES = 8
 
 # Hash function stages: (op1, val1, op2, op3, val3)
 # Each stage computes: val = op2(op1(val, val1), op3(val, val3))

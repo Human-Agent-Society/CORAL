@@ -25,12 +25,7 @@ from coral.agent.assignments import (
     partition_into_islands,
     resolve_agent_specs,
 )
-from coral.agent.exit_classifier import (
-    classify_by_uptime,
-)
-from coral.agent.exit_classifier import (
-    claude_code_log_has_session_error as _log_has_session_error,
-)
+from coral.agent.exit_classifier import classify_by_uptime, log_has_unrecoverable_session_error
 from coral.agent.heartbeat import HeartbeatRunner
 from coral.agent.migration import (
     IslandRoster,
@@ -776,9 +771,9 @@ class AgentManager:
         # Ensure old process and file handles are fully cleaned up
         old_handle.stop()
 
-        # Check if the previous exit was a session-not-found error
+        # Drop sessions whose saved history is missing or deterministically invalid.
         session_id: str | None = None
-        if not _log_has_session_error(old_handle.log_path):
+        if not log_has_unrecoverable_session_error(old_handle.log_path):
             # Try to extract session_id from the old log for resumption
             session_id = self._runtime_for(agent_id).extract_session_id(old_handle.log_path)
 

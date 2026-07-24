@@ -1,0 +1,58 @@
+{
+  "expected_cells": 30,
+  "complete_cells": 30,
+  "expected_attempts_per_cell": 16,
+  "baselines": {
+    "kernel": 11910.0,
+    "smooth": 0.46661908220827797,
+    "rugged": 0.547523857230364
+  },
+  "integrity_failures": [],
+  "incomplete_or_superseded_runs": [
+    {
+      "task": "kernel",
+      "condition": "global",
+      "repetition": 1,
+      "run_dir": "/var/tmp/coral-institutions-results/authoritative-v5/kernel/global/rep-01",
+      "finalized_real_attempts": 16,
+      "total_real_records": 16,
+      "grader_errors": 0,
+      "tune_attempts": 0,
+      "tune_protocol_violations": 0,
+      "migrations": 0,
+      "migration_eval_counts": [],
+      "auto_stop_reason": "experiment_invalid",
+      "invalid_reason": "candidate code imported grader-private frozen_problem during the pre-hardening run and copied simulator material into its worktree"
+    },
+    {
+      "task": "kernel",
+      "condition": "partition",
+      "repetition": 1,
+      "run_dir": "/var/tmp/coral-institutions-results/authoritative-v5/kernel/partition/rep-01",
+      "finalized_real_attempts": 2,
+      "total_real_records": 2,
+      "grader_errors": 0,
+      "tune_attempts": 0,
+      "tune_protocol_violations": 0,
+      "migrations": 0,
+      "migration_eval_counts": [],
+      "auto_stop_reason": "experiment_invalid",
+      "invalid_reason": "candidate code executed inside the grader and copied frozen_problem source into its worktree"
+    },
+    {
+      "task": "smooth",
+      "condition": "partition",
+      "repetition": 1,
+      "run_dir": "/var/tmp/coral-institutions-results/authoritative-v5/smooth/partition/rep-01",
+      "finalized_real_attempts": 14,
+      "total_real_records": 14,
+      "grader_errors": 0,
+      "tune_attempts": 0,
+      "tune_protocol_violations": 0,
+      "migrations": 0,
+      "migration_eval_counts": [],
+      "auto_stop_reason": null,
+      "invalid_reason": ""
+    }
+  ]
+}

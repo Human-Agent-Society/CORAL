@@ -177,6 +177,14 @@
   .figcap strong{color:var(--ink-2);font-weight:600}
   .fig-todo{border:1px dashed var(--rule);border-radius:14px;padding:34px 24px;text-align:center;
     font-family:var(--sans);font-size:12px;color:var(--ink-fade);background:var(--rule-soft);margin:28px 0 8px}
+  .result-figure{margin:28px 0 8px}
+  .result-figure img{display:block;width:100%;height:auto;border:1px solid var(--rule);border-radius:12px;background:#fff}
+  .result-table-wrap{overflow-x:auto;margin:20px 0 24px;border:1px solid var(--rule);border-radius:10px}
+  .result-table{width:100%;border-collapse:collapse;font-family:var(--sans);font-size:12px;line-height:1.45;min-width:620px}
+  .result-table th,.result-table td{padding:9px 11px;text-align:right;border-bottom:1px solid var(--rule-soft);font-variant-numeric:tabular-nums}
+  .result-table th:first-child,.result-table td:first-child{text-align:left}
+  .result-table thead th{background:var(--bg-elev);color:var(--ink);font-weight:600}
+  .result-table tbody tr:last-child td{border-bottom:0}
 
   /* ─── Callout ─── */
   .callout{background:var(--bg-elev);border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:0 14px 14px 0;
@@ -555,6 +563,80 @@
     <p>
       Isolation without mixing just gives you N smaller runs — what made the city-states fertile was the <em>travelers</em> between them. Migration is enabled by default whenever <code>islands.count &gt; 1</code>: every <code>migration.every</code> finalized real evaluations, <strong><span style="color:#E8A09A">CORAL</span></strong> runs a cycle that ranks agents by their best score over a recent window and may relocate up to <code>max_per_cycle</code> eligible agents to another island (weighted toward the weakest eligible destination by default), without worsening roster balance. A 100-real-evaluation remigration cooldown prevents the same high-scoring agent from immediately bouncing between islands. The migrant's worktree, branch, and eval history travel with it — but its <strong>notes stay on the source island</strong>. Ideas travel in the migrant's head, not as a bulk export of the old island's library.
     </p>
+
+    <h3>Does it actually help?</h3>
+    <p>
+      We fixed a small validation matrix before looking at the topology comparisons: <strong>30 runs and 480 finalized real evaluations</strong>, always with four OpenCode agents running <code>mafia/glm-5.2</code>, the same prompts, sandbox, and a shared 16-evaluation budget. Each cell has three operational repetitions. The real task is Kernel Builder; two hidden <code>N=20</code> NK landscapes provide a controlled contrast between a smooth search space (<code>K=0</code>) and a rugged one (<code>K=4</code>).
+    </p>
+    <p>
+      The ablations separate the pieces of the institution. <strong>Global</strong> gives all four agents one shared knowledge pool. <strong>Partition</strong> creates two islands but never migrates anyone. <strong>Multi-island</strong> uses the same two-island boundary, then checks for selective migration whenever another six-evaluation boundary is crossed; because grading and manager polling are asynchronous, we audit the realized application tick rather than assuming it is exactly 6 or 12. On Kernel Builder we also run <strong>independent</strong> search — four one-agent islands — to distinguish collaboration from parallelism alone. Primary performance is final best score; we also record best-so-far AUC and the pairwise diversity of each agent's latest evaluated solution. We analyze topology assignment as-is even when a migration cycle finds no eligible balanced swap; dropping those runs would condition on a post-assignment outcome. With only three repetitions, the intervals below are descriptive, not high-powered significance tests.
+    </p>
+    <div class="callout">
+      <div class="c-lab">Integrity note</div>
+      Two early controlled-task smoke cells used human-readable hidden seeds. Agents began trying to reconstruct those seeds from scalar scores, so we excluded both cells before the authoritative comparison, replaced the seeds with independent random 256-bit values, and marked the old directories invalid rather than deleting them. Exhaustive checks over all 1,048,576 candidates found one one-bit local maximum for the frozen <code>K=0</code> instance and 626 for <code>K=4</code>. We likewise excluded a Kernel pilot after a candidate-level timeout raced the grader's identical outer deadline and was misclassified as free infrastructure failure; retries keep the candidate at 120 seconds but give the grader 30 seconds to record the failure against the real budget. A later Kernel cell exposed a subtler boundary: candidate Python was executing in the grader process and could import the private simulator, then write it back into its worktree. We invalidated every Kernel cell launched before that discovery. In the final protocol, untrusted candidate code builds an instruction stream inside a second bubblewrap namespace with no taskdata or host paths; only its JSON output enters the private simulator process, which never executes candidate source. The tables below contain only post-fix Kernel cells.
+    </div>
+
+    <h3>Results: distance helped one search, not every search</h3>
+    <div class="result-figure">
+      <img src="multi-island-performance.svg" alt="Performance gain for global, partition, multi-island, and independent topologies across Kernel Builder and two NK landscapes">
+    </div>
+    <p class="figcap"><strong>Fig. 3</strong> — Each dot is one operational repetition; the horizontal bar is the mean and the whisker is a replicate-bootstrap 95% interval. Kernel Builder reports percent fewer cycles; NK reports fitness percentage points above its frozen seed.</p>
+
+    <div class="result-table-wrap">
+      <table class="result-table">
+        <thead><tr><th>Task</th><th>Topology</th><th>Final gain, mean [95% interval]</th><th>Best-so-far AUC (gain units)</th><th>Latest diversity</th><th>n</th></tr></thead>
+        <tbody>
+          <tr><td>Kernel Builder</td><td>Global</td><td>41.1 [0.0, 68.3]</td><td>16.5</td><td>46.0%</td><td>3</td></tr>
+          <tr><td>Kernel Builder</td><td>Partition</td><td>31.4 [12.9, 63.7]</td><td>9.0</td><td>30.9%</td><td>3</td></tr>
+          <tr><td>Kernel Builder</td><td>Multi-island</td><td>49.7 [13.2, 68.0]</td><td>17.4</td><td>27.1%</td><td>3</td></tr>
+          <tr><td>Kernel Builder</td><td>Independent</td><td>31.6 [0.3, 81.7]</td><td>6.8</td><td>25.7%</td><td>3</td></tr>
+          <tr><td>Smooth NK (K=0)</td><td>Global</td><td>8.5 [6.7, 10.3]</td><td>3.9</td><td>35.3%</td><td>3</td></tr>
+          <tr><td>Smooth NK (K=0)</td><td>Partition</td><td>12.6 [11.3, 14.4]</td><td>5.0</td><td>49.2%</td><td>3</td></tr>
+          <tr><td>Smooth NK (K=0)</td><td>Multi-island</td><td>5.8 [3.8, 9.3]</td><td>2.5</td><td>38.3%</td><td>3</td></tr>
+          <tr><td>Rugged NK (K=4)</td><td>Global</td><td>9.9 [7.4, 13.3]</td><td>5.2</td><td>26.7%</td><td>3</td></tr>
+          <tr><td>Rugged NK (K=4)</td><td>Partition</td><td>8.5 [5.9, 12.7]</td><td>4.6</td><td>48.1%</td><td>3</td></tr>
+          <tr><td>Rugged NK (K=4)</td><td>Multi-island</td><td>7.5 [6.6, 8.9]</td><td>3.8</td><td>44.4%</td><td>3</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      On Kernel Builder, multi-island is the strongest mean: +8.6 percentage points over global, +18.4 over partition, and +18.1 over independent search. Its best-so-far AUC tells the same story. But the intervals are wide with only three repetitions, and the latest-solution diversity is <em>lower</em> than global's (27.1% versus 46.0%). The benefit is therefore not “more diversity at the end”; it is a better allocation of a small, failure-prone search budget across partially independent lineages, followed by useful exchange.
+    </p>
+    <p>
+      The controlled NK landscapes are the useful warning. Partition wins on the smooth landscape, while multi-island is the weakest of the three topologies there. On the rugged landscape, multi-island is again slightly below global and partition in final gain, although its latest diversity is not lower. The topology × ruggedness interaction is only +0.3 percentage points (descriptive interval −4.3 to +4.5), so this matrix does <strong>not</strong> support a claim that migration becomes more valuable as the landscape gets rugged.
+    </p>
+
+    <div class="result-figure">
+      <img src="multi-island-diversity.svg" alt="Solution diversity after 16 real evaluations across the three tasks and topologies">
+    </div>
+    <p class="figcap"><strong>Fig. 4</strong> — Mean pairwise distance between each agent's latest evaluated solution after the 16-evaluation budget. Diversity is a diagnostic, not a proxy that can replace task performance.</p>
+
+    <h3>Migration and failure accounting</h3>
+    <div class="result-table-wrap">
+      <table class="result-table">
+        <thead><tr><th>Multi-island cell</th><th>Cells</th><th>Real attempts</th><th>Numeric / null</th><th>Migration notes</th><th>Observed ticks</th></tr></thead>
+        <tbody>
+          <tr><td>Kernel Builder</td><td>3</td><td>48</td><td>21 / 27</td><td>6</td><td>12, 12</td></tr>
+          <tr><td>Smooth NK (K=0)</td><td>3</td><td>48</td><td>48 / 0</td><td>12</td><td>6, 6, 12, 12</td></tr>
+          <tr><td>Rugged NK (K=4)</td><td>3</td><td>48</td><td>48 / 0</td><td>12</td><td>6, 6, 12, 12</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      “Null” is not silently dropped: Kernel Builder's 27 null scores in the multi-island cell are candidate crashes or incorrect kernels that consumed real budget. The corresponding null counts are 33/48 for global, 29/48 for partition, and 29/48 for independent; all NK cells returned numeric scores. Every non-migrating control recorded zero migration notes. One independent Kernel attempt called <code>--tune</code>; the disabled-tune gate rejected it with no score and no budget advance, so the audit records one tune event but zero protocol violations.
+    </p>
+
+    <div class="result-figure">
+      <img src="multi-island-ruggedness.svg" alt="Topology by landscape ruggedness interaction plot for smooth and rugged NK landscapes">
+    </div>
+    <p class="figcap"><strong>Fig. 5</strong> — The interaction plot makes the negative result visible: the lines do not separate reliably between smooth and rugged landscapes.</p>
+    <div class="callout">
+      <div class="c-lab">What this experiment establishes</div>
+      This is evidence for a conditional design rule, not a universal leaderboard claim. Multi-island plus migration helped the real Kernel Builder search under this budget and model, while isolation without migration and the two NK controls show that the effect is task-dependent. The fixed matrix has 30 valid cells and 480 finalized real evaluations; intervals are descriptive bootstrap summaries over three repetitions, not powered significance tests. Download the <a href="multi-island-summary.csv">summary</a>, <a href="multi-island-contrasts.csv">contrasts</a>, <a href="multi-island-results.csv">run-level table</a>, and the <a href="multi-island-performance.svg">performance</a>, <a href="multi-island-diversity.svg">diversity</a>, and <a href="multi-island-ruggedness.svg">interaction</a> figures.
+    </div>
+
+    <!-- MULTI_ISLAND_RESULTS -->
+
     <p>
       That design choice took us a few iterations to get right, and it raises the question the next institution answers: if knowledge belongs to the island rather than the agent, <em>what exactly is a unit of knowledge?</em>
     </p>
@@ -649,7 +731,7 @@
         </g>
       </svg>
     </div>
-    <p class="figcap"><strong>Fig. 3</strong> — The archive as a graph. Typed frontmatter links (<code>supersedes</code>, <code>refutes</code>) and ordinary body links become edges; the dashboard's Knowledge tab renders it live, with nodes sized by confidence and colored by claim status.</p>
+    <p class="figcap"><strong>Fig. 6</strong> — The archive as a graph. Typed frontmatter links (<code>supersedes</code>, <code>refutes</code>) and ordinary body links become edges; the dashboard's Knowledge tab renders it live, with nodes sized by confidence and colored by claim status.</p>
 
     <p>Three things fall out of this:</p>
     <ul>
@@ -750,7 +832,7 @@
         <text class="a-fade t-it" style="animation-delay:4.0s" x="646" y="134" text-anchor="middle">by construction</text>
       </svg>
     </div>
-    <p class="figcap"><strong>Fig. 4</strong> — The sandbox boundary. Reads inside the agent's slice of the run succeed; reads of <code>.coral/private/</code>, host secrets, and other runs are blocked by the OS — Seatbelt on macOS, bubblewrap on Linux — identically for every runtime.</p>
+    <p class="figcap"><strong>Fig. 7</strong> — The sandbox boundary. Reads inside the agent's slice of the run succeed; reads of <code>.coral/private/</code>, host secrets, and other runs are blocked by the OS — Seatbelt on macOS, bubblewrap on Linux — identically for every runtime.</p>
 
     <ul>
       <li><strong>Reads are allow-listed:</strong> the agent's own worktree (and same-island siblings'), the run repo, shared <code>.coral/</code> state minus <code>private/</code>, the surfaced grader source, and toolchain dotdirs.</li>

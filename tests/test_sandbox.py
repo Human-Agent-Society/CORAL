@@ -24,6 +24,7 @@ from coral.sandbox.srt import (
     AllowAllProxy,
     SrtSandbox,
     _cli_pythonpath_shim,
+    _prepare_srt_mountpoints,
     _tls_cert_env,
     build_srt_settings,
     ensure_sandbox_supported,
@@ -165,14 +166,22 @@ def test_build_settings_reads_confined_to_run(tmp_path):
     # Home is denied wholesale; the run slice + toolchain dotdirs come back.
     assert str(Path.home()) in fs["denyRead"]
     assert private in fs["denyRead"]
+    assert "/tmp/claude" in fs["denyRead"]
+    assert "/tmp/claude/claude" in fs["denyRead"]
     allow_read = fs["allowRead"]
-    # The agents/ parent grants every worktree — reading siblings' trees is
-    # part of the shared-knowledge design; writes stay own-worktree-only.
-    assert str((tmp_path / "agents").resolve()) in allow_read
-    assert str((tmp_path / "repo").resolve()) in allow_read
+    # Worktree/repo grants stay exact so an ancestor read bind cannot mask a
+    # narrower write bind when the enclosing results root is denied.
+    assert str((tmp_path / "agents" / "agent-1").resolve()) in allow_read
+    assert str((tmp_path / "agents").resolve()) not in allow_read
+    assert str((tmp_path / "repo" / ".git").resolve()) in allow_read
+    assert str((tmp_path / "repo").resolve()) not in allow_read
     assert str((tmp_path / ".coral" / "public").resolve()) in allow_read
     assert str(Path.home() / ".claude") in allow_read
     assert str(Path.home() / ".claude.json") in allow_read
+    assert str(Path.home() / ".cache" / "claude") in allow_read
+    assert str(Path.home() / ".local" / "share" / "claude") in allow_read
+    assert str(Path.home() / ".cache") not in allow_read
+    assert str(Path.home() / ".local") not in allow_read
     # Nothing allowed back may be an ancestor of private/ — srt read rules
     # are allow-beats-deny, so an ancestor grant would resurrect it.
     for path in allow_read:
@@ -189,6 +198,8 @@ def test_build_settings_writes(tmp_path):
     assert str((tmp_path / "agents" / "agent-1").resolve()) in fs["allowWrite"]
     assert str((tmp_path / ".coral").resolve()) in fs["allowWrite"]
     assert str((tmp_path / "repo" / ".git").resolve()) in fs["allowWrite"]
+    assert "/tmp" not in fs["allowWrite"]
+    assert "/private/tmp" not in fs["allowWrite"]
     # Home is NOT writable wholesale — only the toolchain dotdirs.
     assert str(Path.home()) not in fs["allowWrite"]
     assert str(Path.home() / ".claude") in fs["allowWrite"]
@@ -221,8 +232,12 @@ def test_build_settings_coral_install_readable(tmp_path):
 
     settings = build_srt_settings(SandboxConfig(enabled=True), proxy_port=1, **_paths(tmp_path))
     allow_read = settings["filesystem"]["allowRead"]
-    assert str(Path(sys.prefix).resolve()) in allow_read
+    prefix = Path(sys.prefix).resolve()
+    executable = Path(sys.executable).resolve()
+    assert str(prefix) in allow_read
     assert str(Path(coral_pkg.__file__).resolve().parent) in allow_read
+    if not executable.is_relative_to(prefix):
+        assert str(executable.parent.parent.parent) in allow_read
 
 
 def test_build_settings_multi_island_roster(tmp_path):
@@ -373,6 +388,48 @@ def test_srt_command_prefix_ends_with_separator():
     assert prefix == ["npx", "--no-install", "srt", "--settings", "/x.json", "--"]
 
 
+def test_prepare_srt_mountpoints_creates_and_excludes_placeholders(tmp_path, monkeypatch):
+    monkeypatch.setattr("coral.sandbox.srt.sys.platform", "linux")
+    paths = _paths(tmp_path)
+    worktree = paths["worktree_path"]
+    repo = paths["repo_dir"]
+
+    _prepare_srt_mountpoints(worktree, repo, shared_dir_name=".opencode")
+
+    for filename in (
+        ".gitconfig",
+        ".gitmodules",
+        ".bashrc",
+        ".bash_profile",
+        ".zshrc",
+        ".zprofile",
+        ".profile",
+        ".ripgreprc",
+        ".mcp.json",
+    ):
+        assert (worktree / filename).is_file()
+        assert f"/{filename}" in (repo / ".git" / "info" / "exclude").read_text().splitlines()
+    for dirname in (".vscode", ".idea", ".claude/commands", ".claude/agents"):
+        assert (worktree / dirname).is_dir()
+
+
+def test_prepare_srt_mountpoints_preserves_existing_files(tmp_path, monkeypatch):
+    monkeypatch.setattr("coral.sandbox.srt.sys.platform", "linux")
+    paths = _paths(tmp_path)
+    worktree = paths["worktree_path"]
+    existing = worktree / ".gitmodules"
+    existing.write_text("real submodule config\n")
+
+    _prepare_srt_mountpoints(worktree, paths["repo_dir"], shared_dir_name=".claude")
+
+    assert existing.read_text() == "real submodule config\n"
+    assert (
+        "/.gitmodules"
+        not in (paths["repo_dir"] / ".git" / "info" / "exclude").read_text().splitlines()
+    )
+    assert not (worktree / ".claude" / "commands").exists()
+
+
 # ---------------------------------------------------------------------------
 # SrtSandbox provider lifecycle
 # ---------------------------------------------------------------------------
@@ -401,11 +458,18 @@ def test_srt_provider_open_mode_lifecycle(tmp_path):
         assert json.loads(settings_path.read_text())["network"]["httpProxyPort"] == port
         assert spec.command_prefix == ["srt", "--settings", str(settings_path), "--"]
         # srt injects proxy env into its child itself; the spec's own env
-        # carries at most the editable-install PYTHONPATH shim (present when
+        # carries the per-agent temp directory, plus at most the editable-
+        # install PYTHONPATH shim (present when
         # this test runs from a dev checkout, absent for normal installs)
         # and the SSL_CERT_FILE override for rustls clients (present when
         # the host has a PEM bundle at a known path).
-        assert set(spec.env) <= {"PYTHONPATH", "SSL_CERT_FILE"}
+        assert set(spec.env) <= {"CLAUDE_CODE_TMPDIR", "PYTHONPATH", "SSL_CERT_FILE"}
+        agent_tmpdir = paths["worktree_path"] / ".coral-tmp"
+        assert spec.env["CLAUDE_CODE_TMPDIR"] == str(agent_tmpdir.resolve())
+        assert agent_tmpdir.is_dir()
+        assert "/.coral-tmp/" in (
+            paths["repo_dir"] / ".git" / "info" / "exclude"
+        ).read_text().splitlines()
     finally:
         provider.stop()
     assert provider._proxy is None

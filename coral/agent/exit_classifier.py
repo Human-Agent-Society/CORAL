@@ -62,15 +62,23 @@ def claude_code_has_result(log_path: Path) -> bool:
     return False
 
 
-def claude_code_log_has_session_error(log_path: Path) -> bool:
-    """Return True iff the log indicates a Claude Code session-not-found error.
+def log_has_unrecoverable_session_error(log_path: Path) -> bool:
+    """Return True when resuming the logged session would deterministically fail.
 
-    This happens when resuming on a different machine where the Claude Code
-    session does not exist locally. Lives next to `claude_code_has_result` so
-    the runtime classifier does not have to reach back into `manager.py`.
+    Claude Code can lose a session after moving machines. OpenCode can retain
+    a malformed history containing an empty assistant message; its provider
+    rejects every subsequent continuation with the same HTTP 400. Both cases
+    require a fresh session while preserving the existing worktree.
     """
     try:
         content = log_path.read_text()
-        return "No conversation found" in content
+        return "No conversation found" in content or (
+            "Assistant message content at index" in content and "cannot be empty" in content
+        )
     except (OSError, UnicodeDecodeError):
         return False
+
+
+def claude_code_log_has_session_error(log_path: Path) -> bool:
+    """Backward-compatible alias for the shared unrecoverable-session check."""
+    return log_has_unrecoverable_session_error(log_path)

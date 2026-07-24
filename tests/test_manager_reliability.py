@@ -21,6 +21,7 @@ from coral.agent.builtin.opencode import OpenCodeRuntime
 from coral.agent.exit_classifier import (
     classify_by_uptime,
     claude_code_has_result,
+    log_has_unrecoverable_session_error,
 )
 from coral.agent.state import (
     AGENT_STATE_SCHEMA_VERSION,
@@ -85,6 +86,12 @@ def test_claude_code_has_result_returns_false_when_marker_absent(tmp_path: Path)
 
 def test_claude_code_has_result_returns_false_when_file_missing(tmp_path: Path) -> None:
     assert claude_code_has_result(tmp_path / "missing.log") is False
+
+
+def test_unrecoverable_session_error_detects_opencode_empty_history(tmp_path: Path) -> None:
+    log = tmp_path / "agent.log"
+    log.write_text("The request is invalid: Assistant message content at index 33 cannot be empty.")
+    assert log_has_unrecoverable_session_error(log) is True
 
 
 # ---------------------------------------------------------------------------
