@@ -25,6 +25,9 @@ When spawned, you will receive context about the task and what needs researching
 Before searching, understand what's already known:
 
 ```bash
+# Read the coverage ledger first — it's the map of what's been researched
+cat .claude/notes/research/_coverage.md 2>/dev/null
+
 # Check existing research
 ls .claude/notes/research/ 2>/dev/null
 cat .claude/notes/index.md 2>/dev/null
@@ -34,7 +37,7 @@ coral log -n 10 2>/dev/null
 coral notes --search "technique" 2>/dev/null
 ```
 
-Identify what's missing: known approaches nobody has tried, unexplored domains, well-studied problem classes with no literature review.
+Identify what's missing: known approaches nobody has tried, unexplored domains, well-studied problem classes with no literature review. If `_coverage.md` doesn't exist yet, create it — decompose the task into 4–8 research dimensions and mark them all `missing`. If it does, **target the rows still `missing` or `partial`** rather than re-covering what's already `covered`.
 
 ### 2. Search — Cast a Wide Net, Then Focus
 
@@ -61,16 +64,16 @@ For every useful source, save the raw content to `.claude/notes/raw/`:
 ```bash
 cat > .claude/notes/raw/source-name.md << 'EOF'
 ---
-url: <source URL>
-fetched: <timestamp>
-type: paper|article|repo|docs
+source_url: <source URL>
+source_type: paper|article|repo|docs
+captured: <ISO timestamp>
 ---
 
 <content>
 EOF
 ```
 
-Use `WebFetch` to get full page content. Raw sources are immutable — never edit after saving.
+Use `WebFetch` to get full page content. Raw sources are immutable — never edit after saving. The `source_url` / `source_type` / `captured` fields are required (the grounding check flags raw files missing them). **Retrieve first, then write:** never put a number or benchmark result into a research note that isn't backed by a file here.
 
 ### 4. Compare Approaches
 
@@ -117,9 +120,13 @@ EOF
 
 Keep notes specific and actionable. "X reduces Y by 30% when Z > 10 (see raw/paper-name.md)" is useful. "X might work" is not.
 
-### 6. Update Index
+### 6. Update Index, Coverage Ledger, and Check Grounding
 
-Add new entries to `.claude/notes/index.md` under the Research section.
+Add new entries to `.claude/notes/index.md` under the Research section. Then flip the rows you touched in `.claude/notes/research/_coverage.md` to `partial`/`covered` (link the note, stamp the eval), and run the grounding check, fixing anything it flags:
+
+```bash
+python .claude/skills/deep-research/scripts/check_grounding.py .claude/notes
+```
 
 ### 7. Return Recommendations
 
