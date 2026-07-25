@@ -18,6 +18,18 @@ def test_v6_construct_registration_binds_blind_sources() -> None:
         assert observed == expected
 
 
+def test_v6_registered_construct_artifact_audits_and_passes() -> None:
+    from experiments.multi_island_hard import diagnose_threshold_v6_construct as diagnostic
+
+    artifact = json.loads(
+        (ROOT / "experiments/multi_island_hard/threshold_v6_construct_diagnostics.json").read_text()
+    )
+    assert artifact["fully_registered_run"] is True
+    assert diagnostic.audit(artifact, require_registered=True) == []
+    assert len(artifact["rugged_landscapes"]) == 24 * 5
+    assert artifact["construct_gates"]["construct_validity_passes"] is True
+
+
 def test_v6_construct_reduced_run_is_deterministic_and_audits() -> None:
     from experiments.multi_island_hard import diagnose_threshold_v6_construct as diagnostic
 
