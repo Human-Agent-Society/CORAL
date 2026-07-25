@@ -50,6 +50,12 @@ def test_v6_reduced_phase_map_audits_and_analyzes() -> None:
     assert result["audit_passes"] is True
     assert result["rugged_decision"]["tested_cells"] == 1
     assert result["smooth_decision"]["tested_cells"] == 1
+    rugged = result["rugged_phase_map"][0]
+    assert set(rugged["performance"]) == set(runner.CONDITIONS)
+    assert all(
+        "mean_gain_over_random_z" in values
+        for values in rugged["performance"].values()
+    )
 
     missing = copy.deepcopy(payload)
     missing["rows"].pop()

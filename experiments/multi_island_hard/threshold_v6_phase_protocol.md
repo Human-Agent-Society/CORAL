@@ -47,6 +47,9 @@ both contrasts. The analysis reports the full pass/fail surface and the first
 passing budget within each K; it does not assume that benefit is monotone in K.
 All confirmatory percentile bounds use 100,000 deterministic paired-bootstrap
 draws so the most stringent registered tail contains approximately 100 draws.
+Each cell also reports every topology's mean final score and gain over its own
+NK random reference. These are difficulty/search-progress diagnostics and do
+not alter the registered pass rule.
 
 For each Smooth `(N, B)` cell, the analysis reports exact-solution counts,
 prefix progress, and `global-multi` prefix differences. Its one-sided bounds

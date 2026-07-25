@@ -189,6 +189,28 @@ def summarize_rugged(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], dic
         for budget in budgets:
             contrasts: dict[str, Any] = {}
             gate_values: list[bool] = []
+            performance: dict[str, Any] = {}
+            for condition in runner.CONDITIONS:
+                scores = []
+                gains = []
+                for block in blocks:
+                    score = float(
+                        indexed[(k, budget, block)]["conditions"][condition]["best_score"]
+                    )
+                    reference = next(
+                        row
+                        for row in payload["rugged_random_references"]
+                        if int(row["k"]) == k and int(row["block"]) == block
+                    )
+                    scores.append(score)
+                    gains.append(
+                        (score - float(reference["random_mean"]))
+                        / float(reference["random_sd"])
+                    )
+                performance[condition] = {
+                    "mean_final_best_score": statistics.fmean(scores),
+                    "mean_gain_over_random_z": statistics.fmean(gains),
+                }
             for control, floor in (
                 ("global_8", MULTI_GLOBAL_FLOOR_Z),
                 ("partition_4", MULTI_PARTITION_FLOOR_Z),
@@ -224,7 +246,13 @@ def summarize_rugged(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], dic
                     "passes": passed,
                 }
             passes = all(gate_values)
-            row = {"k": k, "budget": budget, "contrasts": contrasts, "passes": passes}
+            row = {
+                "k": k,
+                "budget": budget,
+                "performance": performance,
+                "contrasts": contrasts,
+                "passes": passes,
+            }
             rows.append(row)
             if passes:
                 passing.append({"k": k, "budget": budget})
