@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent
 DEFAULT_INPUT = runner.DEFAULT_OUTPUT
 DEFAULT_OUTPUT = ROOT / "threshold_v6_phase_map_analysis.json"
 FAMILYWISE_ALPHA = 0.05
-BOOTSTRAP_REPETITIONS = 20_000
+BOOTSTRAP_REPETITIONS = 100_000
 MULTI_GLOBAL_FLOOR_Z = 0.25
 MULTI_PARTITION_FLOOR_Z = 0.10
 
@@ -70,6 +70,18 @@ def audit(payload: dict[str, Any], *, require_registered: bool) -> list[str]:
         errors.append("unexpected schema version")
     if require_registered and not payload.get("fully_registered_run"):
         errors.append("phase map is not the fully registered run")
+    try:
+        configuration_is_registered = runner.registered_configuration(
+            smooth_sizes=tuple(map(int, payload["smooth_sizes"])),
+            rugged_ks=tuple(map(int, payload["rugged_k_values"])),
+            budgets=tuple(map(int, payload["budgets"])),
+            blocks=int(payload["blocks"]),
+            reference_samples=int(payload["reference_samples_per_rugged_block"]),
+        )
+    except (KeyError, TypeError, ValueError):
+        configuration_is_registered = False
+    if require_registered and not configuration_is_registered:
+        errors.append("registered phase-map grid or replication count drifted")
     if payload.get("conditions") != list(runner.CONDITIONS):
         errors.append("topology conditions drifted")
     if payload.get("mutation_policy") != runner.MUTATION_POLICY:
@@ -79,6 +91,14 @@ def audit(payload: dict[str, Any], *, require_registered: bool) -> list[str]:
     expected = expected_keys(payload)
     observed: set[tuple[str, int, int, int]] = set()
     seed_by_block: dict[int, str] = {}
+    expected_seed_by_block = {
+        block: runner.seed_sha256(runner.phase_seed(block))
+        for block in range(int(payload["blocks"]))
+    }
+    expected_policy_by_block = {
+        block: hashlib.sha256(str(runner.phase_policy_seed(block)).encode()).hexdigest()
+        for block in range(int(payload["blocks"]))
+    }
     for row in payload.get("rows", []):
         family = str(row.get("family"))
         difficulty = int(row.get("n") if family == "smooth" else row.get("k"))
@@ -88,6 +108,10 @@ def audit(payload: dict[str, Any], *, require_registered: bool) -> list[str]:
         observed.add(key)
         block = int(row.get("block"))
         seed_hash = str(row.get("seed_sha256"))
+        if seed_hash != expected_seed_by_block.get(block):
+            errors.append(f"unexpected held-out seed hash in block {block}")
+        if row.get("policy_seed_sha256") != expected_policy_by_block.get(block):
+            errors.append(f"unexpected policy seed hash in block {block}")
         if block in seed_by_block and seed_by_block[block] != seed_hash:
             errors.append(f"seed drift within block {block}")
         seed_by_block[block] = seed_hash

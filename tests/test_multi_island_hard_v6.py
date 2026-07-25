@@ -56,6 +56,11 @@ def test_v6_reduced_phase_map_audits_and_analyzes() -> None:
     with pytest.raises(ValueError, match="missing 1 topology triplets"):
         analyzer.analyze(missing, require_registered=False)
 
+    wrong_seed = copy.deepcopy(payload)
+    wrong_seed["rows"][0]["seed_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="unexpected held-out seed hash"):
+        analyzer.analyze(wrong_seed, require_registered=False)
+
 
 def test_v6_registered_configuration_is_exact() -> None:
     from experiments.multi_island_hard import run_threshold_v6_phase_map as runner
@@ -74,6 +79,28 @@ def test_v6_registered_configuration_is_exact() -> None:
         blocks=runner.REGISTERED_BLOCKS,
         reference_samples=runner.REGISTERED_REFERENCE_SAMPLES,
     )
+
+
+def test_v6_registered_audit_recomputes_the_grid() -> None:
+    from experiments.multi_island_hard import analyze_threshold_v6_phase_map as analyzer
+    from experiments.multi_island_hard import run_threshold_v6_phase_map as runner
+
+    payload = {
+        "schema_version": 1,
+        "fully_registered_run": True,
+        "conditions": list(runner.CONDITIONS),
+        "mutation_policy": runner.MUTATION_POLICY,
+        "prior_seed_overlap": False,
+        "smooth_sizes": [32],
+        "rugged_k_values": [2],
+        "budgets": [32],
+        "blocks": 2,
+        "reference_samples_per_rugged_block": 16,
+        "rows": [],
+        "rugged_random_references": [],
+    }
+    errors = analyzer.audit(payload, require_registered=True)
+    assert "registered phase-map grid or replication count drifted" in errors
 
 
 def test_v6_multiplicity_bound_is_at_least_as_strict_as_descriptive() -> None:
