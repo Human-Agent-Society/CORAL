@@ -66,6 +66,30 @@ from +0.064 SD at 2,048 (interval includes zero) to +0.547 SD at 4,096
 (0.312–0.770) and +0.613 at 8,192 (0.404–0.820). Thus the anchor is a
 high-diffusion phase transition, not a generic effect of making NK larger.
 
+## Out-of-selection falsification
+
+The selected anchor is not treated as self-validating. A separate audit uses
+eight newly generated landscapes, eight paired stochastic policies per
+landscape, and a cluster bootstrap whose unit of inference is the landscape
+seed. `threshold_v3_robustness.json` records two failures of a broad reading:
+
+* `multi_island_4-global_8` remains positive for one-bit local search
+  (+0.452 random SD, cluster interval 0.322–0.598), the registered 1/2/4 mix
+  (+0.254, 0.090–0.402), and a broader local mix (+0.249, 0.082–0.427), but
+  reverses for fixed four-bit mutation (−0.266, −0.426–−0.113). The boundary
+  is therefore operator-conditional.
+* Elite, fixed-identity, and worst-resident migration all have small positive
+  means versus permanent four-way partition, but every cluster interval
+  includes zero. Elite selection is not better than the two non-elite
+  controls. The fresh landscapes support an island-boundary effect relative
+  to global champion imitation; they do not yet identify a migration benefit
+  or a benefit from selecting the strongest migrant.
+
+Consequently the K=32/B=4,096 cell remains a mechanism probe, not sufficient
+evidence for the blog's migration claim. A real escalation must report the
+realized mutation operator and must add a matched non-elite/sham migration
+control before attributing any score difference to selective migration.
+
 ## Natural and high-diffusion LLM conditions
 
 The natural protocol does not instruct agents to copy or preserve diversity.

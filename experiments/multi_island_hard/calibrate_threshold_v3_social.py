@@ -94,9 +94,31 @@ def make_individual(candidate: str, *, k: int, seed: str, lineage: str) -> Indiv
     return Individual(candidate, components, sum(components), lineage)
 
 
-def mutation_indices(rng: random.Random, n: int) -> tuple[int, ...]:
+MUTATION_POLICIES = (
+    "one_bit",
+    "registered_mixed",
+    "broader",
+    "four_bit",
+)
+MIGRATION_SELECTIONS = ("elite", "fixed_identity", "worst")
+
+
+def mutation_indices(
+    rng: random.Random,
+    n: int,
+    policy: str = "registered_mixed",
+) -> tuple[int, ...]:
     draw = rng.random()
-    count = 1 if draw < 0.90 else 2 if draw < 0.98 else 4
+    if policy == "one_bit":
+        count = 1
+    elif policy == "registered_mixed":
+        count = 1 if draw < 0.90 else 2 if draw < 0.98 else 4
+    elif policy == "broader":
+        count = 1 if draw < 0.70 else 2 if draw < 0.90 else 4 if draw < 0.98 else 8
+    elif policy == "four_bit":
+        count = 4
+    else:
+        raise ValueError(f"unknown mutation policy: {policy}")
     return tuple(sorted(rng.sample(range(n), count)))
 
 
@@ -106,8 +128,9 @@ def mutate(
     k: int,
     seed: str,
     rng: random.Random,
+    mutation_policy: str = "registered_mixed",
 ) -> Individual:
-    flips = mutation_indices(rng, len(parent.candidate))
+    flips = mutation_indices(rng, len(parent.candidate), mutation_policy)
     bits = list(parent.candidate)
     for index in flips:
         bits[index] = "1" if bits[index] == "0" else "0"
@@ -130,14 +153,22 @@ def visible(states: list[AgentState], island: int) -> list[AgentState]:
     return [state for state in states if state.island == island]
 
 
-def rotate_champions(states: list[AgentState], island_count: int) -> None:
-    champions = [
-        max(
-            visible(states, island),
-            key=lambda state: (state.incumbent.score, state.agent_id),
-        )
-        for island in range(island_count)
-    ]
+def rotate_champions(
+    states: list[AgentState],
+    island_count: int,
+    selection: str = "elite",
+) -> None:
+    def selected(island: int) -> AgentState:
+        pool = visible(states, island)
+        if selection == "elite":
+            return max(pool, key=lambda state: (state.incumbent.score, state.agent_id))
+        if selection == "worst":
+            return min(pool, key=lambda state: (state.incumbent.score, state.agent_id))
+        if selection == "fixed_identity":
+            return min(pool, key=lambda state: state.agent_id)
+        raise ValueError(f"unknown migration selection: {selection}")
+
+    champions = [selected(island) for island in range(island_count)]
     destinations = {
         champion.agent_id: (source + 1) % island_count for source, champion in enumerate(champions)
     }
@@ -166,6 +197,8 @@ def simulate(
     budget: int,
     imitation: float,
     policy_seed: int,
+    mutation_policy: str = "registered_mixed",
+    migration_selection: str = "elite",
 ) -> dict[str, Any]:
     if budget < len(BASE_AGENT_IDS) or budget % len(BASE_AGENT_IDS):
         raise ValueError("budget must be a multiple of the eight-agent roster")
@@ -204,7 +237,13 @@ def simulate(
         parent = champion.incumbent if imitate else state.incumbent
         if imitate:
             adoption_attempts += 1
-        child = mutate(parent, k=k, seed=seed, rng=rng)
+        child = mutate(
+            parent,
+            k=k,
+            seed=seed,
+            rng=rng,
+            mutation_policy=mutation_policy,
+        )
         evaluations += 1
         best_attempt = max(best_attempt, child.score)
         if child.score > state.incumbent.score:
@@ -212,7 +251,7 @@ def simulate(
                 accepted_adoptions += 1
             state.incumbent = child
         if evaluations in migration_boundaries and condition.startswith("multi_island_"):
-            rotate_champions(states, island_count)
+            rotate_champions(states, island_count, migration_selection)
             migrations += 1
         lineage_total += len({item.incumbent.lineage for item in states})
         lineage_observations += 1

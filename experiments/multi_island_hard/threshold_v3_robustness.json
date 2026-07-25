@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "purpose": "out-of-selection falsification of the K=32/B=4096 NK anchor",
+  "n": 256,
+  "k": 32,
+  "budget": 4096,
+  "imitation": 1.0,
+  "landscape_seed_sha256": [
+    "8e0a94d06b9901d6108ca930faf1067a08faeac1ee601a13022d667d0e8364f6",
+    "800ae42b687d222996ec85442c9405d84c6b2c4f13abff84d4ba3cafe52f6b6d",
+    "afc98c5284f1d6838e999a0a961816d14c26d8d7062b742b2b53572542bab510",
+    "5a41dee33ee93a16b9fe93f9700ba95a531ebf7e9435dbd2f38fee9a3a182fd6",
+    "90838a0491cfc7a8754f3685f33aa4f288d58ba70a58a6659d95a3e373b18930",
+    "01d18c3581ba61d36e048bf38f998abacf0dabceb9190566aa168c0baa3d84d0",
+    "b7605fa539532b123ec1a54c825f674f3fa62a6c6606fb6d807ed1b98cfb7bf3",
+    "0a7622ff34f92a242d06d22a47c41e6368ad158382ceca520e35863b756eaef0"
+  ],
+  "landscape_repetitions": 8,
+  "policy_repetitions_per_landscape": 8,
+  "inference_unit": "landscape seed; stochastic policy runs are averaged within seed",
+  "mutation_robustness": {
+    "one_bit": {
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 8,
+      "paired_runs": 64,
+      "mean_random_z_difference": 0.451929177730302,
+      "cluster_bootstrap_ci_low": 0.3222108634175032,
+      "cluster_bootstrap_ci_high": 0.5983453713689573,
+      "paired_win_rate": 0.765625,
+      "per_landscape_mean_random_z": [
+        0.41122616086829666,
+        0.3940906899859371,
+        0.22756828122373896,
+        0.6995318486450212,
+        0.8380935035582832,
+        0.47819234641310804,
+        0.34425536232839665,
+        0.22247522881963436
+      ]
+    },
+    "registered_mixed": {
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 8,
+      "paired_runs": 64,
+      "mean_random_z_difference": 0.25370189448092906,
+      "cluster_bootstrap_ci_low": 0.08970054606269987,
+      "cluster_bootstrap_ci_high": 0.40178133450518105,
+      "paired_win_rate": 0.609375,
+      "per_landscape_mean_random_z": [
+        0.5107314003911527,
+        0.39517382278432095,
+        0.23935929074746207,
+        0.43075556175325586,
+        0.44548285040444685,
+        -0.12177257165508902,
+        0.2152446732358782,
+        -0.0853598718139951
+      ]
+    },
+    "broader": {
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 8,
+      "paired_runs": 64,
+      "mean_random_z_difference": 0.2486244684183021,
+      "cluster_bootstrap_ci_low": 0.0817589723358223,
+      "cluster_bootstrap_ci_high": 0.4274704244353053,
+      "paired_win_rate": 0.609375,
+      "per_landscape_mean_random_z": [
+        0.7512333048144476,
+        0.3189611422970393,
+        0.284259927593916,
+        0.2560065256635575,
+        -0.18872509512181032,
+        0.036056666539832034,
+        0.2951252713178033,
+        0.23607800424163142
+      ]
+    },
+    "four_bit": {
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 8,
+      "paired_runs": 64,
+      "mean_random_z_difference": -0.2659107590705829,
+      "cluster_bootstrap_ci_low": -0.42637923849328985,
+      "cluster_bootstrap_ci_high": -0.11260082964497249,
+      "paired_win_rate": 0.3125,
+      "per_landscape_mean_random_z": [
+        -0.32195858675729466,
+        0.05824884788845698,
+        -0.23099519918649283,
+        -0.6753549617208583,
+        -0.3404382480608673,
+        -0.21606382546652297,
+        -0.4458804328287412,
+        0.04515633356765699
+      ]
+    }
+  },
+  "migration_selection_robustness": {
+    "elite": {
+      "multi_island_4_minus_global_8": {
+        "landscape_clusters": 8,
+        "policy_runs_per_landscape": 8,
+        "paired_runs": 64,
+        "mean_random_z_difference": 0.451929177730302,
+        "cluster_bootstrap_ci_low": 0.32157423186699013,
+        "cluster_bootstrap_ci_high": 0.5962476811933948,
+        "paired_win_rate": 0.765625,
+        "per_landscape_mean_random_z": [
+          0.41122616086829666,
+          0.3940906899859371,
+          0.22756828122373896,
+          0.6995318486450212,
+          0.8380935035582832,
+          0.47819234641310804,
+          0.34425536232839665,
+          0.22247522881963436
+        ]
+      },
+      "multi_island_4_minus_partition_4": {
+        "landscape_clusters": 8,
+        "policy_runs_per_landscape": 8,
+        "paired_runs": 64,
+        "mean_random_z_difference": 0.10186560609741456,
+        "cluster_bootstrap_ci_low": -0.016927032456486343,
+        "cluster_bootstrap_ci_high": 0.20625557890660967,
+        "paired_win_rate": 0.5625,
+        "per_landscape_mean_random_z": [
+          0.10631170253355018,
+          0.051166610719017916,
+          -0.08062995412812567,
+          -0.2097237378235254,
+          0.19032335010858226,
+          0.2704310928382954,
+          0.1915576379763153,
+          0.2954881465552065
+        ]
+      }
+    },
+    "fixed_identity": {
+      "multi_island_4_minus_global_8": {
+        "landscape_clusters": 8,
+        "policy_runs_per_landscape": 8,
+        "paired_runs": 64,
+        "mean_random_z_difference": 0.4703116365981236,
+        "cluster_bootstrap_ci_low": 0.27107895802542487,
+        "cluster_bootstrap_ci_high": 0.689825147918717,
+        "paired_win_rate": 0.734375,
+        "per_landscape_mean_random_z": [
+          0.34611186188148985,
+          0.3898059248337695,
+          0.13594645942260153,
+          0.8824660435878721,
+          0.9911463166452021,
+          0.5427288704187011,
+          0.3996569543358518,
+          0.07463066165950066
+        ]
+      },
+      "multi_island_4_minus_partition_4": {
+        "landscape_clusters": 8,
+        "policy_runs_per_landscape": 8,
+        "paired_runs": 64,
+        "mean_random_z_difference": 0.12024806496523614,
+        "cluster_bootstrap_ci_low": -0.0013097338669442104,
+        "cluster_bootstrap_ci_high": 0.23292877865848757,
+        "paired_win_rate": 0.59375,
+        "per_landscape_mean_random_z": [
+          0.04119740354674336,
+          0.04688184556685032,
+          -0.1722517759292631,
+          -0.026789542880674446,
+          0.3433761631955013,
+          0.3349676168438884,
+          0.24695922998377046,
+          0.1476435793950728
+        ]
+      }
+    },
+    "worst": {
+      "multi_island_4_minus_global_8": {
+        "landscape_clusters": 8,
+        "policy_runs_per_landscape": 8,
+        "paired_runs": 64,
+        "mean_random_z_difference": 0.4293477251416415,
+        "cluster_bootstrap_ci_low": 0.27791974716458756,
+        "cluster_bootstrap_ci_high": 0.5834752433778985,
+        "paired_win_rate": 0.71875,
+        "per_landscape_mean_random_z": [
+          0.4341138801006307,
+          0.36981342121451133,
+          0.37108278084902524,
+          0.7267473634331224,
+          0.8018643651773391,
+          0.3979173228145129,
+          0.2960025427473783,
+          0.03724012479661185
+        ]
+      },
+      "multi_island_4_minus_partition_4": {
+        "landscape_clusters": 8,
+        "policy_runs_per_landscape": 8,
+        "paired_runs": 64,
+        "mean_random_z_difference": 0.07928415350875405,
+        "cluster_bootstrap_ci_low": -0.004874786927323235,
+        "cluster_bootstrap_ci_high": 0.1428520777771477,
+        "paired_win_rate": 0.609375,
+        "per_landscape_mean_random_z": [
+          0.12919942176588423,
+          0.026889341947592193,
+          0.06288454549716062,
+          -0.18250822303542408,
+          0.15409421172763824,
+          0.19015606923970027,
+          0.1433048183952969,
+          0.11025304253218399
+        ]
+      }
+    }
+  },
+  "decision": {
+    "is_universal_over_tested_mutations": false,
+    "elite_selection_identified": false,
+    "required_interpretation": "An effect is conditional on the mutation operator. A positive elite-migration contrast alone identifies periodic mixing, not the value of selecting elites, unless it exceeds matched non-elite migration controls."
+  }
+}

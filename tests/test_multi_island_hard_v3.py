@@ -76,6 +76,43 @@ def test_social_calibration_activates_lineage_collapse_only_with_diffusion() -> 
     )
 
 
+def test_social_calibration_exposes_operator_and_migration_falsification_controls() -> None:
+    from experiments.multi_island_hard import calibrate_threshold_v3_social as calibration
+
+    common = {
+        "n": 64,
+        "k": 8,
+        "seed": "b" * 64,
+        "condition": "multi_island_4",
+        "budget": 256,
+        "imitation": 1.0,
+        "policy_seed": 11,
+    }
+    mutation_scores = {
+        policy: calibration.simulate(**common, mutation_policy=policy)["best_score"]
+        for policy in calibration.MUTATION_POLICIES
+    }
+    migration_scores = {
+        selection: calibration.simulate(**common, migration_selection=selection)["best_score"]
+        for selection in calibration.MIGRATION_SELECTIONS
+    }
+    assert set(mutation_scores) == set(calibration.MUTATION_POLICIES)
+    assert set(migration_scores) == set(calibration.MIGRATION_SELECTIONS)
+    assert len(set(mutation_scores.values())) > 1
+
+
+def test_v3_robustness_uses_landscapes_as_inference_unit() -> None:
+    from experiments.multi_island_hard.calibrate_threshold_v3_robustness import cluster_summary
+
+    values = {"landscape-a": [1.0, 3.0], "landscape-b": [-1.0, 1.0]}
+    result = cluster_summary(values, bootstrap_repetitions=200, bootstrap_seed=7)
+    assert result["landscape_clusters"] == 2
+    assert result["policy_runs_per_landscape"] == 2
+    assert result["paired_runs"] == 4
+    assert result["mean_random_z_difference"] == 1.0
+    assert result["per_landscape_mean_random_z"] == [2.0, 0.0]
+
+
 def test_v3_calibration_selects_first_stable_full_diffusion_boundary() -> None:
     data = json.loads((EXPERIMENT / "threshold_v3_social_calibration.json").read_text())
     decision = data["decision"]
@@ -112,6 +149,22 @@ def test_v3_phase_map_falsifies_universal_island_advantage() -> None:
     anchor = next(row for row in rugged if row["imitation"] == 1.0 and row["budget"] == 4096)
     assert anchor["phase_gate_passes"] is True
     assert anchor["random_z_ci_low"] > 0
+
+
+def test_v3_out_of_selection_audit_rejects_universal_and_elite_claims() -> None:
+    data = json.loads((EXPERIMENT / "threshold_v3_robustness.json").read_text())
+    assert data["inference_unit"].startswith("landscape seed")
+    assert data["decision"]["is_universal_over_tested_mutations"] is False
+    assert data["decision"]["elite_selection_identified"] is False
+    assert data["mutation_robustness"]["one_bit"]["cluster_bootstrap_ci_low"] > 0
+    assert data["mutation_robustness"]["four_bit"]["cluster_bootstrap_ci_high"] < 0
+    for selection in ("elite", "fixed_identity", "worst"):
+        contrast = data["migration_selection_robustness"][selection][
+            "multi_island_4_minus_partition_4"
+        ]
+        assert contrast["cluster_bootstrap_ci_low"] <= 0 <= contrast[
+            "cluster_bootstrap_ci_high"
+        ]
 
 
 def test_v3_diagnostics_verify_unique_smooth_optimum_and_many_rugged_basins() -> None:

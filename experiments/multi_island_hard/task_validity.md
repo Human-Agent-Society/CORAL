@@ -41,3 +41,14 @@ migrant can carry a tested building block and its provenance. A budget-scaling
 ablation (for example, 24/64/128 queries), at least 8 independent seeds per
 cell, and a no-migration control with the same island boundary would separate
 feedback starvation, landscape ruggedness, and the actual value of migration.
+
+The N=256 phase study fixes dimension, budget scaling, and seed replication,
+but its out-of-selection robustness audit finds a different limitation. At
+K=32/B=4,096 under full champion imitation, four islands beat one global pool
+for several local mutation mixes, while fixed four-bit mutation reverses the
+effect. The same fresh landscapes do not distinguish elite migration from
+fixed-identity or worst-resident movement, and no tested migration rule has a
+cluster-interval lower bound above zero relative to permanent partition. Thus
+this pair diagnoses an operator-conditional boundary-preservation mechanism.
+It cannot by itself establish that CORAL's elite migration rule adds value,
+and it remains too synthetic to establish semantic institution-building.
