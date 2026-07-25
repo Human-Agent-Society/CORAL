@@ -1,0 +1,56 @@
+task:
+  name: "Certified Modular Landscape v8 — Smooth 32x32"
+  description: |
+    A 32-module separable Hamming search with active-module-only feedback and
+    portable exact-evaluation certificates. Search is smooth; composition is
+    measured only on a certificate-backed artifact actually submitted during
+    the run.
+  tips: |
+    A module needs at most 34 coordinate/provenance evaluations. Use assigned
+    lanes, preserve exact bits and certificates, and consolidate locally
+    visible certificates before submitting. Tune is disabled.
+
+grader:
+  entrypoint: "hard_active_modular_landscape_v8_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  private:
+    - "taskdata/hard_v8_seed_bundle.json"
+  args:
+    program_file: "candidate.py"
+    seed_bundle_file: "hard_v8_seed_bundle.json"
+    seed_index: 0
+    mode: "smooth"
+  direction: maximize
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../hard_v8_eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: allowlist
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 1536
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 128
+    rank_window: 128
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 128

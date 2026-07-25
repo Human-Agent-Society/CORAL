@@ -56,3 +56,22 @@ manager observes the stop threshold. Any cell whose finalized real count is
 not exactly 24 is invalid for the ladder. The interrupted July 24 collection
 was not used as a result set for this reason (one cell reached 25 real
 attempts).
+
+## Replicated threshold v2
+
+The original ladder remains a one-seed stress test. The held-out replacement
+uses `smooth128_rep_v2` and `rugged128_k12_rep_v2`, eight paired confirmation
+seeds that are disjoint from task-calibration seeds, eight agents, equal
+per-agent quotas, closed networking, and budgets
+128/256/512/1,024/2,048/4,096. It compares global search with two and four
+islands plus a matched four-way no-migration partition. Verified component
+transfer is tested separately by the modular v8 package.
+
+Run `calibrate_threshold_v2_topologies.py` for the conventional-GA
+falsification check and `calibrate_threshold_v2_takeover.py` for the narrower
+champion-takeover sensitivity check. `diagnose_threshold_v2.py` reproduces the
+held-out per-seed references, `run_threshold_v2.py --budget <registered
+budget>` collects one isolated budget slice, and `analyze_threshold_v2.py`
+computes paired-seed contrasts. See `threshold_v2_design.md` and
+`threshold_v2_protocol.md` for the registered decision rule and participant
+instructions.

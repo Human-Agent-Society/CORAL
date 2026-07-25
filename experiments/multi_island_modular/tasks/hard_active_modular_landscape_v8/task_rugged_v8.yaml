@@ -1,0 +1,57 @@
+task:
+  name: "Certified Modular Landscape v8 — Rugged 32x(4x8)"
+  description: |
+    A 32-module block-rugged search. Each 32-bit module contains four public
+    8-bit groups with private random fitness tables, a unique exact value, and
+    a strong deceptive decoy. Active-module feedback is scalar. Exact active
+    evaluations issue portable certificates for submitted-artifact assembly.
+  tips: |
+    Exhaustively holding three groups fixed while enumerating all 256 values
+    of the fourth costs at most 1025 evaluations per exact module. Preserve
+    exact bits and certificates and merge locally visible certified modules.
+    Tune is disabled.
+
+grader:
+  entrypoint: "hard_active_modular_landscape_v8_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  private:
+    - "taskdata/hard_v8_seed_bundle.json"
+  args:
+    program_file: "candidate.py"
+    seed_bundle_file: "hard_v8_seed_bundle.json"
+    seed_index: 0
+    mode: "rugged"
+  direction: maximize
+
+agents:
+  count: 4
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  runtime_options:
+    role_file: "../../hard_v8_eval_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: allowlist
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 40960
+
+islands:
+  count: 2
+  migration:
+    enabled: true
+    every: 2048
+    rank_window: 2048
+    min_evals: 1
+    max_per_cycle: 2
+    remigration_cooldown: 2048

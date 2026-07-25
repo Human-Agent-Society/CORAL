@@ -59,6 +59,25 @@ def nk_fitness(candidate: str, *, k: int, seed: str) -> float:
     return sum(contributions) / n
 
 
+def load_landscape(path: Path, seed_index: int) -> tuple[int, int, str, bool]:
+    landscape = json.loads(path.read_text())
+    n = int(landscape["n"])
+    k = int(landscape["k"])
+    replicated = landscape.get("schema_version") == 2
+    if landscape.get("schema_version") == 1:
+        seed = str(landscape["seed"])
+    elif landscape.get("schema_version") == 2:
+        seeds = landscape.get("seeds")
+        if not isinstance(seeds, list) or not 0 <= seed_index < len(seeds):
+            raise ValueError(f"seed_index must be in [0, {len(seeds or [])})")
+        seed = str(seeds[seed_index])
+    else:
+        raise ValueError("invalid landscape schema")
+    if n < 1 or not 0 <= k < n or len(seed) < 64:
+        raise ValueError("invalid landscape configuration")
+    return n, k, seed, replicated
+
+
 class Grader(TaskGrader):
     def evaluate(self) -> ScoreBundle:
         if self.tune:
@@ -75,14 +94,15 @@ class Grader(TaskGrader):
         if not landscape_path.is_file():
             return self.fail(f"Private landscape not found: {landscape_file}")
         try:
-            landscape = json.loads(landscape_path.read_text())
-            n = int(landscape["n"])
-            k = int(landscape["k"])
-            seed = str(landscape["seed"])
-            if landscape.get("schema_version") != 1 or n < 1 or not 0 <= k < n:
-                raise ValueError("invalid landscape configuration")
+            seed_index = int(self.args.get("seed_index", 0))
+            n, k, seed, replicated = load_landscape(landscape_path, seed_index)
+        except (KeyError, TypeError, ValueError, OSError, json.JSONDecodeError) as exc:
+            return self.fail(f"Invalid grader configuration: {exc}")
+        try:
             candidate = parse_candidate(program_path, n)
             fitness = nk_fitness(candidate, k=k, seed=seed)
-        except (KeyError, TypeError, ValueError, SyntaxError, OSError, json.JSONDecodeError) as exc:
+        except (TypeError, ValueError, SyntaxError, OSError) as exc:
+            if replicated:
+                return self.score(0.0, f"Invalid candidate: {exc}")
             return self.fail(f"Invalid candidate: {exc}")
         return self.score(fitness, f"Fitness: {fitness:.8f}")

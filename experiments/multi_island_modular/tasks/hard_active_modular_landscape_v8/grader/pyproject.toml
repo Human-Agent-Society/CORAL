@@ -1,0 +1,9 @@
+[project]
+name = "hard-active-modular-landscape-v8-grader"
+version = "0.1.0"
+description = "Certified-composition modular landscape grader for the v8 multi-island threshold study."
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hard_active_modular_landscape_v8_grader"]

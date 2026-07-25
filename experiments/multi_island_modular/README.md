@@ -1,10 +1,12 @@
 # Modular multi-island follow-up
 
-Status: the modular-v1 through v6 runs are design or operational audits, not
-topology evidence. v6 exposed an inactive exact-module count and its first
-fixed-budget pilot remained throughput-imbalanced. The oracle-free v7 package
-below is the current candidate for a higher-difficulty threshold study; it has
-not yet produced a conclusion.
+Status: the modular-v1 through v7 runs are design or operational audits, not
+topology evidence. v6 exposed an inactive exact-module count. v7 removed that
+oracle, but its pooled primary outcome performed an impossible operator-side
+cross-island assembly for `partition`, while deterministic disjoint lanes made
+discovery nearly topology-invariant. The certified-composition v8 package is
+the replacement threshold study; it must pass scripted treatment-sensitivity
+checks before any LLM matrix is launched.
 
 The old NK cells remain useful black-box stress controls, but they do not
 exercise the blog's stronger mechanism: carrying a tested sub-artifact and its
@@ -122,8 +124,37 @@ provenance remains the primary assembly metric, so inactive exact-count
 differencing cannot guide the agents. `analyze_hard_v7.py` also reports an
 agent-quota gate in addition to coverage, exact-signal, and migration gates;
 the runner atomically reserves exactly one eighth of the global budget for
-each agent, and quota-failing cells remain operational audits. See `research_design_v7.md`,
-`hard_v7_calibration.json`, and `hard_v7_eval_protocol.md`.
+each agent, and quota-failing cells remain operational audits. See
+`research_design_v7.md`, `hard_v7_calibration.json`,
+`hard_v7_eval_protocol.md`, and the staged operational record in
+`hard_v7_pilot_log.md`.
+
+Post-pilot review stopped v7 before a third launch. Its run-wide
+`final_known_blocks` union is not a feasible artifact produced by an island,
+and its equality-only Rugged search plus fixed lanes leaves migration almost no
+way to change discovery. `research_design_v7.md` now records the superseded
+status. v7 remains useful only for testing quotas, numeric failure handling,
+migration mechanics, and chronology-backed diagnostics.
+
+## Hard v8 certified-composition package
+
+`run_hard_v8.py` replaces pooled operator assembly with portable exact
+certificates and an actual-submission primary outcome. It is a migration
+mechanism positive control, not standalone evidence for endogenous
+institution-building. Both tasks contain
+32×32-bit modules. Smooth has a 1,088-evaluation full-artifact upper bound.
+Rugged contains four private random 8-bit sublandscapes per module, about 28
+strict one-bit local maxima per group in the frozen seeds, and a 32,800-
+evaluation exhaustive upper bound. The registered ladders bracket discovery,
+discovery without a later migration, and migration followed by a real
+consolidation submission.
+
+Run `simulate_hard_v8.py` before spending agent budget. Its deterministic
+positive-control policy must show no pre-transfer topology difference, no
+cross-island union in `partition`, and a post-transfer window in both tasks.
+`analyze_hard_v8.py` then audits certificate integrity and treats global pooled
+discovery as a diagnostic only. See `research_design_v8.md`,
+`hard_v8_calibration.json`, and `hard_v8_eval_protocol.md`.
 
 ## Files
 
@@ -148,4 +179,9 @@ run_hard_v7.py                        v7 oracle-free high-difficulty launcher
 calibrate_hard_v7.py                  v7 difficulty calibration
 analyze_hard_v7.py                    v7 provenance/transfer/quota analyzer
 hard_v7_eval_protocol.md              v7 agent-facing protocol
+run_hard_v8.py                        v8 certified-composition launcher
+calibrate_hard_v8.py                  v8 ruggedness/difficulty calibration
+simulate_hard_v8.py                   v8 treatment-sensitivity preflight
+analyze_hard_v8.py                    v8 submitted-artifact/certificate audit
+hard_v8_eval_protocol.md              v8 agent-facing protocol
 ```

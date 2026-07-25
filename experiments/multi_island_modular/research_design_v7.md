@@ -1,5 +1,13 @@
 # Hard v7 oracle-free threshold study
 
+> **Status: superseded design audit. Do not launch the registered matrix.**
+> Post-pilot review found that the primary `final_known_blocks` outcome pools
+> discoveries across islands, giving `partition` an operator-side assembly it
+> could not perform during the run. The deterministic disjoint lanes and
+> separable objectives also make exact discovery nearly topology-invariant.
+> v7 therefore validates evaluation, quota, migration, and provenance
+> plumbing only; it cannot identify a multi-island advantage.
+
 ## Research question
 
 The v6 pilot increased the search space but still returned an inactive-module

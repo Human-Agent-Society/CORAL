@@ -1,0 +1,736 @@
+{
+  "schema_version": 6,
+  "method": "certified submitted-artifact Smooth/Rugged threshold",
+  "feedback": "active module plus portable exact certificate",
+  "blocks": 32,
+  "block_width": 32,
+  "rugged_group_width": 8,
+  "rugged_groups_per_module": 4,
+  "seed_count": 8,
+  "module_cost_upper_bound": {
+    "smooth": 34,
+    "rugged": 1025
+  },
+  "full_artifact_cost_upper_bound": {
+    "smooth": 1088,
+    "rugged": 32800
+  },
+  "budgets": {
+    "smooth": [
+      288,
+      384,
+      512,
+      768,
+      1024,
+      1536
+    ],
+    "rugged": [
+      8192,
+      10240,
+      12288,
+      16384,
+      24576,
+      32768,
+      40960
+    ]
+  },
+  "migration_every": {
+    "smooth": 128,
+    "rugged": 2048
+  },
+  "per_seed": [
+    {
+      "seed_index": 0,
+      "target_sha256": "1961fc3f52cee080d4c6351f81166f39579907bd5b9c7ed03ff0771ea9b28f34",
+      "unique_target_modules": 32,
+      "smooth_zero_mean_active_score": 0.524072265625,
+      "rugged_zero_mean_active_score": 0.45359347416124496,
+      "rugged_group_local_maxima_mean": 28.71875,
+      "rugged_group_local_maxima_min": 20,
+      "rugged_group_local_maxima_max": 35
+    },
+    {
+      "seed_index": 1,
+      "target_sha256": "75cfd578a227d5d3ac3ee59f4d633452dfa12ca09baba26d9bdcd0bcd51b02f2",
+      "unique_target_modules": 32,
+      "smooth_zero_mean_active_score": 0.562109375,
+      "rugged_zero_mean_active_score": 0.4759258863310223,
+      "rugged_group_local_maxima_mean": 28.15625,
+      "rugged_group_local_maxima_min": 20,
+      "rugged_group_local_maxima_max": 36
+    },
+    {
+      "seed_index": 2,
+      "target_sha256": "7d479fc470f3f4ef139da704c34be9ebe561660a0e543988e062873b1c4b04f3",
+      "unique_target_modules": 32,
+      "smooth_zero_mean_active_score": 0.51943359375,
+      "rugged_zero_mean_active_score": 0.42013732374675533,
+      "rugged_group_local_maxima_mean": 27.8203125,
+      "rugged_group_local_maxima_min": 21,
+      "rugged_group_local_maxima_max": 37
+    },
+    {
+      "seed_index": 3,
+      "target_sha256": "8a0c0119be3d8e2e26bfa291b7da35a887bd9d82dd6ae1f342b686d124ff310f",
+      "unique_target_modules": 32,
+      "smooth_zero_mean_active_score": 0.52314453125,
+      "rugged_zero_mean_active_score": 0.44636127598033604,
+      "rugged_group_local_maxima_mean": 28.0078125,
+      "rugged_group_local_maxima_min": 21,
+      "rugged_group_local_maxima_max": 40
+    },
+    {
+      "seed_index": 4,
+      "target_sha256": "fb881601735de77b46111e03df4d245c8f3e097ce9b9b0e834690c09ca9d8001",
+      "unique_target_modules": 32,
+      "smooth_zero_mean_active_score": 0.520361328125,
+      "rugged_zero_mean_active_score": 0.4531717337436453,
+      "rugged_group_local_maxima_mean": 28.8046875,
+      "rugged_group_local_maxima_min": 21,
+      "rugged_group_local_maxima_max": 39
+    },
+    {
+      "seed_index": 5,
+      "target_sha256": "9cb93483277a89e07af7990fae8de8be7a702655389d38ed5842c01008b97781",
+      "unique_target_modules": 32,
+      "smooth_zero_mean_active_score": 0.52314453125,
+      "rugged_zero_mean_active_score": 0.398539128003072,
+      "rugged_group_local_maxima_mean": 28.046875,
+      "rugged_group_local_maxima_min": 20,
+      "rugged_group_local_maxima_max": 37
+    },
+    {
+      "seed_index": 6,
+      "target_sha256": "2b66f523670b82ab931c19476c733ed7c780390a8079f5276b46f22a2b7b59b5",
+      "unique_target_modules": 32,
+      "smooth_zero_mean_active_score": 0.531494140625,
+      "rugged_zero_mean_active_score": 0.44408590910252427,
+      "rugged_group_local_maxima_mean": 28.5703125,
+      "rugged_group_local_maxima_min": 20,
+      "rugged_group_local_maxima_max": 36
+    },
+    {
+      "seed_index": 7,
+      "target_sha256": "dc66b4839f93782dd9bf113f8990a914904ab8440195f4e9503b91c0ebecd0cf",
+      "unique_target_modules": 32,
+      "smooth_zero_mean_active_score": 0.509228515625,
+      "rugged_zero_mean_active_score": 0.44575430906599317,
+      "rugged_group_local_maxima_mean": 28.28125,
+      "rugged_group_local_maxima_min": 20,
+      "rugged_group_local_maxima_max": 36
+    }
+  ],
+  "idealized_treatment_sensitivity": [
+    {
+      "mode": "smooth",
+      "condition": "global_8",
+      "budget": 288,
+      "best_submitted_certified_blocks": 8,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 8
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 36
+    },
+    {
+      "mode": "smooth",
+      "condition": "partition",
+      "budget": 288,
+      "best_submitted_certified_blocks": 4,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 4,
+      "per_island_known_blocks": {
+        "0": 4,
+        "1": 4
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 36
+    },
+    {
+      "mode": "smooth",
+      "condition": "multi_island",
+      "budget": 288,
+      "best_submitted_certified_blocks": 4,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 4,
+      "per_island_known_blocks": {
+        "0": 4,
+        "1": 4
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 2,
+      "attempts_per_agent": 36
+    },
+    {
+      "mode": "smooth",
+      "condition": "global_8",
+      "budget": 384,
+      "best_submitted_certified_blocks": 8,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 8
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 48
+    },
+    {
+      "mode": "smooth",
+      "condition": "partition",
+      "budget": 384,
+      "best_submitted_certified_blocks": 4,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 4,
+      "per_island_known_blocks": {
+        "0": 4,
+        "1": 4
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 48
+    },
+    {
+      "mode": "smooth",
+      "condition": "multi_island",
+      "budget": 384,
+      "best_submitted_certified_blocks": 4,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 4,
+      "per_island_known_blocks": {
+        "0": 4,
+        "1": 4
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 3,
+      "attempts_per_agent": 48
+    },
+    {
+      "mode": "smooth",
+      "condition": "global_8",
+      "budget": 512,
+      "best_submitted_certified_blocks": 8,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 8
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 64
+    },
+    {
+      "mode": "smooth",
+      "condition": "partition",
+      "budget": 512,
+      "best_submitted_certified_blocks": 4,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 4,
+      "per_island_known_blocks": {
+        "0": 4,
+        "1": 4
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 64
+    },
+    {
+      "mode": "smooth",
+      "condition": "multi_island",
+      "budget": 512,
+      "best_submitted_certified_blocks": 8,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 8,
+        "1": 8
+      },
+      "cross_island_reused_blocks": 8,
+      "first_cross_island_reuse_eval": 385,
+      "migration_cycles": 4,
+      "attempts_per_agent": 64
+    },
+    {
+      "mode": "smooth",
+      "condition": "global_8",
+      "budget": 768,
+      "best_submitted_certified_blocks": 16,
+      "global_discovered_blocks": 16,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 16
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 96
+    },
+    {
+      "mode": "smooth",
+      "condition": "partition",
+      "budget": 768,
+      "best_submitted_certified_blocks": 8,
+      "global_discovered_blocks": 16,
+      "assembly_gap": 8,
+      "per_island_known_blocks": {
+        "0": 8,
+        "1": 8
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 96
+    },
+    {
+      "mode": "smooth",
+      "condition": "multi_island",
+      "budget": 768,
+      "best_submitted_certified_blocks": 16,
+      "global_discovered_blocks": 16,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 16,
+        "1": 16
+      },
+      "cross_island_reused_blocks": 16,
+      "first_cross_island_reuse_eval": 385,
+      "migration_cycles": 6,
+      "attempts_per_agent": 96
+    },
+    {
+      "mode": "smooth",
+      "condition": "global_8",
+      "budget": 1024,
+      "best_submitted_certified_blocks": 24,
+      "global_discovered_blocks": 24,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 24
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 128
+    },
+    {
+      "mode": "smooth",
+      "condition": "partition",
+      "budget": 1024,
+      "best_submitted_certified_blocks": 12,
+      "global_discovered_blocks": 24,
+      "assembly_gap": 12,
+      "per_island_known_blocks": {
+        "0": 12,
+        "1": 12
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 128
+    },
+    {
+      "mode": "smooth",
+      "condition": "multi_island",
+      "budget": 1024,
+      "best_submitted_certified_blocks": 24,
+      "global_discovered_blocks": 24,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 24,
+        "1": 24
+      },
+      "cross_island_reused_blocks": 24,
+      "first_cross_island_reuse_eval": 385,
+      "migration_cycles": 8,
+      "attempts_per_agent": 128
+    },
+    {
+      "mode": "smooth",
+      "condition": "global_8",
+      "budget": 1536,
+      "best_submitted_certified_blocks": 32,
+      "global_discovered_blocks": 32,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 32
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 192
+    },
+    {
+      "mode": "smooth",
+      "condition": "partition",
+      "budget": 1536,
+      "best_submitted_certified_blocks": 16,
+      "global_discovered_blocks": 32,
+      "assembly_gap": 16,
+      "per_island_known_blocks": {
+        "0": 16,
+        "1": 16
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 192
+    },
+    {
+      "mode": "smooth",
+      "condition": "multi_island",
+      "budget": 1536,
+      "best_submitted_certified_blocks": 32,
+      "global_discovered_blocks": 32,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 32,
+        "1": 32
+      },
+      "cross_island_reused_blocks": 32,
+      "first_cross_island_reuse_eval": 385,
+      "migration_cycles": 12,
+      "attempts_per_agent": 192
+    },
+    {
+      "mode": "rugged",
+      "condition": "global_8",
+      "budget": 8192,
+      "best_submitted_certified_blocks": 0,
+      "global_discovered_blocks": 0,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 0
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 1024
+    },
+    {
+      "mode": "rugged",
+      "condition": "partition",
+      "budget": 8192,
+      "best_submitted_certified_blocks": 0,
+      "global_discovered_blocks": 0,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 0,
+        "1": 0
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 1024
+    },
+    {
+      "mode": "rugged",
+      "condition": "multi_island",
+      "budget": 8192,
+      "best_submitted_certified_blocks": 0,
+      "global_discovered_blocks": 0,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 0,
+        "1": 0
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 4,
+      "attempts_per_agent": 1024
+    },
+    {
+      "mode": "rugged",
+      "condition": "global_8",
+      "budget": 10240,
+      "best_submitted_certified_blocks": 8,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 8
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 1280
+    },
+    {
+      "mode": "rugged",
+      "condition": "partition",
+      "budget": 10240,
+      "best_submitted_certified_blocks": 4,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 4,
+      "per_island_known_blocks": {
+        "0": 4,
+        "1": 4
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 1280
+    },
+    {
+      "mode": "rugged",
+      "condition": "multi_island",
+      "budget": 10240,
+      "best_submitted_certified_blocks": 4,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 4,
+      "per_island_known_blocks": {
+        "0": 4,
+        "1": 4
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 5,
+      "attempts_per_agent": 1280
+    },
+    {
+      "mode": "rugged",
+      "condition": "global_8",
+      "budget": 12288,
+      "best_submitted_certified_blocks": 8,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 8
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 1536
+    },
+    {
+      "mode": "rugged",
+      "condition": "partition",
+      "budget": 12288,
+      "best_submitted_certified_blocks": 4,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 4,
+      "per_island_known_blocks": {
+        "0": 4,
+        "1": 4
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 1536
+    },
+    {
+      "mode": "rugged",
+      "condition": "multi_island",
+      "budget": 12288,
+      "best_submitted_certified_blocks": 8,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 8,
+        "1": 8
+      },
+      "cross_island_reused_blocks": 8,
+      "first_cross_island_reuse_eval": 10241,
+      "migration_cycles": 6,
+      "attempts_per_agent": 1536
+    },
+    {
+      "mode": "rugged",
+      "condition": "global_8",
+      "budget": 16384,
+      "best_submitted_certified_blocks": 8,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 8
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 2048
+    },
+    {
+      "mode": "rugged",
+      "condition": "partition",
+      "budget": 16384,
+      "best_submitted_certified_blocks": 4,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 4,
+      "per_island_known_blocks": {
+        "0": 4,
+        "1": 4
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 2048
+    },
+    {
+      "mode": "rugged",
+      "condition": "multi_island",
+      "budget": 16384,
+      "best_submitted_certified_blocks": 8,
+      "global_discovered_blocks": 8,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 8,
+        "1": 8
+      },
+      "cross_island_reused_blocks": 8,
+      "first_cross_island_reuse_eval": 10241,
+      "migration_cycles": 8,
+      "attempts_per_agent": 2048
+    },
+    {
+      "mode": "rugged",
+      "condition": "global_8",
+      "budget": 24576,
+      "best_submitted_certified_blocks": 16,
+      "global_discovered_blocks": 16,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 16
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 3072
+    },
+    {
+      "mode": "rugged",
+      "condition": "partition",
+      "budget": 24576,
+      "best_submitted_certified_blocks": 8,
+      "global_discovered_blocks": 16,
+      "assembly_gap": 8,
+      "per_island_known_blocks": {
+        "0": 8,
+        "1": 8
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 3072
+    },
+    {
+      "mode": "rugged",
+      "condition": "multi_island",
+      "budget": 24576,
+      "best_submitted_certified_blocks": 16,
+      "global_discovered_blocks": 16,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 16,
+        "1": 16
+      },
+      "cross_island_reused_blocks": 16,
+      "first_cross_island_reuse_eval": 10241,
+      "migration_cycles": 12,
+      "attempts_per_agent": 3072
+    },
+    {
+      "mode": "rugged",
+      "condition": "global_8",
+      "budget": 32768,
+      "best_submitted_certified_blocks": 24,
+      "global_discovered_blocks": 24,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 24
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 4096
+    },
+    {
+      "mode": "rugged",
+      "condition": "partition",
+      "budget": 32768,
+      "best_submitted_certified_blocks": 12,
+      "global_discovered_blocks": 24,
+      "assembly_gap": 12,
+      "per_island_known_blocks": {
+        "0": 12,
+        "1": 12
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 4096
+    },
+    {
+      "mode": "rugged",
+      "condition": "multi_island",
+      "budget": 32768,
+      "best_submitted_certified_blocks": 24,
+      "global_discovered_blocks": 24,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 24,
+        "1": 24
+      },
+      "cross_island_reused_blocks": 24,
+      "first_cross_island_reuse_eval": 10241,
+      "migration_cycles": 16,
+      "attempts_per_agent": 4096
+    },
+    {
+      "mode": "rugged",
+      "condition": "global_8",
+      "budget": 40960,
+      "best_submitted_certified_blocks": 32,
+      "global_discovered_blocks": 32,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 32
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 5120
+    },
+    {
+      "mode": "rugged",
+      "condition": "partition",
+      "budget": 40960,
+      "best_submitted_certified_blocks": 16,
+      "global_discovered_blocks": 32,
+      "assembly_gap": 16,
+      "per_island_known_blocks": {
+        "0": 16,
+        "1": 16
+      },
+      "cross_island_reused_blocks": 0,
+      "first_cross_island_reuse_eval": null,
+      "migration_cycles": 0,
+      "attempts_per_agent": 5120
+    },
+    {
+      "mode": "rugged",
+      "condition": "multi_island",
+      "budget": 40960,
+      "best_submitted_certified_blocks": 32,
+      "global_discovered_blocks": 32,
+      "assembly_gap": 0,
+      "per_island_known_blocks": {
+        "0": 32,
+        "1": 32
+      },
+      "cross_island_reused_blocks": 32,
+      "first_cross_island_reuse_eval": 10241,
+      "migration_cycles": 20,
+      "attempts_per_agent": 5120
+    }
+  ]
+}
