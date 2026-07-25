@@ -263,3 +263,51 @@ def test_behavior_metrics_detect_strategy_collapse_and_foreign_parent() -> None:
     assert metrics["inferred_cross_agent_adoptions"] == 1
     assert metrics["exact_foreign_copies"] == 1
     assert metrics["final_inferred_lineages"] == 1
+
+
+def test_threshold_analyzer_accepts_only_unscored_rejected_tune(tmp_path: Path) -> None:
+    from experiments.multi_island_hard import analyze_threshold_v2 as analyzer
+
+    attempts = tmp_path / ".coral/public/attempts"
+    attempts.mkdir(parents=True)
+
+    def write(name: str, budget_class: str, score, feedback: str) -> None:
+        (attempts / f"{name}.json").write_text(
+            json.dumps(
+                {
+                    "commit_hash": name,
+                    "status": "crashed" if score is None else "scored",
+                    "score": score,
+                    "feedback": feedback,
+                    "metadata": {"budget_class": budget_class},
+                }
+            )
+        )
+
+    write(
+        "rejected",
+        "tune",
+        None,
+        f"prefix: {analyzer.TUNE_DISABLED_MARKER}; submit an ordinary eval",
+    )
+    assert analyzer.disallowed_records(tmp_path) == []
+
+    write("scored-tune", "tune", 0.5, analyzer.TUNE_DISABLED_MARKER)
+    write("grader-error", "grader_error", None, "worker crashed")
+    assert {record["commit_hash"] for record in analyzer.disallowed_records(tmp_path)} == {
+        "scored-tune",
+        "grader-error",
+    }
+
+
+def test_threshold_analyzer_orders_retained_retry_directories(tmp_path: Path) -> None:
+    from experiments.multi_island_hard import analyze_threshold_v2 as analyzer
+
+    base = tmp_path / "rep-01"
+    for path in (base.with_name("rep-01-retry-10"), base, base.with_name("rep-01-retry-02")):
+        path.mkdir()
+    assert [path.name for path in analyzer.existing_run_dirs(base)] == [
+        "rep-01",
+        "rep-01-retry-02",
+        "rep-01-retry-10",
+    ]

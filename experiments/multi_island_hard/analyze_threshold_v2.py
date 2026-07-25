@@ -42,6 +42,7 @@ PRACTICAL_DELTA_Z = 0.50
 MAX_MALFORMED = 1
 INITIAL_SALT = "coral-threshold-v2"
 AGENT_TIMEOUT = 300
+TUNE_DISABLED_MARKER = "Tune mode is disabled for this controlled experiment"
 CONTRAST_METRICS = (
     "random_z",
     "reference_gain",
@@ -81,6 +82,50 @@ def real_records(run_dir: Path) -> list[dict[str, Any]]:
         for record in all_records(run_dir)
         if record.get("metadata", {}).get("budget_class", "real") == "real"
     ]
+
+
+def disallowed_records(run_dir: Path) -> list[dict[str, Any]]:
+    """Return attempts that obtained free feedback or reflect grader failure.
+
+    A controlled grader may reject ``--tune`` before scoring.  That rejected
+    request is useful compliance evidence, but it did not expose a free score
+    and must not invalidate an otherwise fixed-real-budget cell.  This mirrors
+    the runner's completion rule instead of treating every tune-class record
+    as equivalent to a successful tune evaluation.
+    """
+
+    violations = []
+    for record in all_records(run_dir):
+        budget_class = record.get("metadata", {}).get("budget_class", "real")
+        if budget_class == "grader_error":
+            violations.append(record)
+        elif budget_class == "tune" and (
+            record.get("score") is not None
+            or TUNE_DISABLED_MARKER not in str(record.get("feedback") or "")
+        ):
+            violations.append(record)
+    return violations
+
+
+def existing_run_dirs(base: Path) -> list[Path]:
+    """Return the base cell followed by its numbered retries.
+
+    Failed pilots are deliberately retained.  An audit therefore resolves a
+    logical replicate across those immutable directories instead of assuming
+    that the first path is authoritative forever.
+    """
+
+    candidates = [base] if base.exists() else []
+
+    def retry_number(path: Path) -> int:
+        suffix = path.name.removeprefix(f"{base.name}-retry-")
+        try:
+            return int(suffix)
+        except ValueError:
+            return 10**9
+
+    candidates.extend(sorted(base.parent.glob(f"{base.name}-retry-*"), key=retry_number))
+    return candidates
 
 
 def source_at(run_dir: Path, commit: str) -> str:
@@ -316,10 +361,7 @@ def integrity(
     records = real_records(run_dir)
     if len(records) != budget:
         errors.append(f"real attempts={len(records)}, expected {budget}")
-    if any(
-        record.get("metadata", {}).get("budget_class") in {"grader_error", "tune"}
-        for record in all_records(run_dir)
-    ):
+    if disallowed_records(run_dir):
         errors.append("disallowed tune/grader-error attempt present")
     stop = load_json(run_dir / ".coral/public/auto_stop.json") or {}
     if stop.get("reason") != "max_real_attempts":
@@ -503,21 +545,22 @@ def main() -> int:
     references = diagnostics()
     rows: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
+    superseded: list[dict[str, Any]] = []
     expected = 0
     for budget in args.budgets:
         for task in args.tasks:
             for condition in args.conditions:
                 for repetition in range(1, args.repetitions + 1):
                     expected += 1
-                    run_dir = (
+                    base_run_dir = (
                         args.results_root.resolve()
                         / f"budget-{budget}"
                         / task
                         / condition
                         / f"rep-{repetition:02d}"
                     )
-                    identity = load_json(run_dir / "operator-command.json")
-                    if identity is None:
+                    candidates = existing_run_dirs(base_run_dir)
+                    if not candidates:
                         failures.append(
                             {
                                 "budget": budget,
@@ -528,22 +571,47 @@ def main() -> int:
                             }
                         )
                         continue
-                    row = collect(run_dir, identity, task, budget, references)
-                    reasons = integrity(run_dir, identity, task, budget, row)
-                    if reasons:
+                    accepted_row: dict[str, Any] | None = None
+                    rejected: list[dict[str, Any]] = []
+                    for run_dir in candidates:
+                        identity = load_json(run_dir / "operator-command.json")
+                        if identity is None:
+                            rejected.append(
+                                {"run_dir": str(run_dir), "reasons": ["missing identity"]}
+                            )
+                            continue
+                        row = collect(run_dir, identity, task, budget, references)
+                        reasons = integrity(run_dir, identity, task, budget, row)
+                        if reasons:
+                            rejected.append(
+                                {
+                                    "run_dir": str(run_dir),
+                                    "reasons": reasons,
+                                    "observed": row,
+                                }
+                            )
+                            continue
+                        row["run_dir"] = str(run_dir)
+                        row["superseded_run_count"] = len(rejected)
+                        row["superseded_run_dirs"] = ";".join(
+                            item["run_dir"] for item in rejected
+                        )
+                        accepted_row = row
+                        superseded.extend(rejected)
+                        break
+                    if accepted_row is None:
                         failures.append(
                             {
                                 "budget": budget,
                                 "task": task,
                                 "condition": condition,
                                 "repetition": repetition,
-                                "run_dir": str(run_dir),
-                                "reasons": reasons,
-                                "observed": row,
+                                "reasons": ["no valid base or retry run"],
+                                "candidate_runs": rejected,
                             }
                         )
                     else:
-                        rows.append(row)
+                        rows.append(accepted_row)
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
     write_csv(output / "runs.csv", rows)
@@ -557,6 +625,7 @@ def main() -> int:
         "accepted_rows": len(rows),
         "expected_rows": expected,
         "integrity_failures": failures,
+        "superseded_invalid_runs": superseded,
     }
     (output / "audit.json").write_text(json.dumps(audit, indent=2) + "\n")
     print(f"Audited {len(rows)}/{expected} threshold-v2 cells; failures={len(failures)}")

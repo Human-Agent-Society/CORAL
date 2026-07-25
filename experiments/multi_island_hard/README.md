@@ -98,4 +98,15 @@ four islands beat global by 0.547 random-baseline SD (bootstrap 95% interval
 0.312 to 0.770), with a 0.610 SD rugged-minus-smooth interaction (0.379 to
 0.837). No p=0.75 cell passed, so the calibrated claim is conditional on high
 social learning rather than a universal island advantage. See
-`threshold_v3_design.md` for staging and interpretation.
+`threshold_v3_design.md` for staging and interpretation.  The fresh-seed
+operator audit narrows it further: fixed four-bit mutation reverses the
+island/global effect, and elite migration is not separated from fixed or worst
+migration relative to permanent partition.
+
+The first matched real-agent Smooth/high-diffusion pilot is recorded in
+`threshold_v3_pilot_log.md`.  Global collapsed to one inferred lineage and
+outperformed four islands by 0.092 raw fitness; four islands retained four
+lineages and substantially more candidate diversity.  The result validates
+the negative-control direction for one seed, while also exposing a conservative
+adoption metric and realized migration-tick drift.  It is not expanded into a
+large LLM matrix because the operator audit already prevents a broad NK claim.

@@ -176,21 +176,22 @@ def main() -> int:
     references = base.diagnostics()
     rows: list[dict[str, Any]] = []
     failures: list[dict[str, Any]] = []
+    superseded: list[dict[str, Any]] = []
     expected = 0
     for budget in args.budgets:
         for task in args.tasks:
             for condition in args.conditions:
                 for repetition in range(1, args.repetitions + 1):
                     expected += 1
-                    run_dir = (
+                    base_run_dir = (
                         results_root.resolve()
                         / f"budget-{budget}"
                         / task
                         / condition
                         / f"rep-{repetition:02d}"
                     )
-                    identity = base.load_json(run_dir / "operator-command.json")
-                    if identity is None:
+                    candidates = base.existing_run_dirs(base_run_dir)
+                    if not candidates:
                         failures.append(
                             {
                                 "budget": budget,
@@ -201,23 +202,48 @@ def main() -> int:
                             }
                         )
                         continue
-                    row = base.collect(run_dir, identity, task, budget, references)
-                    row["policy"] = args.policy
-                    reasons = base.integrity(run_dir, identity, task, budget, row)
-                    if reasons:
+                    accepted_row: dict[str, Any] | None = None
+                    rejected: list[dict[str, Any]] = []
+                    for run_dir in candidates:
+                        identity = base.load_json(run_dir / "operator-command.json")
+                        if identity is None:
+                            rejected.append(
+                                {"run_dir": str(run_dir), "reasons": ["missing identity"]}
+                            )
+                            continue
+                        row = base.collect(run_dir, identity, task, budget, references)
+                        row["policy"] = args.policy
+                        reasons = base.integrity(run_dir, identity, task, budget, row)
+                        if reasons:
+                            rejected.append(
+                                {
+                                    "run_dir": str(run_dir),
+                                    "reasons": reasons,
+                                    "observed": row,
+                                }
+                            )
+                            continue
+                        row["run_dir"] = str(run_dir)
+                        row["superseded_run_count"] = len(rejected)
+                        row["superseded_run_dirs"] = ";".join(
+                            item["run_dir"] for item in rejected
+                        )
+                        accepted_row = row
+                        superseded.extend(rejected)
+                        break
+                    if accepted_row is None:
                         failures.append(
                             {
                                 "budget": budget,
                                 "task": task,
                                 "condition": condition,
                                 "repetition": repetition,
-                                "run_dir": str(run_dir),
-                                "reasons": reasons,
-                                "observed": row,
+                                "reasons": ["no valid base or retry run"],
+                                "candidate_runs": rejected,
                             }
                         )
                     else:
-                        rows.append(row)
+                        rows.append(accepted_row)
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     base.write_csv(output / "runs.csv", rows)
@@ -233,6 +259,7 @@ def main() -> int:
         "accepted_rows": len(rows),
         "expected_rows": expected,
         "integrity_failures": failures,
+        "superseded_invalid_runs": superseded,
     }
     (output / "audit.json").write_text(json.dumps(audit, indent=2) + "\n")
     print(
