@@ -1,0 +1,56 @@
+task:
+  name: "Institutional Phase Map v4 — Smooth N512 K0"
+  description: |
+    Optimize a literal 512-bit candidate on a private-seed K=0 adjacent NK
+    landscape. This paired Smooth control has one one-bit local optimum.
+  tips: |
+    CANDIDATE must remain one literal 512-bit string. Use ordinary coral eval
+    only. The seed is private; networking permits only the model API.
+
+grader:
+  entrypoint: "institutional_landscape_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  direction: maximize
+  private:
+    - "taskdata/smooth512_replicated_v4.json"
+  args:
+    program_file: "candidate.py"
+    landscape_file: "smooth512_replicated_v4.json"
+    seed_index: 0
+
+agents:
+  count: 8
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  timeout: 240
+  runtime_options:
+    role_file: "../../threshold_v4_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: allowlist
+    allowed_domains:
+      - api.appintheloop.com
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed_v4"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 16384
+
+islands:
+  count: 4
+  migration:
+    enabled: true
+    every: 4096
+    rank_window: 4096
+    min_evals: 1
+    dest_weighting: round_robin
+    max_per_cycle: 4
+    remigration_cooldown: 4096

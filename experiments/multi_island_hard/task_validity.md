@@ -52,3 +52,14 @@ cluster-interval lower bound above zero relative to permanent partition. Thus
 this pair diagnoses an operator-conditional boundary-preservation mechanism.
 It cannot by itself establish that CORAL's elite migration rule adds value,
 and it remains too synthetic to establish semantic institution-building.
+
+The N=512 v4 study is the registered follow-up to that failure, not a way to
+erase it. It crosses K=0/16/32/64/128, three much larger budgets, and all four
+previous mutation operators on fresh calibration landscapes. A full boundary
+claim must survive three local operator families and a Rugged-minus-Smooth
+interaction; fixed four-bit behavior remains an explicit generalization test.
+Migration is a distinct estimand with a stricter `multi_island-partition`
+gate. If no cell passes, the experiment stops rather than selecting a
+convenient LLM task. Even a positive v4 threshold remains a black-box
+social-learning mechanism result and does not replace a second structured real
+task.

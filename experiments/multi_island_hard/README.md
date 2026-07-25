@@ -110,3 +110,38 @@ lineages and substantially more candidate diversity.  The result validates
 the negative-control direction for one seed, while also exposing a conservative
 adoption metric and realized migration-tick drift.  It is not expanded into a
 large LLM matrix because the operator audit already prevents a broad NK claim.
+
+## Operator-robust scale threshold v4
+
+Version 4 doubles dimension again to N=512 and screens K=0/16/32/64/128 at
+4,096/8,192/16,384 evaluations.  It does not treat a larger K as automatically
+harder or favorable: one-bit, two mostly-local mutation mixtures, and fixed
+four-bit mutation are crossed explicitly on eight calibration landscapes.
+The decision file reports a boundary threshold (`multi_island_4-global_8` plus
+the Rugged-minus-Smooth interaction) separately from a migration threshold
+(`multi_island_4-partition_4`).
+
+`calibrate_threshold_v4_scale.py` must finish its complete registered grid
+before any participant launch. `run_threshold_v4.py` reads that result and
+refuses reduced calibrations, unselected K values, or a different budget.
+The future participant seeds and all candidate K bundles are already frozen
+and disjoint from calibration. `diagnose_threshold_v4.py` generates held-out
+references only for the selected pair; `analyze_threshold_v4.py` additionally
+requires every last migrant to submit another real attempt and replaces the
+miscalibrated v3 adoption-rate gate with directly observed global lineage
+collapse plus active-lineage separation. See `threshold_v4_design.md` for the
+full staged rule and interpretation boundary.
+
+Before launching the first selected cell, run
+`python experiments/multi_island/sandbox_canary.py`. It executes a real
+sandboxed `coral eval --no-wait` and fails unless foreign island state and
+foreign-island worktrees are both unreadable and unwritable, the attempt lands
+only in the current island, and the fixed-budget lock is island-scoped. Canary
+directories are retained under `/var/tmp` for audit.
+
+The complete calibration selected K=32/B=8,192 for the boundary pilot and
+K=64/B=16,384 as the first operator-side migration threshold. Fixed four-bit
+mutation passed neither generalization gate. The selected held-out landscapes
+also pass the frozen random/autocorrelation/local-maxima diagnostics. See
+`threshold_v4_calibration_log.md` for effect sizes, file hashes, and the narrow
+interpretation; no participant result has yet been used to alter selection.

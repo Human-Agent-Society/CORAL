@@ -71,8 +71,12 @@ class AgentState:
     incumbent: Individual
 
 
-def initial_candidate(agent_id: str, n: int) -> str:
-    digest = hashlib.sha256(f"coral-threshold-v3:{agent_id}".encode()).digest()
+def initial_candidate(
+    agent_id: str,
+    n: int,
+    initial_salt: str = "coral-threshold-v3",
+) -> str:
+    digest = hashlib.sha256(f"{initial_salt}:{agent_id}".encode()).digest()
     bits = "".join(f"{byte:08b}" for byte in digest)
     while len(bits) < n:
         digest = hashlib.sha256(digest).digest()
@@ -199,6 +203,7 @@ def simulate(
     policy_seed: int,
     mutation_policy: str = "registered_mixed",
     migration_selection: str = "elite",
+    initial_salt: str = "coral-threshold-v3",
 ) -> dict[str, Any]:
     if budget < len(BASE_AGENT_IDS) or budget % len(BASE_AGENT_IDS):
         raise ValueError("budget must be a multiple of the eight-agent roster")
@@ -209,7 +214,7 @@ def simulate(
             agent_id=agent_id,
             island=initial_island(slot, island_count),
             incumbent=make_individual(
-                initial_candidate(agent_id, n),
+                initial_candidate(agent_id, n, initial_salt),
                 k=k,
                 seed=seed,
                 lineage=agent_id,

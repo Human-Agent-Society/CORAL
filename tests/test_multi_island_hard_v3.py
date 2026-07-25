@@ -54,6 +54,16 @@ def test_social_calibration_has_exact_zero_imitation_null() -> None:
     assert [row["migration_cycles"] for row in rows] == [0, 0, 3, 3]
 
 
+def test_social_calibration_supports_versioned_paired_initial_candidates() -> None:
+    from experiments.multi_island_hard import calibrate_threshold_v3_social as calibration
+
+    v3 = calibration.initial_candidate("captain-nemo", 512)
+    v4 = calibration.initial_candidate("captain-nemo", 512, "coral-threshold-v4")
+    assert len(v3) == len(v4) == 512
+    assert v3 != v4
+    assert v3 == calibration.initial_candidate("captain-nemo", 512)
+
+
 def test_social_calibration_activates_lineage_collapse_only_with_diffusion() -> None:
     from experiments.multi_island_hard import calibrate_threshold_v3_social as calibration
 
@@ -165,6 +175,366 @@ def test_v3_out_of_selection_audit_rejects_universal_and_elite_claims() -> None:
         assert contrast["cluster_bootstrap_ci_low"] <= 0 <= contrast[
             "cluster_bootstrap_ci_high"
         ]
+
+
+def test_v4_scale_rule_separates_boundary_from_migration_threshold() -> None:
+    from experiments.multi_island_hard import calibrate_threshold_v4_scale as calibration
+
+    rows = []
+    for mutation in calibration.MUTATION_POLICIES:
+        for contrast, mean, low in (
+            ("multi_island_4_minus_global_8", 0.40, 0.20),
+            ("multi_island_4_minus_partition_4", 0.15, 0.05),
+            ("rugged_minus_smooth_multi_island_4_minus_global_8", 0.35, 0.10),
+        ):
+            rows.append(
+                {
+                    "k": 32,
+                    "budget": 8192,
+                    "mutation": mutation,
+                    "contrast": contrast,
+                    "mean_random_z_difference": mean,
+                    "cluster_bootstrap_ci_low": low,
+                }
+            )
+    decision = calibration.select_threshold(rows, k_values=(0, 32), budgets=(8192,))
+    assert decision["earliest_boundary_threshold"] == {"k": 32, "budget": 8192}
+    assert decision["earliest_migration_threshold"] == {"k": 32, "budget": 8192}
+    assert decision["earliest_four_bit_generalization_threshold"] == {
+        "k": 32,
+        "budget": 8192,
+    }
+
+    failed_row = next(
+        row
+        for row in rows
+        if row["mutation"] == "broader"
+        and row["contrast"] == "multi_island_4_minus_partition_4"
+    )
+    failed_row["cluster_bootstrap_ci_low"] = -0.01
+    decision = calibration.select_threshold(rows, k_values=(0, 32), budgets=(8192,))
+    assert decision["earliest_boundary_threshold"] == {"k": 32, "budget": 8192}
+    assert decision["earliest_migration_threshold"] is None
+
+
+def test_v4_scale_uses_harder_dimension_and_operator_stress_test() -> None:
+    from experiments.multi_island_hard import calibrate_threshold_v4_scale as calibration
+
+    assert calibration.N == 512
+    assert calibration.K_VALUES == (0, 16, 32, 64, 128)
+    assert calibration.BUDGETS == (4096, 8192, 16384)
+    assert set(calibration.LOCAL_MUTATION_FAMILY) < set(calibration.MUTATION_POLICIES)
+    assert "four_bit" in calibration.MUTATION_POLICIES
+
+
+def test_v4_full_calibration_records_boundary_migration_and_failed_generalization() -> None:
+    data = json.loads((EXPERIMENT / "threshold_v4_scale_calibration.json").read_text())
+    assert data["fully_registered_run"] is True
+    assert len(data["summaries"]) == 168
+    assert all(
+        row["landscape_clusters"] == 8
+        and row["policy_runs_per_landscape"] == 4
+        and row["paired_runs"] == 32
+        for row in data["summaries"]
+    )
+    decision = data["decision"]
+    assert decision["earliest_boundary_threshold"] == {"k": 32, "budget": 8192}
+    assert decision["earliest_migration_threshold"] == {"k": 64, "budget": 16384}
+    assert decision["earliest_four_bit_generalization_threshold"] is None
+
+
+def test_v4_heldout_diagnostics_separate_smooth_and_rugged() -> None:
+    data = json.loads((EXPERIMENT / "threshold_v4_diagnostics.json").read_text())
+    assert (data["selected_k"], data["selected_budget"]) == (32, 8192)
+    assert (data["random_samples"], data["greedy_starts"]) == (1024, 32)
+    smooth = [row for row in data["landscapes"] if row["k"] == 0]
+    rugged = [row for row in data["landscapes"] if row["k"] == 32]
+    assert len(smooth) == len(rugged) == 8
+    assert [row["seed_sha256"] for row in smooth] == [
+        row["seed_sha256"] for row in rugged
+    ]
+    assert all(row["reference_is_exact"] and row["greedy_unique_maxima"] == 1 for row in smooth)
+    assert all(
+        not row["reference_is_exact"] and row["greedy_unique_maxima"] == 32
+        for row in rugged
+    )
+    assert max(row["one_bit_autocorrelation"] for row in rugged) < min(
+        row["one_bit_autocorrelation"] for row in smooth
+    )
+
+
+def test_v4_candidate_tasks_are_paired_and_disjoint_from_calibration() -> None:
+    from coral.config import CoralConfig
+    from experiments.multi_island_hard import calibrate_threshold_v4_scale as calibration
+
+    filenames = {
+        0: "smooth512_replicated_v4.json",
+        16: "rugged512_k16_replicated_v4.json",
+        32: "rugged512_k32_replicated_v4.json",
+        64: "rugged512_k64_replicated_v4.json",
+        128: "rugged512_k128_replicated_v4.json",
+    }
+    bundles = {
+        k: json.loads((TASK_DIR / "taskdata" / filename).read_text())
+        for k, filename in filenames.items()
+    }
+    paired_seeds = bundles[0]["seeds"]
+    assert len(paired_seeds) == 8
+    assert paired_seeds == [calibration.heldout_seed(index) for index in range(8)]
+    for k, bundle in bundles.items():
+        assert (bundle["n"], bundle["k"]) == (512, k)
+        assert bundle["seeds"] == paired_seeds
+    assert set(paired_seeds).isdisjoint(
+        calibration.generated_seed(index)
+        for index in range(calibration.CALIBRATION_LANDSCAPES)
+    )
+
+    configs = ["task_smooth512_replicated_v4.yaml"] + [
+        f"task_rugged512_k{k}_replicated_v4.yaml" for k in (16, 32, 64, 128)
+    ]
+    for filename in configs:
+        config = CoralConfig.from_yaml(TASK_DIR / filename)
+        assert config.agents.count == 8
+        assert config.agents.timeout == 240
+        assert config.run.stop.max_real_attempts == 16384
+        assert config.agents.sandbox.allowed_domains == ["api.appintheloop.com"]
+
+
+def test_v4_runner_refuses_reduced_or_missing_calibration(tmp_path: Path) -> None:
+    from experiments.multi_island_hard import run_threshold_v4 as runner
+
+    missing = tmp_path / "missing.json"
+    try:
+        runner.registered_selection(missing)
+    except ValueError as exc:
+        assert "incomplete" in str(exc)
+    else:
+        raise AssertionError("missing calibration was accepted")
+
+    reduced = tmp_path / "reduced.json"
+    reduced.write_text(
+        json.dumps(
+            {
+                "fully_registered_run": False,
+                "decision": {"earliest_boundary_threshold": {"k": 32, "budget": 8192}},
+            }
+        )
+    )
+    try:
+        runner.registered_selection(reduced)
+    except ValueError as exc:
+        assert "reduced" in str(exc)
+    else:
+        raise AssertionError("reduced calibration was accepted")
+
+
+def test_v4_runner_uses_selected_budget_pair_and_quarter_migration(tmp_path: Path) -> None:
+    from experiments.multi_island_hard import run_threshold_v4 as runner
+
+    calibration = tmp_path / "calibration.json"
+    calibration.write_text(
+        json.dumps(
+            {
+                "fully_registered_run": True,
+                "decision": {"earliest_boundary_threshold": {"k": 32, "budget": 8192}},
+            }
+        )
+    )
+    assert runner.registered_selection(calibration) == {"k": 32, "budget": 8192}
+
+    runner.base.EXPECTED_REAL_ATTEMPTS = 8192
+    command = runner.build_command(
+        runner.base.TASKS["rugged512_k32_rep_v4"],
+        "multi_island_4",
+        tmp_path / "task" / "condition" / "rep-01",
+    )
+    assert "islands.migration.every=2048" in command
+    assert "islands.migration.rank_window=2048" in command
+    assert "run.stop.max_real_attempts_per_agent=1024" in command
+    assert "grader.args.seed_index=0" in command
+    assert "agents.count=8" in command
+    for role_path in runner.POLICY_ROLES.values():
+        protocol = role_path.read_text()
+        assert ".coral_agent_id" in protocol
+        assert "must never be hashed" in protocol
+        assert "git show <commit>" not in protocol
+
+
+def test_v4_isolation_preflight_and_trace_gate(tmp_path: Path) -> None:
+    from experiments.multi_island.isolation_audit import (
+        sandbox_contract_errors,
+        trace_isolation_violations,
+    )
+
+    assert sandbox_contract_errors() == []
+
+    run_dir = tmp_path / "run"
+    own = run_dir / "agents" / "agent-a"
+    foreign = run_dir / "agents" / "agent-b"
+    own.mkdir(parents=True)
+    foreign.mkdir(parents=True)
+    (own / ".coral_island").write_text("avalon\n")
+    (foreign / ".coral_island").write_text("atlantis\n")
+    logs = run_dir / ".coral" / "islands" / "avalon" / "logs"
+    (run_dir / ".coral" / "islands" / "atlantis" / "logs").mkdir(parents=True)
+    logs.mkdir(parents=True)
+
+    def event(tool: str, payload: dict[str, str]) -> str:
+        return json.dumps(
+            {
+                "type": "tool_use",
+                "part": {"tool": tool, "state": {"input": payload}},
+            }
+        )
+
+    (logs / "agent-a.log").write_text(
+        "\n".join(
+            (
+                event("bash", {"command": "git show coral/agent-b:candidate.py"}),
+                event(
+                    "write",
+                    {
+                        "filePath": str(
+                            run_dir
+                            / ".coral"
+                            / "islands"
+                            / "atlantis"
+                            / "notes"
+                            / "handoff.md"
+                        )
+                    },
+                ),
+                event("read", {"filePath": str(foreign / "candidate.py")}),
+            )
+        )
+        + "\n"
+    )
+    violations = trace_isolation_violations(run_dir)
+    assert any("raw-git-inspection" in item for item in violations)
+    assert any("foreign-island-path:atlantis" in item for item in violations)
+    assert any("foreign-agent-path:agent-b" in item for item in violations)
+
+
+def test_v4_analyzer_requires_lineage_boundary_and_migration_effect() -> None:
+    from experiments.multi_island_hard import analyze_threshold_v4 as analyzer
+
+    budget = 8192
+    rugged = "rugged512_k32_rep_v4"
+    rows = [
+        {
+            "task": rugged,
+            "budget": budget,
+            "condition": "global_8",
+            "final_inferred_lineages": 1,
+        }
+        for _ in range(8)
+    ] + [
+        {
+            "task": rugged,
+            "budget": budget,
+            "condition": "multi_island_4",
+            "final_inferred_lineages": 4,
+        }
+        for _ in range(8)
+    ]
+    contrasts = [
+        {
+            "task": rugged,
+            "budget": budget,
+            "contrast": "multi_island_4_minus_global_8",
+            "paired_repetitions": 8,
+            "confirmatory_ready": True,
+            "random_z_difference": 0.5,
+            "random_z_ci_low": 0.2,
+            "mean_active_inferred_lineages_difference": 2.0,
+            "mean_active_inferred_lineages_ci_low": 1.0,
+        },
+        {
+            "task": rugged,
+            "budget": budget,
+            "contrast": "multi_island_4_minus_partition_4",
+            "paired_repetitions": 8,
+            "confirmatory_ready": True,
+            "random_z_difference": 0.2,
+            "random_z_ci_low": 0.05,
+        },
+        {
+            "task": "rugged_minus_smooth",
+            "budget": budget,
+            "contrast": "difference_in_multi_minus_global",
+            "paired_repetitions": 8,
+            "confirmatory_ready": True,
+            "random_z_difference": 0.4,
+            "random_z_ci_low": 0.1,
+        },
+    ]
+    result = analyzer.decision(
+        rows,
+        contrasts,
+        policy="high_diffusion",
+        budget=budget,
+        rugged_task=rugged,
+        repetitions=8,
+    )
+    assert result["boundary_threshold_supported"] is True
+    assert result["migration_threshold_supported"] is True
+    assert result["causal_policy_manipulation"] is True
+
+    contrasts[1]["random_z_ci_low"] = -0.01
+    result = analyzer.decision(
+        rows,
+        contrasts,
+        policy="high_diffusion",
+        budget=budget,
+        rugged_task=rugged,
+        repetitions=8,
+    )
+    assert result["boundary_threshold_supported"] is True
+    assert result["migration_threshold_supported"] is False
+
+    contrasts[1]["random_z_ci_low"] = 0.05
+    contrasts[1]["confirmatory_ready"] = False
+    contrasts[1]["paired_repetitions"] = 7
+    result = analyzer.decision(
+        rows,
+        contrasts,
+        policy="high_diffusion",
+        budget=budget,
+        rugged_task=rugged,
+        repetitions=8,
+    )
+    assert result["confirmatory_ready"] is False
+    assert result["boundary_threshold_supported"] is False
+    assert result["migration_threshold_supported"] is False
+
+
+def test_v4_analyzer_requires_attempt_after_last_migration(tmp_path: Path) -> None:
+    from experiments.multi_island_hard.analyze_threshold_v4 import post_migration_attempt_gate
+
+    public = tmp_path / ".coral/public"
+    attempts = public / "attempts"
+    attempts.mkdir(parents=True)
+    (public / "migration_state.json").write_text(
+        json.dumps({"schema_version": 1, "last_migrated_evals": {"agent-a": 1}})
+    )
+    for index, agent in enumerate(("agent-b", "agent-a"), start=1):
+        (attempts / f"{index}.json").write_text(
+            json.dumps(
+                {
+                    "commit_hash": str(index),
+                    "agent_id": agent,
+                    "status": "scored",
+                    "score": 0.5,
+                    "timestamp": f"2026-07-25T00:00:0{index}+00:00",
+                    "metadata": {"budget_class": "real"},
+                }
+            )
+        )
+    assert post_migration_attempt_gate(tmp_path) == (True, [])
+    (public / "migration_state.json").write_text(
+        json.dumps({"schema_version": 1, "last_migrated_evals": {"agent-a": 2}})
+    )
+    assert post_migration_attempt_gate(tmp_path) == (False, ["agent-a"])
 
 
 def test_v3_diagnostics_verify_unique_smooth_optimum_and_many_rugged_basins() -> None:
