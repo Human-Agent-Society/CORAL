@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
+from pathlib import Path
 
 import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_v6_seeds_are_unique_and_disjoint_from_prior_experiments() -> None:
@@ -11,6 +16,17 @@ def test_v6_seeds_are_unique_and_disjoint_from_prior_experiments() -> None:
     seeds = tuple(runner.phase_seed(block) for block in range(runner.REGISTERED_BLOCKS))
     runner.validate_seed_isolation(seeds)
     assert len(set(map(runner.seed_sha256, seeds))) == runner.REGISTERED_BLOCKS
+
+
+def test_v6_registration_hashes_bind_the_blind_sources() -> None:
+    directory = ROOT / "experiments/multi_island_hard"
+    registration = json.loads(
+        (directory / "threshold_v6_phase_registration.json").read_text()
+    )
+    assert registration["raw_result_absent_at_registration"] is True
+    for filename, expected in registration["artifacts"].items():
+        observed = hashlib.sha256((directory / filename).read_bytes()).hexdigest()
+        assert observed == expected
 
 
 def test_v6_smooth_is_deterministic_and_topology_paired() -> None:

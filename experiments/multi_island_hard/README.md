@@ -6,6 +6,8 @@ map. It crosses five Smooth sizes, five Rugged epistasis levels, and five
 budgets on 24 new paired blocks. The v6 simulator locates a phase region; it
 does not replace the audited CORAL v5 anchor, natural-agent arm, or real-task
 validation.
+The blind formal launch is bound to source hashes and its operator command in
+[`threshold_v6_phase_registration.json`](threshold_v6_phase_registration.json).
 
 The original `N=20` Smooth/Rugged NK cells are retained as sanity checks. They
 are not sufficient to establish a ruggedness threshold: `K=0` is separable,

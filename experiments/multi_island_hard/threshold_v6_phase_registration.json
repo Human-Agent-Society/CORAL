@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "registered_at": "2026-07-26T04:24:08+08:00",
+  "formal_process_started_at": "2026-07-26T04:03:11+08:00",
+  "raw_result_absent_at_registration": true,
+  "operator_command": [
+    "nice",
+    "-n",
+    "15",
+    "uv",
+    "run",
+    "python",
+    "experiments/multi_island_hard/run_threshold_v6_phase_map.py",
+    "--max-workers",
+    "1"
+  ],
+  "runner_commit": "f4d58f8b70451b22d4ba0044502073eb4601bd40",
+  "analysis_commit": "65d825152c079cb276b671606b355f93810ab5f6",
+  "artifacts": {
+    "run_threshold_v6_phase_map.py": "4b119389dcb48d2ea95ca4b7f1e90f29ae059f3f0bc8db48486decc406f367de",
+    "analyze_threshold_v6_phase_map.py": "72ca2ed4db211b4c752b2eb1b137218da2fc1914a880246b55893a1e4f654519",
+    "threshold_v6_phase_protocol.md": "85915427f26c6aa262a1a4c3bf1a9ba4fc0d36fb39e8e8198a5deb1706759e32"
+  },
+  "seed_namespace": "threshold-v6-phase-heldout",
+  "policy_seed_namespace": "threshold-v6-phase-policy",
+  "expected_output": "experiments/multi_island_hard/threshold_v6_phase_map_raw.json"
+}
