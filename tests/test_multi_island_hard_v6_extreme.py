@@ -1,0 +1,143 @@
+from __future__ import annotations
+
+import copy
+import random
+
+import pytest
+
+
+def test_extreme_seeds_are_unique_and_disjoint_from_all_prior_data() -> None:
+    from experiments.multi_island_hard import run_threshold_v6_extreme_phase as runner
+
+    seeds = tuple(runner.phase_seed(block) for block in range(runner.REGISTERED_BLOCKS))
+    runner.validate_seed_isolation(seeds)
+    assert len(set(map(runner.seed_sha256, seeds))) == runner.REGISTERED_BLOCKS
+
+
+def test_compact_smooth_mutations_match_literal_permuted_leading_ones() -> None:
+    from experiments.multi_island_hard import calibrate_threshold_v3_social as social
+    from experiments.multi_island_hard import calibrate_threshold_v5_hard_smooth as smooth
+    from experiments.multi_island_hard import run_threshold_v6_extreme_phase as runner
+
+    n = 64
+    seed = runner.phase_seed(0)
+    target = smooth.hidden_target(seed, n)
+    order = smooth.hidden_coordinate_order(seed, n)
+    candidate = social.initial_candidate("compact-equivalence", n, runner.INITIAL_SALT)
+    compact, ranks = runner.make_compact_smooth(
+        candidate,
+        target=target,
+        order=order,
+        lineage="equivalence",
+    )
+    compact_rng = random.Random(9182)
+    literal_rng = random.Random(9182)
+    for _ in range(100):
+        compact = runner.mutate_compact_smooth(
+            compact,
+            rank_by_coordinate=ranks,
+            rng=compact_rng,
+        )
+        bits = list(candidate)
+        for coordinate in social.mutation_indices(
+            literal_rng,
+            n,
+            runner.MUTATION_POLICY,
+        ):
+            bits[coordinate] = "0" if bits[coordinate] == "1" else "1"
+        candidate = "".join(bits)
+        assert compact.prefix == smooth.leading_ones(candidate, target, order)
+
+
+def test_extreme_reduced_phase_map_audits_and_analyzes() -> None:
+    from experiments.multi_island_hard import analyze_threshold_v6_extreme_phase as analyzer
+    from experiments.multi_island_hard import run_threshold_v6_extreme_phase as runner
+
+    payload = runner.run_phase_map(
+        smooth_sizes=(32,),
+        rugged_ks=(2,),
+        budgets=(32,),
+        blocks=2,
+        reference_samples=16,
+        max_workers=1,
+    )
+    assert payload["fully_registered_run"] is False
+    assert analyzer.audit(payload, require_registered=False) == []
+    result = analyzer.analyze(payload, require_registered=False)
+    assert result["audit_passes"] is True
+    assert result["rugged_decision"]["tested_cells"] == 1
+    assert "search_progress_gate" in result["rugged_phase_map"][0]
+
+    missing = copy.deepcopy(payload)
+    missing["rows"].pop()
+    with pytest.raises(ValueError, match="missing 1 topology triplets"):
+        analyzer.analyze(missing, require_registered=False)
+
+
+def test_extreme_registered_configuration_is_exact() -> None:
+    from experiments.multi_island_hard import run_threshold_v6_extreme_phase as runner
+
+    assert runner.registered_configuration(
+        smooth_sizes=runner.SMOOTH_SIZES,
+        rugged_ks=runner.RUGGED_K_VALUES,
+        budgets=runner.BUDGETS,
+        blocks=runner.REGISTERED_BLOCKS,
+        reference_samples=runner.REGISTERED_REFERENCE_SAMPLES,
+    )
+    assert not runner.registered_configuration(
+        smooth_sizes=runner.SMOOTH_SIZES,
+        rugged_ks=runner.RUGGED_K_VALUES[:-1],
+        budgets=runner.BUDGETS,
+        blocks=runner.REGISTERED_BLOCKS,
+        reference_samples=runner.REGISTERED_REFERENCE_SAMPLES,
+    )
+
+
+def test_extreme_progress_floor_beats_iid_random_search_and_grows_with_budget() -> None:
+    from experiments.multi_island_hard import analyze_threshold_v6_extreme_phase as analyzer
+
+    floors = [analyzer.iid_random_max_floor_z(budget) for budget in (16384, 32768, 65536)]
+    assert floors == sorted(floors)
+    assert floors[0] > 4.0
+    assert all(floor - analyzer.RANDOM_SEARCH_MARGIN_Z > 3.5 for floor in floors)
+
+
+def test_extreme_construct_reduced_run_is_deterministic_and_audits() -> None:
+    from experiments.multi_island_hard import diagnose_threshold_v6_extreme_construct as diagnostic
+
+    first = diagnostic.run_diagnostics(blocks=2, samples=16, max_workers=1)
+    second = diagnostic.run_diagnostics(blocks=2, samples=16, max_workers=1)
+    assert first == second
+    assert first["fully_registered_run"] is False
+    assert diagnostic.audit(first, require_registered=False) == []
+    assert len(first["rugged_landscapes"]) == 8
+
+
+def test_extreme_construct_gate_requires_an_actual_low_correlation_endpoint() -> None:
+    from experiments.multi_island_hard import diagnose_threshold_v6_extreme_construct as diagnostic
+    from experiments.multi_island_hard import run_threshold_v6_extreme_phase as phase
+
+    correlations = {32: 0.75, 64: 0.50, 96: 0.24, 120: 0.08}
+    rows = [
+        {
+            "block": block,
+            "k": k,
+            "one_bit_autocorrelation": correlations[k],
+            "mean_absolute_neighbour_delta_random_z": 1.0,
+            "neighbour_delta_sd_random_z": 1.0,
+        }
+        for block in range(phase.REGISTERED_BLOCKS)
+        for k in phase.RUGGED_K_VALUES
+    ]
+    payload = {
+        "blocks": phase.REGISTERED_BLOCKS,
+        "smooth_scale": diagnostic.smooth_scale_rows(),
+        "rugged_landscapes": rows,
+    }
+    assert diagnostic.construct_gates(payload)["construct_validity_passes"] is True
+    for row in rows:
+        if row["k"] == 120:
+            row["one_bit_autocorrelation"] = 0.20
+    gates = diagnostic.construct_gates(payload)
+    assert gates["rugged_extremes_separate"] is False
+    assert gates["construct_validity_passes"] is False
