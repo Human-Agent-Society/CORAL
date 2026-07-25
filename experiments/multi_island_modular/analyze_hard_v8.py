@@ -292,6 +292,7 @@ def integrity(
             "agents.count": "8",
             "agents.runtime": "opencode",
             "agents.model": "mafia/glm-5.2",
+            "agents.timeout": "300",
             "agents.sandbox.network": "allowlist",
             "agents.sandbox.allowed_domains": '["api.appintheloop.com"]',
             "grader.parallel.max_workers": "4",

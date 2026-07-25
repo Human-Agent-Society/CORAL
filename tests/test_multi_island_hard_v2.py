@@ -127,6 +127,7 @@ def test_threshold_v2_runner_records_registered_protocol(tmp_path: Path) -> None
         tmp_path / "rep-01",
     )
     assert "agents.count=8" in command
+    assert "agents.timeout=300" in command
     assert "agents.sandbox.network=allowlist" in command
     assert 'agents.sandbox.allowed_domains=["api.appintheloop.com"]' in command
     assert "grader.parallel.max_workers=4" in command

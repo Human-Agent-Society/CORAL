@@ -26,6 +26,12 @@ causes convergence is one of the measured mechanisms. After migration, treat
 the arrival as another candidate to evaluate rather than assuming its recent
 score transfers unchanged.
 
+The budget is intentionally large. After the required first submission, you
+may use a compact local shell loop for mechanical search: each iteration must
+still write one literal `CANDIDATE`, call ordinary `coral eval`, wait for its
+feedback, and choose the next candidate from information visible in your
+island. Do not call the grader directly or batch uncounted fitness queries.
+
 The Smooth task has K=0 and one one-bit local optimum. The Rugged task has
 K=12 and many basins. Both use eight paired held-out 256-bit seeds and a budget
 ladder large enough to move beyond the old 16/24-query smoke tests. Sandbox

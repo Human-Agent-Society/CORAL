@@ -29,6 +29,7 @@ agents:
   runtime: opencode
   model: mafia/glm-5.2
   research: false
+  timeout: 300
   runtime_options:
     role_file: "../../hard_v8_eval_protocol.md"
   sandbox:

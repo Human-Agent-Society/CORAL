@@ -89,6 +89,7 @@ def build_command(spec, condition, run_dir):
         elif item == "agents.count=4":
             command[index] = "agents.count=8"
     command.append(f"agents.heartbeat={heartbeat_for(budget)}")
+    command.append("agents.timeout=300")
     command.append('agents.sandbox.allowed_domains=["api.appintheloop.com"]')
     command.append("islands.migration.dest_weighting=round_robin")
     command.append(f"run.stop.max_real_attempts_per_agent={budget // 8}")

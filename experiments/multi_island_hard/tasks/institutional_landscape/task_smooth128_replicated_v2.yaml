@@ -26,6 +26,7 @@ agents:
   runtime: opencode
   model: mafia/glm-5.2
   research: false
+  timeout: 300
   runtime_options:
     role_file: "../../threshold_v2_protocol.md"
   sandbox:

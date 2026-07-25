@@ -54,7 +54,8 @@ medium-rugged rather than maximally random: very high K can erase the local
 signal that either topology needs to improve. Registered
 budgets are 128, 256, 512, 1,024, 2,048, and 4,096 real evaluations. Every
 condition uses the same eight agents and an atomic `budget / 8` quota per
-agent. Migration cadence is `budget / 4`, clipped to 64–512 evaluations.
+agent. A 300-second no-output watchdog restarts stalled model sessions equally
+in every topology. Migration cadence is `budget / 4`, clipped to 64–512 evaluations.
 
 The topology conditions are:
 
