@@ -31,7 +31,10 @@ from hard_active_modular_landscape_v8_grader.grader import (  # noqa: E402
 )
 
 from experiments.multi_island_modular import analyze_hard_v4 as common  # noqa: E402
-from experiments.multi_island_modular.run_hard_v8 import heartbeat_for  # noqa: E402
+from experiments.multi_island_modular.run_hard_v8 import (  # noqa: E402
+    MODEL_API_DOMAINS,
+    heartbeat_for,
+)
 from experiments.multi_island_modular.simulate_hard_v8 import (  # noqa: E402
     BUDGETS,
     MIGRATION_EVERY,
@@ -290,6 +293,7 @@ def integrity(
             "agents.runtime": "opencode",
             "agents.model": "mafia/glm-5.2",
             "agents.sandbox.network": "allowlist",
+            "agents.sandbox.allowed_domains": '["api.appintheloop.com"]',
             "grader.parallel.max_workers": "4",
             "grader.args.disable_tune": "true",
             "grader.args.mode": mode,
@@ -315,8 +319,10 @@ def integrity(
     except (OSError, TypeError, KeyError, yaml.YAMLError):
         errors.append("resolved config is unreadable")
     else:
-        if allowed_domains:
-            errors.append("synthetic task network allowlist is not empty")
+        if allowed_domains != list(MODEL_API_DOMAINS):
+            errors.append(
+                f"network allowlist={allowed_domains!r}, expected model API only"
+            )
     private = run_dir / ".coral/private" / SEED_BUNDLE_FILENAME
     if not private.is_file() or private.read_bytes() != TASKDATA.read_bytes():
         errors.append("private v8 seed bundle mismatch")

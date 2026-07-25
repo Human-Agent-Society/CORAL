@@ -36,6 +36,8 @@ agents:
     enabled: true
     provider: srt
     network: allowlist
+    allowed_domains:
+      - api.appintheloop.com
 
 workspace:
   results_dir: "/var/tmp/coral-institutions-results"

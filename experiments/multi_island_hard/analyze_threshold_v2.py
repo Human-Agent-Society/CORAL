@@ -19,6 +19,7 @@ import yaml
 from experiments.multi_island import analyze as legacy
 from experiments.multi_island_hard.run_threshold_v2 import (
     BUDGETS,
+    MODEL_API_DOMAINS,
     heartbeat_for,
     migration_every,
 )
@@ -260,6 +261,7 @@ def integrity(
             "agents.runtime": "opencode",
             "agents.model": "mafia/glm-5.2",
             "agents.sandbox.network": "allowlist",
+            "agents.sandbox.allowed_domains": '["api.appintheloop.com"]',
             "agents.runtime_options.role_file": str(ROLE_FILE),
             "agents.heartbeat": heartbeat_for(budget),
             "grader.parallel.max_workers": "4",
@@ -287,8 +289,10 @@ def integrity(
     except (OSError, TypeError, KeyError, yaml.YAMLError):
         errors.append("resolved config is unreadable")
     else:
-        if allowed_domains:
-            errors.append("synthetic task network allowlist is not empty")
+        if allowed_domains != list(MODEL_API_DOMAINS):
+            errors.append(
+                f"network allowlist={allowed_domains!r}, expected model API only"
+            )
     frozen = TASKDATA / TASK_FILES[task]
     private = run_dir / ".coral/private" / TASK_FILES[task]
     if not private.is_file() or private.read_bytes() != frozen.read_bytes():

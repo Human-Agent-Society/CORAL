@@ -78,10 +78,10 @@ four per island, no migration events in controls, and a real migration event
 when enabled. Above the calibrated first-certificate frontier, at least one
 exact certificate is also required.
 
-Synthetic cells run with an empty network allowlist (effectively closed). This is part of the
-integrity gate: after the package is pushed, a network-open participant could
-otherwise retrieve the committed private-seed bundle from the remote and turn
-the black-box task into source lookup.
+Synthetic cells allowlist only `api.appintheloop.com`, which the model runtime
+requires. This is part of the integrity gate: source hosts such as GitHub stay
+blocked, because a network-open participant could otherwise retrieve the
+committed private-seed bundle and turn the black-box task into source lookup.
 
 Eight private seeds are paired across conditions. The operational threshold is
 the earliest budget at which the eight paired `multi_island - partition`

@@ -62,7 +62,7 @@ attempts).
 The original ladder remains a one-seed stress test. The held-out replacement
 uses `smooth128_rep_v2` and `rugged128_k12_rep_v2`, eight paired confirmation
 seeds that are disjoint from task-calibration seeds, eight agents, equal
-per-agent quotas, closed networking, and budgets
+per-agent quotas, model-API-only networking, and budgets
 128/256/512/1,024/2,048/4,096. It compares global search with two and four
 islands plus a matched four-way no-migration partition. Verified component
 transfer is tested separately by the modular v8 package.

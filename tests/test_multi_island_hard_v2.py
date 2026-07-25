@@ -76,7 +76,7 @@ def test_replicated_variants_parse_and_network_is_closed() -> None:
         config = CoralConfig.from_yaml(TASK_DIR / name)
         assert config.agents.count == 8
         assert config.agents.sandbox.network == "allowlist"
-        assert config.agents.sandbox.allowed_domains == []
+        assert config.agents.sandbox.allowed_domains == ["api.appintheloop.com"]
         assert config.grader.args["seed_index"] == 0
 
 
@@ -128,6 +128,7 @@ def test_threshold_v2_runner_records_registered_protocol(tmp_path: Path) -> None
     )
     assert "agents.count=8" in command
     assert "agents.sandbox.network=allowlist" in command
+    assert 'agents.sandbox.allowed_domains=["api.appintheloop.com"]' in command
     assert "grader.parallel.max_workers=4" in command
     assert "islands.migration.every=128" in command
     assert "islands.migration.dest_weighting=round_robin" in command

@@ -67,8 +67,9 @@ The topology conditions are:
 
 Each base agent's first candidate is deterministically derived from its id and
 is identical across paired topology cells. The eight starts are distinct.
-Subsequent allocation is free. Networking is closed so a pushed private bundle
-cannot be downloaded from the remote.
+Subsequent allocation is free. The sandbox allowlists only
+`api.appintheloop.com`, which is required by the model runtime; source hosts
+such as GitHub remain blocked so a pushed private bundle cannot be downloaded.
 
 ## Outcomes and registered decision rule
 
@@ -111,9 +112,9 @@ satisfy the eight-seed decision rule.
 
 Every accepted cell needs the exact budget, eight equal per-agent quotas,
 numeric feedback, the matching private seed and seed index, registered
-topology/cadence/heartbeat, topology-invariant first candidates, an empty
-network allowlist, no grader errors, no migration notes in controls, and a real
-migration event in enabled conditions. At most one malformed candidate is
+topology/cadence/heartbeat, topology-invariant first candidates, an allowlist
+containing exactly the model API domain, no grader errors, no migration notes
+in controls, and a real migration event in enabled conditions. At most one malformed candidate is
 allowed and remains charged as numeric zero.
 
 A positive threshold supports a controlled black-box diversity-and-transfer

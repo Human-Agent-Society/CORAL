@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parent
 TASK_DIR = ROOT / "tasks/institutional_landscape"
 ROLE_FILE = ROOT / "threshold_v2_protocol.md"
 BUDGETS = (128, 256, 512, 1024, 2048, 4096)
+MODEL_API_DOMAINS = ("api.appintheloop.com",)
 
 base.DEFAULT_RESULTS_ROOT = Path("/var/tmp/coral-institutions-results/nk-threshold-v2")
 base.TOPOLOGIES = {
@@ -88,6 +89,7 @@ def build_command(spec, condition, run_dir):
         elif item == "agents.count=4":
             command[index] = "agents.count=8"
     command.append(f"agents.heartbeat={heartbeat_for(budget)}")
+    command.append('agents.sandbox.allowed_domains=["api.appintheloop.com"]')
     command.append("islands.migration.dest_weighting=round_robin")
     command.append(f"run.stop.max_real_attempts_per_agent={budget // 8}")
     command.append(f"grader.args.seed_index={seed_index}")

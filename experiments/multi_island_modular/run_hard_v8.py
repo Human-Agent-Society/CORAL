@@ -12,6 +12,7 @@ from experiments.multi_island_modular.simulate_hard_v8 import BUDGETS, MIGRATION
 ROOT = Path(__file__).resolve().parent
 TASK_DIR = ROOT / "tasks/hard_active_modular_landscape_v8"
 ROLE_FILE = ROOT / "hard_v8_eval_protocol.md"
+MODEL_API_DOMAINS = ("api.appintheloop.com",)
 
 base.DEFAULT_RESULTS_ROOT = Path("/var/tmp/coral-institutions-results/modular-hard-v8")
 base.TOPOLOGIES = {
@@ -86,6 +87,7 @@ def build_command(spec, condition, run_dir):
         elif item == "agents.count=4":
             command[index] = "agents.count=8"
     command.append(f"agents.heartbeat={heartbeat_for(mode)}")
+    command.append('agents.sandbox.allowed_domains=["api.appintheloop.com"]')
     command.append(f"run.stop.max_real_attempts_per_agent={budget // 8}")
     command.append(f"grader.args.seed_index={seed_index}")
     command.append(f"grader.args.mode={mode}")

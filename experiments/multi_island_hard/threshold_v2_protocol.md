@@ -29,5 +29,5 @@ score transfers unchanged.
 The Smooth task has K=0 and one one-bit local optimum. The Rugged task has
 K=12 and many basins. Both use eight paired held-out 256-bit seeds and a budget
 ladder large enough to move beyond the old 16/24-query smoke tests. Sandbox
-networking is closed. Do not inspect private paths, infer the seed, or treat
+networking is restricted to the model API. Do not inspect private paths, infer the seed, or treat
 the operator's approximate greedy reference as a known optimum.

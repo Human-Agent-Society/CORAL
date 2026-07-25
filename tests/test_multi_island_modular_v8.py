@@ -209,6 +209,7 @@ def test_v8_calibration_and_runner_are_registered(tmp_path: Path) -> None:
     )
     assert "agents.count=8" in command
     assert "agents.sandbox.network=allowlist" in command
+    assert 'agents.sandbox.allowed_domains=["api.appintheloop.com"]' in command
     assert "islands.migration.every=128" in command
     assert "run.stop.max_real_attempts_per_agent=64" in command
     assert "grader.args.seed_index=0" in command

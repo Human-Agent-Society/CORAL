@@ -6,7 +6,7 @@ task:
     boundary effects when the landscape has one one-bit local optimum.
   tips: |
     CANDIDATE must remain one literal 128-bit string. Use ordinary coral eval
-    only. The seed is a private 256-bit token and sandbox networking is closed.
+    only. The seed is a private 256-bit token; networking permits only the model API.
 
 grader:
   entrypoint: "institutional_landscape_grader.grader:Grader"
@@ -32,6 +32,8 @@ agents:
     enabled: true
     provider: srt
     network: allowlist
+    allowed_domains:
+      - api.appintheloop.com
 
 workspace:
   results_dir: "/var/tmp/coral-institutions-results"
