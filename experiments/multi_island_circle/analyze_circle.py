@@ -21,6 +21,7 @@ from typing import Any
 import yaml
 
 from experiments.multi_island import analyze as common
+from experiments.multi_island.isolation_audit import isolation_gate
 from experiments.multi_island_circle.run_circle import (
     AGENT_TIMEOUT,
     BUDGETS,
@@ -411,6 +412,12 @@ def integrity(
         errors.append(f"scored source parse errors={row['scored_source_error_count']}")
     if row["forbidden_candidate_io_count"]:
         errors.append("candidate source attempted forbidden host/network I/O")
+    isolated, isolation_violations = isolation_gate(run_dir)
+    row["isolation_trace_gate"] = isolated
+    row["isolation_trace_violation_count"] = len(isolation_violations)
+    row["isolation_trace_violations"] = ";".join(isolation_violations)
+    if not isolated:
+        errors.append("cross-island information access in runtime trace")
     if not row["agent_quota_gate"]:
         errors.append(
             f"per-agent quota failed: min={row['agent_attempt_min']}, "

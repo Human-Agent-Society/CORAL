@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from coral.config import CoralConfig
-from coral.hub._island import all_view_roots
+from coral.hub._island import all_view_roots, island_root
 from coral.hub.attempts import (
     agent_in_grader_queue,
     count_agent_pending,
@@ -42,7 +42,10 @@ _POLL_INTERVAL_SEC = 0.2
 
 
 @contextmanager
-def _real_budget_lock(coral_dir: Path) -> Iterator[None]:
+def _real_budget_lock(
+    coral_dir: Path,
+    island_id: str | int | None = None,
+) -> Iterator[None]:
     """Serialize real-evaluation admission for a run.
 
     The manager's stop check happens after grading, so several agents can
@@ -50,7 +53,11 @@ def _real_budget_lock(coral_dir: Path) -> Iterator[None]:
     declared ``run.stop.max_real_attempts``.  The producer-side lock closes
     that race at the point where pending attempts enter the queue.
     """
-    lock_path = coral_dir / "real-budget.lock"
+    lock_path = (
+        island_root(coral_dir, island_id) / "real-budget.lock"
+        if island_id is not None
+        else coral_dir / "real-budget.lock"
+    )
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+") as lock_file:
         fcntl.flock(lock_file, fcntl.LOCK_EX)
@@ -60,10 +67,20 @@ def _real_budget_lock(coral_dir: Path) -> Iterator[None]:
             fcntl.flock(lock_file, fcntl.LOCK_UN)
 
 
-def _real_attempt_count(coral_dir: Path, *, agent_id: str | None = None) -> int:
-    """Count queued/final real attempts, optionally for one stable agent id."""
+def _real_attempt_count(
+    coral_dir: Path,
+    *,
+    agent_id: str | None = None,
+    island_id: str | int | None = None,
+) -> int:
+    """Count queued/final real attempts in a run or one island scope."""
     commits: set[str] = set()
-    for root in all_view_roots(coral_dir):
+    roots = (
+        [island_root(coral_dir, island_id)]
+        if island_id is not None
+        else all_view_roots(coral_dir)
+    )
+    for root in roots:
         attempts_dir = root / "attempts"
         if not attempts_dir.is_dir():
             continue
@@ -235,14 +252,48 @@ def submit_eval(
     # too late to prevent concurrent submissions from overshooting the budget.
     max_real_attempts = config.run.stop.max_real_attempts
     max_real_attempts_per_agent = config.run.stop.max_real_attempts_per_agent
+    global_budget_implied_by_quotas = bool(
+        island_id is not None
+        and max_real_attempts is not None
+        and max_real_attempts_per_agent is not None
+        and max_real_attempts == max_real_attempts_per_agent * config.agents.count
+    )
+    island_scoped_agent_quota = bool(
+        island_id is not None
+        and max_real_attempts_per_agent is not None
+        and (max_real_attempts is None or global_budget_implied_by_quotas)
+    )
+    if (
+        island_id is not None
+        and config.agents.sandbox.enabled
+        and (max_real_attempts is not None or max_real_attempts_per_agent is not None)
+        and not island_scoped_agent_quota
+    ):
+        raise RuntimeError(
+            "sandboxed multi-island fixed budgets require a per-agent quota; "
+            "when max_real_attempts is also set it must equal "
+            "agents.count * max_real_attempts_per_agent"
+        )
     admission = (
-        _real_budget_lock(coral_dir)
+        _real_budget_lock(
+            coral_dir,
+            island_id=island_id if island_scoped_agent_quota else None,
+        )
         if (max_real_attempts is not None or max_real_attempts_per_agent is not None)
         and not tune
         else nullcontext()
     )
     with admission:
-        if max_real_attempts is not None and not tune:
+        # With an exact balanced per-agent allocation, the hard quotas sum to
+        # the global budget.  Enforce them using only the current island's
+        # attempt view so a sandboxed partition agent never needs permission
+        # to scan foreign attempts.  The manager still observes the run-wide
+        # sum and records the ordinary max_real_attempts auto-stop at B.
+        if (
+            max_real_attempts is not None
+            and not tune
+            and not global_budget_implied_by_quotas
+        ):
             current = _real_attempt_count(coral_dir)
             if current >= max_real_attempts:
                 raise RuntimeError(
@@ -250,7 +301,11 @@ def submit_eval(
                     f"{current}/{max_real_attempts} real attempts already queued or finalized"
                 )
         if max_real_attempts_per_agent is not None and not tune:
-            agent_current = _real_attempt_count(coral_dir, agent_id=agent_id)
+            agent_current = _real_attempt_count(
+                coral_dir,
+                agent_id=agent_id,
+                island_id=island_id if island_scoped_agent_quota else None,
+            )
             if agent_current >= max_real_attempts_per_agent:
                 raise RuntimeError(
                     "per-agent real evaluation quota exhausted: "

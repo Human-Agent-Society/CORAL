@@ -8,6 +8,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from experiments.multi_island import run_matrix as base
+from experiments.multi_island.isolation_audit import require_sandbox_contract
 
 ROOT = Path(__file__).resolve().parent
 REPO_ROOT = ROOT.parents[1]
@@ -109,6 +110,10 @@ def latin_square_cells(
 
 
 def main() -> int:
+    try:
+        require_sandbox_contract()
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
     if "--budget" not in sys.argv:
         raise SystemExit("Circle Packing requires one explicit registered --budget per launch")
     previous_build = base.build_command

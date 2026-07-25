@@ -154,7 +154,12 @@ positive-control policy must show no pre-transfer topology difference, no
 cross-island union in `partition`, and a post-transfer window in both tasks.
 `analyze_hard_v8.py` then audits certificate integrity and treats global pooled
 discovery as a diagnostic only. See `research_design_v8.md`,
-`hard_v8_calibration.json`, and `hard_v8_eval_protocol.md`.
+`hard_v8_calibration.json`, and `hard_v8_eval_protocol.md`. The first B=384
+partition pilot is invalid: shared Git/state permissions allowed a cross-island
+9-certificate consolidation with migration disabled. The retained evidence,
+root cause, and fail-closed isolation gate are recorded in
+`hard_v8_pilot_log.md`; the paired multi-island cell was stopped before its
+first attempt.
 
 ## Files
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import importlib
 import json
 import random
@@ -15,6 +16,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+from experiments.multi_island.isolation_audit import isolation_gate
 
 ROOT = Path(__file__).resolve().parent
 GRADER_SRC = ROOT / "tasks/hard_active_modular_landscape_v8/grader/src"
@@ -51,6 +54,16 @@ CONDITIONS = ("global_8", "partition", "multi_island")
 MAX_MALFORMED_ATTEMPTS = 1
 MIN_MODULE_COVERAGE = 8
 MIN_ISLAND_COVERAGE = 4
+AGENT_LANE_INDEX = {
+    "captain-nemo": 0,
+    "captain-ahab": 1,
+    "jack-sparrow": 2,
+    "davy-jones": 3,
+    "long-john-silver": 4,
+    "sinbad-the-sailor": 5,
+    "horatio-hornblower": 6,
+    "jack-aubrey": 7,
+}
 
 
 def mode_for(task: str) -> str:
@@ -83,6 +96,72 @@ def record_origin(record: dict[str, Any]) -> str:
     metadata = record.get("metadata")
     metadata = metadata if isinstance(metadata, dict) else {}
     return str(metadata.get("origin_island_id") or common.record_island(record))
+
+
+def base_agent_id(agent_id: str) -> str:
+    return agent_id.split("-from-", 1)[0]
+
+
+def lane_index(agent_id: str) -> int:
+    base = base_agent_id(agent_id)
+    if base in AGENT_LANE_INDEX:
+        return AGENT_LANE_INDEX[base]
+    return int.from_bytes(hashlib.sha256(base.encode()).digest()[:2], "big") % 8
+
+
+def search_query_error(
+    *,
+    agent_id: str,
+    active: int,
+    bits: str,
+    carried: set[int],
+    active_score: float | None,
+    exact: bool,
+    states: dict[tuple[str, int], dict[str, Any]],
+) -> str | None:
+    """Validate probes against the incumbent, not the preceding query.
+
+    A rejected coordinate probe is followed by a query that both restores the
+    rejected bit and flips the next bit.  Those two submitted strings are two
+    bits apart even though both are legal one-coordinate probes of the same
+    incumbent.  Tracking the incumbent also lets the audit distinguish that
+    registered operator from multi-bit group testing.
+    """
+
+    if active in carried or exact:
+        return None
+    base = base_agent_id(agent_id)
+    key = (base, active)
+    if active % 8 != lane_index(base):
+        return f"{base}:searched-unowned-module-{active}"
+    state = states.get(key)
+    if state is None:
+        if bits != "0" * len(bits):
+            return f"{base}:module-{active}-did-not-start-at-zero"
+        if active_score is not None:
+            states[key] = {
+                "incumbent": bits,
+                "score": active_score,
+                "probed": set(),
+            }
+        return None
+    incumbent = str(state["incumbent"])
+    changed = [
+        index
+        for index, (left, right) in enumerate(zip(incumbent, bits, strict=True))
+        if left != right
+    ]
+    if len(changed) != 1:
+        return f"{base}:module-{active}-changed-{len(changed)}-coordinates-from-incumbent"
+    coordinate = changed[0]
+    probed = state["probed"]
+    if coordinate in probed:
+        return f"{base}:module-{active}-repeated-coordinate-{coordinate}"
+    probed.add(coordinate)
+    if active_score is not None and active_score > float(state["score"]):
+        state["incumbent"] = bits
+        state["score"] = active_score
+    return None
 
 
 def agent_balance(records: list[dict[str, Any]], budget: int) -> dict[str, Any]:
@@ -124,6 +203,8 @@ def collect(
     seen_queries: defaultdict[tuple[int, str], set[str]] = defaultdict(set)
     parse_errors: list[str] = []
     feedback_errors: list[str] = []
+    search_errors: list[str] = []
+    smooth_search_states: dict[tuple[str, int], dict[str, Any]] = {}
     best_certified = 0
     best_actual = 0
     best_commit = ""
@@ -152,6 +233,21 @@ def collect(
         origin = record_origin(record)
         active_by_origin[origin].add(active)
         bits = modules[active]
+        if mode == "smooth":
+            active_value = payload.get("active_score") if payload is not None else None
+            search_error = search_query_error(
+                agent_id=str(record.get("agent_id") or "unknown"),
+                active=active,
+                bits=bits,
+                carried=carried,
+                active_score=(
+                    float(active_value) if isinstance(active_value, (int, float)) else None
+                ),
+                exact=bits == target_bits(seed, active),
+                states=smooth_search_states,
+            )
+            if search_error is not None:
+                search_errors.append(f"{commit}:{search_error}")
         query = (active, bits)
         if seen_queries[query]:
             duplicate_queries += 1
@@ -255,6 +351,8 @@ def collect(
         "parse_errors": ";".join(parse_errors),
         "feedback_error_count": len(feedback_errors),
         "feedback_errors": ";".join(feedback_errors),
+        "search_protocol_error_count": len(search_errors),
+        "search_protocol_errors": ";".join(search_errors),
         # Compatibility aliases for prior modular audit tables. The aliases
         # deliberately distinguish feasible submitted assembly from pooling.
         "best_assembled_score": best_certified / BLOCKS,
@@ -345,6 +443,12 @@ def integrity(
         errors.append("multi-island cell has no migration event")
     if condition != "multi_island" and row["transferred_blocks"]:
         errors.append("cross-island certificate reuse in a non-migration control")
+    isolated, isolation_violations = isolation_gate(run_dir)
+    row["isolation_trace_gate"] = isolated
+    row["isolation_trace_violation_count"] = len(isolation_violations)
+    row["isolation_trace_violations"] = ";".join(isolation_violations)
+    if not isolated:
+        errors.append("cross-island information access in runtime trace")
     if row["numeric_scores"] != row["real_attempts"]:
         errors.append("non-numeric real score present")
     if row["parse_error_count"] > MAX_MALFORMED_ATTEMPTS:
@@ -353,6 +457,10 @@ def integrity(
         )
     if row["feedback_error_count"]:
         errors.append(f"feedback integrity errors={row['feedback_error_count']}")
+    if row["search_protocol_error_count"]:
+        errors.append(
+            f"registered search-operator errors={row['search_protocol_error_count']}"
+        )
     if row["real_attempts"] == budget and not row["coverage_gate"]:
         errors.append(f"module coverage={row['module_coverage']}, below v8 gate")
     first_frontier = MODULE_COST[mode] * 8

@@ -352,6 +352,28 @@ def _worktree_reads(
     return sorted(reads)
 
 
+def _state_root_for_worktree(worktree_path: Path, coral_dir: Path) -> Path:
+    """Return the only agent-facing CORAL state root for this worktree.
+
+    A sandboxed multi-island agent must never receive an allow rule for the
+    common ``.coral/islands`` parent: srt uses allow-wins precedence, so that
+    broad grant would silently override a deny on a sibling island.  Resolve
+    the breadcrumb written by :func:`setup_shared_state` and grant only that
+    concrete island.  Failing closed here is preferable to launching a run
+    whose partition control can read or write another island's notes.
+    """
+    from coral.hub._island import island_root
+
+    if not (coral_dir / "islands").exists():
+        return island_root(coral_dir, None)
+    island_id = _worktree_island(worktree_path)
+    if island_id is None:
+        raise ValueError(
+            "sandboxed multi-island worktree has no .coral_island breadcrumb"
+        )
+    return island_root(coral_dir, island_id)
+
+
 def _run_dir_reads(
     worktree_path: Path, coral_dir: Path, repo_dir: Path, sibling_worktrees: list[Path]
 ) -> list[str]:
@@ -362,15 +384,17 @@ def _run_dir_reads(
     of ``.coral/private/`` would resurrect it. Other runs are simply never
     allowed back.
     """
+    state_root = _state_root_for_worktree(worktree_path, coral_dir)
     reads = [
         *_worktree_reads(worktree_path, coral_dir, sibling_worktrees),
         # Worktree git operations need the run repo's object/ref store, not
         # its working-tree parent.  Keeping this exact avoids a broad read
         # bind masking the narrower writable .git bind under a denied root.
         str((repo_dir / ".git").resolve()),
-        str((coral_dir / "public").resolve()),
-        str((coral_dir / "islands").resolve()),  # multi-island shared state
-        str((coral_dir / ".git").resolve()),  # checkpoint history (coral notes --history)
+        # Shared notes, attempts, heartbeat config, and checkpoint history are
+        # island-local in multi-island mode.  Never grant their common parent:
+        # allowRead takes precedence over denyRead in srt.
+        str(state_root.resolve()),
         str((coral_dir / "config.yaml").resolve()),
         str((coral_dir / "config_dir").resolve()),  # breadcrumb read by hooks
         # PYTHONPATH shim for editable installs (_cli_pythonpath_shim). Not
@@ -482,6 +506,9 @@ def build_srt_settings(
     allow-listed to the same slice.
     """
     private_dir = str((coral_dir / "private").resolve())
+    state_root = _state_root_for_worktree(worktree_path, coral_dir).resolve()
+    islands_root = (coral_dir / "islands").resolve()
+    agents_root = worktree_path.parent.resolve()
     home_paths = _runtime_home_paths(shared_dir_name)
 
     settings: dict[str, Any] = {
@@ -498,6 +525,16 @@ def build_srt_settings(
             "denyRead": [
                 str(Path.home()),
                 private_dir,
+                # Runs may live outside $HOME (the research matrices use
+                # /var/tmp).  Deny the common worktree parent explicitly and
+                # allow back only the current island's roster below.  Merely
+                # omitting a foreign worktree from allowRead is not a deny in
+                # sandbox-runtime.
+                str(agents_root),
+                # In multi-island mode, deny the common parent and allow only
+                # ``state_root`` below.  This protects sibling islands even
+                # when the task did not add a broader results-root deny.
+                *([str(islands_root)] if islands_root.exists() else []),
                 # srt's default temp directory is host-wide.  An agent gets a
                 # private replacement under its worktree in prepare_agent().
                 # sandbox-runtime always re-binds the parent as a mandatory
@@ -515,9 +552,11 @@ def build_srt_settings(
             ],
             "allowWrite": [
                 str(worktree_path.resolve()),
-                # Notes, attempts, eval logs, and the checkpoint repo all live
-                # under .coral/ and are written from agent-side `coral` commands.
-                str(coral_dir.resolve()),
+                # Notes, attempts, eval logs, heartbeat config, and the
+                # checkpoint repo live below the current island's state root.
+                # Granting all of .coral would let a partition agent write a
+                # handoff directly into another island.
+                str(state_root),
                 # Worktree commits (coral eval) write objects/refs into the
                 # run repo's .git; srt's built-in protections still deny
                 # .git/hooks and .git/config within it.
@@ -525,7 +564,14 @@ def build_srt_settings(
                 *home_paths,
                 *cfg.allow_write,
             ],
-            "denyWrite": [private_dir],
+            "denyWrite": [
+                private_dir,
+                # The current worktree is allow-listed above.  This parent
+                # deny prevents writes into sibling worktrees even when the
+                # enclosing run directory is outside the home-directory deny.
+                str(agents_root),
+                *([str(islands_root)] if islands_root.exists() else []),
+            ],
         },
         # Runtime CLIs allocate ptys for their shell tools (macOS-only knob).
         "allowPty": True,

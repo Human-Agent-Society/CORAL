@@ -236,6 +236,24 @@ def test_setup_opencode_settings_multi_island_external_dir_scoped(tmp_path):
     assert "public" not in keys, (
         f"public pattern leaked into multi-island opencode config; got {ext}"
     )
+    bash = settings["permission"]["bash"]
+    assert bash["git *"] == "deny"
+    assert bash["* git *"] == "deny"
+
+
+def test_setup_opencode_settings_single_island_does_not_block_git(tmp_path):
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public").mkdir(parents=True)
+    (coral_dir / "private").mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    setup_opencode_settings(worktree, coral_dir, island_id=None)
+
+    settings = _json.loads((worktree / ".opencode" / "opencode.json").read_text())
+    bash = settings["permission"]["bash"]
+    assert "git *" not in bash
+    assert "* git *" not in bash
 
 
 def test_partition_and_setup_threads_island_id_into_worktrees(tmp_path):

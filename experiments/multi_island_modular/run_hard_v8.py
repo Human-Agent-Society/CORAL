@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from experiments.multi_island import run_matrix as base
+from experiments.multi_island.isolation_audit import require_sandbox_contract
 from experiments.multi_island_modular.simulate_hard_v8 import BUDGETS, MIGRATION_EVERY
 
 ROOT = Path(__file__).resolve().parent
@@ -96,6 +97,10 @@ def build_command(spec, condition, run_dir):
 
 
 def main() -> int:
+    try:
+        require_sandbox_contract()
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
     if "--budget" not in sys.argv:
         raise SystemExit("v8 requires one explicit registered --budget per launch")
     previous = base.build_command

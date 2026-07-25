@@ -97,6 +97,13 @@ equal to partition before a post-discovery migration, multi-island can exceed
 partition only after a migrant's certificate is resubmitted, and global pooled
 discovery is not used as the primary outcome. Grader tests must also show that
 changing uncertified inactive bits cannot change feedback or assembly reward.
+The active CORAL build must additionally pass the executable sandbox contract:
+only the current island state root and same-island worktree roster are
+readable, only the current worktree/state root are writable, raw Git inspection
+is denied, and runtime traces contain no foreign-island path or
+foreign-worktree access. `experiments/multi_island/sandbox_canary.py` exercises
+that contract with a real sandboxed `coral eval`. Any violation invalidates the
+cell even if certificate chronology looks plausible.
 
 A positive result establishes sensitivity of CORAL's migration mechanism in a
 certified compositional search. It does not establish semantic collaboration,

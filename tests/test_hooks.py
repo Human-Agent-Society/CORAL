@@ -566,6 +566,13 @@ def test_submit_eval_multi_island_writes_to_island_attempts(tmp_path, monkeypatc
         {
             "task": {"name": "t", "description": "d"},
             "islands": {"count": 2},
+            "agents": {"count": 2, "sandbox": {"enabled": True}},
+            "run": {
+                "stop": {
+                    "max_real_attempts": 2,
+                    "max_real_attempts_per_agent": 1,
+                }
+            },
             "workspace": {
                 "results_dir": str(tmp_path / "results"),
                 "repo_path": str(tmp_path / "src"),
@@ -603,6 +610,12 @@ def test_submit_eval_multi_island_writes_to_island_attempts(tmp_path, monkeypatc
     (worktree / ".coral_dir").write_text(str(coral_dir.resolve()))
     (worktree / ".coral_agent_id").write_text("1-agent-1")
     (worktree / ".coral_island").write_text("1")
+    # Balanced per-agent quotas imply the global budget, so admission must
+    # not enumerate foreign island attempts (which the sandbox cannot read).
+    monkeypatch.setattr(
+        "coral.hooks.post_commit.all_view_roots",
+        lambda _coral_dir: (_ for _ in ()).throw(AssertionError("cross-island scan")),
+    )
 
     attempt = submit_eval(
         message="island-1 eval",
@@ -619,6 +632,8 @@ def test_submit_eval_multi_island_writes_to_island_attempts(tmp_path, monkeypatc
     # metadata.island_id stamped
     assert (attempt.metadata or {}).get("island_id") == "1"
     assert (attempt.metadata or {}).get("origin_island_id") == "1"
+    assert (coral_dir / "islands" / "1" / "real-budget.lock").is_file()
+    assert not (coral_dir / "real-budget.lock").exists()
 
 
 def test_submit_eval_walks_up_for_multi_island_breadcrumbs(tmp_path):

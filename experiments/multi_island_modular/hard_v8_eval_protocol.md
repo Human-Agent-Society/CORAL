@@ -48,6 +48,12 @@ certificates with destination-local certificates and submit a consolidation
 candidate promptly. The primary metric counts the best certificate-backed
 candidate actually submitted; an operator-side union does not count.
 
+Island visibility is part of the treatment. Do not inspect raw Git refs,
+objects, or commits, explicit `.coral/islands/<other-island>` paths, or any
+worktree outside the sibling set surfaced in the current island. Use
+island-scoped `coral log`, shared notes, and visible sibling worktrees only.
+Any such access invalidates the cell.
+
 ## Smooth search
 
 Start an owned module from zero and record its active score. Probe each of its

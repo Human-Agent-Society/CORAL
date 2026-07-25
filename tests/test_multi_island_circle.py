@@ -86,6 +86,12 @@ def test_circle_runner_freezes_budget_topology_and_candidate_timeout(tmp_path: P
     assert expected.issubset(command)
 
 
+def test_circle_runner_shares_fail_closed_isolation_preflight() -> None:
+    from experiments.multi_island.isolation_audit import sandbox_contract_errors
+
+    assert sandbox_contract_errors() == []
+
+
 def test_circle_runner_rotates_sequential_condition_order() -> None:
     from experiments.multi_island_circle import run_circle as runner
 

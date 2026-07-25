@@ -568,6 +568,24 @@ def setup_opencode_settings(
     if grader_source is not None:
         external_allow[str(grader_source.resolve()) + "/**"] = "allow"
 
+    bash_permissions = {
+        private_pattern: "deny",
+    }
+    if island_id is not None:
+        # Every worktree currently uses the run repo's common Git object/ref
+        # store.  Raw Git inspection can therefore bypass the island-scoped
+        # notes/attempt APIs (for example, ``git show coral/<foreign-agent>``).
+        # ``coral eval`` still works: the permission check sees the top-level
+        # coral command, whose internal Git subprocess is sandboxed normally.
+        # Same-island source sharing remains available through the explicitly
+        # granted sibling worktrees.
+        bash_permissions.update(
+            {
+                "git *": "deny",
+                "* git *": "deny",
+            }
+        )
+
     settings: dict = {
         "$schema": "https://opencode.ai/config.json",
         "permission": {
@@ -577,7 +595,7 @@ def setup_opencode_settings(
                 private_pattern: "deny",
             },
             "bash": {
-                private_pattern: "deny",
+                **bash_permissions,
             },
             "edit": {
                 private_pattern: "deny",

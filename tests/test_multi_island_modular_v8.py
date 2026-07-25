@@ -186,6 +186,54 @@ def test_v8_simulator_brackets_post_migration_threshold() -> None:
     ] > indexed[("rugged", 12288, "partition")]["best_submitted_certified_blocks"]
 
 
+def test_v8_analyzer_enforces_registered_smooth_search_operator() -> None:
+    from experiments.multi_island_modular import analyze_hard_v8 as analyzer
+
+    states: dict[tuple[str, int], dict[str, object]] = {}
+    common = {
+        "agent_id": "captain-nemo-from-atlantis",
+        "active": 0,
+        "carried": set(),
+        "exact": False,
+        "states": states,
+    }
+    assert analyzer.search_query_error(bits="0" * 32, active_score=0.5, **common) is None
+    assert analyzer.search_query_error(bits="1" + "0" * 31, active_score=0.4, **common) is None
+    # The rejected first probe is restored while the second coordinate is
+    # tested.  Adjacent submissions differ by two bits, but the new query is
+    # still exactly one bit from the unchanged all-zero incumbent.
+    assert analyzer.search_query_error(bits="01" + "0" * 30, active_score=0.6, **common) is None
+    assert "coordinates-from-incumbent" in str(
+        analyzer.search_query_error(bits="0111" + "0" * 28, active_score=0.7, **common)
+    )
+    assert "repeated-coordinate-0" in str(
+        analyzer.search_query_error(bits="11" + "0" * 30, active_score=0.7, **common)
+    )
+    assert "searched-unowned-module-1" in str(
+        analyzer.search_query_error(
+            agent_id="captain-nemo",
+            active=1,
+            bits="0" * 32,
+            carried=set(),
+            active_score=0.5,
+            exact=False,
+            states=states,
+        )
+    )
+    assert (
+        analyzer.search_query_error(
+            agent_id="captain-nemo",
+            active=6,
+            bits="1" * 32,
+            carried={6},
+            active_score=1.0,
+            exact=True,
+            states=states,
+        )
+        is None
+    )
+
+
 def test_v8_calibration_and_runner_are_registered(tmp_path: Path) -> None:
     from experiments.multi_island_modular import analyze_hard_v8 as analyzer
     from experiments.multi_island_modular import run_hard_v8 as runner

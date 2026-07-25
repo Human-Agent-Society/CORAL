@@ -42,6 +42,12 @@ Candidate Python runs in a no-network bubblewrap namespace exposing only its
 read-only checkout, temporary storage, and the NumPy/SciPy runtime; prior
 results, host paths, and grader state are not mounted.  The analyzer retains a
 second source-level audit for forbidden network or CORAL-private access.
+Before launch, the runner also fails closed unless the shared multi-island SRT
+contract scopes state and worktree visibility to the current island. The
+analyzer rejects runtime traces containing raw Git inspection or explicit
+foreign-island state/worktree access. Run
+`python experiments/multi_island/sandbox_canary.py` once on the active build
+before the B=32 smoke test to exercise the boundary with a real `coral eval`.
 
 ## Outcomes
 

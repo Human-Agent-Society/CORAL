@@ -166,6 +166,7 @@ def test_build_settings_reads_confined_to_run(tmp_path):
     # Home is denied wholesale; the run slice + toolchain dotdirs come back.
     assert str(Path.home()) in fs["denyRead"]
     assert private in fs["denyRead"]
+    assert str((tmp_path / "agents").resolve()) in fs["denyRead"]
     assert "/tmp/claude" in fs["denyRead"]
     assert "/tmp/claude/claude" in fs["denyRead"]
     allow_read = fs["allowRead"]
@@ -195,8 +196,10 @@ def test_build_settings_writes(tmp_path):
     fs = settings["filesystem"]
     private = str((tmp_path / ".coral" / "private").resolve())
     assert private in fs["denyWrite"]
+    assert str((tmp_path / "agents").resolve()) in fs["denyWrite"]
     assert str((tmp_path / "agents" / "agent-1").resolve()) in fs["allowWrite"]
-    assert str((tmp_path / ".coral").resolve()) in fs["allowWrite"]
+    assert str((tmp_path / ".coral" / "public").resolve()) in fs["allowWrite"]
+    assert str((tmp_path / ".coral").resolve()) not in fs["allowWrite"]
     assert str((tmp_path / "repo" / ".git").resolve()) in fs["allowWrite"]
     assert "/tmp" not in fs["allowWrite"]
     assert "/private/tmp" not in fs["allowWrite"]
@@ -245,22 +248,62 @@ def test_build_settings_multi_island_roster(tmp_path):
     worktrees that don't exist on disk yet (initial start spawns agents one
     by one, so later island-mates are pre-granted by path)."""
     paths = _paths(tmp_path)
-    (tmp_path / ".coral" / "islands").mkdir()
+    (tmp_path / ".coral" / "islands" / "avalon").mkdir(parents=True)
     own = tmp_path / "agents" / "agent-1"
+    (own / ".coral_island").write_text("avalon\n")
     unborn_mate = tmp_path / "agents" / "agent-2"  # deliberately not created
     foreigner = tmp_path / "agents" / "agent-3"
     foreigner.mkdir()
 
-    allow_read = build_srt_settings(
+    fs = build_srt_settings(
         SandboxConfig(enabled=True),
         proxy_port=1,
         sibling_worktrees=[own, unborn_mate],
         **paths,
-    )["filesystem"]["allowRead"]
+    )["filesystem"]
+    assert str((tmp_path / "agents").resolve()) in fs["denyRead"]
+    assert str((tmp_path / "agents").resolve()) in fs["denyWrite"]
+    allow_read = fs["allowRead"]
     assert str(own.resolve()) in allow_read
     assert str(unborn_mate.resolve()) in allow_read
     assert str(foreigner.resolve()) not in allow_read
     assert str((tmp_path / "agents").resolve()) not in allow_read
+    assert str((tmp_path / ".coral" / "islands" / "avalon").resolve()) in allow_read
+    assert str((tmp_path / ".coral" / "islands").resolve()) not in allow_read
+
+
+def test_build_settings_multi_island_state_is_read_write_scoped(tmp_path):
+    """A partition agent cannot access a sibling island through broad srt grants."""
+    paths = _paths(tmp_path)
+    own = tmp_path / "agents" / "agent-1"
+    (own / ".coral_island").write_text("avalon\n")
+    own_state = tmp_path / ".coral" / "islands" / "avalon"
+    foreign_state = tmp_path / ".coral" / "islands" / "atlantis"
+    own_state.mkdir(parents=True)
+    foreign_state.mkdir(parents=True)
+
+    fs = build_srt_settings(
+        SandboxConfig(enabled=True), proxy_port=1, **paths
+    )["filesystem"]
+
+    islands = str((tmp_path / ".coral" / "islands").resolve())
+    coral = str((tmp_path / ".coral").resolve())
+    assert islands in fs["denyRead"]
+    assert islands in fs["denyWrite"]
+    assert str(own_state.resolve()) in fs["allowRead"]
+    assert str(own_state.resolve()) in fs["allowWrite"]
+    assert str(foreign_state.resolve()) not in fs["allowRead"]
+    assert str(foreign_state.resolve()) not in fs["allowWrite"]
+    assert islands not in fs["allowRead"]
+    assert coral not in fs["allowWrite"]
+
+
+def test_build_settings_multi_island_requires_breadcrumb(tmp_path):
+    paths = _paths(tmp_path)
+    (tmp_path / ".coral" / "islands" / "avalon").mkdir(parents=True)
+
+    with pytest.raises(ValueError, match="no \\.coral_island breadcrumb"):
+        build_srt_settings(SandboxConfig(enabled=True), proxy_port=1, **paths)
 
 
 def test_build_settings_multi_island_breadcrumb_fallback(tmp_path):
