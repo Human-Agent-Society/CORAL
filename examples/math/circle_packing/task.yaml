@@ -35,11 +35,13 @@ task:
 grader:
   entrypoint: "circle_packing_grader.grader:Grader"
   setup:
-    - "uv pip install -e ./grader"
-  timeout: 600
+    - "uv pip install 'numpy>=1.24.0' 'scipy>=1.10.0' -e ./grader"
+  timeout: 660
   direction: maximize
   args:
     program_file: "initial_program.py"
+    evaluation_timeout: 600
+    harden_candidate: true
 
 agents:
   count: 2

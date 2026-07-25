@@ -12,7 +12,12 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import site
+import subprocess
+import sys
 import textwrap
+from pathlib import Path
 
 from coral.grader import TaskGrader
 from coral.types import ScoreBundle
@@ -29,16 +34,24 @@ class Grader(TaskGrader):
     """
 
     def evaluate(self) -> ScoreBundle:
+        if self.tune and self.args.get("disable_tune", False):
+            return self.fail(
+                "Tune mode is disabled for this controlled experiment; "
+                "submit an ordinary coral eval."
+            )
         program_file = self.args.get("program_file", "initial_program.py")
         program_path = os.path.join(self.codebase_path, program_file)
 
         if not os.path.exists(program_path):
             return self.fail(f"Program file not found: {program_file}")
 
-        timeout = self.timeout
+        timeout = self.args.get("evaluation_timeout", self.timeout)
 
         try:
-            result = _run_evaluation(program_path, timeout, self.get_python_command())
+            if self.args.get("harden_candidate", False):
+                result = _run_hardened_evaluation(program_path, timeout)
+            else:
+                result = _run_evaluation(program_path, timeout, self.get_python_command())
         except TimeoutError:
             return self.fail(f"Evaluation timed out after {timeout}s")
         except Exception as e:
@@ -63,8 +76,30 @@ class Grader(TaskGrader):
         return self.score(score, explanation)
 
 
-def _run_evaluation(program_path: str, timeout: int, python_cmd: list[str]) -> dict:
-    """Run the program in a subprocess with timeout."""
+def _evaluation_script(program_path: str, *, source_from_stdin: bool) -> str:
+    if source_from_stdin:
+        load_program = textwrap.dedent(
+            """\
+            source = sys.stdin.read()
+            namespace = {"__name__": "circle_candidate"}
+            exec(compile(source, "/work/initial_program.py", "exec"), namespace)
+            run_candidate = namespace.get("run")
+            if not callable(run_candidate):
+                raise ValueError("run() function not found")
+            """
+        )
+        run_expression = "run_candidate()"
+    else:
+        load_program = textwrap.dedent(
+            f"""\
+            sys.path.insert(0, os.path.dirname({os.path.abspath(program_path)!r}))
+            module_name = {os.path.splitext(os.path.basename(program_path))[0]!r}
+            program = __import__(module_name)
+            run_candidate = program.run
+            """
+        )
+        run_expression = "run_candidate()"
+
     script = textwrap.dedent(f"""\
         import json, sys, os, time
         import numpy as np
@@ -72,13 +107,10 @@ def _run_evaluation(program_path: str, timeout: int, python_cmd: list[str]) -> d
         N = {N}
         BENCHMARK = {BENCHMARK!r}
 
-        sys.path.insert(0, os.path.dirname({os.path.abspath(program_path)!r}))
-        module_name = {os.path.splitext(os.path.basename(program_path))[0]!r}
-        program = __import__(module_name)
-
-        start = time.time()
         try:
-            result = program.run()
+        __LOAD_PROGRAM__
+            start = time.time()
+            result = {run_expression}
             centers, radii, sum_radii = result
         except Exception as e:
             print(json.dumps({{"error": f"run() failed: {{e}}"}}))
@@ -122,20 +154,15 @@ def _run_evaluation(program_path: str, timeout: int, python_cmd: list[str]) -> d
         score = actual_sum / BENCHMARK if BENCHMARK > 0 else 0.0
         print(json.dumps({{"score": score, "sum_radii": actual_sum, "eval_time": eval_time}}))
     """)
-    import subprocess
-    result = subprocess.run(
-        [*python_cmd, "-c", script],
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip()[-2000:])
-    stdout = result.stdout.strip()
+    return script.replace("__LOAD_PROGRAM__", textwrap.indent(load_program.strip(), "    "))
+
+
+def _parse_result(stdout: str, stderr: str) -> dict:
+    if len(stdout.encode()) > 16 * 1024 * 1024:
+        raise RuntimeError("Candidate output exceeded 16 MiB")
+    stdout = stdout.strip()
     if not stdout:
-        raise RuntimeError(
-            f"Script produced no output.\nstderr: {result.stderr.strip()[-1000:]}"
-        )
+        raise RuntimeError(f"Script produced no output.\nstderr: {stderr.strip()[-1000:]}")
     try:
         return json.loads(stdout)
     except json.JSONDecodeError:
@@ -148,5 +175,131 @@ def _run_evaluation(program_path: str, timeout: int, python_cmd: list[str]) -> d
                 except json.JSONDecodeError:
                     continue
         raise RuntimeError(
-            f"No valid JSON in output.\nstdout: {stdout[-500:]}\nstderr: {result.stderr.strip()[-500:]}"
+            f"No valid JSON in output.\nstdout: {stdout[-500:]}\n"
+            f"stderr: {stderr.strip()[-500:]}"
         )
+
+
+def _run_evaluation(program_path: str, timeout: int, python_cmd: list[str]) -> dict:
+    """Run the program in the legacy task subprocess with timeout."""
+    script = _evaluation_script(program_path, source_from_stdin=False)
+    try:
+        result = subprocess.run(
+            [*python_cmd, "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise TimeoutError from exc
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip()[-2000:])
+    return _parse_result(result.stdout, result.stderr)
+
+
+def _sandboxed_command(
+    codebase: Path,
+    script: str,
+    site_packages: list[Path],
+) -> list[str]:
+    """Build a no-network bubblewrap command for untrusted candidate code."""
+    bubblewrap = shutil.which("bwrap")
+    if bubblewrap is None:
+        raise RuntimeError("harden_candidate requires bubblewrap (bwrap)")
+
+    interpreter = Path(sys.executable).resolve()
+    runtime_roots = {Path(sys.base_prefix).resolve()}
+    command = [
+        bubblewrap,
+        "--die-with-parent",
+        "--new-session",
+        "--unshare-all",
+        "--clearenv",
+        "--setenv",
+        "PATH",
+        "/usr/bin",
+        "--setenv",
+        "HOME",
+        "/tmp",
+        "--setenv",
+        "PYTHONHASHSEED",
+        "0",
+    ]
+    system_roots = [Path(path) for path in ("/usr", "/lib", "/lib64") if Path(path).exists()]
+    for root in system_roots:
+        command.extend(("--ro-bind", str(root), str(root)))
+
+    created: set[Path] = set(system_roots)
+    for root in sorted(runtime_roots, key=lambda path: len(path.parts)):
+        if any(root == system or root.is_relative_to(system) for system in system_roots):
+            continue
+        for parent in reversed(root.parents[:-1]):
+            if parent not in created:
+                command.extend(("--dir", str(parent)))
+                created.add(parent)
+        command.extend(("--ro-bind", str(root), str(root)))
+        created.add(root)
+
+    command.extend(("--dir", "/runtime"))
+    for index, package_root in enumerate(site_packages):
+        command.extend(
+            ("--ro-bind", str(package_root), f"/runtime/site-packages-{index}")
+        )
+
+    command.extend(
+        (
+            "--ro-bind",
+            str(codebase),
+            "/work",
+            "--proc",
+            "/proc",
+            "--dev",
+            "/dev",
+            "--tmpfs",
+            "/tmp",
+            "--chdir",
+            "/work",
+            str(interpreter),
+            "-I",
+            "-c",
+            script,
+        )
+    )
+    return command
+
+
+def _run_hardened_evaluation(program_path: str, timeout: int) -> dict:
+    """Execute candidate Python without host paths, prior results, or network."""
+    path = Path(program_path).resolve()
+    source = path.read_text()
+    site_packages = [
+        Path(item).resolve() for item in site.getsitepackages() if Path(item).is_dir()
+    ]
+    sandbox_site_packages = [
+        f"/runtime/site-packages-{index}" for index in range(len(site_packages))
+    ]
+    script = (
+        "import resource, sys\n"
+        f"sys.path[:0] = {['/work', *sandbox_site_packages]!r}\n"
+        f"resource.setrlimit(resource.RLIMIT_CPU, ({int(timeout) + 5}, {int(timeout) + 5}))\n"
+        "resource.setrlimit(resource.RLIMIT_FSIZE, (64 * 1024 * 1024, 64 * 1024 * 1024))\n"
+        "resource.setrlimit(resource.RLIMIT_NOFILE, (256, 256))\n"
+        "resource.setrlimit(resource.RLIMIT_NPROC, (128, 128))\n"
+        "resource.setrlimit(resource.RLIMIT_AS, (4 * 1024**3, 4 * 1024**3))\n"
+        + _evaluation_script(program_path, source_from_stdin=True)
+    )
+    try:
+        result = subprocess.run(
+            _sandboxed_command(path.parent, script, site_packages),
+            input=source,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise TimeoutError from exc
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Sandboxed candidate exited {result.returncode}: {result.stderr.strip()[-2000:]}"
+        )
+    return _parse_result(result.stdout, result.stderr)
