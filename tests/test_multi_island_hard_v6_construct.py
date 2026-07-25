@@ -1,6 +1,21 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_v6_construct_registration_binds_blind_sources() -> None:
+    directory = ROOT / "experiments/multi_island_hard"
+    registration = json.loads((directory / "threshold_v6_construct_registration.json").read_text())
+    assert registration["phase_map_raw_absent_at_registration"] is True
+    assert registration["construct_output_absent_at_registration"] is True
+    for filename, expected in registration["artifacts"].items():
+        observed = hashlib.sha256((directory / filename).read_bytes()).hexdigest()
+        assert observed == expected
 
 
 def test_v6_construct_reduced_run_is_deterministic_and_audits() -> None:

@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "registered_at": "2026-07-26T04:46:40+08:00",
+  "phase_map_raw_absent_at_registration": true,
+  "construct_output_absent_at_registration": true,
+  "source_commit": "f9067b4c3283cc6f1a33c79b08261974e891ceae",
+  "operator_command": [
+    "nice",
+    "-n",
+    "19",
+    "uv",
+    "run",
+    "python",
+    "experiments/multi_island_hard/diagnose_threshold_v6_construct.py",
+    "--max-workers",
+    "1"
+  ],
+  "artifacts": {
+    "diagnose_threshold_v6_construct.py": "00be1532e9af18fb0a3a8f3c4f32d66e3df9fcfc47251559967d33c8fc9c5e36",
+    "threshold_v6_construct_protocol.md": "ccc19787cc95dd5e1e39825dbe2ea34298415a31be9f1eb73398d6bebd691136"
+  },
+  "expected_output": "experiments/multi_island_hard/threshold_v6_construct_diagnostics.json",
+  "interpretation": "Topology-independent construct audit; cannot alter or rescue phase-map decisions."
+}
