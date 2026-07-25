@@ -6,12 +6,13 @@ generation: 0
 # N=512 high-diffusion positive-control protocol
 
 Follow every mechanical and privacy rule in the natural N=512 protocol. Your
-first real evaluation is the 512-bit digest stream derived from
-`coral-threshold-v4:{base_id}`. The `agent_id` in this role file's YAML header
-is only a protocol label and must never be hashed. Read the real runtime
-identity from `.coral_agent_id`, remove any `-from-<island>` suffix, and use
-that base id. The runner reserves one eighth of the total real-evaluation
-budget for you.
+first action is `python initialize_candidate.py`; submit the resulting literal
+as your first real evaluation without modifying it. The `agent_id` in this
+role file's YAML header is only a protocol label and must never be hashed. The
+helper reads the real runtime identity from `.coral_agent_id`, removes any
+`-from-<island>` suffix, and generates the registered chained SHA-256 stream.
+Do not replace it with SHA-512, a counter stream, or a random candidate. The
+runner reserves one eighth of the total real-evaluation budget for you.
 
 This cell is an explicit social-learning positive control. After the required
 first query, use the highest-scoring candidate currently visible in your

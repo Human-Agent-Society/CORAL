@@ -1,0 +1,1072 @@
+{
+  "schema_version": 1,
+  "purpose": "non-saturating hidden-order Smooth versus high-epistasis Rugged threshold",
+  "n": 512,
+  "smooth_family": "hidden-target hidden-order permuted_leading_ones",
+  "rugged_family": "adjacent NK from frozen v4 calibration",
+  "k_values": [
+    16,
+    32,
+    64,
+    128
+  ],
+  "budgets": [
+    4096,
+    8192,
+    16384
+  ],
+  "conditions": [
+    "global_8",
+    "partition_4",
+    "multi_island_4"
+  ],
+  "mutation_policies": [
+    "one_bit",
+    "registered_mixed",
+    "broader",
+    "four_bit"
+  ],
+  "landscape_repetitions": 8,
+  "policy_repetitions_per_landscape": 4,
+  "calibration_seed_sha256": [
+    "a972ae142f646e6c0948f4020d33a3a5b2348a46ca77f9d7a7460dacfa8fa853",
+    "e1dc27a3014aacf395da7f230a8c7bbdaab223384c4a4e8f07254abe85c914e8",
+    "5f85eaa5a744330366378f8ed54c3001b3e76ade42f3e2e25d706fae18dcee63",
+    "fe92803ed3c68f9d70370038c92a82aa9afecc22f09283b7f803cbf9a2708fc9",
+    "8dc3857ce6ee0703be79f5dc50171eba92ed62485448d8496bb818b9b447da9a",
+    "b86bdda48b501a261975b9f7149722b2accfabfe8d9b4791e518a1060d461cd7",
+    "9ee83feae73076a5a9e4225a06d1d7ae7c17c56c4a74504314b8db759c11bd1a",
+    "6fd0719504286b4ce01ec976e34ec9fb7856ac41fe0dc704d62eec1aead2c2d6"
+  ],
+  "fully_registered_run": true,
+  "smooth_summaries": [
+    {
+      "family": "permuted_leading_ones",
+      "budget": 4096,
+      "mutation": "one_bit",
+      "contrast": "multi_island_4_minus_global_8",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": -6.098795987733972,
+      "cluster_bootstrap_ci_low": -7.822368766876181,
+      "cluster_bootstrap_ci_high": -4.6182911646246385,
+      "paired_win_rate": 0.0,
+      "per_landscape_mean_random_z": [
+        -6.363961030678928,
+        -4.596194077712559,
+        -9.369164850721754,
+        -5.126524163602469,
+        -3.181980515339464,
+        -10.253048327204938,
+        -5.65685424949238,
+        -4.242640687119285
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 4096,
+      "mutation": "one_bit",
+      "contrast": "multi_island_4_minus_partition_4",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": 1.5688931707576521,
+      "cluster_bootstrap_ci_low": 0.7071067811865475,
+      "cluster_bootstrap_ci_high": 2.651650429449553,
+      "paired_win_rate": 0.8125,
+      "per_landscape_mean_random_z": [
+        1.7677669529663687,
+        4.772970773009195,
+        0.8838834764831843,
+        1.414213562373095,
+        2.474873734152916,
+        0.0,
+        0.5303300858899106,
+        0.7071067811865475
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 4096,
+      "mutation": "one_bit",
+      "contrast": "global_hardness_diagnostic",
+      "paired_runs": 32,
+      "mean_best_prefix": 20.6875,
+      "max_best_prefix": 38,
+      "exact_solutions": 0
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 4096,
+      "mutation": "registered_mixed",
+      "contrast": "multi_island_4_minus_global_8",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": -7.2036503333379525,
+      "cluster_bootstrap_ci_low": -8.573669721886889,
+      "cluster_bootstrap_ci_high": -5.723145510228619,
+      "paired_win_rate": 0.03125,
+      "per_landscape_mean_random_z": [
+        -9.015611460128481,
+        -7.247844507162112,
+        -7.7781745930520225,
+        -5.480077554195743,
+        -9.899494936611665,
+        -5.833630944789016,
+        -9.015611460128481,
+        -3.3587572106361003
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 4096,
+      "mutation": "registered_mixed",
+      "contrast": "multi_island_4_minus_partition_4",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": 0.17677669529663687,
+      "cluster_bootstrap_ci_low": -0.8617863895711046,
+      "cluster_bootstrap_ci_high": 1.1711456063402192,
+      "paired_win_rate": 0.34375,
+      "per_landscape_mean_random_z": [
+        0.17677669529663675,
+        1.590990257669732,
+        -2.2980970388562794,
+        -0.8838834764831843,
+        0.35355339059327373,
+        -1.237436867076458,
+        1.414213562373095,
+        2.2980970388562794
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 4096,
+      "mutation": "registered_mixed",
+      "contrast": "global_hardness_diagnostic",
+      "paired_runs": 32,
+      "mean_best_prefix": 22.71875,
+      "max_best_prefix": 39,
+      "exact_solutions": 0
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 4096,
+      "mutation": "broader",
+      "contrast": "multi_island_4_minus_global_8",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": -9.347067763809674,
+      "cluster_bootstrap_ci_low": -10.297242501029098,
+      "cluster_bootstrap_ci_high": -8.41899011350233,
+      "paired_win_rate": 0.0,
+      "per_landscape_mean_random_z": [
+        -10.960155108391486,
+        -11.667261889578032,
+        -9.369164850721754,
+        -8.838834764831844,
+        -10.076271631908302,
+        -8.48528137423857,
+        -7.424621202458749,
+        -7.954951288348659
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 4096,
+      "mutation": "broader",
+      "contrast": "multi_island_4_minus_partition_4",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": 0.8838834764831843,
+      "cluster_bootstrap_ci_low": -0.17677669529663692,
+      "cluster_bootstrap_ci_high": 1.9445436482630056,
+      "paired_win_rate": 0.5625,
+      "per_landscape_mean_random_z": [
+        1.590990257669732,
+        1.7677669529663689,
+        -1.2374368670764582,
+        -1.414213562373095,
+        3.7123106012293743,
+        0.3535533905932736,
+        1.237436867076458,
+        1.0606601717798212
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 4096,
+      "mutation": "broader",
+      "contrast": "global_hardness_diagnostic",
+      "paired_runs": 32,
+      "mean_best_prefix": 28.0625,
+      "max_best_prefix": 47,
+      "exact_solutions": 0
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 4096,
+      "mutation": "four_bit",
+      "contrast": "multi_island_4_minus_global_8",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": -20.88174713191523,
+      "cluster_bootstrap_ci_low": -24.085824734166774,
+      "cluster_bootstrap_ci_high": -17.699766616575765,
+      "paired_win_rate": 0.0,
+      "per_landscape_mean_random_z": [
+        -18.384776310850235,
+        -23.334523779156065,
+        -14.495689014324222,
+        -22.45064030267288,
+        -14.67246570962086,
+        -25.98617420860562,
+        -27.930717856868625,
+        -19.79898987322333
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 4096,
+      "mutation": "four_bit",
+      "contrast": "multi_island_4_minus_partition_4",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": 1.347922301636856,
+      "cluster_bootstrap_ci_low": 0.17677669529663687,
+      "cluster_bootstrap_ci_high": 2.3643882995925183,
+      "paired_win_rate": 0.59375,
+      "per_landscape_mean_random_z": [
+        2.1213203435596424,
+        -1.7677669529663687,
+        1.414213562373095,
+        2.82842712474619,
+        3.005203820042827,
+        -0.17677669529663687,
+        0.5303300858899106,
+        2.82842712474619
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 4096,
+      "mutation": "four_bit",
+      "contrast": "global_hardness_diagnostic",
+      "paired_runs": 32,
+      "mean_best_prefix": 54.8125,
+      "max_best_prefix": 69,
+      "exact_solutions": 0
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 8192,
+      "mutation": "one_bit",
+      "contrast": "multi_island_4_minus_global_8",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": -14.186329797555109,
+      "cluster_bootstrap_ci_low": -16.617009357883866,
+      "cluster_bootstrap_ci_high": -11.645164802665953,
+      "paired_win_rate": 0.0,
+      "per_landscape_mean_random_z": [
+        -16.440232662587228,
+        -12.727922061357855,
+        -15.026019100214134,
+        -12.197591975467944,
+        -12.020815280171307,
+        -18.207999615553597,
+        -19.445436482630054,
+        -7.424621202458749
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 8192,
+      "mutation": "one_bit",
+      "contrast": "multi_island_4_minus_partition_4",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": 2.209708691207961,
+      "cluster_bootstrap_ci_low": 1.347922301636856,
+      "cluster_bootstrap_ci_high": 3.0714950807790657,
+      "paired_win_rate": 0.71875,
+      "per_landscape_mean_random_z": [
+        0.0,
+        2.82842712474619,
+        1.414213562373095,
+        2.82842712474619,
+        4.419417382415922,
+        1.590990257669732,
+        1.7677669529663687,
+        2.82842712474619
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 8192,
+      "mutation": "one_bit",
+      "contrast": "global_hardness_diagnostic",
+      "paired_runs": 32,
+      "mean_best_prefix": 37.71875,
+      "max_best_prefix": 64,
+      "exact_solutions": 0
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 8192,
+      "mutation": "registered_mixed",
+      "contrast": "multi_island_4_minus_global_8",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": -14.937630752565816,
+      "cluster_bootstrap_ci_low": -17.788154964224084,
+      "cluster_bootstrap_ci_high": -12.153397801643786,
+      "paired_win_rate": 0.03125,
+      "per_landscape_mean_random_z": [
+        -16.617009357883866,
+        -18.207999615553597,
+        -10.429825022501575,
+        -8.838834764831844,
+        -17.67766952966369,
+        -14.142135623730951,
+        -21.566756826189696,
+        -12.020815280171307
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 8192,
+      "mutation": "registered_mixed",
+      "contrast": "multi_island_4_minus_partition_4",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": 0.44194173824159216,
+      "cluster_bootstrap_ci_low": -0.11048543456039805,
+      "cluster_bootstrap_ci_high": 1.0606601717798212,
+      "paired_win_rate": 0.53125,
+      "per_landscape_mean_random_z": [
+        0.5303300858899106,
+        0.0,
+        1.237436867076458,
+        0.0,
+        2.1213203435596424,
+        0.0,
+        0.5303300858899106,
+        -0.8838834764831843
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 8192,
+      "mutation": "registered_mixed",
+      "contrast": "global_hardness_diagnostic",
+      "paired_runs": 32,
+      "mean_best_prefix": 40.40625,
+      "max_best_prefix": 61,
+      "exact_solutions": 0
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 8192,
+      "mutation": "broader",
+      "contrast": "multi_island_4_minus_global_8",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": -16.86007731391674,
+      "cluster_bootstrap_ci_low": -18.53945591923479,
+      "cluster_bootstrap_ci_high": -15.24698996933493,
+      "paired_win_rate": 0.0,
+      "per_landscape_mean_random_z": [
+        -18.207999615553597,
+        -20.85965004500315,
+        -18.56155300614687,
+        -13.435028842544401,
+        -14.849242404917497,
+        -14.318912319027586,
+        -18.207999615553597,
+        -16.440232662587228
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 8192,
+      "mutation": "broader",
+      "contrast": "multi_island_4_minus_partition_4",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": 2.0108349089992443,
+      "cluster_bootstrap_ci_low": 0.41984465132951254,
+      "cluster_bootstrap_ci_high": 3.668116427405215,
+      "paired_win_rate": 0.59375,
+      "per_landscape_mean_random_z": [
+        3.7123106012293743,
+        3.5355339059327373,
+        0.35355339059327373,
+        -1.414213562373095,
+        6.010407640085654,
+        3.5355339059327373,
+        0.17677669529663687,
+        0.17677669529663687
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 8192,
+      "mutation": "broader",
+      "contrast": "global_hardness_diagnostic",
+      "paired_runs": 32,
+      "mean_best_prefix": 46.78125,
+      "max_best_prefix": 62,
+      "exact_solutions": 0
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 8192,
+      "mutation": "four_bit",
+      "contrast": "multi_island_4_minus_global_8",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": -33.85273714930596,
+      "cluster_bootstrap_ci_low": -36.04034875360184,
+      "cluster_bootstrap_ci_high": -31.17898963294433,
+      "paired_win_rate": 0.0,
+      "per_landscape_mean_random_z": [
+        -35.35533905932738,
+        -35.885669145217285,
+        -33.58757210636101,
+        -38.18376618407356,
+        -26.339727599198895,
+        -35.885669145217285,
+        -35.35533905932737,
+        -30.228814895724906
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 8192,
+      "mutation": "four_bit",
+      "contrast": "multi_island_4_minus_partition_4",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": 4.1542523394709665,
+      "cluster_bootstrap_ci_low": 1.9003494744388463,
+      "cluster_bootstrap_ci_high": 6.386058117591007,
+      "paired_win_rate": 0.6875,
+      "per_landscape_mean_random_z": [
+        3.5355339059327373,
+        6.363961030678928,
+        0.5303300858899106,
+        0.8838834764831843,
+        -0.17677669529663687,
+        6.894291116568838,
+        9.015611460128481,
+        6.18718433538229
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 8192,
+      "mutation": "four_bit",
+      "contrast": "global_hardness_diagnostic",
+      "paired_runs": 32,
+      "mean_best_prefix": 92.125,
+      "max_best_prefix": 112,
+      "exact_solutions": 0
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 16384,
+      "mutation": "one_bit",
+      "contrast": "multi_island_4_minus_global_8",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": -28.438950855846457,
+      "cluster_bootstrap_ci_low": -31.178989632944326,
+      "cluster_bootstrap_ci_high": -25.080193645210354,
+      "paired_win_rate": 0.0,
+      "per_landscape_mean_random_z": [
+        -28.461047942758537,
+        -31.643028458098,
+        -30.052038200428267,
+        -28.63782463805517,
+        -28.63782463805517,
+        -27.400387770978718,
+        -34.471455582844186,
+        -18.207999615553597
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 16384,
+      "mutation": "one_bit",
+      "contrast": "multi_island_4_minus_partition_4",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": 2.1655145173838015,
+      "cluster_bootstrap_ci_low": 0.9280776503073436,
+      "cluster_bootstrap_ci_high": 3.491339732108578,
+      "paired_win_rate": 0.71875,
+      "per_landscape_mean_random_z": [
+        1.590990257669732,
+        0.8838834764831843,
+        3.3587572106361003,
+        -0.8838834764831844,
+        1.590990257669732,
+        5.833630944789016,
+        2.2980970388562794,
+        2.6516504294495533
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 16384,
+      "mutation": "one_bit",
+      "contrast": "global_hardness_diagnostic",
+      "paired_runs": 32,
+      "mean_best_prefix": 68.3125,
+      "max_best_prefix": 89,
+      "exact_solutions": 0
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 16384,
+      "mutation": "registered_mixed",
+      "contrast": "multi_island_4_minus_global_8",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": -28.461047942758537,
+      "cluster_bootstrap_ci_low": -31.930290587955035,
+      "cluster_bootstrap_ci_high": -25.102290732122434,
+      "paired_win_rate": 0.0,
+      "per_landscape_mean_random_z": [
+        -37.476659402887016,
+        -31.819805153394636,
+        -26.693280989792168,
+        -21.743533521486334,
+        -25.98617420860562,
+        -31.643028458097998,
+        -29.698484809834994,
+        -22.62741699796952
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 16384,
+      "mutation": "registered_mixed",
+      "contrast": "multi_island_4_minus_partition_4",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": 2.2097086912079607,
+      "cluster_bootstrap_ci_low": 0.8838834764831843,
+      "cluster_bootstrap_ci_high": 3.557630992844817,
+      "paired_win_rate": 0.71875,
+      "per_landscape_mean_random_z": [
+        -0.5303300858899106,
+        1.9445436482630056,
+        0.35355339059327373,
+        5.65685424949238,
+        3.889087296526011,
+        0.17677669529663687,
+        3.005203820042827,
+        3.181980515339464
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 16384,
+      "mutation": "registered_mixed",
+      "contrast": "global_hardness_diagnostic",
+      "paired_runs": 32,
+      "mean_best_prefix": 71.15625,
+      "max_best_prefix": 91,
+      "exact_solutions": 0
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 16384,
+      "mutation": "broader",
+      "contrast": "multi_island_4_minus_global_8",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": -35.95196040595352,
+      "cluster_bootstrap_ci_low": -39.929436050127855,
+      "cluster_bootstrap_ci_high": -32.10706728325167,
+      "paired_win_rate": 0.0,
+      "per_landscape_mean_random_z": [
+        -45.0780573006424,
+        -42.603183566489484,
+        -30.58236828631818,
+        -39.59797974644666,
+        -31.643028458098,
+        -27.753941161571987,
+        -33.23401871576773,
+        -37.12310601229374
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 16384,
+      "mutation": "broader",
+      "contrast": "multi_island_4_minus_partition_4",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": 2.607456255625394,
+      "cluster_bootstrap_ci_low": 0.26516504294495535,
+      "cluster_bootstrap_ci_high": 4.927650381393753,
+      "paired_win_rate": 0.625,
+      "per_landscape_mean_random_z": [
+        0.0,
+        7.247844507162112,
+        2.1213203435596424,
+        2.82842712474619,
+        5.303300858899107,
+        6.7175144212722016,
+        -2.2980970388562794,
+        -1.0606601717798212
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 16384,
+      "mutation": "broader",
+      "contrast": "global_hardness_diagnostic",
+      "paired_runs": 32,
+      "mean_best_prefix": 88.90625,
+      "max_best_prefix": 125,
+      "exact_solutions": 0
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 16384,
+      "mutation": "four_bit",
+      "contrast": "multi_island_4_minus_global_8",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": -54.15996002150712,
+      "cluster_bootstrap_ci_low": -58.6235715777472,
+      "cluster_bootstrap_ci_high": -49.27650381393752,
+      "paired_win_rate": 0.0,
+      "per_landscape_mean_random_z": [
+        -58.336309447890166,
+        -59.9272997055599,
+        -48.967144597168414,
+        -63.462833611492634,
+        -41.188970004116385,
+        -51.61879502661797,
+        -58.86663953378008,
+        -50.91168824543142
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 16384,
+      "mutation": "four_bit",
+      "contrast": "multi_island_4_minus_partition_4",
+      "landscape_clusters": 8,
+      "policy_runs_per_landscape": 4,
+      "paired_runs": 32,
+      "mean_random_z_difference": 2.8063300378341105,
+      "cluster_bootstrap_ci_low": 0.02209708691207951,
+      "cluster_bootstrap_ci_high": 5.2149125112507875,
+      "paired_win_rate": 0.78125,
+      "per_landscape_mean_random_z": [
+        -5.480077554195743,
+        3.181980515339464,
+        7.7781745930520225,
+        -0.17677669529663698,
+        4.596194077712559,
+        2.2980970388562794,
+        6.363961030678928,
+        3.889087296526011
+      ]
+    },
+    {
+      "family": "permuted_leading_ones",
+      "budget": 16384,
+      "mutation": "four_bit",
+      "contrast": "global_hardness_diagnostic",
+      "paired_runs": 32,
+      "mean_best_prefix": 146.09375,
+      "max_best_prefix": 173,
+      "exact_solutions": 0
+    }
+  ],
+  "rugged_summaries_source": "threshold_v4_scale_calibration.json",
+  "cross_family_standardized_interaction": null,
+  "cross_family_interaction_reason": "Permuted LeadingOnes and NK random-baseline variances are not commensurate; directional gates are reported separately instead of subtracting z-scores.",
+  "decision": {
+    "selection_order": "earliest budget, then smallest K",
+    "required_local_mutation_family": [
+      "one_bit",
+      "registered_mixed",
+      "broader"
+    ],
+    "boundary_floor_random_z": 0.25,
+    "migration_floor_random_z": 0.1,
+    "selected_hard_anchor": {
+      "k": 64,
+      "budget": 16384
+    },
+    "cells": [
+      {
+        "k": 16,
+        "budget": 4096,
+        "by_local_operator": {
+          "one_bit": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "registered_mixed": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "broader": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          }
+        },
+        "hard_anchor_passes": false
+      },
+      {
+        "k": 32,
+        "budget": 4096,
+        "by_local_operator": {
+          "one_bit": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "registered_mixed": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "broader": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          }
+        },
+        "hard_anchor_passes": false
+      },
+      {
+        "k": 64,
+        "budget": 4096,
+        "by_local_operator": {
+          "one_bit": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "registered_mixed": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "broader": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          }
+        },
+        "hard_anchor_passes": false
+      },
+      {
+        "k": 128,
+        "budget": 4096,
+        "by_local_operator": {
+          "one_bit": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "registered_mixed": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "broader": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          }
+        },
+        "hard_anchor_passes": false
+      },
+      {
+        "k": 16,
+        "budget": 8192,
+        "by_local_operator": {
+          "one_bit": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "registered_mixed": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "broader": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          }
+        },
+        "hard_anchor_passes": false
+      },
+      {
+        "k": 32,
+        "budget": 8192,
+        "by_local_operator": {
+          "one_bit": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "registered_mixed": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "broader": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          }
+        },
+        "hard_anchor_passes": false
+      },
+      {
+        "k": 64,
+        "budget": 8192,
+        "by_local_operator": {
+          "one_bit": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "registered_mixed": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "broader": {
+            "rugged_beats_global": false,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          }
+        },
+        "hard_anchor_passes": false
+      },
+      {
+        "k": 128,
+        "budget": 8192,
+        "by_local_operator": {
+          "one_bit": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "registered_mixed": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "broader": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          }
+        },
+        "hard_anchor_passes": false
+      },
+      {
+        "k": 16,
+        "budget": 16384,
+        "by_local_operator": {
+          "one_bit": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "registered_mixed": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "broader": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          }
+        },
+        "hard_anchor_passes": false
+      },
+      {
+        "k": 32,
+        "budget": 16384,
+        "by_local_operator": {
+          "one_bit": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "registered_mixed": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "broader": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          }
+        },
+        "hard_anchor_passes": false
+      },
+      {
+        "k": 64,
+        "budget": 16384,
+        "by_local_operator": {
+          "one_bit": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "registered_mixed": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "broader": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          }
+        },
+        "hard_anchor_passes": true
+      },
+      {
+        "k": 128,
+        "budget": 16384,
+        "by_local_operator": {
+          "one_bit": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": false,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "registered_mixed": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          },
+          "broader": {
+            "rugged_beats_global": true,
+            "rugged_beats_partition": true,
+            "within_nk_ruggedness_interaction": true,
+            "hard_smooth_global_beats_multi": true,
+            "hard_smooth_not_saturated": true
+          }
+        },
+        "hard_anchor_passes": false
+      }
+    ]
+  },
+  "interpretation": "This is scripted topology-mechanism calibration. It cannot establish a natural-agent or institutions claim."
+}

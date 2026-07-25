@@ -36,6 +36,7 @@ agents:
 workspace:
   results_dir: "/var/tmp/coral-institutions-results"
   repo_path: "./seed_v4"
+  seed_path: null
 
 run:
   session: local

@@ -1,22 +1,25 @@
 task:
-  name: "Institutional Phase Map v4 — Rugged N512 K128"
+  name: "Institutional Phase Map v5 — Smooth N512 Permuted LeadingOnes"
   description: |
-    Optimize a literal 512-bit candidate on a private-seed adjacent K=128 NK
-    landscape. This variant is eligible only if the frozen v4 calibration
-    selects it.
+    Optimize a literal 512-bit candidate on a private-target, private-order
+    Permuted LeadingOnes landscape. Every non-optimal point has exactly one
+    improving one-bit coordinate and the optimum is unique, but scalar feedback
+    does not reveal which private coordinate comes next. This is the hard,
+    non-saturating Smooth control.
   tips: |
     CANDIDATE must remain one literal 512-bit string. Use ordinary coral eval
-    only. The seed is private; networking permits only the model API.
+    only. The target and coordinate order are private; networking permits only
+    the model API.
 
 grader:
   entrypoint: "institutional_landscape_grader.grader:Grader"
   setup: ["uv pip install -e ./grader"]
   timeout: 30
   direction: maximize
-  private: ["taskdata/rugged512_k128_replicated_v4.json"]
+  private: ["taskdata/smooth512_permuted_leading_ones_replicated_v5.json"]
   args:
     program_file: "candidate.py"
-    landscape_file: "rugged512_k128_replicated_v4.json"
+    landscape_file: "smooth512_permuted_leading_ones_replicated_v5.json"
     seed_index: 0
 
 agents:

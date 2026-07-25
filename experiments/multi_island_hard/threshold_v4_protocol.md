@@ -12,11 +12,12 @@ evaluation budget for each of eight agents.
 For the first real evaluation, create a topology-invariant diverse start from
 your runtime base agent id. The `agent_id` in this role file's YAML header is
 only a protocol label and must never be hashed. Read your actual identity from
-the worktree's `.coral_agent_id`, then strip any `-from-<island>` suffix.
-Compute SHA-256 of `coral-threshold-v4:{base_id}` and render the digest as 256
-bits. Repeatedly replace the digest with SHA-256 of its raw 32 bytes and append
-the next 256 bits until the candidate contains exactly 512 bits. These same
-eight starts are used in every paired topology cell.
+the worktree's `.coral_agent_id`, then run `python initialize_candidate.py`.
+The checked-in helper strips any `-from-<island>` suffix, computes SHA-256 of
+`coral-threshold-v4:{base_id}`, renders the digest as 256 bits, repeatedly
+hashes the raw 32-byte digest, and writes exactly 512 bits to `candidate.py`.
+Do not substitute SHA-512, a counter stream, or another random start. These
+same eight starts are used in every paired topology cell.
 
 After that first query, search normally. Use local ascent, structured
 mutations, restarts, copying, recombination, or coordination as you judge

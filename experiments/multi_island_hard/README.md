@@ -145,3 +145,53 @@ mutation passed neither generalization gate. The selected held-out landscapes
 also pass the frozen random/autocorrelation/local-maxima diagnostics. See
 `threshold_v4_calibration_log.md` for effect sizes, file hashes, and the narrow
 interpretation; no participant result has yet been used to alter selection.
+
+## Non-saturating hard Smooth control v5
+
+Version 5 addresses the remaining K=0 saturation problem with a second Smooth
+family: hidden-target, hidden-coordinate-order Permuted LeadingOnes at N=512.
+It has one strict one-bit local optimum, but the registered blind local policy
+solves at most 91/512 prefix bits at B=16,384 across the complete calibration.
+Random-z effects are never subtracted across Permuted LeadingOnes and NK; the
+original within-NK ruggedness interaction remains the comparable gate, and
+Permuted LeadingOnes is a separate directional negative control.
+
+`calibrate_threshold_v5_hard_smooth.py` selects K=64/B=16,384 as the first
+hard anchor passing boundary, migration, within-NK interaction, hard-Smooth
+direction, and non-saturation gates across one-bit and both registered local
+mixtures. `run_threshold_v5_mechanism.py` executes the held-out scripted arm
+through real CORAL worktrees and migration. `audit_threshold_v5_mechanism.py`
+must pass before `analyze_threshold_v5_mechanism.py` reads performance.
+`diagnose_threshold_v5.py` separately freezes properties of the actual eight
+held-out landscapes: paired seeds, the exact unique one-bit optimum of Smooth,
+NK random/neighbor moments, and at least 24 distinct Rugged maxima among 32
+deterministic greedy starts per seed. The confirmatory analyzer also requires
+the held-out hard-Smooth control to remain unsolved and global visibility to
+beat multi-island; a Rugged-only positive result is insufficient.
+
+The ordinary-LeadingOnes B=256 smoke and interrupted B=1,024 launch are both
+marked invalid because their public coordinate order creates an O(N) adaptive
+shortcut. They are retained for provenance and cannot be used even as negative
+evidence. The replacement one-seed phase ladder restarts with Permuted
+LeadingOnes at B=256/1,024 for engineering only. Fresh direct result slices at
+B=4,096/8,192/16,384 form the confirmatory ladder, with eight paired held-out
+seeds at every budget; the earlier single-seed smoke directories cannot be
+promoted into that matrix. Even a supported threshold is not natural-agent or
+institutions evidence. See `threshold_v5_design.md` and
+`threshold_v5_calibration_log.md`.
+After each slice passes `audit_threshold_v5_mechanism.py` and is analyzed,
+`summarize_threshold_v5_ladder.py` refuses an incomplete matrix and reports the
+earliest budget satisfying the full Rugged plus hard-Smooth rule.
+
+The separately registered natural-agent follow-up uses
+`run_threshold_v5_natural.py` and `threshold_v5_natural_protocol.md` at the
+same K=64/B=16,384 anchor and the same eight held-out seeds. It removes the
+scripted parent-selection and mutation schedule; search operators, copying,
+and coordination are endogenous outcomes. Run it only after the scripted arm
+passes its integrity gate. `audit_threshold_v5_natural.py` requires balanced
+per-agent quotas, the frozen first candidate, model-API-only networking,
+runtime isolation, and a migrant's later real submission in every exposed
+destination. `analyze_threshold_v5_natural.py` keeps the two task families
+separate and requires positive paired lower bounds against both global and
+permanent partition on Rugged. A positive natural arm still needs a
+structured real-task replication.

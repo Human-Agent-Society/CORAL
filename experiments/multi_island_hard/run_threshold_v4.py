@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import sys
 from pathlib import Path
 from typing import Any
 
+from coral.config import CoralConfig
 from experiments.multi_island import run_matrix as base
 from experiments.multi_island.isolation_audit import require_sandbox_contract
 
@@ -26,7 +28,7 @@ RUGGED_TASKS = {
 }
 SMOOTH_TASK = "smooth512_rep_v4"
 
-base.TOPOLOGIES = {
+TOPOLOGIES = {
     "global_8": {"count": 1, "migration": False, "max_per_cycle": 1},
     "partition_4": {"count": 4, "migration": False, "max_per_cycle": 4},
     "multi_island_4": {"count": 4, "migration": True, "max_per_cycle": 4},
@@ -38,7 +40,7 @@ _CONFIGS = {
         for k, task in RUGGED_TASKS.items()
     },
 }
-base.TASKS = {
+TASKS = {
     name: base.TaskSpec(
         name=name,
         config=TASK_DIR / config,
@@ -50,6 +52,55 @@ base.TASKS = {
 
 _BASE_BUILD_COMMAND = base.build_command
 _ACTIVE_POLICY = "natural"
+
+
+def _literal_candidate(path: Path) -> str:
+    tree = ast.parse(path.read_text(), filename=path.name)
+    values = [
+        statement.value.value
+        for statement in tree.body
+        if isinstance(statement, (ast.Assign, ast.AnnAssign))
+        and isinstance(statement.value, ast.Constant)
+        and isinstance(statement.value.value, str)
+    ]
+    if len(values) != 1:
+        raise ValueError("candidate.py must contain one literal string assignment")
+    return values[0]
+
+
+def seed_contract_errors() -> list[str]:
+    errors: list[str] = []
+    for task, filename in _CONFIGS.items():
+        config_path = TASK_DIR / filename
+        try:
+            config = CoralConfig.from_yaml(config_path)
+        except (OSError, TypeError, ValueError) as exc:
+            errors.append(f"{task}: unreadable config: {exc}")
+            continue
+        if config.workspace.seed_path is not None:
+            errors.append(
+                f"{task}: workspace.seed_path must be null so task-local seed/ cannot "
+                "overwrite seed_v4"
+            )
+        source = Path(config.workspace.repo_path)
+        if not source.is_absolute():
+            source = (TASK_DIR / source).resolve()
+        try:
+            candidate = _literal_candidate(source / "candidate.py")
+        except (OSError, SyntaxError, ValueError) as exc:
+            errors.append(f"{task}: invalid source candidate: {exc}")
+        else:
+            if len(candidate) != 512 or set(candidate) - {"0", "1"}:
+                errors.append(f"{task}: source candidate is not a 512-bit literal")
+        if not (source / "initialize_candidate.py").is_file():
+            errors.append(f"{task}: initialize_candidate.py is missing")
+    return errors
+
+
+def require_seed_contract() -> None:
+    errors = seed_contract_errors()
+    if errors:
+        raise RuntimeError("threshold-v4 seed preflight failed: " + "; ".join(errors))
 
 
 def registered_selection(path: Path = CALIBRATION) -> dict[str, int]:
@@ -97,10 +148,10 @@ def repetition_seed_index(run_dir: Path) -> int:
 
 
 def build_command(spec: Any, condition: str, run_dir: Path) -> list[str]:
-    command = _BASE_BUILD_COMMAND(spec, condition, run_dir)
+    command = _BASE_BUILD_COMMAND(spec, condition, run_dir, topologies=TOPOLOGIES)
     budget = base.EXPECTED_REAL_ATTEMPTS
     every = migration_every(budget)
-    topology = base.TOPOLOGIES[condition]
+    topology = TOPOLOGIES[condition]
     seed_index = repetition_seed_index(run_dir)
     role = POLICY_ROLES[_ACTIVE_POLICY]
     for index, item in enumerate(command):
@@ -173,6 +224,7 @@ def main() -> int:
     global _ACTIVE_POLICY
     try:
         require_sandbox_contract()
+        require_seed_contract()
     except RuntimeError as exc:
         raise SystemExit(str(exc)) from exc
     _ACTIVE_POLICY = take_policy_argument()
@@ -181,15 +233,30 @@ def main() -> int:
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         raise SystemExit(str(exc)) from exc
     enforce_selection(selection)
-    base.DEFAULT_RESULTS_ROOT = Path(
+    results_root = Path(
         f"/var/tmp/coral-institutions-results/nk-threshold-v4/{_ACTIVE_POLICY}"
     )
-    previous = base.build_command
+    previous = (
+        base.TASKS,
+        base.TOPOLOGIES,
+        base.DEFAULT_RESULTS_ROOT,
+        base.build_command,
+        base.EXPECTED_REAL_ATTEMPTS,
+    )
+    base.TASKS = TASKS
+    base.TOPOLOGIES = TOPOLOGIES
+    base.DEFAULT_RESULTS_ROOT = results_root
     base.build_command = build_command
     try:
         return base.main()
     finally:
-        base.build_command = previous
+        (
+            base.TASKS,
+            base.TOPOLOGIES,
+            base.DEFAULT_RESULTS_ROOT,
+            base.build_command,
+            base.EXPECTED_REAL_ATTEMPTS,
+        ) = previous
 
 
 if __name__ == "__main__":

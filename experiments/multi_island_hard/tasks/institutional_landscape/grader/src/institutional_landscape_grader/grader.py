@@ -1,8 +1,11 @@
-"""Hidden-seed adjacent NK-landscape grader for the difficulty ladder.
+"""Hidden-seed landscape grader for the Smooth/Rugged difficulty ladder.
 
 The submitted file is parsed, never imported or executed. Component i depends
 on bit i and the next K circular neighbours. The taskdata controls N and K so
-the same grader can express high-dimensional smooth and rugged instances.
+the same grader can express high-dimensional smooth and rugged NK instances.
+Schema 3 also supports a hidden-target, hidden-order Permuted LeadingOnes
+control: it has one strict one-bit local optimum but a long, plateaued path
+even for an adaptive participant that does not know the next coordinate.
 """
 
 from __future__ import annotations
@@ -59,22 +62,66 @@ def nk_fitness(candidate: str, *, k: int, seed: str) -> float:
     return sum(contributions) / n
 
 
-def load_landscape(path: Path, seed_index: int) -> tuple[int, int, str, bool]:
+def hidden_target(seed: str, n: int) -> str:
+    digest = hashlib.sha256(f"permuted-leading-ones:{seed}".encode()).digest()
+    bits = "".join(f"{byte:08b}" for byte in digest)
+    while len(bits) < n:
+        digest = hashlib.sha256(digest).digest()
+        bits += "".join(f"{byte:08b}" for byte in digest)
+    return bits[:n]
+
+
+def hidden_coordinate_order(seed: str, n: int) -> list[int]:
+    return sorted(
+        range(n),
+        key=lambda index: hashlib.sha256(
+            f"permuted-leading-order:{seed}:{index}".encode()
+        ).digest(),
+    )
+
+
+def permuted_leading_ones_fitness(candidate: str, *, seed: str) -> float:
+    target = hidden_target(seed, len(candidate))
+    order = hidden_coordinate_order(seed, len(candidate))
+    matches = 0
+    for index in order:
+        if candidate[index] != target[index]:
+            break
+        matches += 1
+    return matches / len(candidate)
+
+
+def load_landscape_spec(
+    path: Path,
+    seed_index: int,
+) -> tuple[int, int, str, bool, str]:
     landscape = json.loads(path.read_text())
     n = int(landscape["n"])
     k = int(landscape["k"])
-    replicated = landscape.get("schema_version") == 2
-    if landscape.get("schema_version") == 1:
+    schema_version = landscape.get("schema_version")
+    replicated = schema_version in {2, 3}
+    if schema_version == 1:
         seed = str(landscape["seed"])
-    elif landscape.get("schema_version") == 2:
+    elif schema_version in {2, 3}:
         seeds = landscape.get("seeds")
         if not isinstance(seeds, list) or not 0 <= seed_index < len(seeds):
             raise ValueError(f"seed_index must be in [0, {len(seeds or [])})")
         seed = str(seeds[seed_index])
     else:
         raise ValueError("invalid landscape schema")
+    family = str(landscape.get("family", "nk"))
+    if family not in {"nk", "permuted_leading_ones"}:
+        raise ValueError(f"unsupported landscape family: {family}")
+    if family == "permuted_leading_ones" and k != 0:
+        raise ValueError("permuted_leading_ones requires k=0")
     if n < 1 or not 0 <= k < n or len(seed) < 64:
         raise ValueError("invalid landscape configuration")
+    return n, k, seed, replicated, family
+
+
+def load_landscape(path: Path, seed_index: int) -> tuple[int, int, str, bool]:
+    """Backward-compatible four-field loader used by earlier diagnostics."""
+    n, k, seed, replicated, _family = load_landscape_spec(path, seed_index)
     return n, k, seed, replicated
 
 
@@ -95,12 +142,18 @@ class Grader(TaskGrader):
             return self.fail(f"Private landscape not found: {landscape_file}")
         try:
             seed_index = int(self.args.get("seed_index", 0))
-            n, k, seed, replicated = load_landscape(landscape_path, seed_index)
+            n, k, seed, replicated, family = load_landscape_spec(
+                landscape_path,
+                seed_index,
+            )
         except (KeyError, TypeError, ValueError, OSError, json.JSONDecodeError) as exc:
             return self.fail(f"Invalid grader configuration: {exc}")
         try:
             candidate = parse_candidate(program_path, n)
-            fitness = nk_fitness(candidate, k=k, seed=seed)
+            if family == "permuted_leading_ones":
+                fitness = permuted_leading_ones_fitness(candidate, seed=seed)
+            else:
+                fitness = nk_fitness(candidate, k=k, seed=seed)
         except (TypeError, ValueError, SyntaxError, OSError) as exc:
             if replicated:
                 return self.score(0.0, f"Invalid candidate: {exc}")

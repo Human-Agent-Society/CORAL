@@ -55,6 +55,67 @@ def test_replicated_landscape_schema_preserves_legacy_and_rotates_seed() -> None
     assert replicated0[2] != replicated1[2]
 
 
+def test_v5_permuted_leading_ones_has_one_strict_local_optimum() -> None:
+    path = TASK_DIR / "taskdata/smooth512_permuted_leading_ones_replicated_v5.json"
+    n, k, seed, replicated, family = GRADER.load_landscape_spec(path, 0)
+    assert (n, k, replicated, family) == (
+        512,
+        0,
+        True,
+        "permuted_leading_ones",
+    )
+    target = GRADER.hidden_target(seed, n)
+    order = GRADER.hidden_coordinate_order(seed, n)
+    assert sorted(order) == list(range(n))
+    assert order != list(range(n))
+    assert GRADER.permuted_leading_ones_fitness(target, seed=seed) == 1.0
+
+    def flip(candidate: str, index: int) -> str:
+        bits = list(candidate)
+        bits[index] = "0" if bits[index] == "1" else "1"
+        return "".join(bits)
+
+    last_wrong = flip(target, order[-1])
+    assert GRADER.permuted_leading_ones_fitness(last_wrong, seed=seed) == (n - 1) / n
+    first_wrong = flip(target, order[0])
+    assert GRADER.permuted_leading_ones_fitness(first_wrong, seed=seed) == 0.0
+    assert GRADER.permuted_leading_ones_fitness(
+        target,
+        seed=seed,
+    ) > GRADER.permuted_leading_ones_fitness(
+        last_wrong,
+        seed=seed,
+    )
+
+
+def test_v5_hard_smooth_and_rugged_tasks_are_paired() -> None:
+    smooth = json.loads(
+        (
+            TASK_DIR
+            / "taskdata/smooth512_permuted_leading_ones_replicated_v5.json"
+        ).read_text()
+    )
+    rugged64 = json.loads(
+        (TASK_DIR / "taskdata/rugged512_k64_replicated_v5.json").read_text()
+    )
+    rugged128 = json.loads(
+        (TASK_DIR / "taskdata/rugged512_k128_replicated_v5.json").read_text()
+    )
+    assert smooth["seeds"] == rugged64["seeds"] == rugged128["seeds"]
+    assert len(smooth["seeds"]) == 8
+    assert (smooth["family"], smooth["n"], smooth["k"]) == (
+        "permuted_leading_ones",
+        512,
+        0,
+    )
+    assert (rugged64["family"], rugged64["n"], rugged64["k"]) == ("nk", 512, 64)
+    assert (rugged128["family"], rugged128["n"], rugged128["k"]) == (
+        "nk",
+        512,
+        128,
+    )
+
+
 def test_replicated_grader_charges_malformed_candidate_as_numeric_zero(tmp_path: Path) -> None:
     result = evaluate(
         tmp_path,
