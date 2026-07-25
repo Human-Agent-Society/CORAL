@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "registered_at": "2026-07-26T07:22:47+08:00",
+  "phase_raw_absent_at_registration": true,
+  "phase_analysis_absent_at_registration": true,
+  "construct_output_absent_at_registration": true,
+  "source_commit": "95d6b3270703d3c5db093bbb799d10591fa64ab1",
+  "artifacts": {
+    "run_threshold_v6_extreme_phase.py": "4b6bc06f26ac3907b112f82ba48d74496578a095b5ab62d90df8b9529e615580",
+    "analyze_threshold_v6_extreme_phase.py": "8ce4ee9d78c9adcb3e281b39af6e4f44f4cc0d1e5a4baaf7957fa74d376bf3c5",
+    "diagnose_threshold_v6_extreme_construct.py": "11f295ba2e64cea54799cf6db76a014dc6b891f9cbd08bc6c8e7a4dc3e71b345",
+    "threshold_v6_extreme_phase_protocol.md": "b59d960f4f7c4710ff95c477f81a5084933f24f5bce181f454504b46dbf2e6b7"
+  },
+  "seed_namespace": "threshold-v6-extreme-phase-heldout",
+  "policy_seed_namespace": "threshold-v6-extreme-phase-policy",
+  "construct_rng_namespace": "threshold-v6-extreme-construct",
+  "construct_command": [
+    "nice",
+    "-n",
+    "15",
+    "uv",
+    "run",
+    "python",
+    "experiments/multi_island_hard/diagnose_threshold_v6_extreme_construct.py",
+    "--max-workers",
+    "1"
+  ],
+  "phase_command": [
+    "nice",
+    "-n",
+    "15",
+    "uv",
+    "run",
+    "python",
+    "experiments/multi_island_hard/run_threshold_v6_extreme_phase.py",
+    "--max-workers",
+    "2"
+  ],
+  "phase_launch_deferred": true,
+  "phase_launch_prerequisites": [
+    "original v6 phase map has finished and been audited",
+    "v5 B=4096 eight-block CORAL mechanism run has finished and been audited",
+    "registered extreme construct-validity gate has passed"
+  ],
+  "expected_outputs": {
+    "construct": "experiments/multi_island_hard/threshold_v6_extreme_construct_diagnostics.json",
+    "phase_raw": "experiments/multi_island_hard/threshold_v6_extreme_phase_raw.json",
+    "phase_analysis": "experiments/multi_island_hard/threshold_v6_extreme_phase_analysis.json"
+  }
+}
