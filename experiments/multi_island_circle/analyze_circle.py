@@ -42,6 +42,8 @@ SEED_SOURCE = REPO_ROOT / "examples/math/circle_packing/seed/initial_program.py"
 SEED_SCORE = 0.3641018935
 PRACTICAL_SCORE_DELTA = 0.01
 REGISTERED_REPETITIONS = 8
+LADDER_FAMILYWISE_ALPHA = 0.05
+LADDER_ONE_SIDED_ALPHA = LADDER_FAMILYWISE_ALPHA / len(BUDGETS)
 SOURCE_FILE = "initial_program.py"
 CONTRAST_METRICS = (
     "final_best_score",
@@ -426,14 +428,23 @@ def integrity(
     return errors
 
 
-def bootstrap_interval(values: list[float], seed: str) -> tuple[float, float]:
+def bootstrap_interval(
+    values: list[float],
+    seed: str,
+    *,
+    tail_probability: float = 0.025,
+) -> tuple[float, float]:
     if not values:
         return float("nan"), float("nan")
+    if not 0 < tail_probability < 0.5:
+        raise ValueError("bootstrap tail probability must be in (0, 0.5)")
     rng = random.Random(int.from_bytes(hashlib.sha256(seed.encode()).digest()[:8], "big"))
     samples = sorted(
         statistics.fmean(rng.choice(values) for _ in values) for _ in range(20_000)
     )
-    return samples[500], samples[19_500]
+    low = max(0, int(len(samples) * tail_probability) - 1)
+    high = min(len(samples) - 1, int(len(samples) * (1 - tail_probability)) - 1)
+    return samples[low], samples[high]
 
 
 def make_contrasts(
@@ -443,6 +454,15 @@ def make_contrasts(
         (int(row["budget"]), str(row["condition"]), int(row["repetition"])): row
         for row in rows
     }
+    matrix_complete = bool(
+        repetitions == REGISTERED_REPETITIONS
+        and all(
+            (budget, condition, repetition) in indexed
+            for budget in BUDGETS
+            for condition in CONDITIONS
+            for repetition in range(1, REGISTERED_REPETITIONS + 1)
+        )
+    )
     output: list[dict[str, Any]] = []
     passing: dict[tuple[int, str], bool] = {}
     comparisons = (
@@ -474,10 +494,18 @@ def make_contrasts(
                 "paired_repetitions": len(pairs["final_best_score"]),
             }
             for metric, values in pairs.items():
-                low, high = bootstrap_interval(values, f"circle:{budget}:{treatment}:{reference}:{metric}")
+                label = f"circle:{budget}:{treatment}:{reference}:{metric}"
+                low, high = bootstrap_interval(values, label)
+                ladder_low, ladder_high = bootstrap_interval(
+                    values,
+                    label,
+                    tail_probability=LADDER_ONE_SIDED_ALPHA,
+                )
                 item[f"{metric}_difference"] = statistics.fmean(values)
                 item[f"{metric}_ci_low"] = low
                 item[f"{metric}_ci_high"] = high
+                item[f"{metric}_ladder_ci_low"] = ladder_low
+                item[f"{metric}_ladder_ci_high"] = ladder_high
             confirmatory = repetitions == REGISTERED_REPETITIONS and len(
                 pairs["final_best_score"]
             ) == REGISTERED_REPETITIONS
@@ -485,7 +513,7 @@ def make_contrasts(
                 treatment == "multi_island"
                 and confirmatory
                 and item["final_best_score_difference"] >= PRACTICAL_SCORE_DELTA
-                and item["final_best_score_ci_low"] > 0
+                and item["final_best_score_ladder_ci_low"] > 0
                 and all(compliance)
             )
             item["all_multi_cells_have_post_migration_work"] = all(compliance)
@@ -502,10 +530,14 @@ def make_contrasts(
             and passing.get((budget, "global"), False)
         ),
         None,
-    )
+    ) if matrix_complete else None
     return output, {
         "registered_repetitions": REGISTERED_REPETITIONS,
         "practical_score_delta": PRACTICAL_SCORE_DELTA,
+        "ladder_familywise_alpha": LADDER_FAMILYWISE_ALPHA,
+        "ladder_one_sided_alpha_per_budget": LADDER_ONE_SIDED_ALPHA,
+        "uses_multiplicity_controlled_ladder_bounds": True,
+        "confirmatory_matrix_complete": matrix_complete,
         "primary_contrast": "multi_island_minus_partition",
         "secondary_contrast": "multi_island_minus_global",
         "earliest_supported_multi_island_threshold": earliest,

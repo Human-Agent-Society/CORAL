@@ -79,6 +79,10 @@ first registered budget at which all of the following hold:
 3. both paired bootstrap 95% lower bounds are above zero;
 4. every multi-island cell has a real migration and a later real submission.
 
+Searching three budgets for the earliest pass is multiplicity-controlled:
+the decision uses per-budget one-sided alpha 0.05/3 bootstrap bounds. Ordinary
+95% intervals remain descriptive and cannot trigger the registered rule.
+
 Run one B=32 repetition as an operational smoke test.  Advance to the full B=32
 block only if all cells meet budget/quota gates and the multi-island cell has
 post-migration work.  Advance to B=64 and B=128 regardless of the direction of

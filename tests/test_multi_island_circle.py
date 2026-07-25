@@ -6,6 +6,8 @@ import importlib.util
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 GRADER_FILE = ROOT / "examples/math/circle_packing/grader/src/circle_packing_grader/grader.py"
 SPEC = importlib.util.spec_from_file_location("circle_packing_grader_under_test", GRADER_FILE)
@@ -109,6 +111,22 @@ def test_circle_runner_rotates_sequential_condition_order() -> None:
     ]
 
 
+def test_circle_runner_enforces_serial_latin_square_launch(monkeypatch) -> None:
+    from experiments.multi_island_circle import run_circle as runner
+
+    monkeypatch.setattr(runner.sys, "argv", ["run_circle.py", "--budget", "32"])
+    runner.enforce_serial_launch()
+    assert runner.argument_values("--max-parallel") == ["1"]
+
+    monkeypatch.setattr(
+        runner.sys,
+        "argv",
+        ["run_circle.py", "--budget", "32", "--max-parallel", "2"],
+    )
+    with pytest.raises(SystemExit, match="requires --max-parallel 1"):
+        runner.enforce_serial_launch()
+
+
 def test_circle_source_audit_blocks_external_or_private_lookup() -> None:
     from experiments.multi_island_circle.analyze_circle import forbidden_candidate_io
 
@@ -122,26 +140,29 @@ def test_circle_threshold_requires_both_partition_and_global_contrasts() -> None
     from experiments.multi_island_circle import analyze_circle as analyzer
 
     rows = []
-    for repetition in range(1, 9):
-        for condition, score in (
-            ("global", 0.70),
-            ("partition", 0.71),
-            ("multi_island", 0.73),
-        ):
-            rows.append(
-                {
-                    "budget": 32,
-                    "condition": condition,
-                    "repetition": repetition,
-                    "final_best_score": score,
-                    "gain_over_seed": score - analyzer.SEED_SCORE,
-                    "best_so_far_auc": score - 0.01,
-                    "latest_source_diversity": 0.5,
-                    "null_rate": 0.0,
-                    "migration_notes": 2 if condition == "multi_island" else 0,
-                    "post_migration_attempts": 4 if condition == "multi_island" else 0,
-                }
-            )
+    for budget in analyzer.BUDGETS:
+        for repetition in range(1, 9):
+            for condition, score in (
+                ("global", 0.70),
+                ("partition", 0.71),
+                ("multi_island", 0.73),
+            ):
+                rows.append(
+                    {
+                        "budget": budget,
+                        "condition": condition,
+                        "repetition": repetition,
+                        "final_best_score": score,
+                        "gain_over_seed": score - analyzer.SEED_SCORE,
+                        "best_so_far_auc": score - 0.01,
+                        "latest_source_diversity": 0.5,
+                        "null_rate": 0.0,
+                        "migration_notes": 2 if condition == "multi_island" else 0,
+                        "post_migration_attempts": 4
+                        if condition == "multi_island"
+                        else 0,
+                    }
+                )
     contrasts, threshold = analyzer.make_contrasts(rows, 8)
     assert threshold["earliest_supported_multi_island_threshold"] == 32
     primary = next(
@@ -152,3 +173,23 @@ def test_circle_threshold_requires_both_partition_and_global_contrasts() -> None
     )
     assert primary["contrast_rule_passes"] is True
     assert secondary["contrast_rule_passes"] is True
+    assert threshold["uses_multiplicity_controlled_ladder_bounds"] is True
+    assert threshold["confirmatory_matrix_complete"] is True
+
+    _contrasts, incomplete = analyzer.make_contrasts(rows[:-1], 8)
+    assert incomplete["confirmatory_matrix_complete"] is False
+    assert incomplete["earliest_supported_multi_island_threshold"] is None
+
+
+def test_circle_ladder_interval_is_wider_than_descriptive_interval() -> None:
+    from experiments.multi_island_circle import analyze_circle as analyzer
+
+    values = [-0.02, -0.01, 0.0, 0.01, 0.02, 0.03, 0.04, 0.05]
+    low, high = analyzer.bootstrap_interval(values, "descriptive")
+    ladder_low, ladder_high = analyzer.bootstrap_interval(
+        values,
+        "descriptive",
+        tail_probability=analyzer.LADDER_ONE_SIDED_ALPHA,
+    )
+    assert ladder_low <= low
+    assert ladder_high >= high

@@ -41,6 +41,28 @@ _BASE_BUILD_COMMAND = base.build_command
 _BASE_ORDERED_CELLS = base.ordered_cells
 
 
+def argument_values(flag: str) -> list[str] | None:
+    if flag not in sys.argv:
+        return None
+    start = sys.argv.index(flag) + 1
+    values: list[str] = []
+    for value in sys.argv[start:]:
+        if value.startswith("--"):
+            break
+        values.append(value)
+    return values
+
+
+def enforce_serial_launch() -> None:
+    """Make the preregistered Latin-square order an actual serial order."""
+
+    values = argument_values("--max-parallel")
+    if values is None:
+        sys.argv.extend(["--max-parallel", "1"])
+    elif values != ["1"]:
+        raise SystemExit("Circle Packing requires --max-parallel 1 for order balancing")
+
+
 def heartbeat_for(budget: int) -> str:
     if budget not in BUDGETS:
         raise ValueError(f"unregistered Circle Packing budget: {budget}")
@@ -114,6 +136,7 @@ def main() -> int:
         require_sandbox_contract()
     except RuntimeError as exc:
         raise SystemExit(str(exc)) from exc
+    enforce_serial_launch()
     if "--budget" not in sys.argv:
         raise SystemExit("Circle Packing requires one explicit registered --budget per launch")
     previous_build = base.build_command

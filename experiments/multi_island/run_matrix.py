@@ -176,8 +176,14 @@ def next_run_dir(base: Path) -> tuple[Path, bool]:
         retry += 1
 
 
-def build_command(spec: TaskSpec, condition: str, run_dir: Path) -> list[str]:
-    topology = TOPOLOGIES[condition]
+def build_command(
+    spec: TaskSpec,
+    condition: str,
+    run_dir: Path,
+    *,
+    topologies: dict[str, dict[str, Any]] | None = None,
+) -> list[str]:
+    topology = (TOPOLOGIES if topologies is None else topologies)[condition]
     results_root = run_dir.parents[2]
     overrides = {
         "agents.count": 4,
