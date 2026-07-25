@@ -10,7 +10,10 @@ Tune is disabled. The runner reserves exactly one eighth of the global real
 evaluation budget for each of eight agents.
 
 For the first real evaluation, create a topology-invariant diverse start from
-your base agent id (strip any `-from-<island>` suffix): compute SHA-256 of
+your runtime base agent id. The `agent_id` in this role file's YAML header is
+only a protocol label and must never be hashed. Read your actual identity from
+the worktree's `.coral_agent_id`, then strip any `-from-<island>` suffix.
+Compute SHA-256 of
 `coral-threshold-v3:{base_id}` and submit its 256 digest bits as the literal
 candidate. Do not submit the common all-zero seed first. These same eight
 lineages are used in every paired topology cell.

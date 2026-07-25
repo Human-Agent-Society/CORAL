@@ -148,6 +148,10 @@ def test_v3_runner_uses_quarter_budget_and_separate_policy_roles(tmp_path: Path)
             item for item in command if item.startswith("agents.runtime_options.role_file=")
         )
     assert roles["natural"] != roles["high_diffusion"]
+    for role_path in runner.POLICY_ROLES.values():
+        protocol = role_path.read_text()
+        assert ".coral_agent_id" in protocol
+        assert "must never be hashed" in protocol
 
 
 def test_v3_analyzer_requires_behavior_manipulation_before_score_claim() -> None:

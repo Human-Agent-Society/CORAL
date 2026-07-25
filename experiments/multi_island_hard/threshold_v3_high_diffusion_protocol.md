@@ -7,8 +7,11 @@ generation: 0
 
 Follow every mechanical and privacy rule in the natural N=256 protocol. Your
 first real evaluation is SHA-256 of `coral-threshold-v3:{base_id}` rendered as
-256 bits, where `base_id` omits any `-from-<island>` suffix. The runner reserves
-one eighth of the total real-evaluation budget for you.
+256 bits. The `agent_id` in this role file's YAML header is only a protocol
+label and must never be hashed. Read the real runtime identity from the
+worktree's `.coral_agent_id`, then remove any `-from-<island>` suffix to obtain
+`base_id`. The runner reserves one eighth of the total real-evaluation budget
+for you.
 
 This cell is an explicit social-learning positive control. After the required
 first query, use the highest-scoring candidate currently visible in your
