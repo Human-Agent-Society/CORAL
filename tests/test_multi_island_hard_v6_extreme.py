@@ -22,12 +22,63 @@ def test_extreme_registration_binds_blind_sources() -> None:
         assert observed == expected
 
 
+def test_extreme_registered_construct_artifact_audits_and_bridges_original_v6() -> None:
+    from experiments.multi_island_hard import diagnose_threshold_v6_extreme_construct as diagnostic
+
+    directory = ROOT / "experiments/multi_island_hard"
+    extreme = json.loads(
+        (directory / "threshold_v6_extreme_construct_diagnostics.json").read_text()
+    )
+    original = json.loads((directory / "threshold_v6_construct_diagnostics.json").read_text())
+    assert diagnostic.audit(extreme, require_registered=True) == []
+    assert extreme["construct_gates"]["construct_validity_passes"] is True
+    assert len(extreme["rugged_landscapes"]) == 24 * 4
+
+    original_bridge = next(
+        row["mean_one_bit_autocorrelation"] for row in original["rugged_summary"] if row["k"] == 128
+    )
+    extreme_bridge = next(
+        row["mean_one_bit_autocorrelation"] for row in extreme["rugged_summary"] if row["k"] == 32
+    )
+    assert abs(original_bridge - extreme_bridge) < 0.08
+
+
 def test_extreme_seeds_are_unique_and_disjoint_from_all_prior_data() -> None:
     from experiments.multi_island_hard import run_threshold_v6_extreme_phase as runner
 
     seeds = tuple(runner.phase_seed(block) for block in range(runner.REGISTERED_BLOCKS))
     runner.validate_seed_isolation(seeds)
     assert len(set(map(runner.seed_sha256, seeds))) == runner.REGISTERED_BLOCKS
+
+
+def test_extreme_rugged_topology_is_exactly_null_without_imitation() -> None:
+    from experiments.multi_island_hard import calibrate_threshold_v3_social as social
+    from experiments.multi_island_hard import run_threshold_v6_extreme_phase as runner
+
+    results = {
+        condition: social.simulate(
+            n=runner.RUGGED_N,
+            k=runner.RUGGED_K_VALUES[-1],
+            seed=runner.phase_seed(0),
+            condition=condition,
+            budget=256,
+            imitation=0.0,
+            policy_seed=runner.phase_policy_seed(0),
+            mutation_policy=runner.MUTATION_POLICY,
+            migration_selection="elite",
+            initial_salt=runner.INITIAL_SALT,
+        )
+        for condition in runner.CONDITIONS
+    }
+    for field in (
+        "best_score",
+        "final_diversity",
+        "final_lineages",
+        "mean_active_lineages",
+        "adoption_attempts",
+        "accepted_adoptions",
+    ):
+        assert len({result[field] for result in results.values()}) == 1
 
 
 def test_compact_smooth_mutations_match_literal_permuted_leading_ones() -> None:
