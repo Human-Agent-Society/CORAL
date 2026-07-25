@@ -1,0 +1,57 @@
+task:
+  name: "Institutional Phase Map v3 — Smooth N256 K0"
+  description: |
+    Optimize a literal 256-bit candidate on a private-seed K=0 NK landscape.
+    This high-dimensional separable control has one one-bit local optimum and
+    measures the exploitation benefit of broad visibility.
+  tips: |
+    CANDIDATE must remain one literal 256-bit string. Use ordinary coral eval
+    only. The seed is a private 256-bit token; networking permits only the model API.
+
+grader:
+  entrypoint: "institutional_landscape_grader.grader:Grader"
+  setup:
+    - "uv pip install -e ./grader"
+  timeout: 30
+  direction: maximize
+  private:
+    - "taskdata/smooth256_replicated_v3.json"
+  args:
+    program_file: "candidate.py"
+    landscape_file: "smooth256_replicated_v3.json"
+    seed_index: 0
+
+agents:
+  count: 8
+  runtime: opencode
+  model: mafia/glm-5.2
+  research: false
+  timeout: 240
+  runtime_options:
+    role_file: "../../threshold_v3_protocol.md"
+  sandbox:
+    enabled: true
+    provider: srt
+    network: allowlist
+    allowed_domains:
+      - api.appintheloop.com
+
+workspace:
+  results_dir: "/var/tmp/coral-institutions-results"
+  repo_path: "./seed"
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 8192
+
+islands:
+  count: 4
+  migration:
+    enabled: true
+    every: 2048
+    rank_window: 2048
+    min_evals: 1
+    dest_weighting: round_robin
+    max_per_cycle: 4
+    remigration_cooldown: 2048

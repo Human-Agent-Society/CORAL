@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "purpose": "Social-learning phase calibration only; excluded from LLM confirmation cells.",
+  "n": 256,
+  "k_values": [
+    0,
+    8,
+    16,
+    24,
+    32,
+    48
+  ],
+  "seeds": [
+    "cebccf2d26025b29839f1dc23c6fa244fe345ba37142c0981db5d2b1c0bc6eff",
+    "027d2da691b668ba29eb66d47be0dedd2201a3038ba1dcf6eb4f8f0224a45dd6",
+    "c5159628f35dcad4a0e82660769cff5e1d7c7f46c830170f2927c16e5cf101d2",
+    "471216636dfcd87feefa43e8644e81298e03795a1700bab1dd3f4630eb8b851c",
+    "cb629db8c553fdaec37ef9e8c788dc3405790049f3044862ba7b23a55724eff3",
+    "d50a1991bbd888fdc6fd7957d5c4be3b95135a4861b8609304fda6dd04bb95c0",
+    "703fcc03f317869dee8aa425781c6b0cffd90f431d5246a7c5cf4d03c057646f",
+    "636d75d71346c93d677a126e1ab61581a143eadff625033a91463f4b2c5cf142"
+  ]
+}

@@ -17,6 +17,7 @@ from typing import Any
 import yaml
 
 from experiments.multi_island import analyze as legacy
+from experiments.multi_island_hard.behavior_metrics import behavior_metrics
 from experiments.multi_island_hard.run_threshold_v2 import (
     BUDGETS,
     MODEL_API_DOMAINS,
@@ -33,11 +34,22 @@ TASK_FILES = {
     "rugged128_k12_rep_v2": "rugged128_k12_replicated_v2.json",
 }
 TASKS = tuple(TASK_FILES)
+SMOOTH_TASK = "smooth128_rep_v2"
 RUGGED_TASK = "rugged128_k12_rep_v2"
 PRIMARY_TREATMENT = "multi_island_4"
 CONDITIONS = ("global_8", "partition_4", "multi_island_2", PRIMARY_TREATMENT)
 PRACTICAL_DELTA_Z = 0.50
 MAX_MALFORMED = 1
+INITIAL_SALT = "coral-threshold-v2"
+AGENT_TIMEOUT = 300
+CONTRAST_METRICS = (
+    "random_z",
+    "reference_gain",
+    "best_so_far_auc_reference",
+    "midpoint_diversity",
+    "final_diversity",
+    "duplicate_candidate_rate",
+)
 
 
 def load_json(path: Path) -> dict[str, Any] | None:
@@ -98,19 +110,20 @@ def task_bundle(task: str) -> dict[str, Any]:
 
 def diagnostics() -> dict[tuple[str, int], dict[str, Any]]:
     data = json.loads(DIAGNOSTICS.read_text())
-    return {
-        (str(row["task"]), int(row["seed_index"])): row
-        for row in data["landscapes"]
-    }
+    return {(str(row["task"]), int(row["seed_index"])): row for row in data["landscapes"]}
 
 
 def base_agent_id(agent_id: str) -> str:
     return agent_id.split("-from-", 1)[0]
 
 
-def initial_candidate(agent_id: str) -> str:
-    digest = hashlib.sha256(f"coral-threshold-v2:{base_agent_id(agent_id)}".encode()).digest()
-    return "".join(f"{byte:08b}" for byte in digest)[:128]
+def initial_candidate(agent_id: str, n: int = 128) -> str:
+    digest = hashlib.sha256(f"{INITIAL_SALT}:{base_agent_id(agent_id)}".encode()).digest()
+    bits = "".join(f"{byte:08b}" for byte in digest)
+    while len(bits) < n:
+        digest = hashlib.sha256(digest).digest()
+        bits += "".join(f"{byte:08b}" for byte in digest)
+    return bits[:n]
 
 
 def agent_balance(records: list[dict[str, Any]], budget: int) -> dict[str, Any]:
@@ -161,6 +174,7 @@ def collect(
 ) -> dict[str, Any]:
     repetition = int(identity["repetition"])
     reference = references[(task, repetition - 1)]
+    n = int(reference["n"])
     records = real_records(run_dir)
     parsed: list[tuple[dict[str, Any], str]] = []
     parse_errors: list[str] = []
@@ -186,24 +200,26 @@ def collect(
         try:
             source = source_at(run_dir, commit)
             candidate = legacy.candidate_from_source(source)
-            if len(candidate) != 128 or set(candidate) - {"0", "1"}:
-                raise ValueError("candidate is not a literal 128-bit string")
+            if len(candidate) != n or set(candidate) - {"0", "1"}:
+                raise ValueError(f"candidate is not a literal {n}-bit string")
             parsed.append((record, candidate))
             if candidate in seen_candidates:
                 duplicate_candidates += 1
             seen_candidates.add(candidate)
             if agent not in seen_first:
                 seen_first.add(agent)
-                if candidate != initial_candidate(agent):
+                if candidate != initial_candidate(agent, n):
                     initial_errors.append(agent)
         except (OSError, ValueError, SyntaxError, KeyError, TypeError) as exc:
             parse_errors.append(f"{commit}:{exc}")
         if "Invalid candidate:" in str(record.get("feedback") or ""):
             invalid += 1
     final_best = best if scores else 0.0
-    auc = statistics.fmean(normalized(value, reference) for value in best_progress) if (
-        best_progress
-    ) else float("-inf")
+    auc = (
+        statistics.fmean(normalized(value, reference) for value in best_progress)
+        if (best_progress)
+        else float("-inf")
+    )
     row = {
         "task": task,
         "condition": str(identity["condition"]),
@@ -233,6 +249,7 @@ def collect(
         "random_mean": float(reference["random_mean"]),
     }
     row.update(agent_balance(records, budget))
+    row.update(behavior_metrics(parsed))
     return row
 
 
@@ -260,7 +277,7 @@ def integrity(
             "agents.count": "8",
             "agents.runtime": "opencode",
             "agents.model": "mafia/glm-5.2",
-            "agents.timeout": "300",
+            "agents.timeout": str(AGENT_TIMEOUT),
             "agents.sandbox.network": "allowlist",
             "agents.sandbox.allowed_domains": '["api.appintheloop.com"]',
             "agents.runtime_options.role_file": str(ROLE_FILE),
@@ -291,9 +308,7 @@ def integrity(
         errors.append("resolved config is unreadable")
     else:
         if allowed_domains != list(MODEL_API_DOMAINS):
-            errors.append(
-                f"network allowlist={allowed_domains!r}, expected model API only"
-            )
+            errors.append(f"network allowlist={allowed_domains!r}, expected model API only")
     frozen = TASKDATA / TASK_FILES[task]
     private = run_dir / ".coral/private" / TASK_FILES[task]
     if not private.is_file() or private.read_bytes() != frozen.read_bytes():
@@ -332,10 +347,7 @@ def integrity(
 
 def bootstrap_interval(values: list[float], seed_text: str) -> tuple[float, float]:
     rng = random.Random(int.from_bytes(hashlib.sha256(seed_text.encode()).digest()[:8], "big"))
-    samples = sorted(
-        statistics.fmean(rng.choice(values) for _ in values)
-        for _ in range(20_000)
-    )
+    samples = sorted(statistics.fmean(rng.choice(values) for _ in values) for _ in range(20_000))
     return samples[500], samples[19_500]
 
 
@@ -344,8 +356,7 @@ def make_contrasts(
     repetitions: int,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     indexed = {
-        (row["task"], row["budget"], row["condition"], row["repetition"]): row
-        for row in rows
+        (row["task"], row["budget"], row["condition"], row["repetition"]): row for row in rows
     }
     output: list[dict[str, Any]] = []
     threshold: int | None = None
@@ -366,14 +377,7 @@ def make_contrasts(
                     right = indexed.get((task, budget, reference, repetition))
                     if left is None or right is None:
                         continue
-                    for metric in (
-                        "random_z",
-                        "reference_gain",
-                        "best_so_far_auc_reference",
-                        "midpoint_diversity",
-                        "final_diversity",
-                        "duplicate_candidate_rate",
-                    ):
+                    for metric in CONTRAST_METRICS:
                         pairs[metric].append(float(left[metric]) - float(right[metric]))
                     random_z_by_repetition[repetition] = float(left["random_z"]) - float(
                         right["random_z"]
@@ -405,19 +409,21 @@ def make_contrasts(
                 output.append(item)
                 if treatment == PRIMARY_TREATMENT and reference == "global_8":
                     task_effects[task] = random_z_by_repetition
-                if task == RUGGED_TASK and treatment == PRIMARY_TREATMENT and reference == "partition_4":
+                if (
+                    task == RUGGED_TASK
+                    and treatment == PRIMARY_TREATMENT
+                    and reference == "partition_4"
+                ):
                     rugged_partition_effect = item
 
         if set(task_effects) == set(TASKS):
             paired_repetitions = sorted(
-                set(task_effects[RUGGED_TASK])
-                & set(task_effects["smooth128_rep_v2"])
+                set(task_effects[RUGGED_TASK]) & set(task_effects[SMOOTH_TASK])
             )
             if not paired_repetitions:
                 continue
             interaction = [
-                task_effects[RUGGED_TASK][repetition]
-                - task_effects["smooth128_rep_v2"][repetition]
+                task_effects[RUGGED_TASK][repetition] - task_effects[SMOOTH_TASK][repetition]
                 for repetition in paired_repetitions
             ]
             low, high = bootstrap_interval(interaction, f"interaction:{budget}")

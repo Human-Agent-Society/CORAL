@@ -75,3 +75,27 @@ budget>` collects one isolated budget slice, and `analyze_threshold_v2.py`
 computes paired-seed contrasts. See `threshold_v2_design.md` and
 `threshold_v2_protocol.md` for the registered decision rule and participant
 instructions.
+
+## Social-learning threshold v3
+
+Version 2 made the landscape and budget harder, but its first valid natural
+Smooth/global pilot retained eight inferred candidate lineages and had zero
+cross-agent parent adoption. It therefore did not activate the full champion
+takeover assumed by the mechanism-positive calibration. See
+`threshold_v2_pilot_log.md` for the audited behavior and liveness record.
+
+Version 3 doubles the candidate dimension to N=256, uses K=0/K=32 held-out
+tasks, and extends the budget ladder to 8,192. More importantly,
+`calibrate_threshold_v3_social.py` maps imitation probability rather than
+assuming it: p=0 is an executable exact topology null, while p=1 is an explicit
+high-diffusion positive control. `run_threshold_v3.py --policy natural` and
+`--policy high_diffusion` keep endogenous and manipulated behavior separate.
+`analyze_threshold_v3.py` adds mutation-operator entropy, coordinate overlap,
+cross-agent parent adoption, and active-lineage manipulation gates.
+
+The offline boundary calibration selected K=32/B=4,096: under full diffusion,
+four islands beat global by 0.547 random-baseline SD (bootstrap 95% interval
+0.312 to 0.770), with a 0.610 SD rugged-minus-smooth interaction (0.379 to
+0.837). No p=0.75 cell passed, so the calibrated claim is conditional on high
+social learning rather than a universal island advantage. See
+`threshold_v3_design.md` for staging and interpretation.
