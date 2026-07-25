@@ -117,6 +117,8 @@ These tend to bite AI-generated PRs in this repo specifically:
   better — agents often flip this. Double-check against existing examples.
 - **Don't commit hidden answers under `seed/`.** Anything in `seed/` ends
   up in the agent's worktree, visible to the running agent.
+- **`workspace.seed_path` defaults to the task-local `seed/` overlay.** Set it
+  to `null` when `workspace.repo_path` already contains the complete agent seed.
 - **CORAL.md is generated** by `coral/template/coral_md.py` — don't hand-
   edit the rendered file in a worktree, edit the template instead.
 

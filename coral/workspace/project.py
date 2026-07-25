@@ -288,10 +288,15 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     # Resolve task_dir (directory containing task.yaml)
     task_source_dir = config.task_dir or config_dir or Path.cwd()
 
-    # Auto-copy seed/ into repo (if present in task directory)
-    seed_dir = task_source_dir / "seed"
-    if seed_dir.is_dir():
-        copy_seed_directory(seed_dir, repo_dir)
+    # Overlay the configured task seed after cloning repo_path. Historically
+    # this was always task_dir/seed; keeping that default is backward
+    # compatible, while an explicit null lets a task use repo_path verbatim.
+    if config.workspace.seed_path is not None:
+        seed_dir = Path(config.workspace.seed_path)
+        if not seed_dir.is_absolute():
+            seed_dir = task_source_dir / seed_dir
+        if seed_dir.is_dir():
+            copy_seed_directory(seed_dir, repo_dir)
 
     # Copy private grader data into .coral/ (hidden from agents)
     if config.grader.private:

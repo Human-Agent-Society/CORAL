@@ -462,8 +462,22 @@ def _cli_pythonpath_shim(run_dir: Path, package_dir: Path, prefix: Path) -> dict
     shim_dir = run_dir / ".sandbox" / "pythonpath"
     shim_dir.mkdir(parents=True, exist_ok=True)
     link = shim_dir / package_dir.name
-    link.unlink(missing_ok=True)  # repoint if the checkout moved since last start
-    link.symlink_to(package_dir)
+    if link.is_symlink():
+        try:
+            if link.resolve() == package_dir.resolve():
+                return {"PYTHONPATH": str(shim_dir)}
+        except OSError:
+            pass
+    # prepare_agent runs concurrently for batch starts and migration resyncs.
+    # Never unlink the live shim: another agent may import CORAL in that gap.
+    # Build a per-thread link and atomically replace the old entry instead.
+    temporary = shim_dir / f".{package_dir.name}.{os.getpid()}.{threading.get_ident()}.tmp"
+    temporary.unlink(missing_ok=True)
+    temporary.symlink_to(package_dir)
+    try:
+        os.replace(temporary, link)
+    finally:
+        temporary.unlink(missing_ok=True)
     return {"PYTHONPATH": str(shim_dir)}
 
 

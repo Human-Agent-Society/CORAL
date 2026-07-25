@@ -85,6 +85,7 @@ sharing:
 
 workspace:
   repo_path: "./examples/my_task/seed"  # Path to seed directory (default: ".")
+  seed_path: "seed"                     # Task-dir overlay; null uses repo_path verbatim
   results_dir: "./results"              # Where run outputs are stored (default: ./results)
   setup:                                # Shell commands run once per worktree before agents start
     - "uv pip install numpy scipy"

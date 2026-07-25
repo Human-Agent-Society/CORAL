@@ -2,6 +2,7 @@
 
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from coral.hub.attempts import (
     archive_attempts,
@@ -90,6 +91,25 @@ def test_attempts_crud():
 
         all_attempts = read_attempts(d)
         assert len(all_attempts) == 2
+
+
+def test_read_attempts_tolerates_file_migrated_after_glob():
+    with tempfile.TemporaryDirectory() as d:
+        write_attempt(d, _make_attempt("migrating"))
+        write_attempt(d, _make_attempt("stable"))
+        migrating = Path(d) / "public" / "attempts" / "migrating.json"
+        original_read_text = Path.read_text
+
+        def read_text_after_possible_move(path: Path, *args, **kwargs):
+            if path == migrating:
+                path.unlink()
+                raise FileNotFoundError(path)
+            return original_read_text(path, *args, **kwargs)
+
+        with patch.object(Path, "read_text", read_text_after_possible_move):
+            attempts = read_attempts(d)
+
+        assert [attempt.commit_hash for attempt in attempts] == ["stable"]
 
 
 def test_archive_attempts_soft_deletes_from_all_views():

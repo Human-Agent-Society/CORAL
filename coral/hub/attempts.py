@@ -2,14 +2,30 @@
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
 from coral.hub._island import island_root
 from coral.types import Attempt
+
+
+@contextmanager
+def attempt_location_lock(coral_dir: str | Path) -> Iterator[None]:
+    """Serialize attempt moves with grader finalization across processes."""
+    lock_path = Path(coral_dir) / "public" / ".attempt-location.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
 def _attempts_dir(coral_dir: str | Path, island_id: str | int | None = None) -> Path:
@@ -201,6 +217,8 @@ def read_attempts(coral_dir: str | Path, island_id: str | int | None = None) -> 
 
     Archived attempts (e.g. discarded by `coral resume --from`) are treated
     as soft-deleted: they never appear here or in any view built on this.
+    A concurrent island migration may atomically move a file after the glob;
+    skip that stale path because the record is now visible at its destination.
     """
     d = _attempts_dir(coral_dir, island_id)
     attempts = []
@@ -208,7 +226,7 @@ def read_attempts(coral_dir: str | Path, island_id: str | int | None = None) -> 
         try:
             data = json.loads(f.read_text())
             attempts.append(Attempt.from_dict(data))
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, KeyError, OSError):
             continue
     return [a for a in attempts if not a.archived]
 

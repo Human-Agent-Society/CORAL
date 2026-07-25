@@ -7,7 +7,9 @@ import multiprocessing
 import subprocess
 import sys
 import tempfile
+import threading
 import time
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -797,6 +799,134 @@ def test_find_pending_skips_archived(tmp_path):
 
     pending = _find_pending(coral_dir)
     assert {a.commit_hash for a in pending} == {"aaa000"}
+
+
+def test_find_pending_deduplicates_stale_pending_copy(tmp_path):
+    """A finalized copy suppresses a stale pending copy of the same commit."""
+    coral_dir = tmp_path / ".coral"
+    for island in ("0", "1"):
+        (coral_dir / "islands" / island / "attempts").mkdir(parents=True)
+
+    pending = Attempt(
+        commit_hash="duplicate",
+        agent_id="0-agent-1",
+        title="pending copy",
+        score=None,
+        status="pending",
+        parent_hash=None,
+        timestamp="2026-05-31T10:00:00Z",
+        metadata={"island_id": "0"},
+    )
+    finalized = Attempt(
+        commit_hash="duplicate",
+        agent_id="0-agent-1",
+        title="finalized copy",
+        score=0.9,
+        status="improved",
+        parent_hash=None,
+        timestamp="2026-05-31T10:00:00Z",
+        metadata={"island_id": "1"},
+    )
+    write_attempt(coral_dir, pending, island_id="0")
+    write_attempt(coral_dir, finalized, island_id="1")
+
+    assert _find_pending(coral_dir) == []
+
+
+def test_finalize_attempt_blocks_migration_then_record_moves_once(tmp_path, monkeypatch):
+    """Migration waits for finalization, then moves one finalized record."""
+    import coral.agent.manager as manager
+    import coral.grader.daemon as daemon
+
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public").mkdir(parents=True)
+    for island in ("0", "1"):
+        for subdir in ("attempts", "eval_logs", "roles", "heartbeat"):
+            (coral_dir / "islands" / island / subdir).mkdir(parents=True)
+
+    queued = Attempt(
+        commit_hash="serialized",
+        agent_id="0-agent-1",
+        title="queued before migration",
+        score=None,
+        status="pending",
+        parent_hash=None,
+        timestamp="2026-05-31T10:00:00Z",
+        metadata={"island_id": "0"},
+    )
+    write_attempt(coral_dir, queued, island_id="0")
+
+    finalizer_holds_lock = threading.Event()
+    release_finalizer = threading.Event()
+    migration_waiting = threading.Event()
+    migration_acquired_lock = threading.Event()
+    failures: list[BaseException] = []
+
+    def blocking_status(*_args, **_kwargs):
+        finalizer_holds_lock.set()
+        if not release_finalizer.wait(timeout=5):
+            raise TimeoutError("test did not release finalizer")
+        return "improved"
+
+    real_location_lock = manager.attempt_location_lock
+
+    @contextmanager
+    def tracked_migration_lock(path):
+        migration_waiting.set()
+        with real_location_lock(path):
+            migration_acquired_lock.set()
+            yield
+
+    monkeypatch.setattr(daemon, "_compute_status", blocking_status)
+    monkeypatch.setattr(manager, "attempt_location_lock", tracked_migration_lock)
+
+    def finalize() -> None:
+        try:
+            daemon._finalize_attempt_record(
+                queued,
+                coral_dir,
+                grading_island_id="0",
+                score=0.9,
+                status="crashed",
+                feedback="ok",
+                metadata={},
+                budget_class="real",
+                minimize=False,
+                grader_completed=True,
+                runtime_name="claude_code",
+            )
+        except BaseException as error:
+            failures.append(error)
+
+    def migrate() -> None:
+        try:
+            manager._move_agent_files(coral_dir, "0-agent-1", src="0", dst="1")
+        except BaseException as error:
+            failures.append(error)
+
+    finalize_thread = threading.Thread(target=finalize)
+    migration_thread = threading.Thread(target=migrate)
+    finalize_thread.start()
+    assert finalizer_holds_lock.wait(timeout=5)
+    migration_thread.start()
+    assert migration_waiting.wait(timeout=5)
+    assert not migration_acquired_lock.wait(timeout=0.1)
+
+    release_finalizer.set()
+    finalize_thread.join(timeout=5)
+    migration_thread.join(timeout=5)
+
+    assert not finalize_thread.is_alive()
+    assert not migration_thread.is_alive()
+    assert failures == []
+    assert read_attempt(coral_dir, "serialized", island_id="0") is None
+    moved = read_attempt(coral_dir, "serialized", island_id="1")
+    assert moved is not None
+    assert moved.score == 0.9
+    assert moved.status == "improved"
+    assert moved.metadata["island_id"] == "1"
+    assert list((coral_dir / "islands" / "0" / "attempts").glob("serialized.json")) == []
+    assert len(list((coral_dir / "islands" / "1" / "attempts").glob("serialized.json"))) == 1
 
 
 def test_grade_one_finalizes_migrated_pending_attempt_in_current_island(tmp_path, monkeypatch):

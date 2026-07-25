@@ -351,6 +351,28 @@ def test_cli_pythonpath_shim_editable_install(tmp_path):
     assert (shim / "coral").readlink() == pkg2
 
 
+def test_cli_pythonpath_shim_repoint_never_unlinks_live_entry(tmp_path, monkeypatch):
+    run_dir = tmp_path / "run"
+    prefix = tmp_path / "venv"
+    prefix.mkdir()
+    first = tmp_path / "checkout" / "coral"
+    second = tmp_path / "checkout2" / "coral"
+    first.mkdir(parents=True)
+    second.mkdir(parents=True)
+    _cli_pythonpath_shim(run_dir, first, prefix)
+    live = run_dir / ".sandbox" / "pythonpath" / "coral"
+    original_unlink = Path.unlink
+
+    def guarded_unlink(path: Path, *args, **kwargs):
+        if path == live:
+            raise AssertionError("live PYTHONPATH shim must not be unlinked")
+        return original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", guarded_unlink)
+    _cli_pythonpath_shim(run_dir, second, prefix)
+    assert live.readlink() == second
+
+
 def test_cli_pythonpath_shim_noop_for_normal_install(tmp_path):
     """A coral installed inside the interpreter prefix needs no shim —
     sys.prefix is already in allowRead."""

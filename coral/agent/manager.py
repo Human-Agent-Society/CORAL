@@ -48,6 +48,7 @@ from coral.hub._island import island_root
 from coral.hub.attempts import (
     agent_in_grader_queue,
     archive_attempts,
+    attempt_location_lock,
     get_leaderboard,
     read_attempts,
     read_eval_count,
@@ -548,6 +549,7 @@ class AgentManager:
             raise RuntimeError("run paths are not initialized; start_all() has not run")
 
         runtime = self._runtime_for(agent_id)
+        shared_dir_name = runtime.shared_dir_name
         spec = self.specs_by_id.get(agent_id)
 
         # Track which island this agent belongs to. Single-island mode (None)
@@ -565,7 +567,7 @@ class AgentManager:
         logger.info(f"  Worktree: {worktree_path}")
 
         # Ignore CORAL files via the repo's shared info/exclude (reset-proof)
-        setup_git_exclude(worktree_path)
+        setup_git_exclude(worktree_path, shared_dir_name=shared_dir_name)
 
         # Run setup commands (uv sync, etc.) and install coral in the worktree
         setup_worktree_env(worktree_path, self.config.workspace.setup)
@@ -575,7 +577,6 @@ class AgentManager:
 
         # Set up shared state directory (notes, skills, attempts symlinks, plus
         # a symlink to the grader source so the agent can read how it's scored).
-        shared_dir_name = runtime.shared_dir_name
         setup_shared_state(
             worktree_path,
             self.paths.coral_dir,
@@ -2752,6 +2753,18 @@ def _validate_sessions(
 
 
 def _move_agent_files(
+    coral_dir: Path,
+    agent_id: str,
+    *,
+    src: str,
+    dst: str,
+) -> None:
+    """Move agent-owned island files without racing grader finalization."""
+    with attempt_location_lock(coral_dir):
+        _move_agent_files_unlocked(coral_dir, agent_id, src=src, dst=dst)
+
+
+def _move_agent_files_unlocked(
     coral_dir: Path,
     agent_id: str,
     *,

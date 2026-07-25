@@ -95,7 +95,7 @@ def create_agent_worktree(repo_path: Path, agent_id: str, agents_dir: Path) -> P
     return worktree_path
 
 
-def setup_git_exclude(worktree_path: Path) -> None:
+def setup_git_exclude(worktree_path: Path, shared_dir_name: str | None = None) -> None:
     """Register CORAL-managed files in the repo's git exclude file.
 
     Entries go to ``$GIT_COMMON_DIR/info/exclude`` rather than the tracked
@@ -132,6 +132,14 @@ def setup_git_exclude(worktree_path: Path) -> None:
         ".pi/",
         ".venv/",
     }
+    if shared_dir_name is not None:
+        if (
+            not shared_dir_name
+            or Path(shared_dir_name).name != shared_dir_name
+            or shared_dir_name in {".", ".."}
+        ):
+            raise ValueError("runtime shared_dir_name must be one worktree-local directory name")
+        entries.add(f"{shared_dir_name}/")
 
     # Preserve existing entries
     existing = set()

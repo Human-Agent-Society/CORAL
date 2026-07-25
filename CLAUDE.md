@@ -147,6 +147,9 @@ uv run ruff check .
 uv run ruff format .
 ```
 
+`workspace.seed_path` defaults to the task-local `seed/` overlay. Set it to
+`null` when `workspace.repo_path` already contains the complete agent seed.
+
 ## Code Patterns
 
 1. **`GraderInterface`** protocol (`@runtime_checkable`):

@@ -116,6 +116,19 @@ def test_config_setup_defaults_empty():
     assert config.workspace.setup == []
 
 
+def test_workspace_seed_path_can_disable_task_seed_overlay():
+    config = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "workspace": {"repo_path": "./complete-seed", "seed_path": None},
+        }
+    )
+
+    assert config.workspace.seed_path is None
+    restored = CoralConfig.from_dict(config.to_dict())
+    assert restored.workspace.seed_path is None
+
+
 # --- OmegaConf-specific tests ---
 
 

@@ -105,6 +105,60 @@ def test_create_project_unique_runs():
         assert latest.resolve() == paths2.run_dir.resolve()
 
 
+def test_create_project_seed_overlay_can_be_disabled():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        root = Path(d)
+        source = root / "complete-seed"
+        source.mkdir()
+        (source / "candidate.py").write_text('CANDIDATE = "source"\n')
+        task_dir = root / "task"
+        task_dir.mkdir()
+        seed = task_dir / "seed"
+        seed.mkdir()
+        (seed / "candidate.py").write_text('CANDIDATE = "overlay"\n')
+
+        config = CoralConfig(
+            task=TaskConfig(name="No Overlay", description="Test task"),
+            grader=GraderConfig(),
+            agents=AgentConfig(count=1),
+            workspace=WorkspaceConfig(
+                results_dir=str(root / "results"),
+                repo_path=str(source),
+                seed_path=None,
+            ),
+        )
+        paths = create_project(config, config_dir=task_dir)
+
+        assert (paths.repo_dir / "candidate.py").read_text() == 'CANDIDATE = "source"\n'
+
+
+def test_create_project_custom_seed_overlay_is_relative_to_task_dir():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        root = Path(d)
+        source = root / "source"
+        source.mkdir()
+        (source / "candidate.py").write_text('CANDIDATE = "source"\n')
+        task_dir = root / "task"
+        task_dir.mkdir()
+        alternate = task_dir / "alternate-seed"
+        alternate.mkdir()
+        (alternate / "candidate.py").write_text('CANDIDATE = "alternate"\n')
+
+        config = CoralConfig(
+            task=TaskConfig(name="Custom Overlay", description="Test task"),
+            grader=GraderConfig(),
+            agents=AgentConfig(count=1),
+            workspace=WorkspaceConfig(
+                results_dir=str(root / "results"),
+                repo_path=str(source),
+                seed_path="alternate-seed",
+            ),
+        )
+        paths = create_project(config, config_dir=task_dir)
+
+        assert (paths.repo_dir / "candidate.py").read_text() == 'CANDIDATE = "alternate"\n'
+
+
 def test_write_agent_id():
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d)
@@ -128,6 +182,34 @@ def test_setup_git_exclude():
         assert ".coral_island" in content
         # The tracked .gitignore is never touched
         assert not (worktree / ".gitignore").exists()
+
+
+def test_setup_git_exclude_preserves_custom_runtime_state_across_checkout():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        repo = Path(d)
+        _git_init(d)
+        setup_git_exclude(repo, shared_dir_name=".scripted")
+        shared = repo / ".scripted"
+        shared.mkdir()
+        (shared / "attempts").symlink_to("/tmp/island-a-attempts")
+        (repo / "candidate.py").write_text('CANDIDATE = "first"\n')
+
+        def _run(*args: str) -> subprocess.CompletedProcess:
+            return subprocess.run(
+                ["git", "-C", d, "-c", "user.name=test", "-c", "user.email=test@test.com", *args],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+        _run("add", "-A")
+        _run("commit", "-m", "first candidate")
+        assert _run("ls-files", ".scripted").stdout == ""
+
+        (shared / "attempts").unlink()
+        (shared / "attempts").symlink_to("/tmp/island-b-attempts")
+        _run("reset", "--hard", "HEAD")
+        assert (shared / "attempts").readlink() == Path("/tmp/island-b-attempts")
 
 
 def test_setup_git_exclude_preserves_existing():

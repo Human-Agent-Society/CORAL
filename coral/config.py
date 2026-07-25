@@ -326,6 +326,10 @@ class WorkspaceConfig:
 
     results_dir: str = "./results"
     repo_path: str = "."
+    # Optional task-directory overlay applied after cloning repo_path. The
+    # historical default preserves the conventional task-local seed/ layout;
+    # set to null when repo_path is already the complete agent seed.
+    seed_path: str | None = "seed"
     setup: list[str] = field(default_factory=list)  # shell commands to run before agents start
     # Ignored if results_dir is set
     base_dir: str = ""
