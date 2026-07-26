@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "purpose": "blindly select one extreme Rugged cell for fresh-seed confirmation",
+  "discovery_source_sha256": "83ce90697a3d0bd475177579f8bc54c20693e809ea1d46713361bf83ae409aa6",
+  "discovery_source_fully_registered": true,
+  "selection_rule": "Prefer cells whose discovery point estimates clear both practical floors and whose three topologies clear the progress gate; maximize the smaller effect surplus, then progress surplus, then prefer lower K and budget. If none are eligible, maximize the smaller of effect and progress surplus with the same deterministic tie-breakers. Discovery confidence bounds never determine selection.",
+  "selection_reason": "maximum_joint_effect_margin_among_point_gate_eligible_cells",
+  "selected_cell": {
+    "k": 32,
+    "budget": 65536,
+    "discovery_multi_minus_global_mean_random_z": 0.3402114407613519,
+    "discovery_multi_minus_partition_mean_random_z": 0.14753970026752797,
+    "discovery_effect_margin_random_z": 0.04753970026752796,
+    "discovery_progress_margin_random_z": 1.4795719198959292,
+    "discovery_point_gate_eligible": true
+  },
+  "confirmation_design": {
+    "blocks": 192,
+    "reference_samples_per_block": 512,
+    "conditions": [
+      "global_8",
+      "partition_4",
+      "multi_island_4"
+    ],
+    "multi_minus_global_practical_floor_random_z": 0.25,
+    "multi_minus_partition_practical_floor_random_z": 0.1,
+    "seed_namespace": "threshold-v6-extreme-confirmation-heldout",
+    "policy_seed_namespace": "threshold-v6-extreme-confirmation-policy"
+  },
+  "claim_boundary": "The 64-block surface is discovery/selection evidence. Only the independent 192-block confirmation can support a positive scripted-mechanism claim."
+}

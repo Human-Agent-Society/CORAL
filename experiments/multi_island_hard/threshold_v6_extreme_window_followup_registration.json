@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "registered_at": "2026-07-26T13:55:00+08:00",
+  "purpose": "Freeze an outcome-aware sequential fresh replication of the provisional K=32 extreme budget window.",
+  "outcome_aware_sequential_followup": true,
+  "not_a_replacement_for_original_confirmation": true,
+  "prior_confirmation_analysis_sha256": "c0514998ab8542f56b44ef8efd0be1bbecb825ff0f9d26c51391f34219b07a97",
+  "result_roots_absent_at_registration": {
+    "raw": true,
+    "analysis": true,
+    "checkpoint": true
+  },
+  "cells": [
+    {"k": 32, "budget": 32768},
+    {"k": 32, "budget": 65536}
+  ],
+  "rugged_n": 128,
+  "blocks_per_cell": 192,
+  "reference_samples_per_cell_block": 512,
+  "conditions": ["global_8", "partition_4", "multi_island_4"],
+  "practical_floors_random_z": {
+    "multi_minus_global": 0.25,
+    "multi_minus_partition": 0.1
+  },
+  "seed_namespace": "threshold-v6-extreme-window-followup-heldout",
+  "policy_namespace": "threshold-v6-extreme-window-followup-policy",
+  "checkpoint_every_condition_runs": 24,
+  "artifacts": {
+    "run_threshold_v6_extreme_window_followup.py": "5b0c1b795fd58bca162837218be7ab08da61ca747ec35dfc9b1595eee3418051",
+    "analyze_threshold_v6_extreme_window_followup.py": "1f620a6de82c25ab12deb628410aad889f09a897d8e5bced580c08874a3999ff",
+    "threshold_v6_extreme_window_followup_protocol.md": "fea6010fe5110d54fc8aed00141a95f803cd54bbad0083b0ae543475f007185a"
+  },
+  "expected_outputs": {
+    "checkpoint": "/var/tmp/coral-threshold-v6-extreme-window-followup-v1-checkpoint.json",
+    "raw": "experiments/multi_island_hard/threshold_v6_extreme_window_followup_raw.json",
+    "analysis": "experiments/multi_island_hard/threshold_v6_extreme_window_followup_analysis.json"
+  },
+  "execution": {
+    "command": [
+      "uv", "run", "python",
+      "experiments/multi_island_hard/run_threshold_v6_extreme_window_followup.py",
+      "--max-workers", "8",
+      "--checkpoint", "/var/tmp/coral-threshold-v6-extreme-window-followup-v1-checkpoint.json",
+      "--checkpoint-every", "24"
+    ],
+    "analysis_command": [
+      "uv", "run", "python",
+      "experiments/multi_island_hard/analyze_threshold_v6_extreme_window_followup.py"
+    ]
+  },
+  "interpretation": "Analyze each fixed cell separately. Do not pool with discovery or the original confirmation, and do not treat a passing follow-up cell as retroactive confirmation of the original claim."
+}

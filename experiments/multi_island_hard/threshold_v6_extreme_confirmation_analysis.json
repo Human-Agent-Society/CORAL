@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "source_fully_registered": true,
+  "audit_passes": true,
+  "bootstrap_repetitions": 100000,
+  "selected_cell": {
+    "n": 128,
+    "k": 32,
+    "affected_fraction": 0.2578125,
+    "budget": 65536
+  },
+  "performance": {
+    "global_8": {
+      "mean_final_best_score": 0.6542026221575552,
+      "mean_gain_over_random_z": 6.069933054260525
+    },
+    "partition_4": {
+      "mean_final_best_score": 0.6576700083523284,
+      "mean_gain_over_random_z": 6.20630713564221
+    },
+    "multi_island_4": {
+      "mean_final_best_score": 0.6604763107852797,
+      "mean_gain_over_random_z": 6.316009584966868
+    }
+  },
+  "contrasts": {
+    "multi_minus_global": {
+      "mean_random_z_difference": 0.24607653070634294,
+      "descriptive_random_z_ci": [
+        0.16057308618096713,
+        0.3325993668761416
+      ],
+      "one_sided_95pct_random_z_lower": 0.17441273780681324,
+      "practical_floor_random_z": 0.25,
+      "passes": false
+    },
+    "multi_minus_partition": {
+      "mean_random_z_difference": 0.10970244932465832,
+      "descriptive_random_z_ci": [
+        0.05503728223875053,
+        0.165383382505246
+      ],
+      "one_sided_95pct_random_z_lower": 0.06387762824463084,
+      "practical_floor_random_z": 0.1,
+      "passes": true
+    }
+  },
+  "search_progress_gate": {
+    "minimum_topology_gain_over_random_z": 6.069933054260525,
+    "iid_random_search_expected_max_plus_margin_z": 4.525470407817345,
+    "passes": true
+  },
+  "intersection_union_test": {
+    "one_sided_alpha_each_component": 0.05,
+    "multiplicity_rationale": "The positive claim requires both component nulls to be rejected. Under the union null, rejecting both at alpha controls the conjunction claim at alpha without dividing alpha between the two components."
+  },
+  "confirmation_passes": false,
+  "claim_boundary": "A pass is independent confirmation only for the frozen scripted mechanism at the selected cell; the discovery surface locates the provisional phase region, and natural-agent/CORAL/real-task validation remains required."
+}
