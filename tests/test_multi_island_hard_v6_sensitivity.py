@@ -1,8 +1,26 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import math
+from pathlib import Path
 
 import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_v6_sensitivity_registration_binds_blind_sources() -> None:
+    directory = ROOT / "experiments/multi_island_hard"
+    registration = json.loads(
+        (directory / "threshold_v6_sensitivity_registration.json").read_text()
+    )
+    assert registration["original_phase_raw_absent_at_registration"] is True
+    assert registration["extreme_phase_raw_absent_at_registration"] is True
+    assert registration["sensitivity_output_absent_at_registration"] is True
+    for filename, expected in registration["artifacts"].items():
+        observed = hashlib.sha256((directory / filename).read_bytes()).hexdigest()
+        assert observed == expected
 
 
 def test_v6_sensitivity_power_increases_with_effect_and_blocks() -> None:
