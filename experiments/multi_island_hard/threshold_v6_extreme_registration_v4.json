@@ -1,0 +1,123 @@
+{
+  "schema_version": 4,
+  "registered_at": "2026-07-26T09:35:33+08:00",
+  "supersedes": "threshold_v6_extreme_registration_v3.json",
+  "supersession_reason": "An outcome-free audit found that the 64-block, 12-cell Bonferroni map has only about 10.3% power for the registered multi-partition floor when paired-effect SD is 0.5. Preserve that blind surface as discovery, but require a deterministic selected-cell confirmation on 192 fresh blocks before any positive scripted-mechanism claim.",
+  "supersession_uses_topology_outcomes": false,
+  "supersession_changes_discovery_grid_or_seeds": false,
+  "adds_independent_confirmation": true,
+  "source_commit": "0c0bf708793b4db5c3a62aa0f24ebe1db9819768",
+  "discovery_blocks": 64,
+  "confirmation_blocks": 192,
+  "discovery_phase_raw_absent_at_registration": true,
+  "discovery_phase_analysis_absent_at_registration": true,
+  "discovery_checkpoint_absent_at_registration": true,
+  "confirmation_selection_absent_at_registration": true,
+  "confirmation_raw_absent_at_registration": true,
+  "confirmation_analysis_absent_at_registration": true,
+  "confirmation_checkpoint_absent_at_registration": true,
+  "artifacts": {
+    "threshold_v6_extreme_registration_v3.json": "5a4ff96557301bab7ac47d2fd7c3cbca30160bddf433351eb030b1668acb9e2c",
+    "select_threshold_v6_extreme_confirmation.py": "54f2837f0b51fb0b6343118ca51ac0ed8172159b19a889f98b535b152a04c0f5",
+    "run_threshold_v6_extreme_confirmation.py": "8d29f271e0b40b69d455048bdee0dc2e137c4b14fb987dfce0aa9b2f24fedd57",
+    "analyze_threshold_v6_extreme_confirmation.py": "64faaf8186ff04d15ea95619e8be8cc8bc217126eba136c9f5f88b6228729579",
+    "diagnose_threshold_v6_confirmation_sensitivity.py": "db323d23437e00c524b6545e69d28864bd6f313755ebd4449ac3d26b58b29e39",
+    "threshold_v6_extreme_confirmation_sensitivity.json": "f46ad7fe7f69922fb05f9874fb7904f4388feb9a022751a08284b5120946d786",
+    "threshold_v6_extreme_confirmation_protocol.md": "4cd3a417aea8e45b22da4e539e4fe0ebdff22269019effc9fb96f6892bbd6208"
+  },
+  "selection_rule": {
+    "eligible": "Both discovery point effects meet +0.25/+0.10 random-SD floors and all three topologies clear the registered progress floor.",
+    "ranking": "Maximize the smaller effect surplus, then progress surplus, then prefer lower K and lower budget.",
+    "fallback": "If no cell is eligible, maximize the smaller of effect and progress surplus using the same deterministic tie-breakers.",
+    "confidence_bounds_used_for_selection": false,
+    "always_select_exactly_one_cell": true
+  },
+  "confirmation_design": {
+    "rugged_n": 128,
+    "blocks": 192,
+    "reference_samples_per_block": 512,
+    "conditions": [
+      "global_8",
+      "partition_4",
+      "multi_island_4"
+    ],
+    "multi_minus_global_practical_floor_random_z": 0.25,
+    "multi_minus_partition_practical_floor_random_z": 0.1,
+    "one_sided_alpha_each_component": 0.05,
+    "positive_claim_requires_both_components": true,
+    "error_control": "Intersection-union test on fresh confirmation blocks; no alpha division across discovery cells or component nulls.",
+    "search_progress_gate": "Every topology mean must exceed the equal-budget iid-normal expected maximum plus 0.25 random SD.",
+    "seed_namespace": "threshold-v6-extreme-confirmation-heldout",
+    "policy_seed_namespace": "threshold-v6-extreme-confirmation-policy"
+  },
+  "power_design_gate": {
+    "target_true_effect_surplus_over_practical_floor_random_z": 0.05,
+    "paired_effect_sd_random_z_at_or_below": 0.75,
+    "minimum_component_power": 0.8,
+    "audited_minimum_component_power": 0.8221944694523804
+  },
+  "execution_order": [
+    "Finish and audit the original v6 phase map.",
+    "Finish and audit all eight v5 B=4096 CORAL mechanism blocks.",
+    "Run the unchanged registered 64-block extreme discovery map to completion without inspecting checkpoint outcomes.",
+    "Audit the discovery raw and generate the deterministic one-cell selection manifest.",
+    "Run all 192 fresh confirmation blocks without inspecting checkpoint outcomes.",
+    "Audit the confirmation and only then evaluate the positive scripted-mechanism gate.",
+    "Run natural-agent and Circle Packing validation only under their separately registered gates."
+  ],
+  "commands": {
+    "discovery": [
+      "nice",
+      "-n",
+      "15",
+      "uv",
+      "run",
+      "python",
+      "experiments/multi_island_hard/run_threshold_v6_extreme_resumable.py",
+      "--max-workers",
+      "2",
+      "--checkpoint",
+      "/var/tmp/coral-threshold-v6-extreme-phase-v3-checkpoint.json",
+      "--checkpoint-every",
+      "24"
+    ],
+    "select": [
+      "uv",
+      "run",
+      "python",
+      "experiments/multi_island_hard/select_threshold_v6_extreme_confirmation.py"
+    ],
+    "confirm": [
+      "nice",
+      "-n",
+      "15",
+      "uv",
+      "run",
+      "python",
+      "experiments/multi_island_hard/run_threshold_v6_extreme_confirmation.py",
+      "--max-workers",
+      "2",
+      "--checkpoint",
+      "/var/tmp/coral-threshold-v6-extreme-confirmation-v1-checkpoint.json",
+      "--checkpoint-every",
+      "24"
+    ],
+    "analyze_confirmation": [
+      "uv",
+      "run",
+      "python",
+      "experiments/multi_island_hard/analyze_threshold_v6_extreme_confirmation.py"
+    ]
+  },
+  "checkpoint_interpretation_lock": "Before each registered run completes, inspect only completed_items and expected_items. Do not analyze or report topology outcomes from either checkpoint.",
+  "expected_outputs": {
+    "discovery_checkpoint": "/var/tmp/coral-threshold-v6-extreme-phase-v3-checkpoint.json",
+    "discovery_raw": "experiments/multi_island_hard/threshold_v6_extreme_phase_raw.json",
+    "discovery_analysis": "experiments/multi_island_hard/threshold_v6_extreme_phase_analysis.json",
+    "confirmation_selection": "experiments/multi_island_hard/threshold_v6_extreme_confirmation_selection.json",
+    "confirmation_checkpoint": "/var/tmp/coral-threshold-v6-extreme-confirmation-v1-checkpoint.json",
+    "confirmation_raw": "experiments/multi_island_hard/threshold_v6_extreme_confirmation_raw.json",
+    "confirmation_analysis": "experiments/multi_island_hard/threshold_v6_extreme_confirmation_analysis.json"
+  },
+  "claim_boundary": "The 64-block surface is discovery evidence; only a passing independent 192-block selected-cell confirmation can support the frozen scripted-mechanism claim. Natural-agent, CORAL-anchor, and real-task validity remain separate mandatory gates."
+}

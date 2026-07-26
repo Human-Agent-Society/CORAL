@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "purpose": "outcome-free sensitivity audit for fresh selected-cell confirmation",
+  "method": "One-sided normal approximation for the joint per-contrast gate: the point estimate must meet its practical floor and its one-sided 95% lower bound must exceed zero. Cell selection uses independent discovery blocks, and the positive claim is an intersection-union test requiring both contrasts, so alpha is not divided across discovery cells or the two component nulls.",
+  "blocks": 192,
+  "one_sided_alpha_each_component": 0.05,
+  "target_power": 0.8,
+  "paired_effect_sd_grid_random_z": [
+    0.25,
+    0.5,
+    0.75,
+    1.0
+  ],
+  "target_surplus_over_floor_random_z": 0.05,
+  "rows": [
+    {
+      "contrast": "multi_minus_global",
+      "practical_floor_random_z": 0.25,
+      "target_true_effect_random_z": 0.3,
+      "target_surplus_over_floor_random_z": 0.05,
+      "assumed_paired_effect_sd_random_z": 0.25,
+      "approximate_gate_power_at_target_effect": 0.9972081915968106,
+      "minimum_true_effect_for_80pct_gate_power_random_z": 0.2651846951799696
+    },
+    {
+      "contrast": "multi_minus_global",
+      "practical_floor_random_z": 0.25,
+      "target_true_effect_random_z": 0.3,
+      "target_surplus_over_floor_random_z": 0.05,
+      "assumed_paired_effect_sd_random_z": 0.5,
+      "approximate_gate_power_at_target_effect": 0.9170716698285449,
+      "minimum_true_effect_for_80pct_gate_power_random_z": 0.2803693903599392
+    },
+    {
+      "contrast": "multi_minus_global",
+      "practical_floor_random_z": 0.25,
+      "target_true_effect_random_z": 0.3,
+      "target_surplus_over_floor_random_z": 0.05,
+      "assumed_paired_effect_sd_random_z": 0.75,
+      "approximate_gate_power_at_target_effect": 0.8221944694523804,
+      "minimum_true_effect_for_80pct_gate_power_random_z": 0.2955540855399088
+    },
+    {
+      "contrast": "multi_minus_global",
+      "practical_floor_random_z": 0.25,
+      "target_true_effect_random_z": 0.3,
+      "target_surplus_over_floor_random_z": 0.05,
+      "assumed_paired_effect_sd_random_z": 1.0,
+      "approximate_gate_power_at_target_effect": 0.7557888416887031,
+      "minimum_true_effect_for_80pct_gate_power_random_z": 0.31073878071987837
+    },
+    {
+      "contrast": "multi_minus_partition",
+      "practical_floor_random_z": 0.1,
+      "target_true_effect_random_z": 0.15000000000000002,
+      "target_surplus_over_floor_random_z": 0.05,
+      "assumed_paired_effect_sd_random_z": 0.25,
+      "approximate_gate_power_at_target_effect": 0.9972081915968106,
+      "minimum_true_effect_for_80pct_gate_power_random_z": 0.1151846951799696
+    },
+    {
+      "contrast": "multi_minus_partition",
+      "practical_floor_random_z": 0.1,
+      "target_true_effect_random_z": 0.15000000000000002,
+      "target_surplus_over_floor_random_z": 0.05,
+      "assumed_paired_effect_sd_random_z": 0.5,
+      "approximate_gate_power_at_target_effect": 0.917071669828545,
+      "minimum_true_effect_for_80pct_gate_power_random_z": 0.1303693903599392
+    },
+    {
+      "contrast": "multi_minus_partition",
+      "practical_floor_random_z": 0.1,
+      "target_true_effect_random_z": 0.15000000000000002,
+      "target_surplus_over_floor_random_z": 0.05,
+      "assumed_paired_effect_sd_random_z": 0.75,
+      "approximate_gate_power_at_target_effect": 0.8221944694523804,
+      "minimum_true_effect_for_80pct_gate_power_random_z": 0.14555408553990878
+    },
+    {
+      "contrast": "multi_minus_partition",
+      "practical_floor_random_z": 0.1,
+      "target_true_effect_random_z": 0.15000000000000002,
+      "target_surplus_over_floor_random_z": 0.05,
+      "assumed_paired_effect_sd_random_z": 1.0,
+      "approximate_gate_power_at_target_effect": 0.6677131988929127,
+      "minimum_true_effect_for_80pct_gate_power_random_z": 0.17944586625712394
+    }
+  ],
+  "design_gate": {
+    "paired_effect_sd_random_z_at_or_below": 0.75,
+    "minimum_power_at_target_surplus": 0.8221944694523804,
+    "required_minimum_power": 0.8
+  },
+  "interpretation": "This calculation reads no topology outcome. Correlation between the two contrasts is unknown, so it reports component powers rather than inventing a joint-power number. A failed confirmation remains inconclusive if observed paired dispersion lies beyond the audited design range."
+}

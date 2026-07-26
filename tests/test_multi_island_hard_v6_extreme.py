@@ -33,6 +33,7 @@ def test_extreme_v2_registration_binds_64_block_sources() -> None:
 def test_extreme_v3_registration_binds_resumable_sources() -> None:
     directory = ROOT / "experiments/multi_island_hard"
     registration = json.loads((directory / "threshold_v6_extreme_registration_v3.json").read_text())
+    assert registration["superseded_by"] == "threshold_v6_extreme_registration_v4.json"
     assert registration["registered_blocks"] == 64
     assert registration["checkpoint_every_condition_runs"] == 24
     assert registration["supersession_changes_statistical_parameters"] is False

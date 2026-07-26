@@ -1,5 +1,6 @@
 {
   "schema_version": 3,
+  "superseded_by": "threshold_v6_extreme_registration_v4.json",
   "registered_at": "2026-07-26T08:29:29+08:00",
   "supersedes": "threshold_v6_extreme_registration_v2.json",
   "supersession_changes_statistical_parameters": false,
