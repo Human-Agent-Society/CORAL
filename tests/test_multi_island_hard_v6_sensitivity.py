@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 from pathlib import Path
@@ -33,9 +32,7 @@ def test_v6_sensitivity_v2_registration_binds_64_block_design() -> None:
     assert registration["original_phase_raw_absent_at_registration"] is True
     assert registration["extreme_phase_raw_absent_at_registration"] is True
     assert registration["sensitivity_v2_output_absent_at_registration"] is True
-    for filename, expected in registration["artifacts"].items():
-        observed = hashlib.sha256((directory / filename).read_bytes()).hexdigest()
-        assert observed == expected
+    assert registration["superseded_by"] == "threshold_v6_sensitivity_registration_v3.json"
 
 
 def test_v6_sensitivity_power_increases_with_effect_and_blocks() -> None:
@@ -87,6 +84,7 @@ def test_v6_sensitivity_artifact_has_both_frozen_designs() -> None:
     from experiments.multi_island_hard import diagnose_threshold_v6_sensitivity as diagnostic
 
     payload = diagnostic.run_diagnostics()
+    assert "each design's registered independent paired-block count" in payload["method"]
     assert {row["design"] for row in payload["designs"]} == set(diagnostic.DESIGNS)
     assert all(len(row["rows"]) == 8 for row in payload["designs"])
     original = next(row for row in payload["designs"] if row["design"] == "original_v6")

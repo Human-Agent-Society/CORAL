@@ -11,7 +11,7 @@ from statistics import NormalDist
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_OUTPUT = ROOT / "threshold_v6_sensitivity_diagnostics_v2.json"
+DEFAULT_OUTPUT = ROOT / "threshold_v6_sensitivity_diagnostics_v3.json"
 FAMILYWISE_ALPHA = 0.05
 TARGET_POWER = 0.80
 PAIRED_EFFECT_SD_GRID = (0.25, 0.5, 0.75, 1.0)
@@ -126,7 +126,8 @@ def run_diagnostics() -> dict[str, Any]:
         "purpose": "outcome-free design sensitivity for v6 Rugged confirmatory gates",
         "method": (
             "One-sided normal approximation using the registered Bonferroni alpha, "
-            "24 independent paired blocks, and a grid of paired-effect SDs."
+            "each design's registered independent paired-block count, and a grid of "
+            "paired-effect SDs."
         ),
         "target_power": TARGET_POWER,
         "paired_effect_sd_grid_random_z": list(PAIRED_EFFECT_SD_GRID),
