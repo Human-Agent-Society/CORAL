@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "registered_at": "2026-07-26T10:01:59+08:00",
+  "purpose": "Freeze powered fresh-data confirmation requirements before natural-agent or Circle Packing outcomes exist.",
+  "source_commit": "96222553cafb32dea2c09cb15186c02b475b0695",
+  "uses_external_validation_outcomes": false,
+  "natural_results_absent_at_registration": true,
+  "circle_results_absent_at_registration": true,
+  "external_execution_deferred_until_scripted_confirmation_passes": true,
+  "artifacts": {
+    "diagnose_external_validation_sensitivity.py": "bd686b84378cbca29365b7bf820b21b2c1c0f6e6be112cbf943a52ec454accd9",
+    "external_validation_sensitivity.json": "2c31129bb81ea05a104b269b9940360917e43f801768cdf0c083e7d110b7dafb",
+    "external_validation_confirmation_protocol.md": "a682e5ec7adff072896a792974297612ccb40a99493e308f4e619a57dbb138c2"
+  },
+  "natural_discovery_blocks": 8,
+  "natural_confirmation_blocks": 40,
+  "natural_confirmation": {
+    "task": "Rugged N512 K64",
+    "budget": 16384,
+    "conditions": [
+      "global_8",
+      "partition_4",
+      "multi_island_4"
+    ],
+    "fresh_private_landscape_seeds_required": true,
+    "seed_overlap_permitted": false,
+    "multi_minus_global_floor_random_z": 0.25,
+    "multi_minus_partition_floor_random_z": 0.1,
+    "one_sided_alpha_each_required_component": 0.05,
+    "positive_claim_requires_both_components": true,
+    "target_effects_random_z": {
+      "multi_minus_global": 0.35,
+      "multi_minus_partition": 0.2
+    },
+    "powered_paired_effect_sd_at_or_below_random_z": 0.5,
+    "minimum_audited_component_power": 0.8119131898703726
+  },
+  "circle_discovery_budgets": [
+    32,
+    64,
+    128
+  ],
+  "circle_discovery_blocks_per_budget": 8,
+  "circle_confirmation_blocks": 32,
+  "circle_confirmation": {
+    "selection_rule": "Choose the lowest discovery budget whose multi-global and multi-partition point effects both meet +0.01 and whose migration compliance passes; otherwise maximize the smaller effect surplus and break ties toward the lower budget.",
+    "fresh_discovery_independent_model_service_blocks_required": true,
+    "multi_minus_global_floor_score": 0.01,
+    "multi_minus_partition_floor_score": 0.01,
+    "one_sided_alpha_each_required_component": 0.05,
+    "positive_claim_requires_both_components": true,
+    "target_effect_score": 0.02,
+    "powered_paired_effect_sd_at_or_below_score": 0.04,
+    "minimum_audited_component_power": 0.8817090317783471
+  },
+  "error_control": "Each confirmation is an intersection-union test on fresh data. Both topology contrasts must pass; discovery observations are excluded from confirmation estimates.",
+  "implementation_status": "deferred",
+  "implementation_gate": "Before launch, bind the fresh natural landscape bundle, selector where applicable, runner, auditor, analyzer, result root, seed hashes, and dry-run evidence in a superseding source registration while all corresponding result roots remain absent.",
+  "claim_boundary": "Eight-block discovery failures are not absence evidence outside their powered dispersion range. External confirmations remain task- and agent-population-specific and cannot rescue one another."
+}

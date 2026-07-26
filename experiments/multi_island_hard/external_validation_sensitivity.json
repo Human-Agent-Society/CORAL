@@ -1,0 +1,345 @@
+{
+  "schema_version": 1,
+  "purpose": "outcome-free sensitivity for external-validation discovery and confirmation",
+  "method": "Normal approximation to the actual per-contrast gate: the estimate must meet its practical floor and its one-sided lower bound must exceed zero. Fresh confirmation requires both multi-global and multi-partition components, so each uses alpha 0.05 as an intersection-union test.",
+  "target_power": 0.8,
+  "designs": [
+    {
+      "design": "natural_discovery",
+      "blocks": 8,
+      "one_sided_alpha_each_required_component": 0.025,
+      "effect_scale": "rugged_random_z",
+      "target_surplus_over_floor": 0.1,
+      "rows": [
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.25,
+          "target_true_effect": 0.35,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 0.25,
+          "approximate_gate_power_at_target_effect": 0.8710504823538302,
+          "blocks_required_for_80pct_gate_power": 5
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.25,
+          "target_true_effect": 0.35,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 0.5,
+          "approximate_gate_power_at_target_effect": 0.5079523887473217,
+          "blocks_required_for_80pct_gate_power": 18
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.25,
+          "target_true_effect": 0.35,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 0.75,
+          "approximate_gate_power_at_target_effect": 0.26107611678875786,
+          "blocks_required_for_80pct_gate_power": 40
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.25,
+          "target_true_effect": 0.35,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 1.0,
+          "approximate_gate_power_at_target_effect": 0.16601963456118435,
+          "blocks_required_for_80pct_gate_power": 71
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.1,
+          "target_true_effect": 0.2,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 0.25,
+          "approximate_gate_power_at_target_effect": 0.6189703663026574,
+          "blocks_required_for_80pct_gate_power": 13
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.1,
+          "target_true_effect": 0.2,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 0.5,
+          "approximate_gate_power_at_target_effect": 0.203667337065414,
+          "blocks_required_for_80pct_gate_power": 50
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.1,
+          "target_true_effect": 0.2,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 0.75,
+          "approximate_gate_power_at_target_effect": 0.11396336191298317,
+          "blocks_required_for_80pct_gate_power": 111
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.1,
+          "target_true_effect": 0.2,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 1.0,
+          "approximate_gate_power_at_target_effect": 0.0816167514005336,
+          "blocks_required_for_80pct_gate_power": 197
+        }
+      ]
+    },
+    {
+      "design": "natural_fresh_confirmation",
+      "blocks": 40,
+      "one_sided_alpha_each_required_component": 0.05,
+      "effect_scale": "rugged_random_z",
+      "target_surplus_over_floor": 0.1,
+      "rows": [
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.25,
+          "target_true_effect": 0.35,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 0.25,
+          "approximate_gate_power_at_target_effect": 0.9942939818069991,
+          "blocks_required_for_80pct_gate_power": 5
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.25,
+          "target_true_effect": 0.35,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 0.5,
+          "approximate_gate_power_at_target_effect": 0.8970483946339658,
+          "blocks_required_for_80pct_gate_power": 18
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.25,
+          "target_true_effect": 0.35,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 0.75,
+          "approximate_gate_power_at_target_effect": 0.8004624017258813,
+          "blocks_required_for_80pct_gate_power": 40
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.25,
+          "target_true_effect": 0.35,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 1.0,
+          "approximate_gate_power_at_target_effect": 0.7152339504448689,
+          "blocks_required_for_80pct_gate_power": 71
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.1,
+          "target_true_effect": 0.2,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 0.25,
+          "approximate_gate_power_at_target_effect": 0.9942939818069991,
+          "blocks_required_for_80pct_gate_power": 10
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.1,
+          "target_true_effect": 0.2,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 0.5,
+          "approximate_gate_power_at_target_effect": 0.8119131898703726,
+          "blocks_required_for_80pct_gate_power": 39
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.1,
+          "target_true_effect": 0.2,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 0.75,
+          "approximate_gate_power_at_target_effect": 0.5166288641897713,
+          "blocks_required_for_80pct_gate_power": 87
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.1,
+          "target_true_effect": 0.2,
+          "target_surplus_over_floor": 0.1,
+          "assumed_paired_effect_sd": 1.0,
+          "approximate_gate_power_at_target_effect": 0.3519940258168499,
+          "blocks_required_for_80pct_gate_power": 155
+        }
+      ]
+    },
+    {
+      "design": "circle_discovery",
+      "blocks": 8,
+      "one_sided_alpha_each_required_component": 0.016666666666666666,
+      "effect_scale": "normalized_circle_score",
+      "target_surplus_over_floor": 0.01,
+      "rows": [
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.005,
+          "approximate_gate_power_at_target_effect": 0.999999992291371,
+          "blocks_required_for_80pct_gate_power": 2
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.01,
+          "approximate_gate_power_at_target_effect": 0.9976611325094764,
+          "blocks_required_for_80pct_gate_power": 3
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.02,
+          "approximate_gate_power_at_target_effect": 0.758155578666568,
+          "blocks_required_for_80pct_gate_power": 9
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.04,
+          "approximate_gate_power_at_target_effect": 0.2376656363095659,
+          "blocks_required_for_80pct_gate_power": 36
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.005,
+          "approximate_gate_power_at_target_effect": 0.999999992291371,
+          "blocks_required_for_80pct_gate_power": 2
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.01,
+          "approximate_gate_power_at_target_effect": 0.9976611325094764,
+          "blocks_required_for_80pct_gate_power": 3
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.02,
+          "approximate_gate_power_at_target_effect": 0.758155578666568,
+          "blocks_required_for_80pct_gate_power": 9
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.04,
+          "approximate_gate_power_at_target_effect": 0.2376656363095659,
+          "blocks_required_for_80pct_gate_power": 36
+        }
+      ]
+    },
+    {
+      "design": "circle_selected_budget_fresh_confirmation",
+      "blocks": 32,
+      "one_sided_alpha_each_required_component": 0.05,
+      "effect_scale": "normalized_circle_score",
+      "target_surplus_over_floor": 0.01,
+      "rows": [
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.005,
+          "approximate_gate_power_at_target_effect": 1.0,
+          "blocks_required_for_80pct_gate_power": 2
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.01,
+          "approximate_gate_power_at_target_effect": 0.999999992291371,
+          "blocks_required_for_80pct_gate_power": 2
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.02,
+          "approximate_gate_power_at_target_effect": 0.9976611325094764,
+          "blocks_required_for_80pct_gate_power": 7
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.04,
+          "approximate_gate_power_at_target_effect": 0.8817090317783471,
+          "blocks_required_for_80pct_gate_power": 25
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.005,
+          "approximate_gate_power_at_target_effect": 1.0,
+          "blocks_required_for_80pct_gate_power": 2
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.01,
+          "approximate_gate_power_at_target_effect": 0.999999992291371,
+          "blocks_required_for_80pct_gate_power": 2
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.02,
+          "approximate_gate_power_at_target_effect": 0.9976611325094764,
+          "blocks_required_for_80pct_gate_power": 7
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor": 0.01,
+          "target_true_effect": 0.02,
+          "target_surplus_over_floor": 0.01,
+          "assumed_paired_effect_sd": 0.04,
+          "approximate_gate_power_at_target_effect": 0.8817090317783471,
+          "blocks_required_for_80pct_gate_power": 25
+        }
+      ]
+    }
+  ],
+  "confirmation_design_gates": {
+    "natural": {
+      "paired_effect_sd_at_or_below": 0.5,
+      "minimum_component_power": 0.8119131898703726,
+      "required_minimum_power": 0.8
+    },
+    "circle": {
+      "paired_effect_sd_at_or_below": 0.04,
+      "minimum_component_power": 0.8817090317783471,
+      "required_minimum_power": 0.8
+    }
+  },
+  "interpretation": "No natural-agent or Circle Packing outcome directory existed when this audit was frozen. Eight-block discovery failures cannot be described as evidence of no practically relevant effect outside their powered region."
+}
