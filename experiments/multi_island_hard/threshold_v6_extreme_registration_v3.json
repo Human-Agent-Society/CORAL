@@ -1,0 +1,54 @@
+{
+  "schema_version": 3,
+  "registered_at": "2026-07-26T08:29:29+08:00",
+  "supersedes": "threshold_v6_extreme_registration_v2.json",
+  "supersession_changes_statistical_parameters": false,
+  "supersession_changes_heldout_seeds": false,
+  "supersession_reason": "Add atomic fail-closed checkpoint/resume execution before the long 64-block topology run.",
+  "phase_raw_absent_at_registration": true,
+  "phase_analysis_absent_at_registration": true,
+  "checkpoint_absent_at_registration": true,
+  "source_commit": "25d989a416d8bf3aac41d2cf1a9d1fbd3c44c7af",
+  "registered_blocks": 64,
+  "checkpoint_every_condition_runs": 24,
+  "artifacts": {
+    "run_threshold_v6_extreme_phase.py": "b1edf505101e393b7dec15eb5645499d7b3056f7d63bb380ae80d5f5babab1eb",
+    "run_threshold_v6_extreme_resumable.py": "b78f06d51fcdab29f080dd91b4230f5f83a114028f95cb33d41534866e28d15b",
+    "analyze_threshold_v6_extreme_phase.py": "8ce4ee9d78c9adcb3e281b39af6e4f44f4cc0d1e5a4baaf7957fa74d376bf3c5",
+    "diagnose_threshold_v6_extreme_construct.py": "546c8903cdaf29379a0fe30a3a264c8e7d2019b290b7f67410ff04cd00ed0c9d",
+    "threshold_v6_extreme_phase_protocol.md": "db9ec3a2eada8d87a7b108982003d10a0b12b56a1b008dc68a443aab1017d0ea"
+  },
+  "validated_prerequisite_artifacts": {
+    "threshold_v6_extreme_construct_diagnostics_v2.json": "79c74f0c5410a016a48e4fae7c4ec0bce1569246d8b90892acd62ec61ec0de2f",
+    "threshold_v6_sensitivity_diagnostics_v3.json": "e36709a99a0e326d07352394c1efb4dcc8cc33df73deceefe94210c96445a8be"
+  },
+  "seed_namespace": "threshold-v6-extreme-phase-heldout",
+  "policy_seed_namespace": "threshold-v6-extreme-phase-policy",
+  "phase_command": [
+    "nice",
+    "-n",
+    "15",
+    "uv",
+    "run",
+    "python",
+    "experiments/multi_island_hard/run_threshold_v6_extreme_resumable.py",
+    "--max-workers",
+    "2",
+    "--checkpoint",
+    "/var/tmp/coral-threshold-v6-extreme-phase-v3-checkpoint.json",
+    "--checkpoint-every",
+    "24"
+  ],
+  "phase_launch_deferred": true,
+  "phase_launch_prerequisites": [
+    "original v6 phase map has finished and been audited",
+    "v5 B=4096 eight-block CORAL mechanism run has finished and been audited",
+    "registered 64-block extreme construct-validity gate has passed"
+  ],
+  "checkpoint_interpretation_lock": "Before the full run completes, inspect only completed_items and expected_items; do not analyze or report interim topology outcomes.",
+  "expected_outputs": {
+    "checkpoint": "/var/tmp/coral-threshold-v6-extreme-phase-v3-checkpoint.json",
+    "phase_raw": "experiments/multi_island_hard/threshold_v6_extreme_phase_raw.json",
+    "phase_analysis": "experiments/multi_island_hard/threshold_v6_extreme_phase_analysis.json"
+  }
+}
