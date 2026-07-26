@@ -15,6 +15,13 @@ topology raw files were absent showed only 33.9% approximate power for a
 any extreme topology outcome is evaluated. The confirmatory v2 design below
 uses 64 fresh paired blocks, giving approximately 87.2% power in that scenario.
 
+Because this run is materially longer than the original map, the formal
+operator uses a source-bound resumable wrapper. It atomically checkpoints every
+24 completed condition runs and rejects any configuration, seed hash, policy
+hash, item key, or result shape that does not match the registered run. The
+checkpoint may be inspected only for completed/expected counts until the full
+map finishes; interim topology outcomes must not be analyzed or reported.
+
 Changing Rugged `N` is a computational device that makes extreme `K/N`
 feasible. The extension uses `N=128`, still a search space of size `2^128`,
 and treats affected fraction `(K+1)/N` and empirically measured one-bit

@@ -1,5 +1,7 @@
 {
   "schema_version": 2,
+  "superseded_by": "threshold_v6_extreme_registration_v3.json",
+  "supersession_reason": "Add fail-closed resumable checkpointing before the long 64-block topology run; statistical parameters and held-out seeds are unchanged.",
   "registered_at": "2026-07-26T08:14:40+08:00",
   "supersedes": "threshold_v6_extreme_registration.json",
   "supersession_is_outcome_blind": true,

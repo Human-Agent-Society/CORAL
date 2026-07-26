@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 import random
 from pathlib import Path
@@ -27,9 +26,7 @@ def test_extreme_v2_registration_binds_64_block_sources() -> None:
     assert registration["phase_raw_absent_at_registration"] is True
     assert registration["phase_analysis_absent_at_registration"] is True
     assert registration["construct_v2_output_absent_at_registration"] is True
-    for filename, expected in registration["artifacts"].items():
-        observed = hashlib.sha256((directory / filename).read_bytes()).hexdigest()
-        assert observed == expected
+    assert registration["superseded_by"] == "threshold_v6_extreme_registration_v3.json"
 
 
 def test_extreme_registered_construct_artifact_audits_and_bridges_original_v6() -> None:
@@ -166,6 +163,76 @@ def test_extreme_reduced_phase_map_audits_and_analyzes() -> None:
     missing["rows"].pop()
     with pytest.raises(ValueError, match="missing 1 topology triplets"):
         analyzer.analyze(missing, require_registered=False)
+
+
+def test_extreme_resumable_runner_matches_direct_runner(tmp_path: Path) -> None:
+    from experiments.multi_island_hard import run_threshold_v6_extreme_phase as runner
+    from experiments.multi_island_hard import run_threshold_v6_extreme_resumable as resumable
+
+    arguments = {
+        "smooth_sizes": (32,),
+        "rugged_ks": (2,),
+        "budgets": (32,),
+        "blocks": 2,
+        "reference_samples": 16,
+        "max_workers": 1,
+    }
+    direct = runner.run_phase_map(**arguments)
+    checkpoint = tmp_path / "checkpoint.json"
+    resumed = resumable.run_resumable(
+        **arguments,
+        checkpoint=checkpoint,
+        checkpoint_every=1,
+    )
+    assert resumed == direct
+    assert (
+        resumable.run_resumable(
+            **arguments,
+            checkpoint=checkpoint,
+            checkpoint_every=1,
+        )
+        == direct
+    )
+    checkpoint_payload = json.loads(checkpoint.read_text())
+    assert checkpoint_payload["complete"] is True
+    assert checkpoint_payload["completed_items"] == checkpoint_payload["expected_items"]
+
+
+def test_extreme_resumable_checkpoint_rejects_configuration_drift(tmp_path: Path) -> None:
+    from experiments.multi_island_hard import run_threshold_v6_extreme_resumable as resumable
+
+    checkpoint = tmp_path / "checkpoint.json"
+    checkpoint.write_text(
+        json.dumps(
+            {
+                "schema_version": resumable.CHECKPOINT_SCHEMA_VERSION,
+                "configuration": {"wrong": True},
+                "expected_items": 0,
+                "completed_items": 0,
+                "complete": False,
+                "completed": {},
+            }
+        )
+    )
+    items = resumable.work_items(
+        smooth_sizes=(32,),
+        rugged_ks=(2,),
+        budgets=(32,),
+        blocks=2,
+    )
+    expected = resumable.configuration(
+        smooth_sizes=(32,),
+        rugged_ks=(2,),
+        budgets=(32,),
+        blocks=2,
+        reference_samples=16,
+    )
+    with pytest.raises(ValueError, match="configuration drifted"):
+        resumable.load_checkpoint(
+            checkpoint,
+            expected_configuration=expected,
+            items=items,
+        )
 
 
 def test_extreme_registered_configuration_is_exact() -> None:
