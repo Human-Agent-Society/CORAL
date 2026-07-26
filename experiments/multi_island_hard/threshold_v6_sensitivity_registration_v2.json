@@ -1,0 +1,25 @@
+{
+  "schema_version": 2,
+  "registered_at": "2026-07-26T08:14:40+08:00",
+  "supersedes": "threshold_v6_sensitivity_registration.json",
+  "original_phase_raw_absent_at_registration": true,
+  "extreme_phase_raw_absent_at_registration": true,
+  "sensitivity_v2_output_absent_at_registration": true,
+  "source_commit": "25824650aefb6508194c184ff05bae0a3d62b56c",
+  "design_blocks": {
+    "original_v6": 24,
+    "extreme_extension": 64
+  },
+  "artifacts": {
+    "diagnose_threshold_v6_sensitivity.py": "01d32ec9d46c743c46ed045c111e2316f8e411d876398befb76c158acc60d968",
+    "threshold_v6_sensitivity_protocol.md": "b25b3c27b110cf85928cee20dc62f3db14a91b72cbdf015e37d7312c505e0c03"
+  },
+  "operator_command": [
+    "uv",
+    "run",
+    "python",
+    "experiments/multi_island_hard/diagnose_threshold_v6_sensitivity.py"
+  ],
+  "expected_output": "experiments/multi_island_hard/threshold_v6_sensitivity_diagnostics_v2.json",
+  "interpretation_lock": "A failed topology gate is not proof of no practically relevant effect when the registered design has low power at that floor for the applicable paired-block dispersion."
+}

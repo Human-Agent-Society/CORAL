@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import random
 from pathlib import Path
@@ -17,6 +18,18 @@ def test_extreme_registration_binds_blind_sources() -> None:
     assert registration["phase_analysis_absent_at_registration"] is True
     assert registration["construct_output_absent_at_registration"] is True
     assert registration["superseded_by"] == "threshold_v6_extreme_registration_v2.json"
+
+
+def test_extreme_v2_registration_binds_64_block_sources() -> None:
+    directory = ROOT / "experiments/multi_island_hard"
+    registration = json.loads((directory / "threshold_v6_extreme_registration_v2.json").read_text())
+    assert registration["registered_blocks"] == 64
+    assert registration["phase_raw_absent_at_registration"] is True
+    assert registration["phase_analysis_absent_at_registration"] is True
+    assert registration["construct_v2_output_absent_at_registration"] is True
+    for filename, expected in registration["artifacts"].items():
+        observed = hashlib.sha256((directory / filename).read_bytes()).hexdigest()
+        assert observed == expected
 
 
 def test_extreme_registered_construct_artifact_audits_and_bridges_original_v6() -> None:

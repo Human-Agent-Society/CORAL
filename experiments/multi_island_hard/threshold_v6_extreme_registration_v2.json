@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "registered_at": "2026-07-26T08:14:40+08:00",
+  "supersedes": "threshold_v6_extreme_registration.json",
+  "supersession_is_outcome_blind": true,
+  "supersession_basis": "threshold_v6_sensitivity_diagnostics.json",
+  "phase_raw_absent_at_registration": true,
+  "phase_analysis_absent_at_registration": true,
+  "construct_v2_output_absent_at_registration": true,
+  "source_commit": "25824650aefb6508194c184ff05bae0a3d62b56c",
+  "registered_blocks": 64,
+  "artifacts": {
+    "run_threshold_v6_extreme_phase.py": "b1edf505101e393b7dec15eb5645499d7b3056f7d63bb380ae80d5f5babab1eb",
+    "analyze_threshold_v6_extreme_phase.py": "8ce4ee9d78c9adcb3e281b39af6e4f44f4cc0d1e5a4baaf7957fa74d376bf3c5",
+    "diagnose_threshold_v6_extreme_construct.py": "546c8903cdaf29379a0fe30a3a264c8e7d2019b290b7f67410ff04cd00ed0c9d",
+    "threshold_v6_extreme_phase_protocol.md": "51f9f36866d5e09e46f081a4249179bf728487a323537b3c45e5c549460a1579"
+  },
+  "seed_namespace": "threshold-v6-extreme-phase-heldout",
+  "policy_seed_namespace": "threshold-v6-extreme-phase-policy",
+  "construct_rng_namespace": "threshold-v6-extreme-construct",
+  "construct_command": [
+    "nice",
+    "-n",
+    "15",
+    "uv",
+    "run",
+    "python",
+    "experiments/multi_island_hard/diagnose_threshold_v6_extreme_construct.py",
+    "--max-workers",
+    "1"
+  ],
+  "phase_command": [
+    "nice",
+    "-n",
+    "15",
+    "uv",
+    "run",
+    "python",
+    "experiments/multi_island_hard/run_threshold_v6_extreme_phase.py",
+    "--max-workers",
+    "2"
+  ],
+  "phase_launch_deferred": true,
+  "phase_launch_prerequisites": [
+    "original v6 phase map has finished and been audited",
+    "v5 B=4096 eight-block CORAL mechanism run has finished and been audited",
+    "registered 64-block extreme construct-validity gate has passed"
+  ],
+  "expected_outputs": {
+    "construct": "experiments/multi_island_hard/threshold_v6_extreme_construct_diagnostics_v2.json",
+    "phase_raw": "experiments/multi_island_hard/threshold_v6_extreme_phase_raw.json",
+    "phase_analysis": "experiments/multi_island_hard/threshold_v6_extreme_phase_analysis.json"
+  }
+}
