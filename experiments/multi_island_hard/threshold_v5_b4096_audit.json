@@ -1,0 +1,1261 @@
+{
+  "budget": 4096,
+  "cells": [
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 1,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/global_8/rep-01",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 1,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/partition_4/rep-01",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 1,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/multi_island_4/rep-01",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 1,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/global_8/rep-01",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 1,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/partition_4/rep-01",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 1,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/multi_island_4/rep-01",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 2,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/global_8/rep-02",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 2,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/partition_4/rep-02",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 2,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/multi_island_4/rep-02",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 2,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/global_8/rep-02",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 2,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/partition_4/rep-02",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 2,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/multi_island_4/rep-02",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 3,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/global_8/rep-03",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 3,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/partition_4/rep-03",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 3,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/multi_island_4/rep-03",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 3,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/global_8/rep-03",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 3,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/partition_4/rep-03",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 3,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/multi_island_4/rep-03",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 4,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/global_8/rep-04",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 4,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/partition_4/rep-04",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 4,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/multi_island_4/rep-04",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 4,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/global_8/rep-04",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 4,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/partition_4/rep-04",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 4,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/multi_island_4/rep-04",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 5,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/global_8/rep-05",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 5,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/partition_4/rep-05",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 5,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/multi_island_4/rep-05",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 5,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/global_8/rep-05",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 5,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/partition_4/rep-05",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 5,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/multi_island_4/rep-05",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 6,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/global_8/rep-06",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 6,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/partition_4/rep-06",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 6,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/multi_island_4/rep-06",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 6,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/global_8/rep-06",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 6,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/partition_4/rep-06",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 6,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/multi_island_4/rep-06",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 7,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/global_8/rep-07",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 7,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/partition_4/rep-07",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 7,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/multi_island_4/rep-07",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 7,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/global_8/rep-07",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 7,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/partition_4/rep-07",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 7,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/multi_island_4/rep-07",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 8,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/global_8/rep-08",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 8,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/partition_4/rep-08",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 8,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/smooth512_permuted_leading_ones_rep_v5/multi_island_4/rep-08",
+      "superseded_invalid_runs": [],
+      "task": "smooth512_permuted_leading_ones_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "global_8",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 8,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/global_8/rep-08",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "partition_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 0,
+      "real_attempts": 4096,
+      "repetition": 8,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/partition_4/rep-08",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    },
+    {
+      "base_agent_attempts": {
+        "captain-ahab": 512,
+        "captain-nemo": 512,
+        "davy-jones": 512,
+        "horatio-hornblower": 512,
+        "jack-aubrey": 512,
+        "jack-sparrow": 512,
+        "long-john-silver": 512,
+        "sinbad-the-sailor": 512
+      },
+      "condition": "multi_island_4",
+      "errors": [],
+      "heartbeat_events": 0,
+      "migration_events": 12,
+      "real_attempts": 4096,
+      "repetition": 8,
+      "run_dir": "/var/tmp/coral-institutions-results/nk-threshold-v5-mechanism-v2/scripted/budget-4096/rugged512_k64_rep_v5/multi_island_4/rep-08",
+      "superseded_invalid_runs": [],
+      "task": "rugged512_k64_rep_v5",
+      "trace_types": {
+        "initial": 8,
+        "proposal": 4088
+      },
+      "valid": true
+    }
+  ],
+  "expected_cells": 48,
+  "interpretation": "Passing establishes treatment fidelity. Performance is analyzed separately; even a registered scripted effect is topology-mechanism evidence only.",
+  "matrix_errors": [],
+  "registered_budget": true,
+  "repetitions": 8,
+  "schema_version": 1,
+  "scope": "held-out scripted topology mechanism integrity audit",
+  "valid_cells": 48
+}
