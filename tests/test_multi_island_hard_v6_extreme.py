@@ -54,6 +54,22 @@ def test_extreme_registered_construct_artifact_audits_and_bridges_original_v6() 
     assert abs(original_bridge - extreme_bridge) < 0.08
 
 
+def test_extreme_v2_registered_construct_artifact_audits_at_64_blocks() -> None:
+    from experiments.multi_island_hard import diagnose_threshold_v6_extreme_construct as diagnostic
+
+    artifact = json.loads(
+        (
+            ROOT
+            / "experiments/multi_island_hard/threshold_v6_extreme_construct_diagnostics_v2.json"
+        ).read_text()
+    )
+    assert diagnostic.audit(artifact, require_registered=True) == []
+    assert artifact["blocks"] == 64
+    assert len(artifact["rugged_landscapes"]) == 64 * 4
+    assert artifact["construct_gates"]["rugged_extreme_separated_blocks"] == 64
+    assert artifact["construct_gates"]["construct_validity_passes"] is True
+
+
 def test_extreme_seeds_are_unique_and_disjoint_from_all_prior_data() -> None:
     from experiments.multi_island_hard import run_threshold_v6_extreme_phase as runner
 

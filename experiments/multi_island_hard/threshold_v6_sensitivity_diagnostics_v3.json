@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "purpose": "outcome-free design sensitivity for v6 Rugged confirmatory gates",
+  "method": "One-sided normal approximation using the registered Bonferroni alpha, each design's registered independent paired-block count, and a grid of paired-effect SDs.",
+  "target_power": 0.8,
+  "paired_effect_sd_grid_random_z": [
+    0.25,
+    0.5,
+    0.75,
+    1.0
+  ],
+  "designs": [
+    {
+      "design": "original_v6",
+      "rugged_cells": 25,
+      "contrasts_per_cell": 2,
+      "blocks": 24,
+      "familywise_alpha": 0.05,
+      "one_sided_alpha_per_contrast": 0.001,
+      "normal_critical_z": 3.090232306167813,
+      "rows": [
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor_random_z": 0.25,
+          "assumed_paired_effect_sd_random_z": 0.25,
+          "approximate_power_at_floor": 0.9647548551508391,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.20064656074418008,
+          "blocks_required_for_80pct_power_at_floor": 16
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor_random_z": 0.25,
+          "assumed_paired_effect_sd_random_z": 0.5,
+          "approximate_power_at_floor": 0.2608449777275419,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.40129312148836016,
+          "blocks_required_for_80pct_power_at_floor": 62
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor_random_z": 0.25,
+          "assumed_paired_effect_sd_random_z": 0.75,
+          "approximate_power_at_floor": 0.07252518937130414,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.6019396822325402,
+          "blocks_required_for_80pct_power_at_floor": 140
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor_random_z": 0.25,
+          "assumed_paired_effect_sd_random_z": 1.0,
+          "approximate_power_at_floor": 0.031056555917600925,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.8025862429767203,
+          "blocks_required_for_80pct_power_at_floor": 248
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor_random_z": 0.1,
+          "assumed_paired_effect_sd_random_z": 0.25,
+          "approximate_power_at_floor": 0.1291032144614475,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.20064656074418008,
+          "blocks_required_for_80pct_power_at_floor": 97
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor_random_z": 0.1,
+          "assumed_paired_effect_sd_random_z": 0.5,
+          "approximate_power_at_floor": 0.017410391577915407,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.40129312148836016,
+          "blocks_required_for_80pct_power_at_floor": 387
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor_random_z": 0.1,
+          "assumed_paired_effect_sd_random_z": 0.75,
+          "approximate_power_at_floor": 0.007404122147428138,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.6019396822325402,
+          "blocks_required_for_80pct_power_at_floor": 870
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor_random_z": 0.1,
+          "assumed_paired_effect_sd_random_z": 1.0,
+          "approximate_power_at_floor": 0.004656648428146393,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.8025862429767203,
+          "blocks_required_for_80pct_power_at_floor": 1546
+        }
+      ]
+    },
+    {
+      "design": "extreme_extension",
+      "rugged_cells": 12,
+      "contrasts_per_cell": 2,
+      "blocks": 64,
+      "familywise_alpha": 0.05,
+      "one_sided_alpha_per_contrast": 0.0020833333333333333,
+      "normal_critical_z": 2.8652602385321333,
+      "rows": [
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor_random_z": 0.25,
+          "assumed_paired_effect_sd_random_z": 0.25,
+          "approximate_power_at_floor": 0.999999858732651,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.11584004600328274,
+          "blocks_required_for_80pct_power_at_floor": 14
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor_random_z": 0.25,
+          "assumed_paired_effect_sd_random_z": 0.5,
+          "approximate_power_at_floor": 0.8717578138497775,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.23168009200656547,
+          "blocks_required_for_80pct_power_at_floor": 55
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor_random_z": 0.25,
+          "assumed_paired_effect_sd_random_z": 0.75,
+          "approximate_power_at_floor": 0.4212903411832238,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.3475201380098482,
+          "blocks_required_for_80pct_power_at_floor": 124
+        },
+        {
+          "contrast": "multi_minus_global",
+          "practical_floor_random_z": 0.25,
+          "assumed_paired_effect_sd_random_z": 1.0,
+          "approximate_power_at_floor": 0.19344798459838358,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.46336018401313095,
+          "blocks_required_for_80pct_power_at_floor": 220
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor_random_z": 0.1,
+          "assumed_paired_effect_sd_random_z": 0.25,
+          "approximate_power_at_floor": 0.6310892976384952,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.11584004600328274,
+          "blocks_required_for_80pct_power_at_floor": 86
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor_random_z": 0.1,
+          "assumed_paired_effect_sd_random_z": 0.5,
+          "approximate_power_at_floor": 0.10288902745770917,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.23168009200656547,
+          "blocks_required_for_80pct_power_at_floor": 344
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor_random_z": 0.1,
+          "assumed_paired_effect_sd_random_z": 0.75,
+          "approximate_power_at_floor": 0.03604149746871038,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.3475201380098482,
+          "blocks_required_for_80pct_power_at_floor": 773
+        },
+        {
+          "contrast": "multi_minus_partition",
+          "practical_floor_random_z": 0.1,
+          "assumed_paired_effect_sd_random_z": 1.0,
+          "approximate_power_at_floor": 0.019449191784614128,
+          "minimum_detectable_effect_for_80pct_power_random_z": 0.46336018401313095,
+          "blocks_required_for_80pct_power_at_floor": 1375
+        }
+      ]
+    }
+  ],
+  "interpretation": "This diagnostic reads no topology outcome and cannot establish an effect. After results exist, a failed gate must not be described as evidence of no practically relevant effect when observed block dispersion lies in a region where the registered design has low power at that floor."
+}

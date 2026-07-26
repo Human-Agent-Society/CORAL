@@ -126,6 +126,13 @@ def test_v6_sensitivity_artifact_has_both_frozen_designs() -> None:
     assert historical_extreme["blocks"] == 24
     assert payload != historical_artifact
 
+    current_artifact = json.loads(
+        (
+            ROOT / "experiments/multi_island_hard/threshold_v6_sensitivity_diagnostics_v3.json"
+        ).read_text()
+    )
+    assert current_artifact == payload
+
 
 @pytest.mark.parametrize(
     "kwargs",
