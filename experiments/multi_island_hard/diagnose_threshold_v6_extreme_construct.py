@@ -17,9 +17,9 @@ from experiments.multi_island_hard import calibrate_threshold_v3_social as socia
 from experiments.multi_island_hard import run_threshold_v6_extreme_phase as phase
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_OUTPUT = ROOT / "threshold_v6_extreme_construct_diagnostics.json"
+DEFAULT_OUTPUT = ROOT / "threshold_v6_extreme_construct_diagnostics_v2.json"
 REGISTERED_NEIGHBOR_SAMPLES = 256
-MIN_EXTREME_BLOCK_SEPARATION = 20
+MIN_EXTREME_BLOCK_SEPARATION = 54
 MIN_MEAN_EXTREME_SEPARATION = 0.55
 MAX_HIGHEST_K_AUTOCORRELATION = 0.15
 

@@ -6,8 +6,14 @@ The original v6 phase map reaches adjacent-NK `K/N = 128/512 = 0.25`.
 Its registered construct audit confirms a real gradient, but the hardest end
 still has mean one-bit autocorrelation near `0.75`. This independent held-out
 extension tests substantially harder Smooth paths and Rugged landscapes whose
-one-bit neighbourhoods approach the random-energy limit. It is frozen before
-either its construct diagnostic or topology outcomes are evaluated.
+one-bit neighbourhoods approach the random-energy limit.
+
+The initial 24-block extension was frozen and its topology-free construct
+audit passed, but an outcome-free sensitivity audit performed while both
+topology raw files were absent showed only 33.9% approximate power for a
+`+0.25` effect when paired-block SD is `0.5`. That version is superseded before
+any extreme topology outcome is evaluated. The confirmatory v2 design below
+uses 64 fresh paired blocks, giving approximately 87.2% power in that scenario.
 
 Changing Rugged `N` is a computational device that makes extreme `K/N`
 feasible. The extension uses `N=128`, still a search space of size `2^128`,
@@ -23,7 +29,7 @@ are never pooled across the two experiments or across landscapes.
 - Conditions: one global island; four permanent two-agent partitions; and
   four two-agent islands with move-not-copy elite rotations at `B/4`, `B/2`,
   and `3B/4`.
-- Twenty-four fresh paired landscape-policy blocks with zero seed overlap
+- Sixty-four fresh paired landscape-policy blocks with zero seed overlap
   against v4, v5, or the original v6 map.
 - Budgets: 16,384; 32,768; 65,536 real proposals.
 - Smooth negative control: hidden-target, hidden-order Permuted LeadingOnes
@@ -47,7 +53,7 @@ requires all of the following:
 
 1. every Smooth cell has `B/N² <= 0.02`;
 2. mean Rugged one-bit autocorrelation strictly decreases at every K;
-3. at least 20 of 24 blocks have lower autocorrelation at K=120 than K=32;
+3. at least 54 of 64 blocks have lower autocorrelation at K=120 than K=32;
 4. mean K=32 minus K=120 autocorrelation is at least 0.55;
 5. mean K=120 autocorrelation is at most 0.15; and
 6. the K=32 affected fraction is within 0.01 of the original v6 boundary.

@@ -1,5 +1,7 @@
 {
   "schema_version": 1,
+  "superseded_by": "threshold_v6_sensitivity_registration_v2.json",
+  "supersession_reason": "The extreme design increased from 24 to 64 blocks before topology outcomes, requiring an updated sensitivity table.",
   "registered_at": "2026-07-26T08:09:40+08:00",
   "original_phase_raw_absent_at_registration": true,
   "extreme_phase_raw_absent_at_registration": true,

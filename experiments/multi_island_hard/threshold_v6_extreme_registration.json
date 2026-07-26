@@ -1,5 +1,7 @@
 {
   "schema_version": 1,
+  "superseded_by": "threshold_v6_extreme_registration_v2.json",
+  "supersession_reason": "Outcome-free sensitivity audit showed inadequate power at 24 blocks before any extreme topology raw result existed.",
   "registered_at": "2026-07-26T07:22:47+08:00",
   "phase_raw_absent_at_registration": true,
   "phase_analysis_absent_at_registration": true,

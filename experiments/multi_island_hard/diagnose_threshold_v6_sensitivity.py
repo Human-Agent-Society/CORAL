@@ -11,17 +11,18 @@ from statistics import NormalDist
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_OUTPUT = ROOT / "threshold_v6_sensitivity_diagnostics.json"
+DEFAULT_OUTPUT = ROOT / "threshold_v6_sensitivity_diagnostics_v2.json"
 FAMILYWISE_ALPHA = 0.05
 TARGET_POWER = 0.80
-BLOCKS = 24
 PAIRED_EFFECT_SD_GRID = (0.25, 0.5, 0.75, 1.0)
 DESIGNS = {
     "original_v6": {
+        "blocks": 24,
         "rugged_cells": 25,
         "floors": {"multi_minus_global": 0.25, "multi_minus_partition": 0.10},
     },
     "extreme_extension": {
+        "blocks": 64,
         "rugged_cells": 12,
         "floors": {"multi_minus_global": 0.25, "multi_minus_partition": 0.10},
     },
@@ -79,6 +80,7 @@ def run_diagnostics() -> dict[str, Any]:
     designs: list[dict[str, Any]] = []
     for name, design in DESIGNS.items():
         cells = int(design["rugged_cells"])
+        blocks = int(design["blocks"])
         rows = []
         for contrast, floor in design["floors"].items():
             for paired_effect_sd in PAIRED_EFFECT_SD_GRID:
@@ -90,13 +92,13 @@ def run_diagnostics() -> dict[str, Any]:
                         "approximate_power_at_floor": approximate_power(
                             effect=floor,
                             paired_effect_sd=paired_effect_sd,
-                            blocks=BLOCKS,
+                            blocks=blocks,
                             cells=cells,
                         ),
                         "minimum_detectable_effect_for_80pct_power_random_z": (
                             minimum_detectable_effect(
                                 paired_effect_sd=paired_effect_sd,
-                                blocks=BLOCKS,
+                                blocks=blocks,
                                 cells=cells,
                             )
                         ),
@@ -112,7 +114,7 @@ def run_diagnostics() -> dict[str, Any]:
                 "design": name,
                 "rugged_cells": cells,
                 "contrasts_per_cell": 2,
-                "blocks": BLOCKS,
+                "blocks": blocks,
                 "familywise_alpha": FAMILYWISE_ALPHA,
                 "one_sided_alpha_per_contrast": FAMILYWISE_ALPHA / (cells * 2),
                 "normal_critical_z": critical_z(cells=cells),

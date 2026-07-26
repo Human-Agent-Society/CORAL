@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 from pathlib import Path
@@ -18,9 +17,7 @@ def test_v6_sensitivity_registration_binds_blind_sources() -> None:
     assert registration["original_phase_raw_absent_at_registration"] is True
     assert registration["extreme_phase_raw_absent_at_registration"] is True
     assert registration["sensitivity_output_absent_at_registration"] is True
-    for filename, expected in registration["artifacts"].items():
-        observed = hashlib.sha256((directory / filename).read_bytes()).hexdigest()
-        assert observed == expected
+    assert registration["superseded_by"] == "threshold_v6_sensitivity_registration_v2.json"
 
 
 def test_v6_sensitivity_power_increases_with_effect_and_blocks() -> None:
@@ -35,22 +32,24 @@ def test_v6_sensitivity_power_increases_with_effect_and_blocks() -> None:
 def test_v6_sensitivity_mde_and_required_blocks_are_consistent() -> None:
     from experiments.multi_island_hard import diagnose_threshold_v6_sensitivity as diagnostic
 
-    for cells in (12, 25):
+    for design in diagnostic.DESIGNS.values():
+        cells = int(design["rugged_cells"])
+        blocks = int(design["blocks"])
         for paired_effect_sd in diagnostic.PAIRED_EFFECT_SD_GRID:
             mde = diagnostic.minimum_detectable_effect(
                 paired_effect_sd=paired_effect_sd,
-                blocks=diagnostic.BLOCKS,
+                blocks=blocks,
                 cells=cells,
             )
             power = diagnostic.approximate_power(
                 effect=mde,
                 paired_effect_sd=paired_effect_sd,
-                blocks=diagnostic.BLOCKS,
+                blocks=blocks,
                 cells=cells,
             )
             assert math.isclose(power, diagnostic.TARGET_POWER, abs_tol=1e-12)
 
-            blocks = diagnostic.required_blocks(
+            required = diagnostic.required_blocks(
                 effect=0.25,
                 paired_effect_sd=paired_effect_sd,
                 cells=cells,
@@ -59,7 +58,7 @@ def test_v6_sensitivity_mde_and_required_blocks_are_consistent() -> None:
                 diagnostic.approximate_power(
                     effect=0.25,
                     paired_effect_sd=paired_effect_sd,
-                    blocks=blocks,
+                    blocks=required,
                     cells=cells,
                 )
                 >= diagnostic.TARGET_POWER
@@ -81,12 +80,16 @@ def test_v6_sensitivity_artifact_has_both_frozen_designs() -> None:
     )
     assert global_half_sd["approximate_power_at_floor"] < 0.5
 
-    artifact = json.loads(
+    historical_artifact = json.loads(
         (
             ROOT / "experiments/multi_island_hard/threshold_v6_sensitivity_diagnostics.json"
         ).read_text()
     )
-    assert artifact == payload
+    historical_extreme = next(
+        row for row in historical_artifact["designs"] if row["design"] == "extreme_extension"
+    )
+    assert historical_extreme["blocks"] == 24
+    assert payload != historical_artifact
 
 
 @pytest.mark.parametrize(

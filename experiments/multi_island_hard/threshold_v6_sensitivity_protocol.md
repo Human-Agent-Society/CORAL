@@ -2,7 +2,8 @@
 
 ## Purpose
 
-The v6 phase maps test many Rugged cells with 24 paired blocks. A multiplicity-
+The v6 phase maps test many Rugged cells: the already-running original uses 24
+paired blocks, while the superseding extreme extension uses 64. A multiplicity-
 controlled null result is not automatically evidence that a practically
 relevant effect is absent: that interpretation also depends on paired-block
 dispersion. This audit freezes the sensitivity report while both phase-map raw
@@ -10,10 +11,11 @@ files are absent. It reads no landscape, score, topology, or held-out seed.
 
 ## Frozen calculation
 
-For the original 25-cell v6 Rugged map and the 12-cell extreme extension, the
-audit uses the exact registered one-sided Bonferroni alpha
-`0.05 / (cells * 2 contrasts)`, 24 blocks, and paired-effect standard-deviation
-scenarios `0.25, 0.50, 0.75, 1.00` in within-landscape random-SD units.
+For the original 25-cell v6 Rugged map with 24 blocks and the superseding
+12-cell extreme extension with 64 blocks, the audit uses the exact registered
+one-sided Bonferroni alpha `0.05 / (cells * 2 contrasts)` and paired-effect
+standard-deviation scenarios `0.25, 0.50, 0.75, 1.00` in within-landscape
+random-SD units.
 
 For both registered practical floors (`multi-global = 0.25` and
 `multi-partition = 0.10`), it reports:
