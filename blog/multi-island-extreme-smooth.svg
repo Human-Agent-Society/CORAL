@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="550" height="330" viewBox="0 0 550 330" role="img" aria-labelledby="title desc">
+<title id="title">Hard smooth control</title>
+<desc id="desc">Heatmap of the global minus multi-island mean best-prefix score difference for the three hard smooth sizes and budgets.</desc>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#1D2939} .small{font-size:11px} .label{font-size:12px;font-weight:600} .muted{fill:#667085} .grid{stroke:#EAECF0;stroke-width:1} .axis{stroke:#98A2B3;stroke-width:1} .value{font-size:12px;font-weight:600} .note{font-size:10px;fill:#667085}</style>
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<text x="275" y="25" text-anchor="middle" class="label">Hard smooth control: global − multi prefix score</text>
+<text x="275" y="43" text-anchor="middle" class="note">All 9 cells remain unsolved: 0/64 exact solutions in every topology/cell</text>
+<text x="147.0" y="60" text-anchor="middle" class="small muted">B=16k</text>
+<text x="257.0" y="60" text-anchor="middle" class="small muted">B=32k</text>
+<text x="367.0" y="60" text-anchor="middle" class="small muted">B=64k</text>
+<text x="82" y="105.0" text-anchor="end" class="small muted">N=2048</text>
+<rect x="93" y="73" width="108" height="56" rx="5" fill="#C9DAFB" stroke="#FFFFFF" stroke-width="2"/>
+<text x="147.0" y="105.0" text-anchor="middle" class="value" style="fill:#1D2939">8.72</text>
+<rect x="203" y="73" width="108" height="56" rx="5" fill="#8DAFF5" stroke="#FFFFFF" stroke-width="2"/>
+<text x="257.0" y="105.0" text-anchor="middle" class="value" style="fill:#1D2939">22.66</text>
+<rect x="313" y="73" width="108" height="56" rx="5" fill="#2563EB" stroke="#FFFFFF" stroke-width="2"/>
+<text x="367.0" y="105.0" text-anchor="middle" class="value" style="fill:#FFFFFF">46.59</text>
+<text x="82" y="163.0" text-anchor="end" class="small muted">N=4096</text>
+<rect x="93" y="131" width="108" height="56" rx="5" fill="#D9E6FD" stroke="#FFFFFF" stroke-width="2"/>
+<text x="147.0" y="163.0" text-anchor="middle" class="value" style="fill:#1D2939">5.08</text>
+<rect x="203" y="131" width="108" height="56" rx="5" fill="#C5D8FB" stroke="#FFFFFF" stroke-width="2"/>
+<text x="257.0" y="163.0" text-anchor="middle" class="value" style="fill:#1D2939">9.58</text>
+<rect x="313" y="131" width="108" height="56" rx="5" fill="#93B3F6" stroke="#FFFFFF" stroke-width="2"/>
+<text x="367.0" y="163.0" text-anchor="middle" class="value" style="fill:#1D2939">21.33</text>
+<text x="82" y="221.0" text-anchor="end" class="small muted">N=8192</text>
+<rect x="93" y="189" width="108" height="56" rx="5" fill="#E6F0FE" stroke="#FFFFFF" stroke-width="2"/>
+<text x="147.0" y="221.0" text-anchor="middle" class="value" style="fill:#1D2939">2.02</text>
+<rect x="203" y="189" width="108" height="56" rx="5" fill="#DEE9FD" stroke="#FFFFFF" stroke-width="2"/>
+<text x="257.0" y="221.0" text-anchor="middle" class="value" style="fill:#1D2939">3.98</text>
+<rect x="313" y="189" width="108" height="56" rx="5" fill="#C3D6FB" stroke="#FFFFFF" stroke-width="2"/>
+<text x="367.0" y="221.0" text-anchor="middle" class="value" style="fill:#1D2939">10.25</text>
+<text x="257" y="278" text-anchor="middle" class="small muted">mean best-prefix difference (score units)</text>
+</svg>

@@ -1,0 +1,53 @@
+study,stage,condition,n,k,budget,comparison,metric,effect,ci_low,ci_high,one_sided_lower,practical_floor,passes,progress_gate,blocks,notes
+extreme-v6,construct,smooth,2048,,16384,construct-validity,budget_over_n2,0.00390625,,,,,True,,1,one strict one-bit local optimum; unique global optimum
+extreme-v6,construct,smooth,2048,,32768,construct-validity,budget_over_n2,0.0078125,,,,,True,,1,one strict one-bit local optimum; unique global optimum
+extreme-v6,construct,smooth,2048,,65536,construct-validity,budget_over_n2,0.015625,,,,,True,,1,one strict one-bit local optimum; unique global optimum
+extreme-v6,construct,smooth,4096,,16384,construct-validity,budget_over_n2,0.0009765625,,,,,True,,1,one strict one-bit local optimum; unique global optimum
+extreme-v6,construct,smooth,4096,,32768,construct-validity,budget_over_n2,0.001953125,,,,,True,,1,one strict one-bit local optimum; unique global optimum
+extreme-v6,construct,smooth,4096,,65536,construct-validity,budget_over_n2,0.00390625,,,,,True,,1,one strict one-bit local optimum; unique global optimum
+extreme-v6,construct,smooth,8192,,16384,construct-validity,budget_over_n2,0.000244140625,,,,,True,,1,one strict one-bit local optimum; unique global optimum
+extreme-v6,construct,smooth,8192,,32768,construct-validity,budget_over_n2,0.00048828125,,,,,True,,1,one strict one-bit local optimum; unique global optimum
+extreme-v6,construct,smooth,8192,,65536,construct-validity,budget_over_n2,0.0009765625,,,,,True,,1,one strict one-bit local optimum; unique global optimum
+extreme-v6,construct,rugged,,32,,construct-validity,one_bit_autocorrelation,0.7465889914978927,,,,,True,,64,affected fraction=0.257812
+extreme-v6,construct,rugged,,64,,construct-validity,one_bit_autocorrelation,0.4928033639744853,,,,,True,,64,affected fraction=0.507812
+extreme-v6,construct,rugged,,96,,construct-validity,one_bit_autocorrelation,0.23326956215590408,,,,,True,,64,affected fraction=0.757812
+extreme-v6,construct,rugged,,120,,construct-validity,one_bit_autocorrelation,0.0577256208059362,,,,,True,,64,affected fraction=0.945312
+extreme-v6,discovery,smooth,2048,,16384,global-minus-multi,mean_best_prefix,8.71875,6.9375,10.515625,6.421875,,True,,64,all topologies exact_solutions=0
+extreme-v6,discovery,smooth,2048,,32768,global-minus-multi,mean_best_prefix,22.65625,19.90625,25.484375,19.140625,,True,,64,all topologies exact_solutions=0
+extreme-v6,discovery,smooth,2048,,65536,global-minus-multi,mean_best_prefix,46.59375,42.90625,50.359375,41.8125,,True,,64,all topologies exact_solutions=0
+extreme-v6,discovery,smooth,4096,,16384,global-minus-multi,mean_best_prefix,5.078125,3.9375,6.25,3.625,,True,,64,all topologies exact_solutions=0
+extreme-v6,discovery,smooth,4096,,32768,global-minus-multi,mean_best_prefix,9.578125,7.796875,11.4375,7.328125,,True,,64,all topologies exact_solutions=0
+extreme-v6,discovery,smooth,4096,,65536,global-minus-multi,mean_best_prefix,21.328125,18.609375,24.078125,17.796875,,True,,64,all topologies exact_solutions=0
+extreme-v6,discovery,smooth,8192,,16384,global-minus-multi,mean_best_prefix,2.015625,1.140625,2.890625,0.890625,,True,,64,all topologies exact_solutions=0
+extreme-v6,discovery,smooth,8192,,32768,global-minus-multi,mean_best_prefix,3.984375,2.6875,5.34375,2.3125,,True,,64,all topologies exact_solutions=0
+extreme-v6,discovery,smooth,8192,,65536,global-minus-multi,mean_best_prefix,10.25,8.53125,12.03125,8.03125,,True,,64,all topologies exact_solutions=0
+extreme-v6,discovery,rugged,128,32,16384,multi-minus-global,random_reference_z,0.48743032536340464,0.32995591868970736,0.6441478511799665,0.2581861976414554,0.25,False,True,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,32,16384,multi-minus-partition,random_reference_z,0.1042842289338955,0.027551719670187918,0.18487318639049552,-0.008509352908531415,0.1,False,True,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,32,32768,multi-minus-global,random_reference_z,0.37587595539291313,0.22825197558054716,0.5276956992308862,0.16382844504264676,0.25,True,True,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,32,32768,multi-minus-partition,random_reference_z,0.11706523436012421,0.04804879509851066,0.19586122658551222,0.02208059217341126,0.1,True,True,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,32,65536,multi-minus-global,random_reference_z,0.3402114407613519,0.19269126073624834,0.49016044175171114,0.1274860353309633,0.25,True,True,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,32,65536,multi-minus-partition,random_reference_z,0.14753970026752797,0.060428388340945174,0.2397330956666823,0.023683274501560145,0.1,True,True,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,64,16384,multi-minus-global,random_reference_z,0.34671223054717326,0.2146646327057507,0.47795230916149,0.15518147043688102,0.25,False,True,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,64,16384,multi-minus-partition,random_reference_z,0.1060675020585251,0.010920627266512105,0.20594781622550465,-0.03018904905829134,0.1,False,True,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,64,32768,multi-minus-global,random_reference_z,0.38358999880369293,0.2664568399059748,0.500140011767929,0.21270129173899158,0.25,False,True,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,64,32768,multi-minus-partition,random_reference_z,0.07476476931035225,-0.032890303926218487,0.18059164637115288,-0.082697419584283,0.1,False,True,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,64,65536,multi-minus-global,random_reference_z,0.2644082073864928,0.1306082935013289,0.3982775978359825,0.06968153821939424,0.25,False,True,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,64,65536,multi-minus-partition,random_reference_z,0.027320230903046406,-0.051706802068063426,0.10669427666423915,-0.08783670594459905,0.1,False,True,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,96,16384,multi-minus-global,random_reference_z,0.241800167618355,0.1309483926588256,0.3529953589412992,0.08134896063332879,0.25,False,False,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,96,16384,multi-minus-partition,random_reference_z,0.07950547805679796,0.019320418656373243,0.14353108279144816,-0.006692660704308542,0.1,False,False,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,96,32768,multi-minus-global,random_reference_z,0.12637871516036012,0.001511889260686241,0.24792105194213157,-0.05879069357346536,0.25,False,False,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,96,32768,multi-minus-partition,random_reference_z,0.05125552664963324,-0.02740551431919723,0.1321806146432141,-0.061092058163721485,0.1,False,False,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,96,65536,multi-minus-global,random_reference_z,0.0018201410188649744,-0.10846751888554655,0.11064724654126644,-0.16067275967991865,0.25,False,False,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,96,65536,multi-minus-partition,random_reference_z,-0.04056775509975054,-0.13016333884290268,0.0432221134305862,-0.17450252806170577,0.1,False,False,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,120,16384,multi-minus-global,random_reference_z,0.053619091752901187,-0.0550891714212204,0.1618879693798068,-0.10696086668798227,0.25,False,False,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,120,16384,multi-minus-partition,random_reference_z,-0.02791684029390765,-0.09108191437427157,0.03392945229849413,-0.12232616257005868,0.1,False,False,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,120,32768,multi-minus-global,random_reference_z,0.09106134723681837,-0.015556284156782016,0.19976082329335415,-0.06337524758669176,0.25,False,False,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,120,32768,multi-minus-partition,random_reference_z,0.05468088950990082,-0.007817026846008343,0.11884009018455023,-0.036758974929256324,0.1,False,False,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,120,65536,multi-minus-global,random_reference_z,0.06710756063718297,-0.02773326341782857,0.1621790252677985,-0.07120734608962022,0.25,False,False,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,discovery,rugged,128,120,65536,multi-minus-partition,random_reference_z,0.10597644224180039,0.03468678957260955,0.17718194963966918,0.0006368415546365318,0.1,False,False,64,64 fresh paired blocks; full pass requires both contrasts
+extreme-v6,independent-confirmation,rugged,128,32,65536,multi-minus-global,random_reference_z,0.24607653070634294,0.16057308618096713,0.3325993668761416,0.17441273780681324,0.25,False,True,192,frozen selected cell; completely fresh paired blocks
+extreme-v6,independent-confirmation,rugged,128,32,65536,multi-minus-partition,random_reference_z,0.10970244932465832,0.05503728223875053,0.165383382505246,0.06387762824463084,0.1,True,True,192,frozen selected cell; completely fresh paired blocks
+extreme-v6,sequential-follow-up,rugged,128,32,32768,multi-minus-global,random_reference_z,0.15235344361909645,0.05801192387808318,0.24844369429017546,0.07357063210521537,0.25,False,True,192,outcome-aware sequential follow-up; not pooled with confirmation
+extreme-v6,sequential-follow-up,rugged,128,32,32768,multi-minus-partition,random_reference_z,0.1268378323828702,0.07413720715961648,0.1803545220148761,0.0823146672758109,0.1,True,True,192,outcome-aware sequential follow-up; not pooled with confirmation
+extreme-v6,sequential-follow-up,rugged,128,32,65536,multi-minus-global,random_reference_z,0.0848746880426015,-0.00030370526126728914,0.17116558517807098,0.013335208055408132,0.25,False,True,192,outcome-aware sequential follow-up; not pooled with confirmation
+extreme-v6,sequential-follow-up,rugged,128,32,65536,multi-minus-partition,random_reference_z,0.06132583321737126,0.010239886273810858,0.11258719994854932,0.01829896168932092,0.1,False,True,192,outcome-aware sequential follow-up; not pooled with confirmation

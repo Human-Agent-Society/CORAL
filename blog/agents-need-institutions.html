@@ -576,39 +576,28 @@
       Two early controlled-task smoke cells used human-readable hidden seeds. Agents began trying to reconstruct those seeds from scalar scores, so we excluded both cells before the authoritative comparison, replaced the seeds with independent random 256-bit values, and marked the old directories invalid rather than deleting them. Exhaustive checks over all 1,048,576 candidates found one one-bit local maximum for the frozen <code>K=0</code> instance and 626 for <code>K=4</code>. We likewise excluded a Kernel pilot after a candidate-level timeout raced the grader's identical outer deadline and was misclassified as free infrastructure failure; retries keep the candidate at 120 seconds but give the grader 30 seconds to record the failure against the real budget. A later Kernel cell exposed a subtler boundary: candidate Python was executing in the grader process and could import the private simulator, then write it back into its worktree. We invalidated every Kernel cell launched before that discovery. In the final protocol, untrusted candidate code builds an instruction stream inside a second bubblewrap namespace with no taskdata or host paths; only its JSON output enters the private simulator process, which never executes candidate source. The tables below contain only post-fix Kernel cells.
     </div>
 
-    <h3>Why the two synthetic controls are not enough</h3>
+    <h3>Why the original controls are not enough</h3>
     <p>
-      The original Smooth/Rugged pair is a sanity check, not a decisive test of
-      when migration should help. Exhaustive enumeration finds one strict
-      one-bit local maximum for the 20-bit <code>K=0</code> landscape and 626
-      for <code>K=4</code>. The first is intentionally separable; the second is
-      rugged but gives four agents only 16 scalar queries, so it can be
+      The original Smooth/Rugged pair is a useful sanity check, not a decisive
+      test of when migration should help. Exhaustive enumeration finds one
+      strict one-bit local maximum for the 20-bit <code>K=0</code> landscape and
+      626 for <code>K=4</code>. The first is intentionally separable; the second
+      is rugged but gives four agents only 16 scalar queries, so it can be
       feedback-starved. Both tasks expose only a literal bit string and a
-      scalar, which tests black-box parallel search more than semantic
-      institution-building. They also use one frozen seed per K, and their raw
-      fitness gains are not comparable across unrelated landscapes.
+      scalar. They therefore test black-box parallel search more than
+      institution-building, use one frozen seed per K, and put their gains on
+      incomparable raw score scales. The 30-cell matrix remains an important
+      operational audit; it should not carry a stronger causal claim than that.
     </p>
     <p>
-      We therefore added a separate high-dimensional difficulty ladder (kept
-      separate from the 30-cell sanity matrix): <code>N=128</code> with
-      <code>K=0,4,12,24</code>, 24 finalized real evaluations per cell, and the
-      same global/partition/multi-island ablations. The ladder uses a declared
-      operator-side greedy reference and random-baseline z-scores; the
-      reference is approximate and is never called a global optimum. Its
-      results are reported below as a stress test, with the remaining
-      one-seed limitation made explicit.
-    </p>
-    <p>
-      This is a stricter control, not a magic repair. At <code>N=128</code>, 24
-      scalar queries cannot even estimate every independent bit in the
-      <code>K=0</code> case, so a null topology effect there is still
-      feedback-limited. Increasing <code>N</code> makes the search harder but
-      does not make the task more semantic: the ladder remains a black-box
-      optimization stress test. A stronger test of the institution needs
-      replicated seeds, a budget scaled to the number of modules, and a task
-      whose scoreable artifacts have reusable structure (for example, a
-      modular code or research deliverable where migration can carry a tested
-      component and its provenance).
+      We kept that matrix as the operational anchor and added a separate,
+      held-out extreme-hardness extension below. It scales Smooth paths to
+      <code>N=2,048–8,192</code>, sweeps Rugged <code>K=32,64,96,120</code> at
+      <code>N=128</code>, uses 64 paired landscape-policy blocks in discovery,
+      and reserves 192 fresh blocks for independent confirmation. The extension
+      is still a scripted black-box mechanism test—not a semantic coding task—
+      so a positive result would be a necessary but not sufficient step toward
+      an institutional claim.
     </p>
 
     <h3>Results: distance helped one search, not every search</h3>
@@ -666,8 +655,157 @@
     </div>
     <p class="figcap"><strong>Fig. 5</strong> — The interaction plot makes the negative result visible: the lines do not separate reliably between smooth and rugged landscapes.</p>
     <div class="callout">
-      <div class="c-lab">What this experiment establishes</div>
-      This is evidence for a conditional design rule, not a universal leaderboard claim. Multi-island plus migration helped the real Kernel Builder search under this budget and model, while isolation without migration and the two NK controls show that the effect is task-dependent. The fixed matrix has 30 valid cells and 480 finalized real evaluations; intervals are descriptive bootstrap summaries over three repetitions, not powered significance tests. Download the <a href="multi-island-summary.csv">summary</a>, <a href="multi-island-contrasts.csv">contrasts</a>, <a href="multi-island-results.csv">run-level table</a>, and the <a href="multi-island-performance.svg">performance</a>, <a href="multi-island-diversity.svg">diversity</a>, and <a href="multi-island-ruggedness.svg">interaction</a> figures.
+      <div class="c-lab">What the fixed matrix establishes</div>
+      Multi-island plus migration helped the real Kernel Builder search under this budget and model, while isolation without migration and the two NK controls show that the effect is task-dependent. The fixed matrix has 30 valid cells and 480 finalized real evaluations; intervals are descriptive bootstrap summaries over three repetitions, not powered significance tests. We treat this as a positive anchor for the harder test below, not as a universal leaderboard claim. Download the <a href="multi-island-summary.csv">summary</a>, <a href="multi-island-contrasts.csv">contrasts</a>, <a href="multi-island-results.csv">run-level table</a>, and the <a href="multi-island-performance.svg">performance</a>, <a href="multi-island-diversity.svg">diversity</a>, and <a href="multi-island-ruggedness.svg">interaction</a> figures.
+    </div>
+
+    <h3>A preregistered harder test</h3>
+    <p>
+      The fixed matrix motivated a more discriminating test, with topology
+      outcomes hidden until the complete grid was finished. Every condition
+      uses eight scripted agents with full visible-champion imitation, 90%
+      one-bit / 8% two-bit / 2% four-bit mutation, and three elite
+      <em>move-not-copy</em> rotations at quarter-budget boundaries. The
+      ablations are <strong>global</strong> (one eight-agent island),
+      <strong>partition</strong> (four permanent two-agent islands), and
+      <strong>multi-island</strong> (the same four islands with selective
+      migration). Landscape-policy blocks are paired across topologies; each
+      cell has a separate 512-point random reference, so effects are reported
+      in random-reference standard deviations rather than pooled raw fitness
+      units.
+    </p>
+    <div class="result-table-wrap">
+      <table class="result-table">
+        <thead><tr><th>Stage</th><th>Fresh paired blocks</th><th>Cells</th><th>Purpose</th><th>Decision rule</th></tr></thead>
+        <tbody>
+          <tr><td>Construct audit</td><td>64 landscape blocks</td><td>9 smooth + 4 rugged K summaries</td><td>Verify that “smooth” and “rugged” mean what the protocol says</td><td>All registered construct gates</td></tr>
+          <tr><td>Discovery map</td><td>64 per rugged cell</td><td>12 rugged + 9 smooth</td><td>Locate a provisional effect region</td><td>+0.25 vs global, +0.10 vs partition, plus progress</td></tr>
+          <tr><td>Independent confirmation</td><td>192</td><td>K=32, B=65,536</td><td>Test the frozen selected cell on new blocks</td><td>Conjunction of both effect gates and progress</td></tr>
+          <tr><td>Sequential follow-up</td><td>192 per cell</td><td>K=32, B=32,768 and 65,536</td><td>Check adjacent budgets after the confirmation miss</td><td>Same floors; outcome-aware and not pooled</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Construct validity</h3>
+    <p>
+      Before interpreting topology, we audited the landscapes without looking
+      at topology outcomes. The Smooth negative control uses hidden-order
+      Permuted LeadingOnes with <code>N=2,048, 4,096, 8,192</code> and budgets
+      <code>16,384–65,536</code>; its largest budget-to-size-squared ratio is
+      only <code>0.0156</code>. Every one of its nine cells has exactly one
+      strict one-bit local optimum and one global optimum. The Rugged arm keeps
+      the search space at <code>2^128</code> while increasing affected fraction
+      from <code>0.258</code> to <code>0.945</code>. Mean one-bit
+      autocorrelation falls monotonically from <code>0.747</code> to
+      <code>0.058</code>, a separation of <code>0.689</code>; all 64 blocks meet
+      the extreme-separation requirement. The construct gate therefore passes,
+      but this only validates the difficulty coordinates—it does not validate
+      migration as an institution.
+    </p>
+    <div class="result-table-wrap">
+      <table class="result-table">
+        <thead><tr><th>Rugged K</th><th>Affected fraction</th><th>Mean one-bit autocorrelation</th><th>Interpretation</th></tr></thead>
+        <tbody>
+          <tr><td>32</td><td>0.258</td><td>0.747</td><td>Bridge to the earlier v6 boundary</td></tr>
+          <tr><td>64</td><td>0.508</td><td>0.493</td><td>Intermediate ruggedness</td></tr>
+          <tr><td>96</td><td>0.758</td><td>0.233</td><td>Strong local-dependence loss</td></tr>
+          <tr><td>120</td><td>0.945</td><td>0.058</td><td>Near random-energy neighbourhoods</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Discovery phase map</h3>
+    <p>
+      The full discovery surface is shown in Fig. 6. A rugged cell is a
+      “full pass” only when both practical effect floors and the independent
+      random-search progress gate pass. The apparent positive region is narrow:
+      only <strong>K=32 at budgets 32,768 and 65,536</strong> passes all gates.
+      No Smooth cell finds an exact solution; global beats multi-island in all
+      nine cells, with mean prefix differences of 8.72, 22.66, and 46.59 at
+      <code>N=2,048</code> as budget increases; the corresponding differences at
+      <code>N=4,096</code> are 5.08, 9.58, 21.33, and at
+      <code>N=8,192</code> are 2.02, 3.98, 10.25. The smooth control is doing
+      what it should: it makes a broad “migration helps on hard problems” story
+      untenable.
+    </p>
+    <div class="result-figure">
+      <img src="multi-island-extreme-surface.svg" alt="Heatmaps of exploratory multi-island minus global and multi-island minus partition effects across ruggedness K and budget, with full-pass cells outlined">
+    </div>
+    <p class="figcap"><strong>Fig. 6</strong> — Discovery effects in random-reference SD units. Outlines mark the two cells where both topology contrasts and progress pass; crosses mark cells that fail the progress gate. The surface is displayed cell-by-cell so the exploratory multiplicity is visible.</p>
+    <div class="result-table-wrap">
+      <table class="result-table">
+        <thead><tr><th>K</th><th>Budget</th><th>Multi − global</th><th>Multi − partition</th><th>Progress</th><th>Cell</th></tr></thead>
+        <tbody>
+          <tr><td>32</td><td>16,384</td><td>0.487</td><td>0.104</td><td>Pass</td><td>Effect miss</td></tr>
+          <tr><td>32</td><td>32,768</td><td>0.376</td><td>0.117</td><td>Pass</td><td><strong>Full pass</strong></td></tr>
+          <tr><td>32</td><td>65,536</td><td>0.340</td><td>0.148</td><td>Pass</td><td><strong>Full pass</strong></td></tr>
+          <tr><td>64</td><td>16,384</td><td>0.347</td><td>0.106</td><td>Pass</td><td>Effect miss</td></tr>
+          <tr><td>64</td><td>32,768</td><td>0.384</td><td>0.075</td><td>Pass</td><td>Effect miss</td></tr>
+          <tr><td>64</td><td>65,536</td><td>0.264</td><td>0.027</td><td>Pass</td><td>Effect miss</td></tr>
+          <tr><td>96</td><td>16,384</td><td>0.242</td><td>0.080</td><td>Fail</td><td>Progress miss</td></tr>
+          <tr><td>96</td><td>32,768</td><td>0.126</td><td>0.051</td><td>Fail</td><td>Progress miss</td></tr>
+          <tr><td>96</td><td>65,536</td><td>0.002</td><td>−0.041</td><td>Fail</td><td>Progress miss</td></tr>
+          <tr><td>120</td><td>16,384</td><td>0.054</td><td>−0.028</td><td>Fail</td><td>Progress miss</td></tr>
+          <tr><td>120</td><td>32,768</td><td>0.091</td><td>0.055</td><td>Fail</td><td>Progress miss</td></tr>
+          <tr><td>120</td><td>65,536</td><td>0.067</td><td>0.106</td><td>Fail</td><td>Progress miss</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Independent confirmation</h3>
+    <p>
+      We froze the selected cell by rule before opening its 192-block holdout:
+      <code>N=128, K=32, B=65,536</code>. Multi-island remained above both
+      controls in point estimates, but the practical claim did not survive the
+      fresh data. Against global, the effect is <strong>+0.246 SD</strong>
+      (descriptive 95% interval <code>[0.161, 0.333]</code>; one-sided lower
+      bound <code>0.174</code>), just below the registered <code>+0.25</code>
+      floor. Against partition it is <strong>+0.110 SD</strong>
+      (<code>[0.055, 0.165]</code>; lower <code>0.064</code>), which clears its
+      <code>+0.10</code> point floor and has a positive lower bound. The
+      conjunction therefore fails because the global contrast misses, despite
+      the progress gate passing. This is the critical distinction between a
+      suggestive selected-cell estimate and independent confirmation.
+    </p>
+
+    <h3>Sequential window replication</h3>
+    <p>
+      Because the discovery surface had two adjacent K=32 cells, we ran a
+      clearly labelled outcome-aware follow-up on fresh blocks at both budgets.
+      At <code>B=32,768</code>, multi−global is <strong>+0.152 SD</strong>
+      (<code>[0.058, 0.248]</code>) and multi−partition is <strong>+0.127
+      SD</strong> (<code>[0.074, 0.180]</code>); only the latter clears its
+      practical floor. At <code>B=65,536</code>, the corresponding effects are
+      <strong>+0.085 SD</strong> (<code>[−0.000, 0.171]</code>) and
+      <strong>+0.061 SD</strong> (<code>[0.010, 0.113]</code>), so neither
+      practical gate passes. Both cells clear the progress gate. These results
+      are not pooled with the confirmation and cannot retroactively rescue it.
+    </p>
+    <div class="result-figure">
+      <img src="multi-island-extreme-replication.svg" alt="Forest plots comparing discovery, independent confirmation, and sequential follow-up effects against practical floors">
+    </div>
+    <p class="figcap"><strong>Fig. 7</strong> — The discovery points (purple) shrink in the independent confirmation (blue) and sequential follow-up (teal). Dashed lines are the preregistered practical floors, not zero-effect tests.</p>
+    <div class="result-table-wrap">
+      <table class="result-table">
+        <thead><tr><th>Stage</th><th>Budget</th><th>Multi − global [95% interval]</th><th>Multi − partition [95% interval]</th><th>Progress</th></tr></thead>
+        <tbody>
+          <tr><td>Discovery</td><td>32,768</td><td>0.376 [0.228, 0.528]</td><td>0.117 [0.048, 0.196]</td><td>Pass</td></tr>
+          <tr><td>Discovery</td><td>65,536</td><td>0.340 [0.193, 0.490]</td><td>0.148 [0.060, 0.240]</td><td>Pass</td></tr>
+          <tr><td>Independent confirmation</td><td>65,536</td><td>0.246 [0.161, 0.333]</td><td>0.110 [0.055, 0.165]</td><td>Pass</td></tr>
+          <tr><td>Sequential follow-up</td><td>32,768</td><td>0.152 [0.058, 0.248]</td><td>0.127 [0.074, 0.180]</td><td>Pass</td></tr>
+          <tr><td>Sequential follow-up</td><td>65,536</td><td>0.085 [−0.000, 0.171]</td><td>0.061 [0.010, 0.113]</td><td>Pass</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>The smooth negative control is equally important</h3>
+    <div class="result-figure">
+      <img src="multi-island-extreme-smooth.svg" alt="Heatmap of global minus multi-island best-prefix differences for hard smooth controls across N and budget">
+    </div>
+    <p class="figcap"><strong>Fig. 8</strong> — In every hard Smooth cell, global has the higher mean prefix score and no topology reaches the exact solution. Difficulty by itself is not evidence that migration should help.</p>
+    <div class="callout">
+      <div class="c-lab">What the evidence supports</div>
+      The original Kernel Builder result is a descriptive positive anchor (multi-island is +8.6 percentage points over global, with only <em>n=3</em>). The extreme scripted mechanism locates a discovery window, but its practical advantage is not stable in fresh confirmation or sequential replication. We therefore make <strong>no positive claim about a reproducible multi-island advantage</strong> for this black-box mechanism. Nor does the failure show that institutions are useless: natural coding agents, semantic collaboration, CORAL itself, and real tasks remain outside this scripted test. The responsible conclusion is narrower: migration is a plausible conditional design hypothesis, and it still needs an audited natural-agent/Circle-Packing validation before it can be called an institutional effect. Download the <a href="multi-island-summary.csv">original summary</a>, <a href="multi-island-contrasts.csv">original contrasts</a>, <a href="multi-island-results.csv">original run-level table</a>, the <a href="multi-island-extreme-results.csv">extreme tidy results</a>, and the <a href="multi-island-extreme-surface.svg">discovery surface</a>, <a href="multi-island-extreme-replication.svg">replication</a>, and <a href="multi-island-extreme-smooth.svg">smooth-control</a> figures.
     </div>
 
     <!-- MULTI_ISLAND_RESULTS -->
