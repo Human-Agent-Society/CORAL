@@ -33,10 +33,12 @@ _CODEX_RUNTIME_OPTION_KEYS = {
 
 
 def _extract_codex_session_id(log_path: Path) -> str | None:
-    """Extract session_id from a Codex JSONL log.
+    """Extract the resumable thread ID from a Codex JSONL log.
 
-    Codex exec --json emits JSONL events. Session IDs appear in events
-    with a "session_id" field, typically in the final summary event.
+    Older Codex versions emitted ``session_id`` while current versions emit a
+    ``thread.started`` event with ``thread_id``. Accept both formats so a
+    heartbeat interrupt can resume the existing conversation instead of
+    silently starting a fresh one.
     """
     try:
         lines = log_path.read_text().strip().splitlines()
@@ -46,8 +48,12 @@ def _extract_codex_session_id(log_path: Path) -> str | None:
                 continue
             try:
                 data = json.loads(line)
+                if not isinstance(data, dict):
+                    continue
                 sid = data.get("session_id")
-                if sid:
+                if not sid and data.get("type") == "thread.started":
+                    sid = data.get("thread_id")
+                if isinstance(sid, str) and sid:
                     return sid
             except json.JSONDecodeError:
                 continue
