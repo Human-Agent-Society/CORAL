@@ -37,7 +37,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-import select
+import selectors
 import shutil
 import socket
 import subprocess
@@ -127,6 +127,11 @@ class SrtSandbox:
             ctx.repo_dir,
             shared_dir_name=ctx.shared_dir_name,
         )
+        # ``coral eval`` serializes real-budget admission with a lock beside
+        # the public state.  SRT must see the exact file as writable; granting
+        # the enclosing ``.coral`` directory would also expose config and
+        # private-state writes, so materialize and allow only this lock.
+        _prepare_srt_budget_lock(ctx.worktree_path, ctx.coral_dir)
         settings = build_srt_settings(
             self.cfg,
             worktree_path=ctx.worktree_path,
@@ -212,6 +217,22 @@ def _prepare_srt_mountpoints(
     if additions:
         separator = "" if not existing or existing.endswith("\n") else "\n"
         exclude_path.write_text(existing + separator + "\n".join(additions) + "\n")
+
+
+def _budget_lock_path(worktree_path: Path, coral_dir: Path) -> Path:
+    """Return the real-budget lock path for this run or island."""
+    if (coral_dir / "islands").exists():
+        island_id = _worktree_island(worktree_path)
+        if island_id is None:
+            raise ValueError("sandboxed multi-island worktree has no .coral_island breadcrumb")
+        return coral_dir / "islands" / island_id / "real-budget.lock"
+    return coral_dir / "real-budget.lock"
+
+
+def _prepare_srt_budget_lock(worktree_path: Path, coral_dir: Path) -> None:
+    """Create the producer-side real-evaluation lock before entering SRT."""
+    lock_path = _budget_lock_path(worktree_path, coral_dir)
+    lock_path.touch(exist_ok=True)
 
 
 def ensure_sandbox_supported(agents: AgentConfig) -> None:
@@ -521,6 +542,7 @@ def build_srt_settings(
     """
     private_dir = str((coral_dir / "private").resolve())
     state_root = _state_root_for_worktree(worktree_path, coral_dir).resolve()
+    budget_lock = _budget_lock_path(worktree_path, coral_dir).resolve()
     islands_root = (coral_dir / "islands").resolve()
     agents_root = worktree_path.parent.resolve()
     home_paths = _runtime_home_paths(shared_dir_name)
@@ -566,6 +588,10 @@ def build_srt_settings(
             ],
             "allowWrite": [
                 str(worktree_path.resolve()),
+                # The eval hook takes this producer-side lock before it writes
+                # a pending attempt. Keep it file-scoped so the surrounding
+                # .coral root (especially private/) stays unavailable.
+                str(budget_lock),
                 # Notes, attempts, eval logs, heartbeat config, and the
                 # checkpoint repo live below the current island's state root.
                 # Granting all of .coral would let a partition agent write a
@@ -741,9 +767,11 @@ class AllowAllProxy:
     ) -> None:
         """Absolute-URI plain HTTP: rewrite to origin-form and relay.
 
-        Transparent single-request forwarding (each keep-alive request on
-        this connection must target the same host, which real clients do).
-        Plain HTTP through a proxy is rare — HTTPS goes via CONNECT above.
+        Force both sides to close after the response.  ``_relay`` does not
+        parse subsequent requests, so keeping the connection alive would
+        pass their absolute-form request targets straight to the origin.
+        Reconnecting makes every request pass through this rewrite.  Plain
+        HTTP through a proxy is rare — HTTPS goes via CONNECT above.
         """
         if "://" not in target:
             conn.sendall(b"HTTP/1.1 400 Bad Request\r\n\r\n")
@@ -757,7 +785,19 @@ class AllowAllProxy:
             return
         with upstream:
             origin_line = f"{method} {slash + path or '/'} {version}".encode("latin-1")
-            upstream.sendall(origin_line + b"\r\n" + rest)
+            header_block, separator, body = rest.partition(b"\r\n\r\n")
+            if not separator:
+                conn.sendall(b"HTTP/1.1 400 Bad Request\r\n\r\n")
+                return
+            headers = [
+                line
+                for line in header_block.split(b"\r\n")
+                if line.partition(b":")[0].strip().lower()
+                not in {b"connection", b"proxy-connection"}
+            ]
+            headers.extend((b"Connection: close", b"Proxy-Connection: close"))
+            rewritten = b"\r\n".join(headers) + b"\r\n\r\n" + body
+            upstream.sendall(origin_line + b"\r\n" + rewritten)
             self._relay(conn, upstream)
 
     @staticmethod
@@ -765,20 +805,30 @@ class AllowAllProxy:
         """Shuttle bytes between two sockets until either side closes."""
         a.settimeout(None)
         b.settimeout(None)
-        sockets = [a, b]
         peer = {a: b, b: a}
-        while True:
-            readable, _, errored = select.select(sockets, [], sockets, 300)
-            if errored or not readable:
-                return
-            for sock in readable:
+        # ``select.select`` rejects file descriptors >= FD_SETSIZE (usually
+        # 1024). A 32-agent run can exceed that during request bursts even
+        # though each relay watches only two sockets. DefaultSelector uses
+        # poll/epoll/kqueue as appropriate and has no FD_SETSIZE ceiling.
+        with selectors.DefaultSelector() as selector:
+            selector.register(a, selectors.EVENT_READ)
+            selector.register(b, selectors.EVENT_READ)
+            while True:
                 try:
-                    data = sock.recv(65536)
+                    events = selector.select(timeout=300)
                 except OSError:
                     return
-                if not data:
+                if not events:
                     return
-                try:
-                    peer[sock].sendall(data)
-                except OSError:
-                    return
+                for key, _ in events:
+                    sock = key.fileobj
+                    try:
+                        data = sock.recv(65536)
+                    except OSError:
+                        return
+                    if not data:
+                        return
+                    try:
+                        peer[sock].sendall(data)
+                    except OSError:
+                        return

@@ -256,6 +256,86 @@ def test_setup_opencode_settings_single_island_does_not_block_git(tmp_path):
     assert "* git *" not in bash
 
 
+def test_setup_opencode_settings_includes_minimax_gateway_models(tmp_path):
+    """MiniMax aliases must be resolvable by OpenCode when routed by CORAL."""
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public").mkdir(parents=True)
+    (coral_dir / "private").mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    setup_opencode_settings(
+        worktree,
+        coral_dir,
+        gateway_url="http://localhost:4000/v1",
+        gateway_api_key="sk-test",
+    )
+
+    settings = _json.loads((worktree / ".opencode" / "opencode.json").read_text())
+    models = settings["provider"]["openai"]["models"]
+    assert models["MiniMax-M3"] == {"name": "MiniMax-M3"}
+    assert models["MiniMax-M2.7"] == {"name": "MiniMax-M2.7"}
+
+
+def test_setup_opencode_settings_can_disable_subagents(tmp_path):
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public").mkdir(parents=True)
+    (coral_dir / "private").mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    setup_opencode_settings(worktree, coral_dir, allow_subagents=False)
+
+    settings = _json.loads((worktree / ".opencode" / "opencode.json").read_text())
+    assert settings["permission"]["task"] == "deny"
+
+
+def test_setup_opencode_settings_can_disable_file_discovery(tmp_path):
+    coral_dir = tmp_path / ".coral"
+    (coral_dir / "public").mkdir(parents=True)
+    (coral_dir / "private").mkdir(parents=True)
+    (coral_dir / "islands" / "2").mkdir(parents=True)
+    worktree = tmp_path / "worktree"
+    worktree.mkdir()
+
+    setup_opencode_settings(
+        worktree,
+        coral_dir,
+        allow_file_discovery=False,
+        island_id=2,
+    )
+
+    settings = _json.loads((worktree / ".opencode" / "opencode.json").read_text())
+    assert settings["permission"]["glob"] == "deny"
+    bash = settings["permission"]["bash"]
+    assert bash["find *"] == "deny"
+    assert bash["* find *"] == "deny"
+    assert bash["*frozen_problem.py*"] == "deny"
+    assert bash["*taskdata*"] == "deny"
+    assert bash["*submission_tests.py*"] == "deny"
+    for forbidden in ("*frozen_problem.py*", "*taskdata*", "*submission_tests.py*"):
+        assert settings["permission"]["read"][forbidden] == "deny"
+        assert settings["permission"]["edit"][forbidden] == "deny"
+        assert settings["permission"]["write"][forbidden] == "deny"
+    for permission in ("bash", "read", "edit", "write"):
+        assert settings["permission"][permission]["*.coral/private*"] == "deny"
+    assert bash["ls /tmp*"] == "deny"
+    assert bash["* ls /tmp*"] == "deny"
+    run_state = str(coral_dir.resolve()) + "/**"
+    assert settings["permission"]["bash"][run_state] == "deny"
+    assert settings["permission"]["bash"][f"*{coral_dir.resolve()}/*"] == "deny"
+    assert settings["permission"]["read"][run_state] == "deny"
+    run_repo = str(coral_dir.resolve().parent / "repo") + "/**"
+    assert settings["permission"]["bash"][run_repo] == "deny"
+    assert settings["permission"]["bash"][f"*{coral_dir.resolve().parent / 'repo'}/*"] == "deny"
+    assert settings["permission"]["read"][run_repo] == "deny"
+    own_state = str((coral_dir / "islands" / "2").resolve())
+    assert settings["permission"]["bash"][f"*{own_state}/*"] == "allow"
+    run_dir = str(coral_dir.resolve().parent)
+    assert settings["permission"]["bash"][f"*{run_dir}/*"] == "deny"
+    assert settings["permission"]["bash"][f"*{worktree.resolve()}/*"] == "allow"
+
+
 def test_partition_and_setup_threads_island_id_into_worktrees(tmp_path):
     """After project setup, every agent worktree has the right .coral_island breadcrumb."""
     repo = tmp_path / "myrepo"

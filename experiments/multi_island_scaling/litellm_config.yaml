@@ -1,0 +1,12 @@
+# Operator-side gateway configuration for the MiniMax-M3 scaling study.
+# The credential is read from MINIMAX_API_KEY at runtime and is deliberately
+# not stored in this repository.
+model_list:
+  - model_name: MiniMax-M3
+    litellm_params:
+      model: openai/MiniMax-M3
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: https://api.minimax.io/v1
+
+litellm_settings:
+  drop_params: true

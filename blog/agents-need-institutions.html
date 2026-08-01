@@ -582,9 +582,19 @@
     <p>
       Multi-island has the strongest mean: +8.6 percentage points over global, +18.4 over partition, and +18.1 over independent search. But the intervals are wide, and final solution diversity is lower than global's. We read this as evidence that distance plus selective exchange <em>can</em> help allocate a small, failure-prone search budget—not as proof that migration is generally better.
     </p>
+    <p>
+      We then ran the missing scale-out check on two real coding tasks: <strong>Kernel Builder</strong> (cycles, lower is better) and <strong>Pack the Polyominoes</strong> (score, higher is better). The sweep compares a single global pool with two migrating islands at 1, 2, 4, 8, 16, and 32 agents. Every agent received a fixed budget of <strong>two real evaluations</strong>, so total budget grows with the population. It uses OpenCode with <code>MiniMax-M3</code>, one repetition per cell, and is explicitly exploratory/descriptive rather than a powered causal study. The complete run-level table is in <a href="multi-island-scaling-results.csv">CSV form</a>; the plotted means and directions are shown below.
+    </p>
+    <div class="result-figure">
+      <img src="multi-island-scaling-performance.svg" alt="Kernel Builder cycles and Pack the Polyominoes scores as global and multi-island populations scale from one to 32 agents" />
+    </div>
+    <p class="figcap"><strong>Fig. 3</strong> — Exploratory fixed-per-agent-budget scaling sweep. Points are the retained cell's best score (one repetition); lines only connect observed agent counts and are not fitted scaling laws. Kernel Builder is minimized, while Pack the Polyominoes is maximized. Cells with protocol-invalid, incomplete, or entirely scoreless runs are excluded from both the CSV and figure.</p>
+    <p>
+      These runs do not show a consistent multi-island scaling advantage. On Kernel Builder, global was better at 4 and 8 agents; the topologies tied at 2 and 32 and differed by only three cycles at 16. On Pack the Polyominoes, multi-island was better at 2 and 32 agents, while global was better at 4, 8, and 16. The mixed direction across both task and population size is exactly why the curves should be read descriptively rather than compressed into a universal topology ranking.
+    </p>
     <div class="callout">
-      <div class="c-lab">The central scaling question is still open</div>
-      Every condition above uses exactly four agents. It tests topology at one population size; it does <strong>not</strong> test whether multi-island helps multi-agent systems scale as more agents join. The important experiment is an agent-count × topology sweep on real tasks: compare global and multi-island runs as the population grows, under both a fixed total budget and a fixed per-agent budget, and measure performance alongside sample efficiency, wall-clock time, and cost. Until that curve is measured, we make no claim that city-states improve multi-agent scaling.
+      <div class="c-lab">What the sweep can—and cannot—say</div>
+      This is a scale-out measurement, not a claim that topology causes a universal improvement. With one repetition per cell and noisy, sometimes scoreless agents, the curves describe these runs rather than estimate a stable population effect. The fair comparison is the direction-specific best score under the same two-evaluations-per-agent budget; it does not control for every stochastic trajectory, wall-clock difference, or model failure. We therefore use the sweep to expose whether a scaling pattern is worth a replicated study—not to declare that city-states always win.
     </div>
     <div class="callout">
       <div class="c-lab">A synthetic failure mode</div>
@@ -685,7 +695,7 @@
         </g>
       </svg>
     </div>
-    <p class="figcap"><strong>Fig. 3</strong> — The archive as a graph. Typed frontmatter links (<code>supersedes</code>, <code>refutes</code>) and ordinary body links become edges; the dashboard's Knowledge tab renders it live, with nodes sized by confidence and colored by claim status.</p>
+    <p class="figcap"><strong>Fig. 4</strong> — The archive as a graph. Typed frontmatter links (<code>supersedes</code>, <code>refutes</code>) and ordinary body links become edges; the dashboard's Knowledge tab renders it live, with nodes sized by confidence and colored by claim status.</p>
 
     <p>Three things fall out of this:</p>
     <ul>
@@ -786,7 +796,7 @@
         <text class="a-fade t-it" style="animation-delay:4.0s" x="646" y="134" text-anchor="middle">by construction</text>
       </svg>
     </div>
-    <p class="figcap"><strong>Fig. 4</strong> — The sandbox boundary. Reads inside the agent's slice of the run succeed; reads of <code>.coral/private/</code>, host secrets, and other runs are blocked by the OS — Seatbelt on macOS, bubblewrap on Linux — identically for every runtime.</p>
+    <p class="figcap"><strong>Fig. 5</strong> — The sandbox boundary. Reads inside the agent's slice of the run succeed; reads of <code>.coral/private/</code>, host secrets, and other runs are blocked by the OS — Seatbelt on macOS, bubblewrap on Linux — identically for every runtime.</p>
 
     <ul>
       <li><strong>Reads are allow-listed:</strong> the agent's own worktree (and same-island siblings'), the run repo, shared <code>.coral/</code> state minus <code>private/</code>, the surfaced grader source, and toolchain dotdirs.</li>

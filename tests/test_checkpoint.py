@@ -39,6 +39,29 @@ def test_init_checkpoint_repo():
         assert "init: shared state tracking" in result.stdout
 
 
+def test_init_checkpoint_repo_ignores_gateway_logs():
+    with tempfile.TemporaryDirectory() as tmp:
+        coral_dir = _make_coral_dir(Path(tmp))
+        gateway_log = coral_dir / "public" / "gateway" / "requests.jsonl"
+        gateway_log.parent.mkdir()
+        gateway_log.write_text('{"request": 1}\n')
+
+        init_checkpoint_repo(str(coral_dir))
+
+        public = coral_dir / "public"
+        assert subprocess.run(
+            ["git", "check-ignore", "gateway/requests.jsonl"],
+            cwd=str(public),
+            capture_output=True,
+        ).returncode == 0
+        assert subprocess.run(
+            ["git", "ls-files", "gateway"],
+            cwd=str(public),
+            capture_output=True,
+            text=True,
+        ).stdout == ""
+
+
 def test_init_is_idempotent():
     with tempfile.TemporaryDirectory() as tmp:
         coral_dir = _make_coral_dir(Path(tmp))
@@ -67,6 +90,40 @@ def test_checkpoint_with_changes():
         commit_hash = checkpoint(str(coral_dir), "agent-1", "added a note")
         assert commit_hash is not None
         assert len(commit_hash) == 40  # full SHA
+
+
+def test_checkpoint_untracks_gateway_logs_from_legacy_repo():
+    with tempfile.TemporaryDirectory() as tmp:
+        coral_dir = _make_coral_dir(Path(tmp))
+        init_checkpoint_repo(str(coral_dir))
+        public = coral_dir / "public"
+        gateway_log = public / "gateway" / "requests.jsonl"
+        gateway_log.parent.mkdir()
+        gateway_log.write_text('{"request": 1}\n')
+
+        subprocess.run(
+            ["git", "add", "-f", "gateway/requests.jsonl"],
+            cwd=str(public),
+            capture_output=True,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "commit", "-m", "legacy: tracked gateway log"],
+            cwd=str(public),
+            capture_output=True,
+            check=True,
+        )
+        gateway_log.write_text('{"request": 1}\n{"request": 2}\n')
+        (public / "notes" / "idea.md").write_text("keep gateway runtime-only\n")
+
+        assert checkpoint(str(coral_dir), "agent-1", "add note") is not None
+        assert gateway_log.read_text().endswith('{"request": 2}\n')
+        assert subprocess.run(
+            ["git", "ls-files", "gateway"],
+            cwd=str(public),
+            capture_output=True,
+            text=True,
+        ).stdout == ""
 
 
 def test_checkpoint_no_changes():

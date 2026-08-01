@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import http.client
 import http.server
 import json
 import socket
@@ -199,6 +200,7 @@ def test_build_settings_writes(tmp_path):
     assert str((tmp_path / "agents").resolve()) in fs["denyWrite"]
     assert str((tmp_path / "agents" / "agent-1").resolve()) in fs["allowWrite"]
     assert str((tmp_path / ".coral" / "public").resolve()) in fs["allowWrite"]
+    assert str((tmp_path / ".coral" / "real-budget.lock").resolve()) in fs["allowWrite"]
     assert str((tmp_path / ".coral").resolve()) not in fs["allowWrite"]
     assert str((tmp_path / "repo" / ".git").resolve()) in fs["allowWrite"]
     assert "/tmp" not in fs["allowWrite"]
@@ -642,10 +644,16 @@ def test_preflight_missing_linux_deps(monkeypatch):
 
 
 class _OkHandler(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    paths: list[str] = []
+
     def do_GET(self):  # noqa: N802
+        self.paths.append(self.path)
         body = b"ok"
         self.send_response(200)
         self.send_header("Content-Length", str(len(body)))
+        if self.headers.get("Connection", "").lower() == "close":
+            self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
 
@@ -655,6 +663,7 @@ class _OkHandler(http.server.BaseHTTPRequestHandler):
 
 @pytest.fixture
 def local_http_server():
+    _OkHandler.paths = []
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _OkHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -680,6 +689,25 @@ def test_proxy_plain_http_forwarding(proxy, local_http_server):
         assert resp.read() == b"ok"
 
 
+def test_proxy_plain_http_rewrites_each_client_request(proxy, local_http_server):
+    host, port = local_http_server
+    conn = http.client.HTTPConnection("127.0.0.1", proxy.port, timeout=10)
+    try:
+        for path in ("/first", "/second"):
+            conn.request(
+                "GET",
+                f"http://{host}:{port}{path}",
+                headers={"Host": f"{host}:{port}"},
+            )
+            response = conn.getresponse()
+            assert response.status == 200
+            assert response.read() == b"ok"
+    finally:
+        conn.close()
+
+    assert _OkHandler.paths == ["/first", "/second"]
+
+
 def test_proxy_connect_tunnel(proxy, local_http_server):
     host, port = local_http_server
     with socket.create_connection(("127.0.0.1", proxy.port), timeout=10) as conn:
@@ -695,6 +723,44 @@ def test_proxy_connect_tunnel(proxy, local_http_server):
                 break
             data += chunk
         assert b"200" in data and data.endswith(b"ok")
+
+
+def test_proxy_relay_supports_file_descriptors_above_fd_setsize():
+    fcntl = pytest.importorskip("fcntl")
+    resource = pytest.importorskip("resource")
+    if resource.getrlimit(resource.RLIMIT_NOFILE)[0] <= 1024:
+        pytest.skip("process file descriptor limit does not permit a high-fd relay")
+
+    left_client, left_relay = socket.socketpair()
+    right_relay, right_client = socket.socketpair()
+    high_left = socket.socket(
+        fileno=fcntl.fcntl(left_relay.fileno(), fcntl.F_DUPFD, 1024)
+    )
+    high_right = socket.socket(
+        fileno=fcntl.fcntl(right_relay.fileno(), fcntl.F_DUPFD, 1024)
+    )
+    left_relay.close()
+    right_relay.close()
+    left_client.settimeout(2)
+    right_client.settimeout(2)
+
+    relay = threading.Thread(
+        target=AllowAllProxy._relay,
+        args=(high_left, high_right),
+        daemon=True,
+    )
+    relay.start()
+    try:
+        left_client.sendall(b"left-to-right")
+        assert right_client.recv(64) == b"left-to-right"
+        right_client.sendall(b"right-to-left")
+        assert left_client.recv(64) == b"right-to-left"
+    finally:
+        left_client.close()
+        right_client.close()
+        relay.join(timeout=2)
+        high_left.close()
+        high_right.close()
 
 
 def test_proxy_connect_unreachable_target_returns_502(proxy):

@@ -11,10 +11,26 @@ from coral.hub._island import island_root
 
 logger = logging.getLogger(__name__)
 
+_CHECKPOINT_EXCLUDES = ("gateway/",)
+
 
 def _checkpoint_dir(coral_dir: str, island_id: str | int | None = None) -> Path:
     """The directory the checkpoint repo lives in (public/ or islands/<id>/)."""
     return island_root(coral_dir, island_id)
+
+
+def _ensure_checkpoint_excludes(root: Path) -> None:
+    """Keep run-managed high-volume state out of checkpoint commits."""
+    exclude_path = root / ".git" / "info" / "exclude"
+    existing = exclude_path.read_text().splitlines() if exclude_path.exists() else []
+    missing = [entry for entry in _CHECKPOINT_EXCLUDES if entry not in existing]
+    if not missing:
+        return
+    exclude_path.parent.mkdir(parents=True, exist_ok=True)
+    with exclude_path.open("a") as exclude_file:
+        if existing and existing[-1]:
+            exclude_file.write("\n")
+        exclude_file.write("\n".join(missing) + "\n")
 
 
 def init_checkpoint_repo(coral_dir: str, island_id: str | int | None = None) -> None:
@@ -25,6 +41,10 @@ def init_checkpoint_repo(coral_dir: str, island_id: str | int | None = None) -> 
     root = _checkpoint_dir(coral_dir, island_id)
     root.mkdir(parents=True, exist_ok=True)
     if (root / ".git").exists():
+        try:
+            _ensure_checkpoint_excludes(root)
+        except OSError:
+            logger.warning("Failed to update checkpoint excludes", exc_info=True)
         return
 
     try:
@@ -46,6 +66,7 @@ def init_checkpoint_repo(coral_dir: str, island_id: str | int | None = None) -> 
             capture_output=True,
             check=True,
         )
+        _ensure_checkpoint_excludes(root)
         gitignore = root / ".gitignore"
         gitignore.write_text("coral.lock\n")
         subprocess.run(
@@ -86,6 +107,28 @@ def checkpoint(
         lock_path.touch(exist_ok=True)
         with open(lock_path) as lock_fd:
             fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            _ensure_checkpoint_excludes(root)
+
+            # Older checkpoint repositories may already track gateway request
+            # logs. Remove those paths from the index before ``git add -A``;
+            # ``--cached`` preserves the live log while the exclude prevents
+            # it from being re-added. ``-f`` handles logs modified since the
+            # previous checkpoint.
+            subprocess.run(
+                [
+                    "git",
+                    "rm",
+                    "-r",
+                    "-f",
+                    "--cached",
+                    "--ignore-unmatch",
+                    "--",
+                    "gateway",
+                ],
+                cwd=str(root),
+                capture_output=True,
+                check=True,
+            )
 
             subprocess.run(
                 ["git", "add", "-A"],

@@ -544,6 +544,8 @@ def setup_opencode_settings(
     coral_dir: Path,
     *,
     research: bool = True,
+    allow_subagents: bool = True,
+    allow_file_discovery: bool = True,
     gateway_url: str | None = None,
     gateway_api_key: str | None = None,
     island_id: str | int | None = None,
@@ -579,6 +581,9 @@ def setup_opencode_settings(
     bash_permissions = {
         private_pattern: "deny",
     }
+    read_permissions = {private_pattern: "deny"}
+    edit_permissions = {private_pattern: "deny"}
+    write_permissions = {private_pattern: "deny"}
     if island_id is not None:
         # Every worktree currently uses the run repo's common Git object/ref
         # store.  Raw Git inspection can therefore bypass the island-scoped
@@ -593,30 +598,101 @@ def setup_opencode_settings(
                 "* git *": "deny",
             }
         )
+    if not allow_file_discovery:
+        # Controlled experiments may require a stricter boundary than the
+        # ordinary worktree sandbox: even an unsuccessful recursive probe can
+        # invalidate a cell. Remove OpenCode's native glob tool and reject
+        # shell discovery commands before they execute. Explicit reads of
+        # known task/public-grader files remain available.
+        bash_permissions.update(
+            {
+                "find *": "deny",
+                "* find *": "deny",
+                "*frozen_problem.py*": "deny",
+                "*taskdata*": "deny",
+                "*submission_tests.py*": "deny",
+                "ls /tmp*": "deny",
+                "* ls /tmp*": "deny",
+                "grep * /tmp*": "deny",
+                "* grep * /tmp*": "deny",
+            }
+        )
+        # The filename boundary applies to every file-oriented tool, not just
+        # shell commands.  In particular, a Read call to a public-looking
+        # ``taskdata`` copy can still reveal the hidden-simulator API and must
+        # be rejected before it opens the path.
+        for forbidden_name in ("*frozen_problem.py*", "*taskdata*", "*submission_tests.py*"):
+            read_permissions[forbidden_name] = "deny"
+            edit_permissions[forbidden_name] = "deny"
+            write_permissions[forbidden_name] = "deny"
+        # Do not expose run-level bookkeeping (budget locks, config_dir, or
+        # sibling-island roots) through absolute paths. The current island's
+        # public state remains explicitly readable through its scoped allow.
+        run_state_pattern = str(coral_dir.resolve()) + "/**"
+        bash_permissions[run_state_pattern] = "deny"
+        # Bash permission entries are matched against the complete command
+        # string.  The path-only rule above protects Read/Edit/Write calls;
+        # these substring forms also catch commands such as
+        # ``cat /run/.coral/config.yaml`` before the shell can execute them.
+        bash_permissions[f"*{str(coral_dir.resolve())}/*"] = "deny"
+        read_permissions[run_state_pattern] = "deny"
+        edit_permissions[run_state_pattern] = "deny"
+        write_permissions[run_state_pattern] = "deny"
+        # The run repository is a sibling of ``.coral`` and contains the
+        # common Git object store for every agent worktree.  It is outside the
+        # normal state-root grant, but OpenCode's broad top-level permissions
+        # would otherwise let an agent address it by absolute path (for
+        # example, ``repo/.git/worktrees``) and discover sibling checkouts.
+        # Keep that host checkout opaque in the controlled experiment.
+        run_repo_pattern = str(coral_dir.resolve().parent / "repo") + "/**"
+        bash_permissions[run_repo_pattern] = "deny"
+        bash_permissions[f"*{str(coral_dir.resolve().parent / 'repo')}/*"] = "deny"
+        read_permissions[run_repo_pattern] = "deny"
+        edit_permissions[run_repo_pattern] = "deny"
+        write_permissions[run_repo_pattern] = "deny"
+        # Hide the whole run directory from shell discovery.  More-specific
+        # allow rules below re-expose only this worktree and its public island;
+        # sibling worktrees, the common Git checkout, and operator metadata
+        # remain unreachable even when addressed by absolute path.
+        run_dir_path = str(coral_dir.resolve().parent)
+        bash_permissions[f"*{run_dir_path}"] = "deny"
+        bash_permissions[f"*{run_dir_path}/*"] = "deny"
+        # Re-expose only the agent's own public island after the run-level
+        # substring deny.  The more-specific rule lets agents use known
+        # ``.opencode``/``coral`` state paths without reopening sibling or
+        # private run directories.
+        bash_permissions[f"*{str(island_root(coral_dir, island_id).resolve())}/*"] = "allow"
+        bash_permissions[f"*{worktree_path.resolve()}"] = "allow"
+        bash_permissions[f"*{worktree_path.resolve()}/*"] = "allow"
+        # Keep the private-state name blocked even when it is spelled through
+        # an agent-worktree path (which is intentionally re-allowed above).
+        # This catches probes such as ``ls .coral/private`` before the shell
+        # runs, including paths that do not exist inside the sandbox mount.
+        bash_permissions["*.coral/private*"] = "deny"
+        read_permissions["*.coral/private*"] = "deny"
+        edit_permissions["*.coral/private*"] = "deny"
+        write_permissions["*.coral/private*"] = "deny"
+        read_permissions[state_root_pattern] = "allow"
 
     settings: dict = {
         "$schema": "https://opencode.ai/config.json",
         "permission": {
             "*": "allow",
             "external_directory": external_allow,
-            "read": {
-                private_pattern: "deny",
-            },
-            "bash": {
-                **bash_permissions,
-            },
-            "edit": {
-                private_pattern: "deny",
-            },
-            "write": {
-                private_pattern: "deny",
-            },
+            "read": read_permissions,
+            "bash": bash_permissions,
+            "edit": edit_permissions,
+            "write": write_permissions,
             "question": "deny",
             "doom_loop": "allow",
             "webfetch": "deny" if not research else "allow",
             "websearch": "deny" if not research else "allow",
         },
     }
+    if not allow_subagents:
+        settings["permission"]["task"] = "deny"
+    if not allow_file_discovery:
+        settings["permission"]["glob"] = "deny"
 
     if gateway_url:
         provider_options: dict[str, str] = {"baseURL": gateway_url}
@@ -630,6 +706,12 @@ def setup_opencode_settings(
                 "models": {
                     "gpt-5.4": {"name": "gpt-5.4"},
                     "claude-opus-4-6": {"name": "claude-opus-4-6"},
+                    # MiniMax is exposed through the OpenAI-compatible
+                    # LiteLLM gateway.  Keep the aliases here so
+                    # ``opencode run --model openai/MiniMax-M3`` resolves in
+                    # the per-agent config that CORAL writes at launch.
+                    "MiniMax-M3": {"name": "MiniMax-M3"},
+                    "MiniMax-M2.7": {"name": "MiniMax-M2.7"},
                 },
             },
         }

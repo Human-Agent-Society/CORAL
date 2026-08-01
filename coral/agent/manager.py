@@ -589,7 +589,11 @@ class AgentManager:
             proxy_key = self._gateway.register_agent(agent_id, worktree_path)
             self._gateway_keys[agent_id] = proxy_key
 
-        gateway_url = self._gateway.url if self._gateway else None
+        gateway_url = (
+            self._gateway.sandbox_url
+            if self._gateway and self._sandbox is not None
+            else self._gateway.url if self._gateway else None
+        )
         gateway_api_key = self._gateway_keys.get(agent_id)
 
         # Per-agent runtime/model/options come from the resolved spec when
@@ -618,6 +622,10 @@ class AgentManager:
                 worktree_path,
                 coral_dir=self.paths.coral_dir,
                 research=self.config.agents.research,
+                allow_subagents=not bool(runtime_options.get("disable_subagents", False)),
+                allow_file_discovery=not bool(
+                    runtime_options.get("disable_file_discovery", False)
+                ),
                 gateway_url=gateway_url,
                 gateway_api_key=gateway_api_key,
                 island_id=island_id,
@@ -2197,13 +2205,27 @@ class AgentManager:
         repoint_shared_state(worktree_path, coral_dir, shared_dir_name, new_island_id=dst)
 
         # (5) Re-write runtime permission settings against dst's island root.
-        gateway_url = self._gateway.url if self._gateway else None
+        gateway_url = (
+            self._gateway.sandbox_url
+            if self._gateway and self._sandbox is not None
+            else self._gateway.url if self._gateway else None
+        )
         gateway_api_key = self._gateway_keys.get(agent_id)
         _refresh_runtime_settings(
             worktree_path,
             coral_dir=coral_dir,
             shared_dir_name=shared_dir_name,
             research=self.config.agents.research,
+            allow_subagents=not bool(
+                self.specs_by_id[agent_id].runtime_options.get(
+                    "disable_subagents", False
+                )
+            ),
+            allow_file_discovery=not bool(
+                self.specs_by_id[agent_id].runtime_options.get(
+                    "disable_file_discovery", False
+                )
+            ),
             gateway_url=gateway_url,
             gateway_api_key=gateway_api_key,
             island_id=dst,
@@ -2912,6 +2934,8 @@ def _refresh_runtime_settings(
     coral_dir: Path,
     shared_dir_name: str,
     research: bool,
+    allow_subagents: bool,
+    allow_file_discovery: bool,
     gateway_url: str | None,
     gateway_api_key: str | None,
     island_id: str,
@@ -2938,6 +2962,8 @@ def _refresh_runtime_settings(
             worktree_path,
             coral_dir=coral_dir,
             research=research,
+            allow_subagents=allow_subagents,
+            allow_file_discovery=allow_file_discovery,
             gateway_url=gateway_url,
             gateway_api_key=gateway_api_key,
             island_id=island_id,

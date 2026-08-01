@@ -50,6 +50,23 @@ class GatewayManager:
     def url(self) -> str:
         return f"http://localhost:{self.port}"
 
+    @property
+    def sandbox_url(self) -> str:
+        """Gateway URL that sandbox HTTP clients route through their proxy.
+
+        sandbox-runtime confines the child to a network namespace.  Most
+        HTTP stacks bypass proxies for ``localhost`` because it appears in
+        the inherited NO_PROXY list, so a localhost gateway URL resolves to
+        the sandbox's loopback and cannot reach CORAL's host process.
+        ``127.0.0.2`` is still host loopback (uvicorn binds 0.0.0.0) but is
+        not covered by the conventional exact ``127.0.0.1`` exemption.  The
+        request therefore goes through srt's host-side HTTP proxy, which can
+        reach the embedded gateway, while sandbox-local localhost remains
+        available for agents' own test servers.
+        """
+
+        return f"http://127.0.0.2:{self.port}"
+
     def register_agent(self, agent_id: str, worktree_path: Path) -> str:
         """Register an agent and return its unique proxy API key.
 

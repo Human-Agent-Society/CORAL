@@ -10,6 +10,7 @@ from __future__ import annotations
 import fcntl
 import json
 import logging
+import os
 import subprocess
 import time
 from collections.abc import Iterator
@@ -212,6 +213,13 @@ def submit_eval(
     The grader itself runs asynchronously in `coral.grader.daemon`.
     """
     workdir_path = Path(workdir).resolve()
+
+    # Controlled experiments can opt out of tune-mode entirely.  This is an
+    # admission-time guard (before git commit or queue insertion), so a
+    # forbidden ``coral eval --tune`` cannot consume an evaluation slot or
+    # leave a misleading attempt artifact behind.
+    if tune and os.environ.get("CORAL_DISABLE_TUNE") == "1":
+        raise RuntimeError("tune-mode evaluations are disabled for this run")
 
     breadcrumb = find_coral_breadcrumb(workdir_path)
     if breadcrumb is None:
