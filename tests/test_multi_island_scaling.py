@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -23,6 +24,24 @@ def _resolved_command(
         results_root=Path("/var/tmp/scaling-test"),
         run_dir=Path("/var/tmp/scaling-test/run"),
         gateway_port=43210,
+    )
+    config = CoralConfig.merge_dotlist(CoralConfig.from_yaml(spec.config), command[7:])
+    return command, config
+
+
+def _resolved_wall_command(
+    condition: str, agents: int, task: str = "kernel"
+) -> tuple[list[str], CoralConfig]:
+    spec = runner.TASKS[task]
+    command = runner.build_command(
+        spec,
+        condition,
+        agents,
+        per_agent_budget=2,
+        results_root=Path("/var/tmp/scaling-wall-test"),
+        run_dir=Path("/var/tmp/scaling-wall-test/run"),
+        gateway_port=43210,
+        wall_clock_seconds=1800,
     )
     config = CoralConfig.merge_dotlist(CoralConfig.from_yaml(spec.config), command[7:])
     return command, config
@@ -52,6 +71,56 @@ def test_scaling_multi_island_treatment_changes_only_topology_knobs() -> None:
     assert config.islands.migration.rank_window == 8
     assert config.islands.migration.min_evals == 1
     assert config.islands.migration.remigration_cooldown == 8
+
+
+def test_scaling_wall_clock_command_uses_fixed_time_without_eval_quota() -> None:
+    command, config = _resolved_wall_command("multi_island", agents=8)
+
+    assert "run.stop.wall_clock_seconds=1800" in command
+    assert "run.stop.max_real_attempts" not in " ".join(command)
+    assert config.run.stop.wall_clock_seconds == 1800
+    assert config.run.stop.max_real_attempts is None
+    assert config.run.stop.max_real_attempts_per_agent is None
+    assert "fixed 30.0-minute wall-clock window" in config.task.tips
+
+
+def test_wall_clock_completion_can_be_checked_before_writing_operator_result(
+    tmp_path: Path,
+) -> None:
+    public = tmp_path / ".coral/public"
+    attempts = public / "attempts"
+    attempts.mkdir(parents=True)
+    (public / "auto_stop.json").write_text(
+        json.dumps({"reason": "wall_clock", "wall_clock_seconds": 3600}) + "\n"
+    )
+    (attempts / "a.json").write_text(
+        json.dumps(
+            {
+                "commit_hash": "a" * 40,
+                "status": "improved",
+                "score": 5351,
+                "metadata": {"budget_class": "real"},
+            }
+        )
+        + "\n"
+    )
+
+    assert not runner.is_complete(tmp_path, None, wall_clock_seconds=3600)
+    assert runner.is_complete(
+        tmp_path,
+        None,
+        wall_clock_seconds=3600,
+        require_operator_result=False,
+    )
+    (tmp_path / "operator-result.json").write_text(
+        json.dumps({"status": "complete", "timed_out": False}) + "\n"
+    )
+    assert runner.is_complete(tmp_path, None, wall_clock_seconds=3600)
+
+    (tmp_path / "operator-result.json").write_text(
+        json.dumps({"status": "failed", "timed_out": False}) + "\n"
+    )
+    assert not runner.is_complete(tmp_path, None, wall_clock_seconds=3600)
 
 
 def test_single_agent_multi_island_cell_is_not_scheduled() -> None:
@@ -101,6 +170,42 @@ def test_scaling_analysis_expects_all_22_cells() -> None:
     assert ("kernel", "global", 1, 1) in identities
     assert ("kernel", "multi_island", 1, 1) not in identities
     assert ("polyominoes", "multi_island", 32, 1) in identities
+
+
+def test_scaling_analysis_sums_gateway_token_usage(tmp_path: Path) -> None:
+    log_path = tmp_path / ".coral/public/gateway/requests.jsonl"
+    log_path.parent.mkdir(parents=True)
+    records = [
+        {
+            "response": {
+                "usage": {
+                    "input_tokens": 100,
+                    "input_tokens_details": {"cached_tokens": 80},
+                    "output_tokens": 12,
+                    "total_tokens": 112,
+                }
+            }
+        },
+        {"status_code": 500, "response": {"error": "provider error"}},
+        {
+            "response": {
+                "usage": {
+                    "input_tokens": 50,
+                    "output_tokens": 7,
+                    "total_tokens": 57,
+                }
+            }
+        },
+    ]
+    log_path.write_text("\n".join(json.dumps(record) for record in records) + "\n")
+
+    assert analysis.gateway_usage(tmp_path) == {
+        "model_requests": 2,
+        "input_tokens": 150,
+        "cached_input_tokens": 80,
+        "output_tokens": 19,
+        "total_tokens": 169,
+    }
 
 
 def test_scaling_analysis_selects_latest_complete_run_once() -> None:

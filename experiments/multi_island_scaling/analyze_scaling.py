@@ -72,6 +72,45 @@ def count_migrations(run_dir: Path) -> int:
     return len(paths)
 
 
+def gateway_usage(run_dir: Path) -> dict[str, int]:
+    """Sum recorded model usage without reading request or response content."""
+    totals = {
+        "model_requests": 0,
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0,
+    }
+    path = run_dir / ".coral/public/gateway/requests.jsonl"
+    try:
+        lines = path.open()
+    except OSError:
+        return totals
+    with lines:
+        for line in lines:
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(record, dict):
+                continue
+            response = record.get("response")
+            if not isinstance(response, dict):
+                continue
+            usage = response.get("usage")
+            if not isinstance(usage, dict):
+                continue
+            totals["model_requests"] += 1
+            totals["input_tokens"] += int(usage.get("input_tokens") or 0)
+            details = usage.get("input_tokens_details") or {}
+            if not isinstance(details, dict):
+                details = {}
+            totals["cached_input_tokens"] += int(details.get("cached_tokens") or 0)
+            totals["output_tokens"] += int(usage.get("output_tokens") or 0)
+            totals["total_tokens"] += int(usage.get("total_tokens") or 0)
+    return totals
+
+
 def protocol_invalid(run_dir: Path) -> bool:
     """Return whether the operator explicitly quarantined this run.
 
@@ -104,25 +143,43 @@ def audit_run(command_path: Path) -> dict[str, Any]:
     best_score = None
     if scores:
         best_score = min(scores) if direction == "minimize" else max(scores)
-    expected = int(identity["expected_real_attempts"])
+    expected_raw = identity.get("expected_real_attempts")
+    expected = int(expected_raw) if expected_raw is not None else None
+    wall_clock_seconds = identity.get("wall_clock_seconds")
     auto_stop = load_json(run_dir / ".coral/public/auto_stop.json") or {}
-    complete = (
-        result.get("status") == "complete"
-        and auto_stop.get("reason") == "max_real_attempts"
-        and len(attempts) == expected
-        and bool(scores)
-    )
+    usage = gateway_usage(run_dir)
+    if wall_clock_seconds is not None:
+        complete = (
+            result.get("status") == "complete"
+            and not result.get("timed_out", False)
+            and auto_stop.get("reason") == "wall_clock"
+            and bool(scores)
+        )
+    else:
+        complete = (
+            result.get("status") == "complete"
+            and auto_stop.get("reason") == "max_real_attempts"
+            and expected is not None
+            and len(attempts) == expected
+            and bool(scores)
+        )
     return {
         "task": task,
         "condition": str(identity["condition"]),
         "agent_count": int(identity["agent_count"]),
         "repetition": int(identity["repetition"]),
-        "per_agent_budget": int(identity["per_agent_budget"]),
+        "per_agent_budget": (
+            int(identity["per_agent_budget"])
+            if identity.get("per_agent_budget") is not None
+            else None
+        ),
         "total_budget": expected,
+        "wall_clock_seconds": wall_clock_seconds,
         "real_attempts": len(attempts),
         "valid_scored_attempts": len(scores),
         "best_score": best_score,
         "wall_seconds": seconds_between(identity.get("started_at"), result.get("finished_at")),
+        **usage,
         "migrations": count_migrations(run_dir),
         "protocol_valid": not protocol_invalid(run_dir),
         "complete": complete,
@@ -196,10 +253,16 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         "repetition",
         "per_agent_budget",
         "total_budget",
+        "wall_clock_seconds",
         "real_attempts",
         "valid_scored_attempts",
         "best_score",
         "wall_seconds",
+        "model_requests",
+        "input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "total_tokens",
         "migrations",
         "protocol_valid",
         "complete",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -138,3 +139,43 @@ def test_auto_stop_writes_marker_and_stops(tmp_path: Path) -> None:
     assert marker is not None
     assert marker["reason"] == "max_real_attempts"
     assert marker["attempt_id"] == attempt.commit_hash
+
+
+def test_wall_clock_auto_stop_reason_without_completed_attempt(tmp_path: Path) -> None:
+    mgr = _manager(tmp_path, stop={"wall_clock_seconds": 30})
+    mgr._start_monotonic = time.monotonic() - 31
+
+    reason = mgr._wall_clock_stop_reason()
+
+    assert reason is not None
+    assert reason["reason"] == "wall_clock"
+    assert reason["attempt_id"] is None
+    assert reason["real_attempt_count"] == 0
+    assert reason["wall_clock_seconds"] == 30
+
+
+def test_wall_clock_auto_stop_reason_after_real_attempt(tmp_path: Path) -> None:
+    mgr = _manager(tmp_path, stop={"wall_clock_seconds": 30})
+    attempt = _attempt(mgr, "5" * 40, score=0.4)
+    mgr._start_monotonic = time.monotonic() - 31
+
+    reason = mgr._auto_stop_reason_from_attempt(attempt.to_dict())
+
+    assert reason is not None
+    assert reason["reason"] == "wall_clock"
+    assert reason["attempt_id"] == attempt.commit_hash
+    assert reason["score"] == attempt.score
+
+
+def test_monitor_loop_stops_at_wall_clock_deadline(tmp_path: Path) -> None:
+    mgr = _manager(tmp_path, stop={"wall_clock_seconds": 0.05})
+    mgr._start_monotonic = time.monotonic()
+    mgr._running = True
+
+    started = time.monotonic()
+    mgr.monitor_loop(check_interval=1)
+
+    marker = read_auto_stop(mgr.paths.coral_dir)
+    assert marker is not None
+    assert marker["reason"] == "wall_clock"
+    assert time.monotonic() - started < 0.5

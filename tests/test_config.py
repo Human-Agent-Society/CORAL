@@ -215,6 +215,7 @@ def test_run_config_defaults():
     assert config.run.stop.score_threshold is None
     assert config.run.stop.max_real_attempts is None
     assert config.run.stop.max_real_attempts_per_agent is None
+    assert config.run.stop.wall_clock_seconds is None
 
 
 def test_run_config_dotlist_override():
@@ -250,6 +251,7 @@ def test_run_stop_config_roundtrip():
                 score_threshold=0.8,
                 max_real_attempts=30,
                 max_real_attempts_per_agent=4,
+                wall_clock_seconds=3600,
             )
         ),
     )
@@ -261,6 +263,7 @@ def test_run_stop_config_roundtrip():
     assert restored.run.stop.score_threshold == 0.8
     assert restored.run.stop.max_real_attempts == 30
     assert restored.run.stop.max_real_attempts_per_agent == 4
+    assert restored.run.stop.wall_clock_seconds == 3600
 
 
 def test_run_stop_dotlist_override():
@@ -299,6 +302,16 @@ def test_run_stop_max_real_attempts_per_agent_validation():
             {
                 "task": {"name": "t", "description": "d"},
                 "run": {"stop": {"max_real_attempts_per_agent": 0}},
+            }
+        )
+
+
+def test_run_stop_wall_clock_seconds_validation():
+    with pytest.raises(ValueError, match="run.stop.wall_clock_seconds must be > 0"):
+        CoralConfig.from_dict(
+            {
+                "task": {"name": "t", "description": "d"},
+                "run": {"stop": {"wall_clock_seconds": 0}},
             }
         )
 

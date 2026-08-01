@@ -34,9 +34,9 @@ PROTOCOL_TIPS = """Controlled scaling experiment protocol:
   before execution does not invalidate the cell because no probe occurred; do
   not retry it. Any forbidden probe that actually executes invalidates the cell.
   Continue with public task/grader files.
-- You have a small, equal real-evaluation quota. Submit a serious first candidate promptly.
+- Submit a serious first candidate promptly and use the available experiment window on the task.
 - Use only ordinary `coral eval`; never use `coral eval --tune`.
-- After feedback, spend the remaining quota on the strongest correction or improvement.
+- After feedback, spend the remaining window on the strongest correction or improvement.
 - Do not spend the run only researching infrastructure. Do not spawn nested agents
   or invoke OpenCode's `task` tool; only CORAL defines the experimental population.
 - Never inspect sibling runs, other islands, host paths, or `.coral/private`.
@@ -80,6 +80,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--conditions", nargs="+", choices=CONDITIONS, default=list(CONDITIONS))
     parser.add_argument("--agent-counts", nargs="+", type=int, default=list(DEFAULT_COUNTS))
     parser.add_argument("--per-agent-budget", type=int, default=2)
+    parser.add_argument(
+        "--wall-minutes",
+        type=float,
+        default=None,
+        help="Use a fixed wall-clock stop per cell instead of a per-agent quota.",
+    )
     parser.add_argument("--repetitions", type=int, default=1)
     parser.add_argument("--max-parallel", type=int, default=1)
     parser.add_argument("--timeout-hours", type=float, default=8.0)
@@ -104,7 +110,13 @@ def attempt_records(run_dir: Path) -> list[dict[str, Any]]:
     return list(attempts.values())
 
 
-def is_complete(run_dir: Path, expected_attempts: int) -> bool:
+def is_complete(
+    run_dir: Path,
+    expected_attempts: int | None,
+    wall_clock_seconds: float | None = None,
+    *,
+    require_operator_result: bool = True,
+) -> bool:
     auto_stop = run_dir / ".coral/public/auto_stop.json"
     if not auto_stop.is_file():
         return False
@@ -113,26 +125,49 @@ def is_complete(run_dir: Path, expected_attempts: int) -> bool:
     except (OSError, json.JSONDecodeError):
         return False
     records = attempt_records(run_dir)
+    has_score = any(record.get("score") is not None for record in records)
+    if wall_clock_seconds is not None:
+        result: dict[str, Any] = {}
+        if require_operator_result:
+            result_path = run_dir / "operator-result.json"
+            if not result_path.is_file():
+                return False
+            try:
+                result = json.loads(result_path.read_text())
+            except (OSError, json.JSONDecodeError):
+                return False
+            if not isinstance(result, dict):
+                return False
+        return (
+            (not require_operator_result or result.get("status") == "complete")
+            and (not require_operator_result or not result.get("timed_out", False))
+            and state.get("reason") == "wall_clock"
+            and has_score
+        )
     # A cell whose entire quota ended in daemon/grader crashes has no
     # performance observation.  Leave it resumable so a retry can produce a
     # real score instead of silently becoming a null plotted point.
-    has_score = any(record.get("score") is not None for record in records)
     return (
         state.get("reason") == "max_real_attempts"
+        and expected_attempts is not None
         and len(records) == expected_attempts
         and has_score
     )
 
 
-def next_run_dir(base: Path, expected_attempts: int) -> tuple[Path, bool]:
-    if is_complete(base, expected_attempts):
+def next_run_dir(
+    base: Path,
+    expected_attempts: int | None,
+    wall_clock_seconds: float | None = None,
+) -> tuple[Path, bool]:
+    if is_complete(base, expected_attempts, wall_clock_seconds):
         return base, True
     if not base.exists():
         return base, False
     retry = 1
     while True:
         candidate = base.with_name(f"{base.name}-retry-{retry:02d}")
-        if is_complete(candidate, expected_attempts):
+        if is_complete(candidate, expected_attempts, wall_clock_seconds):
             return candidate, True
         if not candidate.exists():
             return candidate, False
@@ -162,26 +197,35 @@ def build_command(
     spec: TaskSpec,
     condition: str,
     agent_count: int,
-    per_agent_budget: int,
+    per_agent_budget: int | None,
     results_root: Path,
     run_dir: Path,
     gateway_port: int,
+    wall_clock_seconds: float | None = None,
 ) -> list[str]:
-    total_budget = agent_count * per_agent_budget
+    total_budget = agent_count * per_agent_budget if per_agent_budget is not None else None
     multi_island = condition == "multi_island" and agent_count > 1
     migration_every = max(2, agent_count)
+    protocol = PROTOCOL_TIPS
+    if wall_clock_seconds is not None:
+        protocol += (
+            f"\n- This cell has a fixed {wall_clock_seconds / 60:.1f}-minute wall-clock window. "
+            "Keep submitting ordinary evaluations until the window closes."
+        )
+    else:
+        protocol += "\n- Each agent has an equal real-evaluation quota for this cell."
     overrides: dict[str, Any] = {
         # Put the quota protocol before the domain description as well as in
         # tips. OpenCode reads the task description at the top of AGENTS.md,
         # so this prevents a short-budget agent from spending its only window
         # on generic orientation before it notices the experiment constraint.
         "task.description": json.dumps(
-            PROTOCOL_TIPS + "\nTask to optimize:\n" + _task_field(spec, "description")
+            protocol + "\nTask to optimize:\n" + _task_field(spec, "description")
         ),
         # Quote the multiline YAML scalar explicitly for OmegaConf's dotlist
         # parser. Keep the task's own tips and append the controlled protocol
         # so it appears directly in every generated AGENTS.md.
-        "task.tips": json.dumps(_task_field(spec, "tips") + "\n\n" + PROTOCOL_TIPS),
+        "task.tips": json.dumps(_task_field(spec, "tips") + "\n\n" + protocol),
         "agents.count": agent_count,
         "agents.runtime": "opencode",
         "agents.model": "openai/MiniMax-M3",
@@ -194,10 +238,8 @@ def build_command(
         "agents.gateway.enabled": True,
         "agents.gateway.port": gateway_port,
         "agents.gateway.config": str(EXPERIMENT_DIR / "litellm_config.yaml"),
-        # The default reflect-after-every-eval heartbeat asks agents to write
-        # an experiment note. With only two real evals per agent that turns
-        # half the search budget into documentation overhead, so reflection,
-        # consolidation, pivoting, and wiki linting are moved beyond the run.
+        # Keep heartbeat actions beyond this short experiment window so the
+        # measured time is spent on task search rather than documentation.
         "agents.heartbeat": [
             {
                 "name": "reflect",
@@ -242,11 +284,14 @@ def build_command(
         "run.session": "local",
         "run.verbose": False,
         "run.ui": False,
-        "run.stop.max_real_attempts": total_budget,
-        "run.stop.max_real_attempts_per_agent": per_agent_budget,
         "workspace.results_dir": str(results_root),
         "workspace.run_dir": str(run_dir),
     }
+    if wall_clock_seconds is not None:
+        overrides["run.stop.wall_clock_seconds"] = wall_clock_seconds
+    else:
+        overrides["run.stop.max_real_attempts"] = total_budget
+        overrides["run.stop.max_real_attempts_per_agent"] = per_agent_budget
     if spec.name == "kernel":
         overrides.update(
             {
@@ -318,17 +363,20 @@ async def run_one(
     agent_count: int,
     repetition: int,
     per_agent_budget: int,
+    wall_clock_seconds: float | None,
     results_root: Path,
     timeout_seconds: float,
     semaphore: asyncio.Semaphore,
     manifest: Manifest,
     dry_run: bool,
 ) -> bool:
-    expected_attempts = agent_count * per_agent_budget
+    expected_attempts = (
+        agent_count * per_agent_budget if wall_clock_seconds is None else None
+    )
     base = (
         results_root / spec.name / condition / f"agents-{agent_count:02d}" / f"rep-{repetition:02d}"
     )
-    run_dir, complete = next_run_dir(base, expected_attempts)
+    run_dir, complete = next_run_dir(base, expected_attempts, wall_clock_seconds)
     identity = f"{spec.name}/{condition}/agents-{agent_count}/rep-{repetition:02d}"
     if complete:
         print(f"[skip complete] {identity}: {run_dir}", flush=True)
@@ -343,6 +391,7 @@ async def run_one(
             results_root,
             run_dir,
             gateway_port=4500,
+            wall_clock_seconds=wall_clock_seconds,
         )
         print(f"[dry run] {identity}", flush=True)
         print("  " + " ".join(command), flush=True)
@@ -358,6 +407,7 @@ async def run_one(
             results_root,
             run_dir,
             gateway_port,
+            wall_clock_seconds=wall_clock_seconds,
         )
         run_dir.mkdir(parents=True, exist_ok=False)
         started_at = now_iso()
@@ -366,8 +416,11 @@ async def run_one(
             "direction": spec.direction,
             "condition": condition,
             "agent_count": agent_count,
-            "per_agent_budget": per_agent_budget,
+            "per_agent_budget": (
+                None if wall_clock_seconds is not None else per_agent_budget
+            ),
             "expected_real_attempts": expected_attempts,
+            "wall_clock_seconds": wall_clock_seconds,
             "repetition": repetition,
             "run_dir": str(run_dir),
             "command": command,
@@ -404,7 +457,12 @@ async def run_one(
                 raise
 
         observed_attempts = len(attempt_records(run_dir))
-        complete = is_complete(run_dir, expected_attempts)
+        complete = is_complete(
+            run_dir,
+            expected_attempts,
+            wall_clock_seconds,
+            require_operator_result=False,
+        )
         finished = {
             **record,
             "finished_at": now_iso(),
@@ -440,6 +498,8 @@ async def async_main(args: argparse.Namespace) -> int:
         raise SystemExit("MINIMAX_API_KEY must be set in the environment")
     if any(count < 1 for count in args.agent_counts):
         raise SystemExit("all agent counts must be positive")
+    if args.wall_minutes is not None and args.wall_minutes <= 0:
+        raise SystemExit("wall-minutes must be positive")
     if (
         args.per_agent_budget < 1
         or args.repetitions < 1
@@ -451,6 +511,12 @@ async def async_main(args: argparse.Namespace) -> int:
     results_root = args.results_root.resolve()
     if str(results_root).startswith(str(Path.home().resolve())):
         raise SystemExit("SRT experiment results must be stored outside $HOME")
+    wall_clock_seconds = args.wall_minutes * 60 if args.wall_minutes is not None else None
+    timeout_seconds = (
+        wall_clock_seconds + 180
+        if wall_clock_seconds is not None
+        else args.timeout_hours * 3600
+    )
     manifest = Manifest(results_root / "manifest.json")
     semaphore = asyncio.Semaphore(args.max_parallel)
     jobs = [
@@ -460,8 +526,9 @@ async def async_main(args: argparse.Namespace) -> int:
             agent_count=agent_count,
             repetition=repetition,
             per_agent_budget=args.per_agent_budget,
+            wall_clock_seconds=wall_clock_seconds,
             results_root=results_root,
-            timeout_seconds=args.timeout_hours * 3600,
+            timeout_seconds=timeout_seconds,
             semaphore=semaphore,
             manifest=manifest,
             dry_run=args.dry_run,

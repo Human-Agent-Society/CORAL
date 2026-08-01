@@ -125,6 +125,7 @@ class AgentManager:
         self._stop_event = threading.Event()
         self._stopping = False
         self._start_time: datetime | None = None
+        self._start_monotonic: float | None = None
         self._restart_counts: dict[str, int] = {}
         self._agent_eval_counts: dict[str, int] = {}
         self._agent_best_scores: dict[str, float] = {}
@@ -214,6 +215,7 @@ class AgentManager:
     def start_all(self) -> list[AgentHandle]:
         """Create workspace structure and spawn all agents."""
         self._start_time = datetime.now(UTC)
+        self._start_monotonic = time.monotonic()
 
         # 1. Create project structure
         self.paths = create_project(self.config, config_dir=self.config_dir)
@@ -858,6 +860,7 @@ class AgentManager:
     ) -> list[AgentHandle]:
         """Resume agents into an existing run's worktrees."""
         self._start_time = datetime.now(UTC)
+        self._start_monotonic = time.monotonic()
         self.paths = paths
         self._last_migrated_eval = _read_last_migrated_evals(paths.coral_dir)
 
@@ -1306,7 +1309,13 @@ class AgentManager:
     def _auto_stop_reason_from_attempt(self, attempt_data: dict[str, Any]) -> dict[str, Any] | None:
         """Return the auto-stop reason for a newly finalized attempt, if any."""
         stop_config = self.config.run.stop
-        if stop_config.score_threshold is None and stop_config.max_real_attempts is None:
+        wall_clock_reason = self._wall_clock_stop_reason()
+        if wall_clock_reason is not None:
+            return wall_clock_reason
+        if (
+            stop_config.score_threshold is None
+            and stop_config.max_real_attempts is None
+        ):
             return None
 
         attempt_info = self._attempt_dict_for_auto_stop(attempt_data)
@@ -1336,7 +1345,13 @@ class AgentManager:
     def _auto_stop_reason_from_current_state(self) -> dict[str, Any] | None:
         """Return a restart-time auto-stop reason from persisted attempts, if reached."""
         stop_config = self.config.run.stop
-        if stop_config.score_threshold is None and stop_config.max_real_attempts is None:
+        wall_clock_reason = self._wall_clock_stop_reason()
+        if wall_clock_reason is not None:
+            return wall_clock_reason
+        if (
+            stop_config.score_threshold is None
+            and stop_config.max_real_attempts is None
+        ):
             return None
 
         real_attempt_count = self._get_finalized_real_attempt_count()
@@ -1366,6 +1381,25 @@ class AgentManager:
             )
         return None
 
+    def _wall_clock_stop_reason(self) -> dict[str, Any] | None:
+        """Return a wall-clock stop reason once the configured deadline passes."""
+        limit = self.config.run.stop.wall_clock_seconds
+        started = self._start_monotonic
+        if limit is None or started is None:
+            return None
+        elapsed = time.monotonic() - started
+        if elapsed < limit:
+            return None
+        real_attempt_count = self._get_finalized_real_attempt_count()
+        reason = self._build_auto_stop_reason(
+            "wall_clock",
+            self._attempt_dict_for_auto_stop(self._latest_finalized_real_attempt()),
+            real_attempt_count,
+        )
+        reason["wall_clock_seconds"] = limit
+        reason["elapsed_wall_seconds"] = elapsed
+        return reason
+
     def _build_auto_stop_reason(
         self,
         reason: str,
@@ -1383,6 +1417,7 @@ class AgentManager:
             "direction": self.config.grader.direction,
             "real_attempt_count": real_attempt_count,
             "max_real_attempts": stop_config.max_real_attempts,
+            "wall_clock_seconds": stop_config.wall_clock_seconds,
         }
 
     def _auto_stop(self, reason: dict[str, Any]) -> None:
@@ -2341,6 +2376,11 @@ class AgentManager:
         logger.info(f"Monitoring {len(self.handles)} agent(s) (check every {check_interval}s)...")
 
         while self._running:
+            wall_clock_reason = self._wall_clock_stop_reason()
+            if wall_clock_reason is not None:
+                self._auto_stop(wall_clock_reason)
+                break
+
             # Check for new attempts
             current_attempts = self._get_seen_attempts()
             new_attempts = current_attempts - seen_attempts
@@ -2616,7 +2656,12 @@ class AgentManager:
                         self._write_agent_pids()
 
             # Interruptible sleep
-            if self._stop_event.wait(timeout=check_interval):
+            sleep_timeout = float(check_interval)
+            wall_limit = self.config.run.stop.wall_clock_seconds
+            if wall_limit is not None and self._start_monotonic is not None:
+                remaining = wall_limit - (time.monotonic() - self._start_monotonic)
+                sleep_timeout = min(sleep_timeout, max(0.1, remaining))
+            if self._stop_event.wait(timeout=sleep_timeout):
                 break
 
     def wait_for_completion(self) -> None:
