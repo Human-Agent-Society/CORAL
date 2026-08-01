@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -15,6 +16,34 @@ from coral.workspace.repo import (
 )
 
 logger = logging.getLogger(__name__)
+
+_SETUP_INPUT_FILES = (
+    "pyproject.toml",
+    "uv.lock",
+    "requirements.txt",
+    "package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lock",
+    "Cargo.toml",
+    "Cargo.lock",
+    "go.mod",
+    "go.sum",
+)
+
+
+def _setup_inputs_fingerprint(worktree_path: Path) -> str:
+    """Hash common dependency manifests that workspace setup consumes."""
+    digest = hashlib.sha256()
+    for name in _SETUP_INPUT_FILES:
+        path = worktree_path / name
+        if path.is_file():
+            digest.update(name.encode())
+            digest.update(b"\0")
+            digest.update(path.read_bytes())
+            digest.update(b"\0")
+    return digest.hexdigest()
 
 
 def create_agent_worktree(repo_path: Path, agent_id: str, agents_dir: Path) -> Path:
@@ -123,6 +152,7 @@ def setup_git_exclude(worktree_path: Path) -> None:
         ".coral_agent_id",
         ".coral_dir",
         ".coral_island",
+        ".coral_setup_state.json",
         "CLAUDE.md",
         "AGENTS.md",
         ".claude/",
@@ -721,21 +751,46 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
     Each worktree gets its own isolated ``.venv`` via UV_PROJECT_ENVIRONMENT
     to prevent concurrent agents from corrupting a shared venv.
 
-    Idempotent: if the worktree's ``.venv`` is already populated (the python
-    binary exists), skip both the setup commands and the coral reinstall.
-    Deps don't change mid-run, so re-running ``uv sync`` on every
-    interrupt-and-resume cycle is wasted work. To force a re-sync, delete the
-    ``.venv`` directory before resuming.
+    Idempotent: successful setup is recorded in a CORAL-managed state file and
+    skipped while the configured commands remain unchanged. This also covers
+    non-Python setup such as ``npm ci``, where no ``.venv`` is created. Older
+    worktrees with an existing venv but no state file are adopted without
+    rerunning setup.
     """
     if not setup_commands:
         return
 
-    # Force uv to create/use a venv inside this worktree, even if
-    # pyproject.toml is resolved from a parent directory.
     worktree_venv = worktree_path / ".venv"
     venv_python = worktree_venv / "bin" / "python"
-    if venv_python.exists():
+    setup_state_path = worktree_path / ".coral_setup_state.json"
+    inputs_fingerprint = _setup_inputs_fingerprint(worktree_path)
+    if setup_state_path.exists():
+        try:
+            state = json.loads(setup_state_path.read_text())
+            state_matches = (
+                state.get("version") == 1
+                and state.get("commands") == setup_commands
+                and state.get("inputs") == inputs_fingerprint
+            )
+            required_venv_exists = not state.get("created_venv", False) or venv_python.exists()
+            if state_matches and required_venv_exists:
+                logger.debug(f"Worktree setup already complete at {worktree_path}")
+                return
+        except (json.JSONDecodeError, OSError):
+            # A corrupt or unreadable marker must never suppress setup.
+            pass
+
+    # Force uv to create/use a venv inside this worktree, even if
+    # pyproject.toml is resolved from a parent directory.
+    if venv_python.exists() and not setup_state_path.exists():
         logger.debug(f"Worktree venv already populated at {worktree_venv}, skipping setup commands")
+        state = {
+            "version": 1,
+            "commands": setup_commands,
+            "inputs": inputs_fingerprint,
+            "created_venv": True,
+        }
+        setup_state_path.write_text(json.dumps(state, indent=2) + "\n")
         return
 
     env_override = {"UV_PROJECT_ENVIRONMENT": str(worktree_venv)}
@@ -759,3 +814,11 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
             )
             if result.returncode != 0:
                 logger.warning(f"Failed to install coral in worktree: {result.stderr.strip()}")
+
+    state = {
+        "version": 1,
+        "commands": setup_commands,
+        "inputs": _setup_inputs_fingerprint(worktree_path),
+        "created_venv": venv_python.exists(),
+    }
+    setup_state_path.write_text(json.dumps(state, indent=2) + "\n")

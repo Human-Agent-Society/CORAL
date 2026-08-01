@@ -1,5 +1,6 @@
 """Tests for workspace setup."""
 
+import json
 import os
 import subprocess
 import tempfile
@@ -126,6 +127,7 @@ def test_setup_git_exclude():
         assert "CLAUDE.md" in content
         assert ".claude/" in content
         assert ".coral_island" in content
+        assert ".coral_setup_state.json" in content
         # The tracked .gitignore is never touched
         assert not (worktree / ".gitignore").exists()
 
@@ -337,6 +339,69 @@ def test_setup_worktree_env_runs_when_venv_missing():
         setup_worktree_env(worktree, [f"touch {marker}"])
 
         assert marker.exists(), "Setup should have run on first launch"
+
+
+def test_setup_worktree_env_skips_repeated_non_python_setup():
+    """A successful setup is cached even when it does not create a venv."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+        marker = worktree / "setup_runs.txt"
+        commands = [f"echo run >> {marker}"]
+
+        setup_worktree_env(worktree, commands)
+        setup_worktree_env(worktree, commands)
+
+        assert marker.read_text().splitlines() == ["run"]
+        state = json.loads((worktree / ".coral_setup_state.json").read_text())
+        assert state["version"] == 1
+        assert state["commands"] == commands
+        assert state["created_venv"] is False
+        assert isinstance(state["inputs"], str)
+
+
+def test_setup_worktree_env_reruns_when_commands_change():
+    """Changing workspace.setup invalidates the cached setup state."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+        marker = worktree / "setup_runs.txt"
+
+        setup_worktree_env(worktree, [f"echo first >> {marker}"])
+        setup_worktree_env(worktree, [f"echo second >> {marker}"])
+
+        assert marker.read_text().splitlines() == ["first", "second"]
+
+
+def test_setup_worktree_env_reruns_when_dependency_manifest_changes():
+    """A checkout that changes a lockfile invalidates cached setup."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+        marker = worktree / "setup_runs.txt"
+        commands = [f"echo run >> {marker}"]
+        (worktree / "package-lock.json").write_text('{"version": 1}')
+
+        setup_worktree_env(worktree, commands)
+        (worktree / "package-lock.json").write_text('{"version": 2}')
+        setup_worktree_env(worktree, commands)
+
+        assert marker.read_text().splitlines() == ["run", "run"]
+
+
+def test_setup_worktree_env_reruns_when_recorded_venv_was_removed():
+    """Deleting a venv still forces setup for commands that originally created it."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+        marker = worktree / "setup_ran.marker"
+        commands = [f"touch {marker}"]
+        state = {"version": 1, "commands": commands, "created_venv": True}
+        (worktree / ".coral_setup_state.json").write_text(json.dumps(state))
+
+        setup_worktree_env(worktree, commands)
+
+        assert marker.exists(), "Setup should rerun after its recorded venv is removed"
 
 
 # --- apply_runtime_mounts tests ---
