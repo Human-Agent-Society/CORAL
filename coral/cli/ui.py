@@ -244,9 +244,11 @@ def cmd_ui(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     from coral.web import create_app
+    from coral.web.run_catalog import find_catalog_root
 
     results_dir = coral_dir.resolve().parent.parent.parent
-    app = create_app(coral_dir, results_dir=results_dir)
+    catalog_root = find_catalog_root(Path.cwd(), results_dir)
+    app = create_app(coral_dir, results_dir=results_dir, catalog_root=catalog_root)
     url = f"http://{args.host}:{port}"
     print(f"CORAL Dashboard: {url}")
     print(f"Serving data from: {coral_dir}")

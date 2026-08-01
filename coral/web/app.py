@@ -36,19 +36,28 @@ from coral.web.api import (
 from coral.web.events import FileWatcher, sse_endpoint
 
 
-def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
+def create_app(
+    coral_dir: Path,
+    results_dir: Path | None = None,
+    catalog_root: Path | None = None,
+) -> Starlette:
     """Create the Starlette application.
 
     Args:
         coral_dir: Path to the .coral/ directory to serve.
         results_dir: Path to the top-level results/ directory (for run listing).
                      If not provided, derived from coral_dir.
+        catalog_root: Project directory within which other run catalogs may be
+                      discovered. Defaults to the current results parent.
     """
     coral_dir = Path(coral_dir).resolve()
     if results_dir is None:
         # coral_dir = results/<task>/<run>/.coral → results_dir = results/
         results_dir = coral_dir.parent.parent.parent
     results_dir = Path(results_dir).resolve()
+    if catalog_root is None:
+        catalog_root = results_dir.parent
+    catalog_root = Path(catalog_root).resolve()
     static_dir = Path(__file__).parent / "static"
 
     @asynccontextmanager
@@ -56,6 +65,7 @@ def create_app(coral_dir: Path, results_dir: Path | None = None) -> Starlette:
         # startup
         app.state.coral_dir = coral_dir
         app.state.results_dir = results_dir
+        app.state.catalog_root = catalog_root
         app.state._switch_lock = asyncio.Lock()
         app.state.watcher = FileWatcher(coral_dir)
         app.state._watcher_task = asyncio.create_task(app.state.watcher.run())
