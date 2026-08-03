@@ -15,8 +15,6 @@
   <a href="https://www.stanford.edu/"><img src="assets/stanford.png" alt="Stanford University" height="58"></a>
 </p>
 
-**Open source. Independent. [Everyone is welcome to contribute and become a maintainer.](#contributing)**
-
 <sub>Affiliations identify individual contributors and do not imply institutional endorsement.</sub>
 
 [![Paper](https://img.shields.io/badge/Paper-arXiv%3A2604.01658-B31B1B.svg?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2604.01658v1)

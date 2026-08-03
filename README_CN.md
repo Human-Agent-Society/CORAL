@@ -15,8 +15,6 @@
   <a href="https://www.stanford.edu/"><img src="assets/stanford.png" alt="斯坦福大学" height="58"></a>
 </p>
 
-**开源、独立。[欢迎每个人参与贡献并成为维护者。](#参与贡献)**
-
 <sub>机构信息仅用于说明贡献者的个人背景，不代表相关机构的官方背书。</sub>
 
 [![Paper](https://img.shields.io/badge/Paper-arXiv%3A2604.01658-B31B1B.svg?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2604.01658v1)
