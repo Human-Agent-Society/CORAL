@@ -74,6 +74,18 @@ def test_scaling_multi_island_treatment_changes_only_topology_knobs() -> None:
     assert config.islands.migration.remigration_cooldown == 8
 
 
+def test_scaling_sqrt_island_uses_rounded_sqrt_population() -> None:
+    _command, config = _resolved_command("sqrt_island", agents=32)
+
+    assert runner.island_count_for("sqrt_island", 32) == 6
+    assert config.islands.count == 6
+    assert config.islands.migration.enabled is True
+    assert config.islands.migration.every == 32
+    assert config.islands.migration.rank_window == 32
+    assert config.islands.migration.max_per_cycle == 6
+    assert config.islands.migration.remigration_cooldown == 32
+
+
 def test_scaling_wall_clock_command_uses_fixed_time_without_eval_quota() -> None:
     command, config = _resolved_wall_command("multi_island", agents=8)
 
@@ -306,13 +318,14 @@ def test_scaling_admission_rejects_tune_mode(monkeypatch) -> None:
         raise AssertionError("tune mode was admitted despite the experiment guard")
 
 
-def test_scaling_analysis_expects_all_22_cells() -> None:
+def test_scaling_analysis_expects_all_32_cells() -> None:
     identities = analysis.expected_cell_identities({1})
 
-    assert len(identities) == 22
+    assert len(identities) == 32
     assert ("kernel", "global", 1, 1) in identities
     assert ("kernel", "multi_island", 1, 1) not in identities
     assert ("polyominoes", "multi_island", 32, 1) in identities
+    assert ("polyominoes", "sqrt_island", 32, 1) in identities
 
 
 def test_scaling_analysis_sums_gateway_token_usage(tmp_path: Path) -> None:

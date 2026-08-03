@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import os
 import signal
 import socket
@@ -23,7 +24,7 @@ POLY_GRADER_DIR = EXPERIMENT_DIR / "poly_grader"
 POLY_PROVISION_SCRIPT = EXPERIMENT_DIR / "provision_poly_data.py"
 DEFAULT_RESULTS_ROOT = Path("/var/tmp/coral-institutions-results/real-scaling-v1")
 DEFAULT_COUNTS = (1, 2, 4, 8, 16, 32)
-CONDITIONS = ("global", "multi_island")
+CONDITIONS = ("global", "multi_island", "sqrt_island")
 PROTOCOL_TIPS = """Controlled scaling experiment protocol:
 - HARD BOUNDARY: never probe hidden data or host checkouts. Do not run `find /`,
   `find ~`, `find /home`, `find /jfs`, `ls /home`, or any recursive search
@@ -206,6 +207,24 @@ def encode_override(value: Any) -> str:
     return str(value)
 
 
+def island_count_for(condition: str, agent_count: int) -> int:
+    """Resolve the number of islands for an experimental condition.
+
+    ``sqrt_island`` keeps both the number of islands and the population per
+    island sublinear in the total population.  Counts are rounded to the
+    nearest integer and clamped to two for a genuine multi-island treatment;
+    CORAL's round-robin partition keeps the resulting island populations
+    balanced to within one agent.
+    """
+    if condition == "global" or agent_count <= 1:
+        return 1
+    if condition == "multi_island":
+        return 2
+    if condition == "sqrt_island":
+        return min(agent_count, max(2, round(math.sqrt(agent_count))))
+    raise ValueError(f"unknown scaling condition: {condition!r}")
+
+
 def _task_field(spec: TaskSpec, field: str) -> str:
     data = yaml.safe_load(spec.config.read_text()) or {}
     return str(data.get("task", {}).get(field, "")).strip()
@@ -222,7 +241,8 @@ def build_command(
     wall_clock_seconds: float | None = None,
 ) -> list[str]:
     total_budget = agent_count * per_agent_budget if per_agent_budget is not None else None
-    multi_island = condition == "multi_island" and agent_count > 1
+    island_count = island_count_for(condition, agent_count)
+    multi_island = island_count > 1
     migration_every = max(2, agent_count)
     protocol = PROTOCOL_TIPS
     if wall_clock_seconds is not None:
@@ -292,12 +312,15 @@ def build_command(
         "grader.max_pending_per_agent": 1,
         "grader.parallel.max_workers": min(4, agent_count),
         "grader.args.disable_tune": True,
-        "islands.count": 2 if multi_island else 1,
+        "islands.count": island_count,
         "islands.migration.enabled": multi_island,
         "islands.migration.every": migration_every,
         "islands.migration.rank_window": migration_every,
         "islands.migration.min_evals": 1,
-        "islands.migration.max_per_cycle": min(2, agent_count),
+        # Let each source island contribute at most one migrant per cycle.
+        # The old two-island condition therefore retains max_per_cycle=2,
+        # while sqrt_island scales this cap with the number of islands.
+        "islands.migration.max_per_cycle": min(island_count, agent_count),
         "islands.migration.remigration_cooldown": migration_every,
         "run.session": "local",
         "run.verbose": False,
@@ -434,6 +457,7 @@ async def run_one(
             "direction": spec.direction,
             "condition": condition,
             "agent_count": agent_count,
+            "island_count": island_count_for(condition, agent_count),
             "per_agent_budget": (
                 None if wall_clock_seconds is not None else per_agent_budget
             ),
@@ -506,7 +530,7 @@ def ordered_cells(args: argparse.Namespace):
                 for condition in args.conditions:
                     # One agent cannot be partitioned. Its global run is the
                     # shared one-agent reference for both plotted curves.
-                    if agent_count == 1 and condition == "multi_island":
+                    if agent_count == 1 and condition != "global":
                         continue
                     yield TASKS[task_name], condition, agent_count, repetition
 

@@ -5,8 +5,11 @@ This experiment follows up the open scaling question in
 more useful as the agent population grows?
 
 The primary sweep compares one global knowledge pool at 1, 2, 4, 8, 16, and 32
-OpenCode agents with two islands plus selective migration at 2, 4, 8, 16, and
-32 agents. The one-agent global cell is the shared topology-free baseline. All
+OpenCode agents with two migrating islands and a population-scaled treatment at
+2, 4, 8, 16, and 32 agents. The `sqrt_island` treatment uses
+`max(2, round(sqrt(n)))` islands (2, 2, 3, 4, and 6 islands respectively), with
+CORAL's round-robin partition keeping island populations balanced within one
+agent. The one-agent global cell is the shared topology-free baseline. All
 agents use MiniMax-M3 through CORAL's local LiteLLM gateway. The two real coding
 tasks are Kernel Builder (minimize simulated VLIW cycles) and Frontier-CS #0,
 Pack the Polyominoes (maximize score).
@@ -52,7 +55,7 @@ export MINIMAX_API_KEY=...
 
 Use `--dry-run` to inspect commands. The runner is resumable: completed cells
 are skipped and incomplete cells get a `retry-*` directory rather than being
-silently overwritten. The analyzer requires all 22 designed cells by default
+silently overwritten. The analyzer requires all 32 designed cells by default
 (`--allow-incomplete` permits a progress snapshot). If infrastructure repair
 leaves more than one valid completed directory for the same cell, the latest
 completion is retained once rather than counted as another repetition.

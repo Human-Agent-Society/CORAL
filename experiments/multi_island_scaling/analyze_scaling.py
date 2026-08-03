@@ -7,6 +7,7 @@ import argparse
 import csv
 import gzip
 import json
+import math
 import re
 import statistics
 from collections import defaultdict
@@ -21,8 +22,16 @@ DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent / "analysis"
 BLOG_DIR = REPO_ROOT / "blog"
 TASK_DIRECTIONS = {"kernel": "minimize", "polyominoes": "maximize"}
 TASK_LABELS = {"kernel": "Kernel Builder", "polyominoes": "Pack the Polyominoes"}
-CONDITION_LABELS = {"global": "Global", "multi_island": "Multi-island"}
-COLORS = {"global": "#667085", "multi_island": "#0F766E"}
+CONDITION_LABELS = {
+    "global": "Global",
+    "multi_island": "Two islands",
+    "sqrt_island": "√n islands",
+}
+COLORS = {
+    "global": "#667085",
+    "multi_island": "#0F766E",
+    "sqrt_island": "#B54708",
+}
 AGENT_COUNTS = (1, 2, 4, 8, 16, 32)
 FORBIDDEN_FIND_RE = re.compile(
     r"(?m)(?:^|\n|[;&|]\s*|\$\()\s*(?:command\s+)?find(?:\s|$)"
@@ -37,6 +46,17 @@ FORBIDDEN_HIDDEN_RE = re.compile(
 FORBIDDEN_TUNE_RE = re.compile(
     r"\bcoral\s+eval\b[^\n;&|]*\s--tune(?:\s|$)"
 )
+
+
+def island_count_for(condition: str, agent_count: int) -> int:
+    """Return the configured island count, including the rounded √n design."""
+    if condition == "global" or agent_count <= 1:
+        return 1
+    if condition == "multi_island":
+        return 2
+    if condition == "sqrt_island":
+        return min(agent_count, max(2, round(math.sqrt(agent_count))))
+    raise ValueError(f"unknown scaling condition: {condition!r}")
 
 
 def parse_args() -> argparse.Namespace:
@@ -254,6 +274,10 @@ def audit_run(command_path: Path) -> dict[str, Any]:
         "task": task,
         "condition": str(identity["condition"]),
         "agent_count": int(identity["agent_count"]),
+        "island_count": int(
+            identity.get("island_count")
+            or island_count_for(str(identity["condition"]), int(identity["agent_count"]))
+        ),
         "repetition": int(identity["repetition"]),
         "per_agent_budget": (
             int(identity["per_agent_budget"])
@@ -295,7 +319,7 @@ def expected_cell_identities(
         for condition in CONDITION_LABELS
         for agent_count in AGENT_COUNTS
         for repetition in repetitions
-        if not (condition == "multi_island" and agent_count == 1)
+        if not (condition != "global" and agent_count == 1)
     }
 
 
@@ -337,6 +361,7 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         "task",
         "condition",
         "agent_count",
+        "island_count",
         "repetition",
         "per_agent_budget",
         "total_budget",
@@ -438,7 +463,7 @@ def chart_svg(rows: list[dict[str, Any]]) -> str:
             'text-anchor="middle">agents</text>'
         )
 
-        for condition in ("global", "multi_island"):
+        for condition in CONDITION_LABELS:
             points: list[tuple[float, float]] = []
             for index, count in enumerate(counts):
                 key = (task, condition, count)
@@ -470,8 +495,8 @@ def chart_svg(rows: list[dict[str, Any]]) -> str:
             )
 
     legend_y = 372
-    for index, condition in enumerate(("global", "multi_island")):
-        x = 390 + index * 150
+    for index, condition in enumerate(CONDITION_LABELS):
+        x = 245 + index * 175
         color = COLORS[condition]
         dash = ' stroke-dasharray="6 4"' if condition == "multi_island" else ""
         elements.append(
@@ -492,23 +517,27 @@ def contrast_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for task in tasks:
         for count in counts:
             global_score = means.get((task, "global", count))
-            island_score = means.get((task, "multi_island", count))
-            if global_score is None or island_score is None:
+            if global_score is None:
                 continue
-            advantage = (
-                global_score - island_score
-                if TASK_DIRECTIONS[task] == "minimize"
-                else island_score - global_score
-            )
-            output.append(
-                {
-                    "task": task,
-                    "agent_count": count,
-                    "global_mean": global_score,
-                    "multi_island_mean": island_score,
-                    "multi_island_advantage": advantage,
-                }
-            )
+            row: dict[str, Any] = {
+                "task": task,
+                "agent_count": count,
+                "global_mean": global_score,
+            }
+            for condition in CONDITION_LABELS:
+                if condition == "global":
+                    continue
+                condition_score = means.get((task, condition, count))
+                row[f"{condition}_mean"] = condition_score
+                if condition_score is None:
+                    row[f"{condition}_advantage"] = None
+                else:
+                    row[f"{condition}_advantage"] = (
+                        global_score - condition_score
+                        if TASK_DIRECTIONS[task] == "minimize"
+                        else condition_score - global_score
+                    )
+            output.append(row)
     return output
 
 
