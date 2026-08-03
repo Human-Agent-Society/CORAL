@@ -5,7 +5,7 @@
 
 ## **一键启动智能体群组，共享知识，无限进化**
 
-<p><strong>由来自以下机构的研究者与工程师共同建设</strong></p>
+<p><strong>贡献者来自</strong></p>
 
 <p>
   <a href="https://www.mit.edu/"><img src="assets/mit_logo.png" alt="MIT" height="48"></a>
@@ -14,8 +14,6 @@
   &nbsp;&nbsp;&nbsp;&nbsp;
   <a href="https://www.stanford.edu/"><img src="assets/stanford.png" alt="斯坦福大学" height="58"></a>
 </p>
-
-<sub>机构信息仅用于说明贡献者的个人背景，不代表相关机构的官方背书。</sub>
 
 [![Paper](https://img.shields.io/badge/Paper-arXiv%3A2604.01658-B31B1B.svg?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2604.01658v1)
 [![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://coral.compounding-intelligence.ai/blogs/)
