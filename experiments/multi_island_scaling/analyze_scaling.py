@@ -406,7 +406,7 @@ def chart_svg(rows: list[dict[str, Any]]) -> str:
         counts = [1, 2, 4, 8, 16, 32]
     elements = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
-        'role="img" aria-label="Global and multi-island performance while scaling agents">',
+        'role="img" aria-label="Global, two-island, and square-root-island performance while scaling agents">',
         "<style>text{font-family:Inter,system-ui,sans-serif;fill:#475467}.title{font-size:18px;"
         "font-weight:700;fill:#101828}.label{font-size:12px}.tick{font-size:11px}.axis{stroke:#98A2B3;"
         "stroke-width:1}.grid{stroke:#EAECF0;stroke-width:1}.line{fill:none;stroke-width:2.5}.point{stroke-width:2;"
