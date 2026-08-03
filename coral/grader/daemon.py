@@ -452,6 +452,11 @@ def _grade_one(
             score = bundle.aggregated
             feedback = _build_feedback(bundle)
             metadata = dict(getattr(bundle, "metadata", None) or {})
+            # Score breakdowns are daemon-owned evaluation output. Preserve them
+            # separately from arbitrary grader metadata so downstream consumers
+            # can inspect the aggregate's component scores without changing
+            # selection behavior.
+            metadata["scores"] = {name: score.to_dict() for name, score in bundle.scores.items()}
             grader_completed = True
         finally:
             _remove_worktree(repo_dir, checkout_path)

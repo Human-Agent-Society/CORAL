@@ -151,7 +151,12 @@ def get_budget_class(metadata: dict[str, Any] | None) -> str:
 
 @dataclass
 class Attempt:
-    """Record of a single optimization attempt by an agent."""
+    """Record of a single optimization attempt by an agent.
+
+    Successful grader finalization stores the serialized ``ScoreBundle.scores``
+    mapping in ``metadata["scores"]``. This daemon-owned breakdown supplements
+    the aggregate ``score``; it does not affect selection behavior.
+    """
 
     commit_hash: str
     agent_id: str
