@@ -5,15 +5,7 @@
 
 ## Robust, lightweight infrastructure for multi-agent self-evolution, built for autoresearch.
 
-<p><strong>Built by researchers from</strong></p>
-
-<p>
-  <a href="https://www.mit.edu/"><img src="assets/mit_logo.png" alt="MIT" height="48"></a>
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://www.nus.edu.sg/"><img src="assets/nus.png" alt="National University of Singapore" height="52"></a>
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://www.stanford.edu/"><img src="assets/stanford.png" alt="Stanford University" height="58"></a>
-</p>
+<p><strong>Built by researchers affiliated with MIT, NUS, Stanford, and McGill.</strong></p>
 
 [![Paper](https://img.shields.io/badge/Paper-arXiv%3A2604.01658-B31B1B.svg?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2604.01658v1)
 [![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://coral.compounding-intelligence.ai/blogs/)
