@@ -5,7 +5,7 @@
 
 ## **一键启动智能体群组，共享知识，无限进化**
 
-<p><strong>贡献者来自</strong></p>
+<p><strong>由来自以下机构的研究者共同建设</strong></p>
 
 <p>
   <a href="https://www.mit.edu/"><img src="assets/mit_logo.png" alt="MIT" height="48"></a>

@@ -5,7 +5,7 @@
 
 ## Robust, lightweight infrastructure for multi-agent self-evolution, built for autoresearch.
 
-<p><strong>Contributors are affiliated with</strong></p>
+<p><strong>Built by researchers from</strong></p>
 
 <p>
   <a href="https://www.mit.edu/"><img src="assets/mit_logo.png" alt="MIT" height="48"></a>
