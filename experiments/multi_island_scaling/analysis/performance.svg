@@ -4,15 +4,15 @@
 <text class="title" x="275.0" y="28" text-anchor="middle">Kernel Builder</text>
 <text class="label" x="275.0" y="47" text-anchor="middle">cycles (lower is better)</text>
 <line class="grid" x1="70" y1="58.0" x2="480" y2="58.0"/>
-<text class="tick" x="60" y="62.0" text-anchor="end">-172.56</text>
+<text class="tick" x="60" y="62.0" text-anchor="end">536.40</text>
 <line class="grid" x1="70" y1="119.25" x2="480" y2="119.25"/>
-<text class="tick" x="60" y="123.25" text-anchor="end">3171.72</text>
+<text class="tick" x="60" y="123.25" text-anchor="end">3684.45</text>
 <line class="grid" x1="70" y1="180.5" x2="480" y2="180.5"/>
-<text class="tick" x="60" y="184.5" text-anchor="end">6516.00</text>
+<text class="tick" x="60" y="184.5" text-anchor="end">6832.50</text>
 <line class="grid" x1="70" y1="241.75" x2="480" y2="241.75"/>
-<text class="tick" x="60" y="245.75" text-anchor="end">9860.28</text>
+<text class="tick" x="60" y="245.75" text-anchor="end">9980.55</text>
 <line class="grid" x1="70" y1="303.0" x2="480" y2="303.0"/>
-<text class="tick" x="60" y="307.0" text-anchor="end">13204.56</text>
+<text class="tick" x="60" y="307.0" text-anchor="end">13128.60</text>
 <line class="axis" x1="70" y1="303" x2="480" y2="303"/>
 <text class="tick" x="70.0" y="324" text-anchor="middle">1</text>
 <text class="tick" x="152.0" y="324" text-anchor="middle">2</text>
@@ -21,32 +21,32 @@
 <text class="tick" x="398.0" y="324" text-anchor="middle">16</text>
 <text class="tick" x="480.0" y="324" text-anchor="middle">32</text>
 <text class="label" x="275.0" y="349" text-anchor="middle">agents</text>
-<polyline class="line" stroke="#667085" points="70.0,279.3 152.0,279.3 234.0,251.2 316.0,146.2 398.0,251.1 480.0,81.7" stroke-dasharray="none"/>
+<polyline class="line" stroke="#667085" points="70.0,279.3 152.0,131.7 234.0,85.6 316.0,86.0 398.0,81.7 480.0,83.5" stroke-dasharray="none"/>
 <circle class="point" stroke="#667085" cx="70.0" cy="279.3" r="4"/>
-<circle class="point" stroke="#667085" cx="152.0" cy="279.3" r="4"/>
-<circle class="point" stroke="#667085" cx="234.0" cy="251.2" r="4"/>
-<circle class="point" stroke="#667085" cx="316.0" cy="146.2" r="4"/>
-<circle class="point" stroke="#667085" cx="398.0" cy="251.1" r="4"/>
-<circle class="point" stroke="#667085" cx="480.0" cy="81.7" r="4"/>
-<polyline class="line" stroke="#0F766E" points="70.0,279.3 152.0,279.3 234.0,279.3 316.0,278.2 398.0,251.2 480.0,81.7" stroke-dasharray="6 4"/>
+<circle class="point" stroke="#667085" cx="152.0" cy="131.7" r="4"/>
+<circle class="point" stroke="#667085" cx="234.0" cy="85.6" r="4"/>
+<circle class="point" stroke="#667085" cx="316.0" cy="86.0" r="4"/>
+<circle class="point" stroke="#667085" cx="398.0" cy="81.7" r="4"/>
+<circle class="point" stroke="#667085" cx="480.0" cy="83.5" r="4"/>
+<polyline class="line" stroke="#0F766E" points="70.0,279.3 152.0,121.8 234.0,100.7 316.0,89.0 398.0,88.5 480.0,98.0" stroke-dasharray="6 4"/>
 <circle class="point" stroke="#0F766E" cx="70.0" cy="279.3" r="4"/>
-<circle class="point" stroke="#0F766E" cx="152.0" cy="279.3" r="4"/>
-<circle class="point" stroke="#0F766E" cx="234.0" cy="279.3" r="4"/>
-<circle class="point" stroke="#0F766E" cx="316.0" cy="278.2" r="4"/>
-<circle class="point" stroke="#0F766E" cx="398.0" cy="251.2" r="4"/>
-<circle class="point" stroke="#0F766E" cx="480.0" cy="81.7" r="4"/>
+<circle class="point" stroke="#0F766E" cx="152.0" cy="121.8" r="4"/>
+<circle class="point" stroke="#0F766E" cx="234.0" cy="100.7" r="4"/>
+<circle class="point" stroke="#0F766E" cx="316.0" cy="89.0" r="4"/>
+<circle class="point" stroke="#0F766E" cx="398.0" cy="88.5" r="4"/>
+<circle class="point" stroke="#0F766E" cx="480.0" cy="98.0" r="4"/>
 <text class="title" x="775.0" y="28" text-anchor="middle">Pack the Polyominoes</text>
 <text class="label" x="775.0" y="47" text-anchor="middle">score (higher is better)</text>
 <line class="grid" x1="570" y1="58.0" x2="980" y2="58.0"/>
-<text class="tick" x="560" y="62.0" text-anchor="end">82.19</text>
+<text class="tick" x="560" y="62.0" text-anchor="end">85.59</text>
 <line class="grid" x1="570" y1="119.25" x2="980" y2="119.25"/>
-<text class="tick" x="560" y="123.25" text-anchor="end">59.44</text>
+<text class="tick" x="560" y="123.25" text-anchor="end">74.52</text>
 <line class="grid" x1="570" y1="180.5" x2="980" y2="180.5"/>
-<text class="tick" x="560" y="184.5" text-anchor="end">36.69</text>
+<text class="tick" x="560" y="184.5" text-anchor="end">63.46</text>
 <line class="grid" x1="570" y1="241.75" x2="980" y2="241.75"/>
-<text class="tick" x="560" y="245.75" text-anchor="end">13.94</text>
+<text class="tick" x="560" y="245.75" text-anchor="end">52.39</text>
 <line class="grid" x1="570" y1="303.0" x2="980" y2="303.0"/>
-<text class="tick" x="560" y="307.0" text-anchor="end">-8.81</text>
+<text class="tick" x="560" y="307.0" text-anchor="end">41.32</text>
 <line class="axis" x1="570" y1="303" x2="980" y2="303"/>
 <text class="tick" x="570.0" y="324" text-anchor="middle">1</text>
 <text class="tick" x="652.0" y="324" text-anchor="middle">2</text>
@@ -55,20 +55,20 @@
 <text class="tick" x="898.0" y="324" text-anchor="middle">16</text>
 <text class="tick" x="980.0" y="324" text-anchor="middle">32</text>
 <text class="label" x="775.0" y="349" text-anchor="middle">agents</text>
-<polyline class="line" stroke="#667085" points="570.0,279.3 652.0,208.1 734.0,81.7 816.0,90.2 898.0,86.1 980.0,100.1" stroke-dasharray="none"/>
-<circle class="point" stroke="#667085" cx="570.0" cy="279.3" r="4"/>
-<circle class="point" stroke="#667085" cx="652.0" cy="208.1" r="4"/>
-<circle class="point" stroke="#667085" cx="734.0" cy="81.7" r="4"/>
-<circle class="point" stroke="#667085" cx="816.0" cy="90.2" r="4"/>
-<circle class="point" stroke="#667085" cx="898.0" cy="86.1" r="4"/>
-<circle class="point" stroke="#667085" cx="980.0" cy="100.1" r="4"/>
-<polyline class="line" stroke="#0F766E" points="570.0,279.3 652.0,110.2 734.0,94.3 816.0,99.7 898.0,93.2 980.0,86.4" stroke-dasharray="6 4"/>
-<circle class="point" stroke="#0F766E" cx="570.0" cy="279.3" r="4"/>
-<circle class="point" stroke="#0F766E" cx="652.0" cy="110.2" r="4"/>
-<circle class="point" stroke="#0F766E" cx="734.0" cy="94.3" r="4"/>
-<circle class="point" stroke="#0F766E" cx="816.0" cy="99.7" r="4"/>
-<circle class="point" stroke="#0F766E" cx="898.0" cy="93.2" r="4"/>
-<circle class="point" stroke="#0F766E" cx="980.0" cy="86.4" r="4"/>
+<polyline class="line" stroke="#667085" points="570.0,124.4 652.0,279.3 734.0,124.3 816.0,86.5 898.0,103.1 980.0,81.7" stroke-dasharray="none"/>
+<circle class="point" stroke="#667085" cx="570.0" cy="124.4" r="4"/>
+<circle class="point" stroke="#667085" cx="652.0" cy="279.3" r="4"/>
+<circle class="point" stroke="#667085" cx="734.0" cy="124.3" r="4"/>
+<circle class="point" stroke="#667085" cx="816.0" cy="86.5" r="4"/>
+<circle class="point" stroke="#667085" cx="898.0" cy="103.1" r="4"/>
+<circle class="point" stroke="#667085" cx="980.0" cy="81.7" r="4"/>
+<polyline class="line" stroke="#0F766E" points="570.0,124.4 652.0,166.2 734.0,102.3 816.0,127.8 898.0,108.3 980.0,91.3" stroke-dasharray="6 4"/>
+<circle class="point" stroke="#0F766E" cx="570.0" cy="124.4" r="4"/>
+<circle class="point" stroke="#0F766E" cx="652.0" cy="166.2" r="4"/>
+<circle class="point" stroke="#0F766E" cx="734.0" cy="102.3" r="4"/>
+<circle class="point" stroke="#0F766E" cx="816.0" cy="127.8" r="4"/>
+<circle class="point" stroke="#0F766E" cx="898.0" cy="108.3" r="4"/>
+<circle class="point" stroke="#0F766E" cx="980.0" cy="91.3" r="4"/>
 <line x1="390" y1="368" x2="418" y2="368" stroke="#667085" stroke-width="2.5"/>
 <text class="legend" x="426" y="372">Global</text>
 <line x1="540" y1="368" x2="568" y2="368" stroke="#0F766E" stroke-width="2.5" stroke-dasharray="6 4"/>

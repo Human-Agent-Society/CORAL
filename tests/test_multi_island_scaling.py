@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -91,7 +92,14 @@ def test_wall_clock_completion_can_be_checked_before_writing_operator_result(
     attempts = public / "attempts"
     attempts.mkdir(parents=True)
     (public / "auto_stop.json").write_text(
-        json.dumps({"reason": "wall_clock", "wall_clock_seconds": 3600}) + "\n"
+        json.dumps(
+            {
+                "reason": "wall_clock",
+                "wall_clock_seconds": 3600,
+                "elapsed_wall_seconds": 3600.01,
+            }
+        )
+        + "\n"
     )
     (attempts / "a.json").write_text(
         json.dumps(
@@ -121,6 +129,141 @@ def test_wall_clock_completion_can_be_checked_before_writing_operator_result(
         json.dumps({"status": "failed", "timed_out": False}) + "\n"
     )
     assert not runner.is_complete(tmp_path, None, wall_clock_seconds=3600)
+
+
+def test_wall_clock_completion_rejects_wrong_or_unelapsed_budget(tmp_path: Path) -> None:
+    public = tmp_path / ".coral/public"
+    attempts = public / "attempts"
+    attempts.mkdir(parents=True)
+    (attempts / "a.json").write_text(
+        json.dumps(
+            {
+                "commit_hash": "a" * 40,
+                "status": "improved",
+                "score": 5351,
+                "metadata": {"budget_class": "real"},
+            }
+        )
+        + "\n"
+    )
+    marker = public / "auto_stop.json"
+    marker.write_text(
+        json.dumps(
+            {
+                "reason": "wall_clock",
+                "wall_clock_seconds": 1800,
+                "elapsed_wall_seconds": 3600,
+            }
+        )
+        + "\n"
+    )
+    assert not runner.is_complete(
+        tmp_path,
+        None,
+        wall_clock_seconds=3600,
+        require_operator_result=False,
+    )
+    assert not analysis.wall_clock_stop_matches(json.loads(marker.read_text()), 3600)
+
+    marker.write_text(
+        json.dumps(
+            {
+                "reason": "wall_clock",
+                "wall_clock_seconds": 3600,
+                "elapsed_wall_seconds": 3599.99,
+            }
+        )
+        + "\n"
+    )
+    assert not runner.is_complete(
+        tmp_path,
+        None,
+        wall_clock_seconds=3600,
+        require_operator_result=False,
+    )
+    assert not analysis.wall_clock_stop_matches(json.loads(marker.read_text()), 3600)
+
+
+def test_scaling_analysis_only_rejects_executed_protocol_violations(
+    tmp_path: Path,
+) -> None:
+    log_path = tmp_path / ".coral/public/logs/agent.0.log"
+    log_path.parent.mkdir(parents=True)
+    event = {
+        "type": "tool_use",
+        "part": {
+            "tool": "bash",
+            "state": {
+                "status": "error",
+                "input": {"command": "grep -rn coreid /jfs-host/checkout"},
+            },
+        },
+    }
+    log_path.write_text(json.dumps(event) + "\n")
+    assert not analysis.executed_protocol_violation(tmp_path)
+
+    event["part"]["state"]["status"] = "completed"
+    log_path.write_text(json.dumps(event) + "\n")
+    assert analysis.executed_protocol_violation(tmp_path)
+    assert analysis.protocol_invalid(tmp_path)
+
+    event["part"]["state"]["input"]["command"] = "ls /home"
+    log_path.write_text(json.dumps(event) + "\n")
+    assert analysis.executed_protocol_violation(tmp_path)
+
+
+def test_scaling_analysis_rejects_all_forbidden_executed_tools(tmp_path: Path) -> None:
+    log_path = tmp_path / ".coral/public/logs/agent.0.log"
+    log_path.parent.mkdir(parents=True)
+    events = [
+        {
+            "type": "tool_use",
+            "part": {
+                "tool": "bash",
+                "state": {
+                    "status": "completed",
+                    "input": {"command": "find .opencode -name '*.json'"},
+                },
+            },
+        },
+        {
+            "type": "tool_use",
+            "part": {
+                "tool": "glob",
+                "state": {"status": "completed", "input": {"pattern": "**/*"}},
+            },
+        },
+        {
+            "type": "tool_use",
+            "part": {
+                "tool": "task",
+                "state": {"status": "completed", "input": {"prompt": "delegate"}},
+            },
+        },
+        {
+            "type": "tool_use",
+            "part": {
+                "tool": "bash",
+                "state": {
+                    "status": "completed",
+                    "input": {"command": "coral eval -m benchmark --tune"},
+                },
+            },
+        },
+        {
+            "type": "tool_use",
+            "part": {
+                "tool": "read",
+                "state": {
+                    "status": "completed",
+                    "input": {"filePath": ".coral/private/answer.json"},
+                },
+            },
+        },
+    ]
+    for event in events:
+        log_path.write_text(json.dumps(event) + "\n")
+        assert analysis.executed_protocol_violation(tmp_path)
 
 
 def test_single_agent_multi_island_cell_is_not_scheduled() -> None:
@@ -200,11 +343,36 @@ def test_scaling_analysis_sums_gateway_token_usage(tmp_path: Path) -> None:
     log_path.write_text("\n".join(json.dumps(record) for record in records) + "\n")
 
     assert analysis.gateway_usage(tmp_path) == {
-        "model_requests": 2,
+        "model_requests": 3,
         "input_tokens": 150,
         "cached_input_tokens": 80,
         "output_tokens": 19,
         "total_tokens": 169,
+    }
+
+
+def test_scaling_analysis_reads_compressed_gateway_usage(tmp_path: Path) -> None:
+    log_path = tmp_path / ".coral/public/gateway/requests.jsonl.gz"
+    log_path.parent.mkdir(parents=True)
+    record = {
+        "response": {
+            "usage": {
+                "input_tokens": 11,
+                "input_tokens_details": {"cached_tokens": 7},
+                "output_tokens": 5,
+                "total_tokens": 16,
+            }
+        }
+    }
+    with gzip.open(log_path, mode="wt") as handle:
+        handle.write(json.dumps(record) + "\n")
+
+    assert analysis.gateway_usage(tmp_path) == {
+        "model_requests": 1,
+        "input_tokens": 11,
+        "cached_input_tokens": 7,
+        "output_tokens": 5,
+        "total_tokens": 16,
     }
 
 

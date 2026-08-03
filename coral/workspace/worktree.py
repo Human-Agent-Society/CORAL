@@ -604,27 +604,40 @@ def setup_opencode_settings(
         # invalidate a cell. Remove OpenCode's native glob tool and reject
         # shell discovery commands before they execute. Explicit reads of
         # known task/public-grader files remain available.
-        bash_permissions.update(
-            {
-                "find *": "deny",
-                "* find *": "deny",
-                "*frozen_problem.py*": "deny",
-                "*taskdata*": "deny",
-                "*submission_tests.py*": "deny",
-                "ls /tmp*": "deny",
-                "* ls /tmp*": "deny",
-                "grep * /tmp*": "deny",
-                "* grep * /tmp*": "deny",
-            }
+        forbidden_file_patterns = (
+            "*frozen_problem.py*",
+            "*taskdata*",
+            "*submission_tests.py*",
         )
+        forbidden_host_patterns = (
+            "*/jfs*",
+            "*/home*",
+            "*~/*",
+        )
+        controlled_bash_denies = (
+            private_pattern,
+            "find *",
+            "* find *",
+            *forbidden_file_patterns,
+            "*/jfs*",
+            "*/home*",
+            "*~/*",
+            "*coral eval*--tune*",
+            "ls /tmp*",
+            "* ls /tmp*",
+            "grep * /tmp*",
+            "* grep * /tmp*",
+            "*.coral/private*",
+        )
+        bash_permissions.update({pattern: "deny" for pattern in controlled_bash_denies})
         # The filename boundary applies to every file-oriented tool, not just
         # shell commands.  In particular, a Read call to a public-looking
         # ``taskdata`` copy can still reveal the hidden-simulator API and must
         # be rejected before it opens the path.
-        for forbidden_name in ("*frozen_problem.py*", "*taskdata*", "*submission_tests.py*"):
-            read_permissions[forbidden_name] = "deny"
-            edit_permissions[forbidden_name] = "deny"
-            write_permissions[forbidden_name] = "deny"
+        for forbidden_path in (*forbidden_file_patterns, *forbidden_host_patterns):
+            read_permissions[forbidden_path] = "deny"
+            edit_permissions[forbidden_path] = "deny"
+            write_permissions[forbidden_path] = "deny"
         # Do not expose run-level bookkeeping (budget locks, config_dir, or
         # sibling-island roots) through absolute paths. The current island's
         # public state remains explicitly readable through its scoped allow.
@@ -673,6 +686,22 @@ def setup_opencode_settings(
         edit_permissions["*.coral/private*"] = "deny"
         write_permissions["*.coral/private*"] = "deny"
         read_permissions[state_root_pattern] = "allow"
+
+        # OpenCode resolves overlapping permission patterns by the last match.
+        # Keep controlled-experiment denies after the worktree/state allows so
+        # an absolute command such as ``find /run/agents/me/.opencode`` cannot
+        # be re-allowed merely because it points inside the agent's worktree.
+        for pattern in controlled_bash_denies:
+            action = bash_permissions.pop(pattern)
+            bash_permissions[pattern] = action
+        for permissions in (read_permissions, edit_permissions, write_permissions):
+            for pattern in (
+                *forbidden_file_patterns,
+                *forbidden_host_patterns,
+                "*.coral/private*",
+            ):
+                action = permissions.pop(pattern)
+                permissions[pattern] = action
 
     settings: dict = {
         "$schema": "https://opencode.ai/config.json",

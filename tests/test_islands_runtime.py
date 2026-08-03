@@ -321,6 +321,14 @@ def test_setup_opencode_settings_can_disable_file_discovery(tmp_path):
         assert settings["permission"][permission]["*.coral/private*"] == "deny"
     assert bash["ls /tmp*"] == "deny"
     assert bash["* ls /tmp*"] == "deny"
+    assert bash["*/jfs*"] == "deny"
+    assert bash["*/home*"] == "deny"
+    assert bash["*~/*"] == "deny"
+    assert bash["*coral eval*--tune*"] == "deny"
+    for permission in ("read", "edit", "write"):
+        assert settings["permission"][permission]["*/jfs*"] == "deny"
+        assert settings["permission"][permission]["*/home*"] == "deny"
+        assert settings["permission"][permission]["*~/*"] == "deny"
     run_state = str(coral_dir.resolve()) + "/**"
     assert settings["permission"]["bash"][run_state] == "deny"
     assert settings["permission"]["bash"][f"*{coral_dir.resolve()}/*"] == "deny"
@@ -333,6 +341,15 @@ def test_setup_opencode_settings_can_disable_file_discovery(tmp_path):
     assert settings["permission"]["bash"][f"*{own_state}/*"] == "allow"
     run_dir = str(coral_dir.resolve().parent)
     assert settings["permission"]["bash"][f"*{run_dir}/*"] == "deny"
+    own_worktree_allow = f"*{worktree.resolve()}/*"
+    assert list(bash).index(own_worktree_allow) < list(bash).index("find *")
+    assert list(bash).index(own_worktree_allow) < list(bash).index("*/jfs*")
+    assert list(bash).index(own_worktree_allow) < list(bash).index(
+        "*coral eval*--tune*"
+    )
+    assert list(settings["permission"]["read"]).index(run_state) < list(
+        settings["permission"]["read"]
+    ).index("*taskdata*")
     assert settings["permission"]["bash"][f"*{worktree.resolve()}/*"] == "allow"
 
 

@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
 import json
+import re
 import statistics
 from collections import defaultdict
 from datetime import datetime
@@ -22,6 +24,19 @@ TASK_LABELS = {"kernel": "Kernel Builder", "polyominoes": "Pack the Polyominoes"
 CONDITION_LABELS = {"global": "Global", "multi_island": "Multi-island"}
 COLORS = {"global": "#667085", "multi_island": "#0F766E"}
 AGENT_COUNTS = (1, 2, 4, 8, 16, 32)
+FORBIDDEN_FIND_RE = re.compile(
+    r"(?m)(?:^|\n|[;&|]\s*|\$\()\s*(?:command\s+)?find(?:\s|$)"
+)
+FORBIDDEN_HOST_RE = re.compile(
+    r'''(?:^|[\s"'`])(?:/jfs[^\s"'`]*|/home(?:/|(?=[\s"'`]|$))|~/)'''
+)
+FORBIDDEN_HIDDEN_RE = re.compile(
+    r"(?:\.coral/private|frozen_problem\.py|taskdata|submission_tests\.py)",
+    re.IGNORECASE,
+)
+FORBIDDEN_TUNE_RE = re.compile(
+    r"\bcoral\s+eval\b[^\n;&|]*\s--tune(?:\s|$)"
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -81,9 +96,13 @@ def gateway_usage(run_dir: Path) -> dict[str, int]:
         "output_tokens": 0,
         "total_tokens": 0,
     }
-    path = run_dir / ".coral/public/gateway/requests.jsonl"
+    gateway_dir = run_dir / ".coral/public/gateway"
+    path = gateway_dir / "requests.jsonl"
     try:
-        lines = path.open()
+        if path.exists():
+            lines = path.open()
+        else:
+            lines = gzip.open(gateway_dir / "requests.jsonl.gz", mode="rt")
     except OSError:
         return totals
     with lines:
@@ -94,13 +113,13 @@ def gateway_usage(run_dir: Path) -> dict[str, int]:
                 continue
             if not isinstance(record, dict):
                 continue
+            totals["model_requests"] += 1
             response = record.get("response")
             if not isinstance(response, dict):
                 continue
             usage = response.get("usage")
             if not isinstance(usage, dict):
                 continue
-            totals["model_requests"] += 1
             totals["input_tokens"] += int(usage.get("input_tokens") or 0)
             details = usage.get("input_tokens_details") or {}
             if not isinstance(details, dict):
@@ -111,6 +130,72 @@ def gateway_usage(run_dir: Path) -> dict[str, int]:
     return totals
 
 
+def wall_clock_stop_matches(state: dict[str, Any], expected_seconds: float) -> bool:
+    """Return whether a stop marker proves the requested wall-clock budget elapsed."""
+    recorded = state.get("wall_clock_seconds")
+    elapsed = state.get("elapsed_wall_seconds")
+    numeric = (int, float)
+    return (
+        state.get("reason") == "wall_clock"
+        and isinstance(recorded, numeric)
+        and not isinstance(recorded, bool)
+        and float(recorded) == float(expected_seconds)
+        and isinstance(elapsed, numeric)
+        and not isinstance(elapsed, bool)
+        and float(elapsed) >= float(expected_seconds)
+    )
+
+
+def executed_protocol_violation(run_dir: Path) -> bool:
+    """Return whether a forbidden tool call actually reached execution."""
+    for path in run_dir.glob(".coral/**/logs/*.log"):
+        try:
+            lines = path.open(errors="replace")
+        except OSError:
+            continue
+        with lines:
+            for line in lines:
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(event, dict) or event.get("type") != "tool_use":
+                    continue
+                part = event.get("part")
+                if not isinstance(part, dict):
+                    continue
+                state = part.get("state")
+                if not isinstance(state, dict) or state.get("status") != "completed":
+                    continue
+                tool = str(part.get("tool") or "")
+                if tool in {"glob", "task"}:
+                    return True
+                tool_input = state.get("input")
+                if not isinstance(tool_input, dict):
+                    continue
+                if tool == "bash":
+                    command = str(tool_input.get("command") or "")
+                    if any(
+                        pattern.search(command)
+                        for pattern in (
+                            FORBIDDEN_FIND_RE,
+                            FORBIDDEN_HOST_RE,
+                            FORBIDDEN_HIDDEN_RE,
+                            FORBIDDEN_TUNE_RE,
+                        )
+                    ):
+                        return True
+                elif tool in {"read", "edit", "write"}:
+                    file_path = str(
+                        tool_input.get("filePath") or tool_input.get("path") or ""
+                    )
+                    if FORBIDDEN_HOST_RE.search(file_path) or FORBIDDEN_HIDDEN_RE.search(
+                        file_path
+                    ):
+                        return True
+    return False
+
+
 def protocol_invalid(run_dir: Path) -> bool:
     """Return whether the operator explicitly quarantined this run.
 
@@ -119,6 +204,8 @@ def protocol_invalid(run_dir: Path) -> bool:
     normal ``auto_stop.json`` sentinel to ``auto_stop.protocol-invalid.json``.
     """
     if any(run_dir.glob(".coral/public/auto_stop.protocol-invalid*.json")):
+        return True
+    if executed_protocol_violation(run_dir):
         return True
     # Keep the audit self-contained: a tune attempt is a protocol violation
     # even if an operator stopped the run before writing the quarantine
@@ -152,7 +239,7 @@ def audit_run(command_path: Path) -> dict[str, Any]:
         complete = (
             result.get("status") == "complete"
             and not result.get("timed_out", False)
-            and auto_stop.get("reason") == "wall_clock"
+            and wall_clock_stop_matches(auto_stop, float(wall_clock_seconds))
             and bool(scores)
         )
     else:

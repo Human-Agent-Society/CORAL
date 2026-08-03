@@ -123,8 +123,10 @@ class RunConfig:
 ```python
 @dataclass
 class RunStopConfig:
-    score_threshold: float | None     # Stop when best real score reaches this threshold
-    max_real_attempts: int | None     # Stop after this many finalized real attempts
+    score_threshold: float | None               # Stop when best real score reaches this threshold
+    max_real_attempts: int | None               # Stop after this many finalized real attempts
+    max_real_attempts_per_agent: int | None     # Cap finalized real attempts per agent
+    wall_clock_seconds: float | None            # Stop after this much manager wall-clock time
 ```
 
 `run.stop.score_threshold` is direction-aware: maximize tasks stop when a
@@ -132,10 +134,15 @@ finalized real attempt has `score >= score_threshold`; minimize tasks stop when
 `score <= score_threshold`. `run.stop.max_real_attempts` counts only finalized
 attempts with `budget_class="real"` across the whole run. Pending attempts,
 `tune` attempts, and `grader_error` attempts do not count.
+`run.stop.max_real_attempts_per_agent` applies the same count independently to
+each agent. `run.stop.wall_clock_seconds` uses a monotonic timer from manager
+startup and gracefully stops all agents when the elapsed time reaches the
+configured positive value.
 
 Examples:
 
 ```bash
 coral start -c task.yaml run.stop.score_threshold=0.8
 coral start -c task.yaml run.stop.max_real_attempts=30
+coral start -c task.yaml run.stop.wall_clock_seconds=3600
 ```

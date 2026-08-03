@@ -110,6 +110,22 @@ def attempt_records(run_dir: Path) -> list[dict[str, Any]]:
     return list(attempts.values())
 
 
+def wall_clock_stop_matches(state: dict[str, Any], expected_seconds: float) -> bool:
+    """Return whether a stop marker proves the requested wall-clock budget elapsed."""
+    recorded = state.get("wall_clock_seconds")
+    elapsed = state.get("elapsed_wall_seconds")
+    numeric = (int, float)
+    return (
+        state.get("reason") == "wall_clock"
+        and isinstance(recorded, numeric)
+        and not isinstance(recorded, bool)
+        and float(recorded) == float(expected_seconds)
+        and isinstance(elapsed, numeric)
+        and not isinstance(elapsed, bool)
+        and float(elapsed) >= float(expected_seconds)
+    )
+
+
 def is_complete(
     run_dir: Path,
     expected_attempts: int | None,
@@ -123,6 +139,8 @@ def is_complete(
     try:
         state = json.loads(auto_stop.read_text())
     except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(state, dict):
         return False
     records = attempt_records(run_dir)
     has_score = any(record.get("score") is not None for record in records)
@@ -141,7 +159,7 @@ def is_complete(
         return (
             (not require_operator_result or result.get("status") == "complete")
             and (not require_operator_result or not result.get("timed_out", False))
-            and state.get("reason") == "wall_clock"
+            and wall_clock_stop_matches(state, wall_clock_seconds)
             and has_score
         )
     # A cell whose entire quota ended in daemon/grader crashes has no

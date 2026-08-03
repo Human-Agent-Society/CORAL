@@ -111,6 +111,7 @@ coral start -c task.yaml                          # Launch agents (auto-tmux)
 coral start -c task.yaml agents.count=4 agents.model=opus       # Dotlist overrides
 coral start -c task.yaml run.verbose=true run.ui=true           # Verbose + dashboard
 coral start -c task.yaml run.stop.max_real_attempts=30          # Stop after 30 finalized real attempts
+coral start -c task.yaml run.stop.wall_clock_seconds=3600       # Stop after one hour of manager wall-clock time
 coral start -c task.yaml agents.sandbox.enabled=true            # Wrap agents in srt OS-level sandbox (or `preset: sandbox`)
 coral start -c task.yaml run.session=local                      # No tmux session
 coral resume                                      # Resume latest run (sessions restored)

@@ -4,18 +4,23 @@ This experiment follows up the open scaling question in
 `blog/agents-need-institutions.html`: does the multi-island institution become
 more useful as the agent population grows?
 
-The primary sweep compares one global knowledge pool with two islands plus
-selective migration at 1, 2, 4, 8, 16, and 32 OpenCode agents. All agents use
-MiniMax-M3 through CORAL's local LiteLLM gateway. The two real coding tasks are
-Kernel Builder (minimize simulated VLIW cycles) and Frontier-CS #0, Pack the
-Polyominoes (maximize score).
+The primary sweep compares one global knowledge pool at 1, 2, 4, 8, 16, and 32
+OpenCode agents with two islands plus selective migration at 2, 4, 8, 16, and
+32 agents. The one-agent global cell is the shared topology-free baseline. All
+agents use MiniMax-M3 through CORAL's local LiteLLM gateway. The two real coding
+tasks are Kernel Builder (minimize simulated VLIW cycles) and Frontier-CS #0,
+Pack the Polyominoes (maximize score).
 
-The sweep uses a fixed per-agent budget. This answers the scale-out question:
-when population and total inference/evaluation budget grow together, does
-island structure convert the extra parallel search into a better final result?
-Every agent receives the same quota in both topologies. Migration is checked
-after each population-sized block of finalized real evaluations, so the first
-exchange happens after roughly one submission per agent.
+The sweep uses a fixed one-hour wall-clock window per cell. This compares the
+direction-specific best score reached by each population and topology in the
+same elapsed manager time. It does not hold aggregate tokens or model compute
+fixed: larger populations can issue more requests concurrently. The analyzer
+therefore reports model requests, input tokens (including cached input), output
+tokens, and total tokens alongside performance. The request count includes
+every well-formed gateway log record, including failed responses; token totals
+sum the usage fields returned by the provider. Migration is checked after each
+population-sized block of finalized real evaluations, so the first exchange
+happens after roughly one submission per agent.
 
 The runs use CORAL's SRT OS sandbox as well as OpenCode's generated
 private-directory permissions. Sandboxed HTTP clients receive a proxy-routable
@@ -37,10 +42,12 @@ Credentials are never stored here. Export `MINIMAX_API_KEY` before launching.
 ```bash
 export MINIMAX_API_KEY=...
 .venv/bin/python experiments/multi_island_scaling/run_scaling.py \
-  --results-root /var/tmp/coral-institutions-results/real-scaling-v1
+  --results-root /var/tmp/coral-institutions-results/real-scaling-wall-v1 \
+  --wall-minutes 60 \
+  --max-parallel 1
 
 .venv/bin/python experiments/multi_island_scaling/analyze_scaling.py \
-  --results-root /var/tmp/coral-institutions-results/real-scaling-v1
+  --results-root /var/tmp/coral-institutions-results/real-scaling-wall-v1
 ```
 
 Use `--dry-run` to inspect commands. The runner is resumable: completed cells
@@ -50,7 +57,8 @@ silently overwritten. The analyzer requires all 22 designed cells by default
 leaves more than one valid completed directory for the same cell, the latest
 completion is retained once rather than counted as another repetition.
 
-Gateway request logs are operational artifacts rather than analysis inputs.
-Some were truncated during the sweep to recover disk space, so request and
-token totals are intentionally omitted instead of publishing partial counts as
-complete cost measurements.
+Gateway request logs are retained as analysis inputs for request and token
+accounting. They may be compressed from `requests.jsonl` to
+`requests.jsonl.gz`; the analyzer reads either form. Do not truncate or delete
+them before producing the final CSV, because partial logs would under-report
+model usage.
