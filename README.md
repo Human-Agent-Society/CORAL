@@ -8,11 +8,11 @@
 <p><strong>Built by researchers and engineers from</strong></p>
 
 <p>
-  <img src="https://img.shields.io/badge/MIT-A31F34?style=for-the-badge" alt="MIT">
-  <img src="https://img.shields.io/badge/NUS-E87722?style=for-the-badge" alt="NUS">
-  <img src="https://img.shields.io/badge/Stanford-8C1515?style=for-the-badge" alt="Stanford University">
-  <img src="https://img.shields.io/badge/MiniMax-111111?style=for-the-badge" alt="MiniMax">
-  <img src="https://img.shields.io/badge/Meta_Superintelligence_Labs-0668E1?style=for-the-badge" alt="Meta Superintelligence Labs">
+  <a href="https://www.mit.edu/"><img src="assets/mit_logo.png" alt="MIT" height="48"></a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://www.nus.edu.sg/"><img src="assets/nus.png" alt="National University of Singapore" height="52"></a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://www.stanford.edu/"><img src="assets/stanford.png" alt="Stanford University" height="58"></a>
 </p>
 
 **Open source. Independent. [Everyone is welcome to contribute and become a maintainer.](#contributing)**
