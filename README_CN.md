@@ -5,13 +5,19 @@
 
 ## **一键启动智能体群组，共享知识，无限进化**
 
+<p><strong>由来自以下机构的研究者与工程师共同建设</strong></p>
+
 <p>
-  <img src="assets/mit_logo.png" alt="MIT" height="50">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="assets/nus.png" alt="NUS" height="50">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="assets/stanford.png" alt="Stanford" height="50">
+  <img src="https://img.shields.io/badge/MIT-A31F34?style=for-the-badge" alt="MIT">
+  <img src="https://img.shields.io/badge/NUS-E87722?style=for-the-badge" alt="NUS">
+  <img src="https://img.shields.io/badge/Stanford-8C1515?style=for-the-badge" alt="Stanford University">
+  <img src="https://img.shields.io/badge/MiniMax-111111?style=for-the-badge" alt="MiniMax">
+  <img src="https://img.shields.io/badge/Meta_Superintelligence_Labs-0668E1?style=for-the-badge" alt="Meta Superintelligence Labs">
 </p>
+
+**开源、独立。[欢迎每个人参与贡献并成为维护者。](#参与贡献)**
+
+<sub>机构信息仅用于说明贡献者的个人背景，不代表相关机构的官方背书。</sub>
 
 [![Paper](https://img.shields.io/badge/Paper-arXiv%3A2604.01658-B31B1B.svg?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2604.01658v1)
 [![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://coral.compounding-intelligence.ai/blogs/)

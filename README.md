@@ -5,6 +5,20 @@
 
 ## Robust, lightweight infrastructure for multi-agent self-evolution, built for autoresearch.
 
+<p><strong>Built by researchers and engineers from</strong></p>
+
+<p>
+  <img src="https://img.shields.io/badge/MIT-A31F34?style=for-the-badge" alt="MIT">
+  <img src="https://img.shields.io/badge/NUS-E87722?style=for-the-badge" alt="NUS">
+  <img src="https://img.shields.io/badge/Stanford-8C1515?style=for-the-badge" alt="Stanford University">
+  <img src="https://img.shields.io/badge/MiniMax-111111?style=for-the-badge" alt="MiniMax">
+  <img src="https://img.shields.io/badge/Meta_Superintelligence_Labs-0668E1?style=for-the-badge" alt="Meta Superintelligence Labs">
+</p>
+
+**Open source. Independent. [Everyone is welcome to contribute and become a maintainer.](#contributing)**
+
+<sub>Affiliations identify individual contributors and do not imply institutional endorsement.</sub>
+
 [![Paper](https://img.shields.io/badge/Paper-arXiv%3A2604.01658-B31B1B.svg?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2604.01658v1)
 [![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://coral.compounding-intelligence.ai/blogs/)
 [![Apache 2.0 License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
