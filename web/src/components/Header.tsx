@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api, type RunStatus } from "../lib/api";
 import { useSSE } from "../hooks/useSSE";
 import RunSelector from "./RunSelector";
+import SettingsMenu from "./SettingsMenu";
 
 type Tab = "overview" | "dag" | "knowledge" | "logs";
 
@@ -83,6 +84,8 @@ export default function Header({ activeTab, onTabChange }: Props) {
           </>
         )}
       </div>
+
+      <SettingsMenu />
     </header>
   );
 }

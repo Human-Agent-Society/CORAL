@@ -349,15 +349,22 @@ def _results_dir(request: Request) -> Path:
     return request.app.state.results_dir
 
 
-def _enumerate_runs(results_dir: Path, current_coral_dir: Path) -> dict:
-    """Walk results_dir and return structured task/run listing."""
-    current_resolved = current_coral_dir.resolve()
-    current_task = current_resolved.parent.parent.name
-    current_run = current_resolved.parent.name
+def _catalog_root(request: Request) -> Path:
+    return getattr(request.app.state, "catalog_root", _results_dir(request).parent)
 
+
+def _available_results_dirs(request: Request) -> tuple[Path, ...]:
+    from coral.web.run_catalog import discover_results_dirs
+
+    current_results_dir = _coral_dir(request).resolve().parent.parent.parent
+    return discover_results_dirs(_catalog_root(request), current_results_dir)
+
+
+def _enumerate_results_dir(results_dir: Path) -> list[dict[str, Any]]:
+    """Return the tasks and runs stored in one results directory."""
     tasks = []
     if not results_dir.is_dir():
-        return {"current": {"task": current_task, "run": current_run}, "tasks": tasks}
+        return tasks
 
     for task_dir in sorted(results_dir.iterdir()):
         if not task_dir.is_dir():
@@ -410,14 +417,55 @@ def _enumerate_runs(results_dir: Path, current_coral_dir: Path) -> dict:
         if runs:
             tasks.append({"slug": task_slug, "runs": runs})
 
-    return {"current": {"task": current_task, "run": current_run}, "tasks": tasks}
+    return tasks
+
+
+def _enumerate_runs(
+    results_dirs: tuple[Path, ...],
+    current_coral_dir: Path,
+    catalog_root: Path,
+) -> dict[str, Any]:
+    """Return every run catalog available to this dashboard."""
+    from coral.web.run_catalog import results_dir_id, results_dir_label
+
+    current_resolved = current_coral_dir.resolve()
+    current_results_dir = current_resolved.parent.parent.parent
+    current_root_id = results_dir_id(current_results_dir)
+    current_task = current_resolved.parent.parent.name
+    current_run = current_resolved.parent.name
+
+    roots = []
+    current_tasks: list[dict[str, Any]] = []
+    for results_dir in results_dirs:
+        tasks = _enumerate_results_dir(results_dir)
+        root_id = results_dir_id(results_dir)
+        roots.append(
+            {
+                "id": root_id,
+                "label": results_dir_label(results_dir, catalog_root),
+                "tasks": tasks,
+            }
+        )
+        if root_id == current_root_id:
+            current_tasks = tasks
+
+    return {
+        "current": {"root": current_root_id, "task": current_task, "run": current_run},
+        # Keep the original field for older dashboard clients. New clients use
+        # roots so task slugs can safely repeat in separate results catalogs.
+        "tasks": current_tasks,
+        "roots": roots,
+    }
 
 
 async def get_runs(request: Request) -> JSONResponse:
     """GET /api/runs — list all tasks and runs."""
-    results_dir = _results_dir(request)
     coral_dir = _coral_dir(request)
-    data = _enumerate_runs(results_dir, coral_dir)
+    data = _enumerate_runs(
+        _available_results_dirs(request),
+        coral_dir,
+        _catalog_root(request),
+    )
     return JSONResponse(data)
 
 
@@ -428,15 +476,42 @@ async def switch_run(request: Request) -> JSONResponse:
     from coral.web.events import FileWatcher
 
     body = await request.json()
+    root_id = body.get("root")
     task = body.get("task")
     run = body.get("run")
     if not task or not run:
         return JSONResponse({"error": "task and run required"}, status_code=400)
 
-    results_dir = _results_dir(request)
-    new_coral_dir = results_dir / task / run / ".coral"
-    if not new_coral_dir.is_dir():
+    from coral.web.run_catalog import results_dir_id
+
+    available_results_dirs = _available_results_dirs(request)
+    if root_id:
+        results_dir = next(
+            (path for path in available_results_dirs if results_dir_id(path) == root_id),
+            None,
+        )
+        if results_dir is None:
+            return JSONResponse({"error": "run catalog not found"}, status_code=404)
+    else:
+        # Backward compatibility for clients created before catalogs existed.
+        results_dir = _results_dir(request)
+
+    if Path(task).name != task or Path(run).name != run:
         return JSONResponse({"error": "run not found"}, status_code=404)
+
+    task_dir = results_dir / task
+    run_dir = task_dir / run
+    new_coral_dir = run_dir / ".coral"
+    if (
+        not task_dir.is_dir()
+        or task_dir.is_symlink()
+        or not run_dir.is_dir()
+        or run_dir.is_symlink()
+        or not new_coral_dir.is_dir()
+        or new_coral_dir.is_symlink()
+    ):
+        return JSONResponse({"error": "run not found"}, status_code=404)
+    new_coral_dir = new_coral_dir.resolve()
 
     app = request.app
 
@@ -451,7 +526,8 @@ async def switch_run(request: Request) -> JSONResponse:
             pass
 
         # Switch coral_dir
-        app.state.coral_dir = new_coral_dir.resolve()
+        app.state.coral_dir = new_coral_dir
+        app.state.results_dir = results_dir
 
         # Start new watcher, reusing subscriber list
         new_watcher = FileWatcher(
@@ -465,11 +541,11 @@ async def switch_run(request: Request) -> JSONResponse:
         new_watcher._broadcast(
             {
                 "event": "run:switched",
-                "data": {"task": task, "run": run},
+                "data": {"root": results_dir_id(results_dir), "task": task, "run": run},
             }
         )
 
-    return JSONResponse({"ok": True, "task": task, "run": run})
+    return JSONResponse({"ok": True, "root": results_dir_id(results_dir), "task": task, "run": run})
 
 
 async def get_status(request: Request) -> JSONResponse:

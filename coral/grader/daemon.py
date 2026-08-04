@@ -437,6 +437,7 @@ def _grade_one(
     status = "crashed"
     feedback = ""
     metadata: dict = {}
+    public_scores: dict[str, dict[str, Any]] | None = None
     grader_completed = False
 
     try:
@@ -452,6 +453,8 @@ def _grade_one(
             score = bundle.aggregated
             feedback = _build_feedback(bundle)
             metadata = dict(getattr(bundle, "metadata", None) or {})
+            if getattr(bundle, "is_public", True):
+                public_scores = {name: score.to_dict() for name, score in bundle.scores.items()}
             grader_completed = True
         finally:
             _remove_worktree(repo_dir, checkout_path)
@@ -499,6 +502,13 @@ def _grade_one(
     # then stamp the final budget_class (always wins over any pending value).
     for k, v in (base_attempt.metadata or {}).items():
         metadata.setdefault(k, v)
+    if grader_completed:
+        # Score breakdowns are daemon-owned. Apply their visibility after the
+        # merge so neither grader nor pending metadata can publish private data.
+        if public_scores is None:
+            metadata.pop("scores", None)
+        else:
+            metadata["scores"] = public_scores
     if final_island_id is not None:
         metadata["island_id"] = final_island_id
     metadata["budget_class"] = budget_class

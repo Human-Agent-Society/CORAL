@@ -59,12 +59,16 @@ class Score:
 class ScoreBundle:
     scores: dict[str, Score]        # name -> Score
     aggregated: float | None = None # the single number used for ranking + plateau detection
-    is_public: bool = True          # False hides the score from the agent
+    is_public: bool = True          # False omits the per-score breakdown from public attempts
     feedback: str | None = None     # message the agent reads
     metadata: dict = field(default_factory=dict)
 ```
 
 `aggregated` is what the leaderboard sorts on and what plateau/heartbeat logic watches. With `self.score(x)` it's just `x`. For multiple metrics you set it explicitly — see the multi-metric pattern in [cookbook.md](cookbook.md).
+
+When `is_public` is true, the daemon serializes `scores` into the finalized
+attempt's public metadata. Setting it to false omits that breakdown; the
+aggregate score and grader feedback remain visible to the agent.
 
 ## Mental model
 
