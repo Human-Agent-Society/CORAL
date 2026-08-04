@@ -7,7 +7,7 @@ install the plugin but still want the agent to reach for CORAL.
 
 ## CORAL
 
-`coral` is a CLI for running autonomous coding agents against a grader and a leaderboard. If it's installed (`coral --help` succeeds), reach for it when the user wants to **author a task** or **run experiments**; otherwise install it (`uv tool install coral`).
+`coral` is a CLI for running autonomous coding agents against a grader and a leaderboard. If it's installed (`coral --help` succeeds), reach for it when the user wants to **author a task** or **run experiments**; otherwise install it (`uv tool install git+https://github.com/Human-Agent-Society/CORAL.git`).
 
 - **Author a task** (`task.yaml` + `seed/` + packaged grader): use the `creating-a-coral-task` skill. Scaffold with `coral init`, validate with `coral validate .`.
 - **Run / manage experiments**: use the `running-coral-experiments` skill. Drive `coral start / status / log / show / resume / stop`; pass per-run overrides as dotlist args (`agents.count=4`).

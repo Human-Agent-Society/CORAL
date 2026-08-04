@@ -1,5 +1,15 @@
 import Link from 'next/link';
 import { blogPosts } from '@/lib/blogs';
+import { createPageMetadata } from '@/lib/metadata';
+
+const description =
+  'Research notes, results, and stories from building autonomous multi-agent systems with CORAL.';
+
+export const metadata = createPageMetadata({
+  title: 'Research and Autoresearch Blog',
+  description,
+  path: '/blogs/',
+});
 
 const dateFormatter = new Intl.DateTimeFormat('en', {
   dateStyle: 'long',
@@ -14,7 +24,7 @@ export default function BlogsPage() {
       </p>
       <h1 className="mt-3 text-4xl font-semibold text-fd-foreground md:text-6xl">Blogs</h1>
       <p className="mt-5 max-w-2xl text-lg leading-8 text-fd-muted-foreground">
-        Research notes, results, and stories from building autonomous multi-agent systems with CORAL.
+        {description}
       </p>
 
       <div className="mt-12 grid gap-5">

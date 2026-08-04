@@ -35,7 +35,8 @@ Two things you build (`seed/` + grader) and one thing you tune (how many agents,
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh
-# or, if you have uv:  uv tool install coral
+# or, if you have uv:
+uv tool install git+https://github.com/Human-Agent-Society/CORAL.git
 coral --help      # verify
 ```
 

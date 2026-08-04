@@ -1,15 +1,40 @@
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import { Analytics } from '@vercel/analytics/next';
+import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import {
+  createPageMetadata,
+  DEFAULT_DESCRIPTION,
+  DEFAULT_TITLE,
+  SITE_ORIGIN,
+} from '@/lib/metadata';
 import './global.css';
 
-export const metadata = {
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_ORIGIN),
+  ...createPageMetadata({
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    path: '/',
+  }),
   title: {
-    default: 'CORAL Documentation',
+    default: DEFAULT_TITLE,
     template: '%s | CORAL',
   },
-  description:
-    'An organization for autonomous AI agents — spawn agents, run experiments, share knowledge, and loop forever.',
+  applicationName: 'CORAL',
+  authors: [{ name: 'Human-Agent-Society', url: 'https://github.com/Human-Agent-Society' }],
+  creator: 'Human-Agent-Society',
+  publisher: 'Human-Agent-Society',
+  category: 'technology',
+  keywords: [
+    'autoresearch',
+    'autonomous coding agents',
+    'multi-agent systems',
+    'agent orchestration',
+    'self-evolving agents',
+    'Claude Code',
+    'Codex',
+  ],
 };
 
 export default function Layout({ children }: { children: ReactNode }) {

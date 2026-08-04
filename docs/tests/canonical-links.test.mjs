@@ -9,6 +9,7 @@ const maintainedFiles = [
   'README_CN.md',
   'install.sh',
   'blog/index.html',
+  'docs/public/llms.txt',
   'docs/lib/layout.shared.tsx',
   'plugin/AGENTS.md',
   'plugin/hooks/session-start.py',
@@ -41,5 +42,23 @@ test('docs index links stay under the canonical docs prefix', async () => {
   assert.match(contents, /\]\(\/docs\/getting-started\/installation\)/);
   for (const route of ['getting-started', 'guides', 'cli', 'api', 'concepts']) {
     assert.doesNotMatch(contents, new RegExp(`\\]\\(/${route}\\/`), route);
+  }
+});
+
+test('public plugin instructions install CORAL from its source repository', async () => {
+  const installationFiles = [
+    'plugin/AGENTS.md',
+    'plugin/hooks/session-start.py',
+    'plugin/skills/coral-quickstart/SKILL.md',
+  ];
+
+  for (const relativePath of installationFiles) {
+    const contents = await readFile(resolve(root, relativePath), 'utf8');
+    assert.doesNotMatch(contents, /uv tool install coral(?:\s|[`'"]|$)/, relativePath);
+    assert.match(
+      contents,
+      /uv tool install git\+https:\/\/github\.com\/Human-Agent-Society\/CORAL\.git/,
+      relativePath,
+    );
   }
 });
