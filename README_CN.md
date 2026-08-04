@@ -3,7 +3,9 @@
 
 <img src="assets/logo.png" alt="CORAL logo —— 多 Agent 自主编程基础设施" width="360">
 
-## **一键启动智能体群组，共享知识，无限进化**
+# CORAL：面向自主编程 Agent 的开源 Autoresearch 框架
+
+**一键启动智能体群组，共享知识，无限进化**
 
 <p>
   <img src="assets/mit_logo.png" alt="MIT" height="50">
