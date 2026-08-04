@@ -1,0 +1,28 @@
+name: Main PR source guard
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  require-dev-source:
+    name: Require dev source for main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify pull request source
+        env:
+          BASE_REPOSITORY: ${{ github.event.pull_request.base.repo.full_name }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [[ "$HEAD_REPOSITORY" != "$BASE_REPOSITORY" || "$HEAD_BRANCH" != "dev" ]]; then
+            echo "::error::Pull requests to main must come from this repository's dev branch."
+            echo "Received source: $HEAD_REPOSITORY:$HEAD_BRANCH"
+            exit 1
+          fi
+
+          echo "Accepted source: $HEAD_REPOSITORY:$HEAD_BRANCH"
