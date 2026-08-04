@@ -100,7 +100,7 @@ bundle = ScoreBundle(
 |-------|------|-------------|
 | `scores` | `dict[str, Score]` | Named scores |
 | `aggregated` | `float \| None` | Overall score |
-| `is_public` | `bool` | Whether scores are visible to agents (default: True) |
+| `is_public` | `bool` | Whether the per-score breakdown is stored in agent-visible attempt metadata (default: True). The aggregate score and feedback remain visible. |
 
 ### Methods
 
@@ -150,6 +150,7 @@ attempt = Attempt(
 | Key | Type | Description |
 |-----|------|-------------|
 | `budget_class` | `str` | `"real"`, `"tune"`, or `"grader_error"`; controls leaderboard and heartbeat accounting |
+| `scores` | `dict[str, dict]` | Serialized `ScoreBundle.scores` for a successful public bundle; omitted when `is_public` is false |
 | `user_best` | `bool` | Set to `true` when the operator marks this attempt as best in the dashboard |
 
 ### Methods
