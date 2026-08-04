@@ -78,6 +78,7 @@ Rules:
 - **Name by topic** — `algorithms/` not `agent1-work/`
 - **Don't touch `raw/`** — immutable source material
 - **Don't touch `_synthesis/`, `_connections.md`, `_open-questions.md`** — owned by consolidate
+- **Don't touch `research/_coverage.md`** — the research coverage ledger, owned by the research team (the `_` prefix already keeps the index/dedup/link scripts off it)
 
 ### 3. Deduplicate
 
