@@ -1,19 +1,29 @@
-import { useEffect, useRef, useState } from "react";
-import { api, type RunsResponse } from "../lib/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api, type RunRoot, type RunsResponse, type TaskRuns } from "../lib/api";
 
 export default function RunSelector() {
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<RunsResponse | null>(null);
+  const [selectedRoot, setSelectedRoot] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const loadRuns = useCallback(() => {
     api.runs().then((d) => {
       setData(d);
+      setSelectedRoot(d.current.root ?? "current");
       setSelectedTask(d.current.task);
     }).catch(() => {});
   }, []);
+
+  useEffect(loadRuns, [loadRuns]);
+
+  // A detached dashboard can outlive the run that launched it. Refresh the
+  // catalog whenever the picker opens so newly-created run directories appear.
+  useEffect(() => {
+    if (open) loadRuns();
+  }, [open, loadRuns]);
 
   // Close on outside click
   useEffect(() => {
@@ -27,14 +37,19 @@ export default function RunSelector() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const handleSwitch = async (task: string, run: string) => {
-    if (data && task === data.current.task && run === data.current.run) {
+  const handleSwitch = async (root: string, task: string, run: string) => {
+    if (
+      data &&
+      root === (data.current.root ?? "current") &&
+      task === data.current.task &&
+      run === data.current.run
+    ) {
       setOpen(false);
       return;
     }
     setSwitching(true);
     try {
-      await api.switchRun(task, run);
+      await api.switchRun(root, task, run);
       window.location.reload();
     } catch {
       setSwitching(false);
@@ -43,14 +58,32 @@ export default function RunSelector() {
 
   if (!data) return null;
 
-  const currentTask = data.tasks.find((t) => t.slug === data.current.task);
-  const hasMultipleTasks = data.tasks.length > 1;
-  const activeTask = data.tasks.find((t) => t.slug === selectedTask) ?? currentTask;
+  const currentRootId = data.current.root ?? "current";
+  const roots = data.roots && data.roots.length > 0
+    ? data.roots
+    : [{ id: currentRootId, label: "results", tasks: data.tasks }];
+  const currentRoot = roots.find((root) => root.id === currentRootId) ?? roots[0];
+  const activeRoot = roots.find((root) => root.id === selectedRoot) ?? currentRoot;
+  const currentTask = currentRoot?.tasks.find((task) => task.slug === data.current.task);
+  const activeTask = activeRoot?.tasks.find((task) => task.slug === selectedTask)
+    ?? (activeRoot?.id === currentRoot?.id ? currentTask : activeRoot?.tasks[0]);
+  const hasMultipleRoots = roots.length > 1;
+  const hasMultipleTasks = (activeRoot?.tasks.length ?? 0) > 1;
+
+  const chooseRoot = (root: RunRoot) => {
+    setSelectedRoot(root.id);
+    if (root.id === currentRootId && root.tasks.some((task) => task.slug === data.current.task)) {
+      setSelectedTask(data.current.task);
+    } else {
+      setSelectedTask(root.tasks[0]?.slug ?? null);
+    }
+  };
 
   return (
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
+        title={currentRoot?.label}
         className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted transition-colors duration-100"
         disabled={switching}
       >
@@ -75,14 +108,69 @@ export default function RunSelector() {
       {open && (
         <div
           className={`absolute top-full left-0 mt-1 z-50 bg-background border border-border rounded-lg shadow-lg overflow-hidden ${
-            hasMultipleTasks ? "w-[520px]" : "w-[340px]"
+            hasMultipleRoots
+              ? "w-[760px] max-w-[calc(100vw-3rem)]"
+              : hasMultipleTasks
+                ? "w-[520px]"
+                : "w-[340px]"
           }`}
         >
-          {hasMultipleTasks ? (
+          {hasMultipleRoots ? (
+            <div className="flex w-full">
+              <div className="w-[280px] border-r border-border bg-muted/50 overflow-y-auto max-h-[360px] shrink-0">
+                <PickerHeading>Catalog</PickerHeading>
+                {roots.map((root) => (
+                  <button
+                    key={root.id}
+                    onClick={() => chooseRoot(root)}
+                    title={root.label}
+                    className={`w-full text-left px-3 py-2 font-mono text-[10px] truncate border-b border-border last:border-b-0 transition-colors duration-100 ${
+                      activeRoot?.id === root.id
+                        ? "bg-foreground text-background"
+                        : "text-muted-fg hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {root.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-[200px] border-r border-border bg-muted/25 overflow-y-auto max-h-[360px] shrink-0">
+                <PickerHeading>Task</PickerHeading>
+                {activeRoot?.tasks.map((task) => (
+                  <button
+                    key={task.slug}
+                    onClick={() => setSelectedTask(task.slug)}
+                    title={task.slug}
+                    className={`w-full text-left px-3 py-2 font-mono text-[10px] tracking-wider uppercase truncate border-b border-border last:border-b-0 transition-colors duration-100 ${
+                      activeTask?.slug === task.slug
+                        ? "bg-foreground text-background"
+                        : "text-muted-fg hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {task.slug}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex-1 max-h-[360px] overflow-y-auto">
+                <PickerHeading>Run</PickerHeading>
+                <RunList
+                  root={activeRoot}
+                  task={activeTask}
+                  currentRoot={currentRootId}
+                  currentTask={data.current.task}
+                  currentRun={data.current.run}
+                  switching={switching}
+                  onSwitch={handleSwitch}
+                />
+              </div>
+            </div>
+          ) : hasMultipleTasks ? (
             <div className="flex">
               {/* Left: task list */}
               <div className="w-[180px] border-r border-border bg-muted/50 overflow-y-auto max-h-[360px] shrink-0">
-                {data.tasks.map((t) => (
+                {activeRoot?.tasks.map((t) => (
                   <button
                     key={t.slug}
                     onClick={() => setSelectedTask(t.slug)}
@@ -101,7 +189,9 @@ export default function RunSelector() {
               {/* Right: run list */}
               <div className="flex-1 max-h-[360px] overflow-y-auto">
                 <RunList
+                  root={activeRoot}
                   task={activeTask}
+                  currentRoot={currentRootId}
                   currentTask={data.current.task}
                   currentRun={data.current.run}
                   switching={switching}
@@ -112,7 +202,9 @@ export default function RunSelector() {
           ) : (
             <div className="max-h-[360px] overflow-y-auto">
               <RunList
+                root={activeRoot}
                 task={activeTask}
+                currentRoot={currentRootId}
                 currentTask={data.current.task}
                 currentRun={data.current.run}
                 switching={switching}
@@ -126,18 +218,30 @@ export default function RunSelector() {
   );
 }
 
+function PickerHeading({ children }: { children: string }) {
+  return (
+    <div className="sticky top-0 z-10 bg-background/95 border-b border-border px-3 py-1.5 font-mono text-[9px] tracking-[0.18em] uppercase text-muted-fg">
+      {children}
+    </div>
+  );
+}
+
 function RunList({
+  root,
   task,
+  currentRoot,
   currentTask,
   currentRun,
   switching,
   onSwitch,
 }: {
-  task: { slug: string; runs: { timestamp: string; status: string; attempts: number; is_latest: boolean }[] } | undefined;
+  root: RunRoot | undefined;
+  task: TaskRuns | undefined;
+  currentRoot: string;
   currentTask: string;
   currentRun: string;
   switching: boolean;
-  onSwitch: (task: string, run: string) => void;
+  onSwitch: (root: string, task: string, run: string) => void;
 }) {
   if (!task || task.runs.length === 0) {
     return (
@@ -151,11 +255,13 @@ function RunList({
     <>
       {task.runs.map((run) => {
         const isCurrent =
-          task.slug === currentTask && run.timestamp === currentRun;
+          root?.id === currentRoot &&
+          task.slug === currentTask &&
+          run.timestamp === currentRun;
         return (
           <button
             key={run.timestamp}
-            onClick={() => onSwitch(task.slug, run.timestamp)}
+            onClick={() => root && onSwitch(root.id, task.slug, run.timestamp)}
             disabled={switching}
             className={`w-full text-left px-3 py-2 flex items-center gap-2 transition-colors duration-100 border-b border-border last:border-b-0 ${
               isCurrent ? "bg-foreground/5" : "hover:bg-muted/50"

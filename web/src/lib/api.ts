@@ -240,9 +240,16 @@ export interface TaskRuns {
   runs: RunInfo[];
 }
 
-export interface RunsResponse {
-  current: { task: string; run: string };
+export interface RunRoot {
+  id: string;
+  label: string;
   tasks: TaskRuns[];
+}
+
+export interface RunsResponse {
+  current: { root?: string; task: string; run: string };
+  tasks: TaskRuns[];
+  roots?: RunRoot[];
 }
 
 export interface TaskConfig {
@@ -285,6 +292,6 @@ export const api = {
   logsList: () => get<Record<string, Array<{ path: string; index: number; size_bytes: number; modified: number }>>>("/logs"),
   status: () => get<RunStatus>("/status"),
   runs: () => get<RunsResponse>("/runs"),
-  switchRun: (task: string, run: string) =>
-    post<{ ok: boolean; task: string; run: string }>("/runs/switch", { task, run }),
+  switchRun: (root: string, task: string, run: string) =>
+    post<{ ok: boolean; root: string; task: string; run: string }>("/runs/switch", { root, task, run }),
 };

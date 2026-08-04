@@ -173,6 +173,9 @@ def test_process_pending_once_grades_pending():
             assert finalized[0].score == 0.42
             assert finalized[0].status == "improved"
             assert finalized[0].commit_hash == pending.commit_hash
+            assert finalized[0].metadata["scores"] == {
+                "eval": {"value": 0.42, "name": "eval", "explanation": None, "metadata": {}}
+            }
 
             # No more pending after the drain.
             assert _find_pending(repo / ".coral") == []
@@ -220,6 +223,93 @@ def test_process_pending_once_preserves_submission_fields():
             assert final.agent_id == "agent-1"
             assert final.timestamp == original_ts  # daemon doesn't restamp
             assert final.parent_hash == pending.parent_hash
+        finally:
+            sys.path.pop(0)
+
+
+def test_grader_persists_score_breakdown_in_attempt_metadata():
+    """Finalized attempts retain daemon-owned serialized ScoreBundle scores."""
+    with tempfile.TemporaryDirectory() as d:
+        repo = _init_repo_and_coral(Path(d))
+        _write_grader(
+            repo,
+            "from coral.grader.task_grader import TaskGrader\n"
+            "from coral.types import Score, ScoreBundle\n"
+            "class Grader(TaskGrader):\n"
+            "    def evaluate(self):\n"
+            "        return ScoreBundle(\n"
+            "            scores={\n"
+            "                'quality': Score(value=0.9, name='quality', explanation='good', metadata={'source': 'test'}),\n"
+            "                'cost': Score(value=0.2, name='cost'),\n"
+            "            },\n"
+            "            aggregated=0.8,\n"
+            "            metadata={'grader_key': 'grader_value', 'scores': {'incorrect': 'value'}},\n"
+            "        )\n",
+        )
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "main.py").write_text("print('v2')\n")
+            pending = submit_eval(
+                message="Persist breakdown", agent_id="agent-1", workdir=str(repo), wait=False
+            )
+
+            process_pending_once(repo / ".coral")
+
+            finalized = read_attempt(repo / ".coral", pending.commit_hash)
+            assert finalized is not None
+            assert finalized.score == 0.8
+            assert finalized.metadata["grader_key"] == "grader_value"
+            assert finalized.metadata["scores"] == {
+                "quality": {
+                    "value": 0.9,
+                    "name": "quality",
+                    "explanation": "good",
+                    "metadata": {"source": "test"},
+                },
+                "cost": {"value": 0.2, "name": "cost", "explanation": None, "metadata": {}},
+            }
+        finally:
+            sys.path.pop(0)
+
+
+def test_private_grader_omits_score_breakdown_from_attempt_metadata():
+    """Private bundles suppress daemon-, grader-, and pending-provided scores."""
+    with tempfile.TemporaryDirectory() as d:
+        repo = _init_repo_and_coral(Path(d))
+        _write_grader(
+            repo,
+            "from coral.grader.task_grader import TaskGrader\n"
+            "from coral.types import Score, ScoreBundle\n"
+            "class Grader(TaskGrader):\n"
+            "    def evaluate(self):\n"
+            "        return ScoreBundle(\n"
+            "            scores={\n"
+            "                'hidden': Score(value=0.4, name='hidden', explanation='secret', metadata={'case': 'private'}),\n"
+            "            },\n"
+            "            aggregated=0.4,\n"
+            "            is_public=False,\n"
+            "            metadata={'grader_key': 'grader_value', 'scores': {'grader': 'leak'}},\n"
+            "        )\n",
+        )
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "main.py").write_text("print('v2')\n")
+            pending = submit_eval(
+                message="Keep breakdown private",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
+            )
+            pending.metadata["scores"] = {"pending": "leak"}
+            write_attempt(repo / ".coral", pending)
+
+            process_pending_once(repo / ".coral")
+
+            finalized = read_attempt(repo / ".coral", pending.commit_hash)
+            assert finalized is not None
+            assert finalized.score == 0.4
+            assert finalized.metadata["grader_key"] == "grader_value"
+            assert "scores" not in finalized.metadata
         finally:
             sys.path.pop(0)
 
@@ -476,6 +566,7 @@ def test_grader_marks_grader_error_on_exception():
             assert final.budget_class == "grader_error", (
                 "Grader exceptions should be classified as grader_error, not real attempts."
             )
+            assert "scores" not in final.metadata
         finally:
             sys.path.pop(0)
 
@@ -873,6 +964,7 @@ def test_grade_one_finalizes_migrated_pending_attempt_in_current_island(tmp_path
     assert current.score == 0.9
     assert current.metadata["island_id"] == "1"
     assert current.metadata["grader_key"] == "grader_value"
+    assert current.metadata["scores"] == {}
     assert read_eval_count(coral_dir, island_id="0") == 0
     assert read_eval_count(coral_dir, island_id="1") == 1
     assert read_eval_count(coral_dir) == 1

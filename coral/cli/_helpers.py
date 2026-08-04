@@ -314,7 +314,9 @@ def kill_ui(coral_dir: Path) -> None:
     import signal
 
     ui_pid_file = coral_dir / "public" / "ui.pid"
+    ui_url_file = coral_dir / "public" / "ui.url"
     if not ui_pid_file.exists():
+        ui_url_file.unlink(missing_ok=True)
         return
     try:
         pid = int(ui_pid_file.read_text().strip())
@@ -323,6 +325,7 @@ def kill_ui(coral_dir: Path) -> None:
     except (ProcessLookupError, ValueError):
         pass
     ui_pid_file.unlink(missing_ok=True)
+    ui_url_file.unlink(missing_ok=True)
 
 
 def kill_orphaned_agents(agent_pids_file: Path) -> None:

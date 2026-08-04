@@ -122,6 +122,30 @@ def test_codex_classify_exit_uses_uptime_fallback(tmp_path: Path) -> None:
     assert runtime.classify_exit(log, exit_code=0, uptime_seconds=5.0) == "no_result"
 
 
+def test_codex_extracts_current_thread_started_id(tmp_path: Path) -> None:
+    log = tmp_path / "agent.log"
+    log.write_text(
+        '{"type":"thread.started","thread_id":"019fbea9-d7c0-7870-9606-cf1100d303e8"}\n'
+        '{"type":"turn.started"}\n'
+    )
+
+    assert CodexRuntime().extract_session_id(log) == "019fbea9-d7c0-7870-9606-cf1100d303e8"
+
+
+def test_codex_extracts_legacy_session_id(tmp_path: Path) -> None:
+    log = tmp_path / "agent.log"
+    log.write_text('{"type":"result","session_id":"legacy-session"}\n')
+
+    assert CodexRuntime().extract_session_id(log) == "legacy-session"
+
+
+def test_codex_ignores_unrelated_thread_id(tmp_path: Path) -> None:
+    log = tmp_path / "agent.log"
+    log.write_text('{"type":"item.completed","thread_id":"not-a-session"}\n')
+
+    assert CodexRuntime().extract_session_id(log) is None
+
+
 def test_kiro_classify_exit_uses_uptime_fallback(tmp_path: Path) -> None:
     log = tmp_path / "agent.log"
     log.write_text("plain text output\n")
