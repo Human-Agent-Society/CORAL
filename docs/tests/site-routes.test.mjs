@@ -74,6 +74,17 @@ test('robots and sitemap expose canonical site routes', async () => {
   }
 });
 
+test('llms.txt provides canonical project and documentation entry points', async () => {
+  const { response, body } = await get('/llms.txt');
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type') ?? '', /^text\/plain/);
+  assert.match(body, /^# CORAL$/m);
+  assert.match(body, /open-source autoresearch powered by autonomous coding agents/i);
+  assert.match(body, /https:\/\/coral\.compounding-intelligence\.ai\/docs\/getting-started\/quickstart\//);
+  assert.match(body, /https:\/\/github\.com\/Human-Agent-Society\/CORAL/);
+  assert.doesNotMatch(body, /uv tool install coral(?:\s|[`'"]|$)/);
+});
+
 test('the article serves an asset below its canonical prefix', async () => {
   const { response } = await get(
     '/blogs/evolve-like-coral/coral_logo.png',

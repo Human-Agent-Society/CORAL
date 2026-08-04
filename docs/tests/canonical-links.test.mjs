@@ -9,6 +9,7 @@ const maintainedFiles = [
   'README_CN.md',
   'install.sh',
   'blog/index.html',
+  'docs/public/llms.txt',
   'docs/lib/layout.shared.tsx',
   'plugin/AGENTS.md',
   'plugin/hooks/session-start.py',
