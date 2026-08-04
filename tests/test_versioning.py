@@ -30,6 +30,15 @@ def _release_tuple(version: str) -> tuple[int, int, int]:
     return tuple(int(part) for part in match.groups())
 
 
+def _latest_release_tag() -> str:
+    tags = _git("tag", "--list", "v[0-9]*")
+    assert tags.returncode == 0
+
+    release_tags = [tag for tag in tags.stdout.splitlines() if tag]
+    assert release_tags, "CI checkout must retain release tags"
+    return max(release_tags, key=_release_tuple)
+
+
 def test_runtime_version_comes_from_distribution_metadata():
     assert coral.__version__ == distribution_version("coral")
 
@@ -43,13 +52,15 @@ def test_generated_version_file_is_ignored_and_untracked():
     assert tracked.stdout.strip() == "", "generated hatch-vcs output must not be committed"
 
 
-def test_distribution_version_is_not_older_than_latest_reachable_tag():
-    latest_tag = _git("describe", "--tags", "--abbrev=0", "--match", "v[0-9]*")
-    assert latest_tag.returncode == 0, (
-        "No reachable release tag; CI checkout must retain Git history and tags"
+def test_distribution_version_is_based_on_latest_release_tag():
+    latest_tag = _latest_release_tag()
+    ancestor = _git("merge-base", "--is-ancestor", latest_tag, "HEAD")
+    assert ancestor.returncode == 0, (
+        f"Latest release tag {latest_tag} is not an ancestor of HEAD; "
+        "release-history syncs must be merged, not squashed"
     )
 
     installed = distribution_version("coral")
-    assert _release_tuple(installed) >= _release_tuple(latest_tag.stdout.strip()), (
-        f"Installed version {installed} predates reachable tag {latest_tag.stdout.strip()}"
+    assert _release_tuple(installed) >= _release_tuple(latest_tag), (
+        f"Installed version {installed} predates release tag {latest_tag}"
     )
