@@ -19,6 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # hatch-vcs and the version regression tests need release tags.
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -46,6 +49,9 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          # hatch-vcs and the version regression tests need release tags.
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
