@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-export const alt = 'CORAL — open-source autoresearch for autonomous coding agents';
+export const alt = 'CORAL: open-source autoresearch powered by autonomous coding agents';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -42,7 +42,7 @@ export default function OpenGraphImage() {
               marginTop: 28,
             }}
           >
-            Autonomous coding agents that experiment, learn, and evolve together.
+            Open-source autoresearch powered by autonomous coding agents.
           </div>
           <div
             style={{

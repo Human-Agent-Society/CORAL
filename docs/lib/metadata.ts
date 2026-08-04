@@ -2,11 +2,11 @@ import type { Metadata } from 'next';
 
 export const SITE_ORIGIN = 'https://coral.compounding-intelligence.ai';
 export const SITE_NAME = 'CORAL';
-export const DEFAULT_TITLE = 'CORAL — Open-Source Autoresearch for Autonomous Coding Agents';
+export const DEFAULT_TITLE = 'CORAL: Open-Source Autoresearch Powered by Autonomous Coding Agents';
 export const DEFAULT_DESCRIPTION =
   'Run Claude Code, Codex, Cursor, Kiro, and OpenCode as a self-improving multi-agent team with isolated worktrees, continuous grading, and shared memory.';
 const SOCIAL_IMAGE_PATH = '/opengraph-image/';
-const SOCIAL_IMAGE_ALT = 'CORAL — open-source autoresearch for autonomous coding agents';
+const SOCIAL_IMAGE_ALT = 'CORAL: open-source autoresearch powered by autonomous coding agents';
 
 export function absoluteUrl(path: string): string {
   return new URL(path, SITE_ORIGIN).toString();
