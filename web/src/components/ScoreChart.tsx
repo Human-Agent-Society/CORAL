@@ -15,6 +15,7 @@ import zoomPlugin from "chartjs-plugin-zoom";
 import "chartjs-adapter-date-fns";
 import { Line } from "react-chartjs-2";
 import type { Attempt } from "../lib/api";
+import { useTheme, type Theme } from "../hooks/useTheme";
 
 ChartJS.register(
   CategoryScale,
@@ -33,23 +34,22 @@ type ScaleMode = "linear" | "log";
 type ViewMode = "all" | "last50" | "last20" | "custom";
 type XAxisMode = "index" | "time";
 
-const AGENT_PALETTE = [
-  "#374151", // gray-700
-  "#1e3a5f", // dark slate blue
-  "#5b4a6a", // dark mauve
-  "#4a5240", // dark olive
-  "#7c4a3a", // dark rust
-  "#2d5a5a", // dark teal
-  "#5a4630", // dark bronze
-  "#3b4f7a", // muted cobalt
-  "#6b4050", // muted berry
-  "#2e5e4e", // muted forest
-];
+const AGENT_PALETTES: Record<Theme, string[]> = {
+  light: [
+    "#374151", "#1e3a5f", "#5b4a6a", "#4a5240", "#7c4a3a",
+    "#2d5a5a", "#5a4630", "#3b4f7a", "#6b4050", "#2e5e4e",
+  ],
+  dark: [
+    "#b4bcc9", "#7fa5d2", "#b598c3", "#9aaa82", "#ce8d73",
+    "#70aaa6", "#bc986b", "#879fce", "#c7889b", "#75aa93",
+  ],
+};
 
-function agentColor(index: number): string {
-  if (index < AGENT_PALETTE.length) return AGENT_PALETTE[index];
-  const hue = ((index - AGENT_PALETTE.length) * 137.5) % 360;
-  return `hsl(${hue}, 35%, 40%)`;
+function agentColor(index: number, theme: Theme): string {
+  const palette = AGENT_PALETTES[theme];
+  if (index < palette.length) return palette[index];
+  const hue = ((index - palette.length) * 137.5) % 360;
+  return `hsl(${hue}, 35%, ${theme === "dark" ? 68 : 40}%)`;
 }
 
 function stripCommonPrefix(id: string, all: string[]): string {
@@ -90,6 +90,7 @@ export default function ScoreChart({
   animationDuration,
 }: Props) {
   const chartRef = useRef<ChartJS<"line"> | null>(null);
+  const { theme } = useTheme();
   const [scaleMode, setScaleMode] = useState<ScaleMode>("linear");
   const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [xAxisMode, setXAxisMode] = useState<XAxisMode>("index");
@@ -99,6 +100,23 @@ export default function ScoreChart({
   const [scoreMax, setScoreMax] = useState("");
   const [hideCrashed, setHideCrashed] = useState(false);
   const [improvedOnly, setImprovedOnly] = useState(false);
+  const chartColors = theme === "dark"
+    ? {
+        foreground: "#eceeec",
+        background: "#0e1011",
+        muted: "#a6acae",
+        border: "#292d2f",
+        borderStrong: "#454b4e",
+        fill: "rgba(236, 238, 236, 0.08)",
+      }
+    : {
+        foreground: "#1a1d1e",
+        background: "#eff0f0",
+        muted: "#727879",
+        border: "#d0d3d5",
+        borderStrong: "#a0a3a5",
+        fill: "rgba(26, 29, 30, 0.08)",
+      };
 
   // Filter and sort
   let filtered = [...attempts]
@@ -177,7 +195,7 @@ export default function ScoreChart({
     ? agents
         .filter((id) => selectedAgents.has(id))
         .map((id) => {
-          const color = agentColor(agents.indexOf(id));
+          const color = agentColor(agents.indexOf(id), theme);
           return {
             label: id,
             data: sliced.map((a) => (a.agent_id === id ? a.score! : null)),
@@ -197,14 +215,14 @@ export default function ScoreChart({
         {
           label: "Score",
           data: scores,
-          borderColor: "#1a1d1e",
-          backgroundColor: "rgba(26, 29, 30, 0.08)",
+          borderColor: chartColors.foreground,
+          backgroundColor: chartColors.fill,
           borderWidth: lineWidth,
           pointRadius: ptRadius,
           pointBackgroundColor: sliced.map((a) =>
-            a.status === "improved" ? "#1a1d1e" : "#eff0f0"
+            a.status === "improved" ? chartColors.foreground : chartColors.background
           ),
-          pointBorderColor: "#1a1d1e",
+          pointBorderColor: chartColors.foreground,
           pointBorderWidth: 2,
           fill: true,
           tension: 0,
@@ -219,7 +237,7 @@ export default function ScoreChart({
       {
         label: "Best",
         data: runningBest,
-        borderColor: showPerAgent ? "#a0a3a5" : "#1a1d1e",
+        borderColor: showPerAgent ? chartColors.borderStrong : chartColors.foreground,
         borderWidth: 1,
         borderDash: [6, 4],
         pointRadius: 0,
@@ -240,19 +258,19 @@ export default function ScoreChart({
             day: "MMM d",
           },
         },
-        grid: { color: "#d0d3d5", lineWidth: 1 },
+        grid: { color: chartColors.border, lineWidth: 1 },
         ticks: {
           font: { family: "'JetBrains Mono', monospace", size: 10 },
-          color: "#727879",
+          color: chartColors.muted,
           maxRotation: 0,
         },
       }
     : {
         type: "category" as const,
-        grid: { color: "#d0d3d5", lineWidth: 1 },
+        grid: { color: chartColors.border, lineWidth: 1 },
         ticks: {
           font: { family: "'JetBrains Mono', monospace", size: 10 },
-          color: "#727879",
+          color: chartColors.muted,
         },
       };
 
@@ -275,11 +293,13 @@ export default function ScoreChart({
           font: { family: "'JetBrains Mono', monospace", size: 11 },
           boxWidth: 20,
           boxHeight: 2,
-          color: "#1a1d1e",
+          color: chartColors.foreground,
         },
       },
       tooltip: {
-        backgroundColor: "#1a1d1e",
+        backgroundColor: chartColors.foreground,
+        titleColor: chartColors.background,
+        bodyColor: chartColors.background,
         titleFont: { family: "'JetBrains Mono', monospace", size: 11 },
         bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
         callbacks: {
@@ -310,10 +330,10 @@ export default function ScoreChart({
       x: xScale,
       y: {
         type: effectiveScale as "linear" | "logarithmic",
-        grid: { color: "#d0d3d5", lineWidth: 1 },
+        grid: { color: chartColors.border, lineWidth: 1 },
         ticks: {
           font: { family: "'JetBrains Mono', monospace", size: 10 },
-          color: "#727879",
+          color: chartColors.muted,
         },
         ...(yMin !== undefined && !isNaN(yMin) ? { min: yMin } : {}),
         ...(yMax !== undefined && !isNaN(yMax) ? { max: yMax } : {}),
@@ -429,7 +449,7 @@ export default function ScoreChart({
             </button>
             <div className="flex items-center gap-1 overflow-x-auto">
               {agents.map((id, i) => {
-                const color = agentColor(i);
+                const color = agentColor(i, theme);
                 const label = stripCommonPrefix(id, agents);
                 const isActive = selectedAgents.has(id);
                 return (

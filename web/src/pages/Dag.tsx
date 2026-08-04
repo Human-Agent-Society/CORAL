@@ -328,7 +328,7 @@ function LineageCanvas({
       style={{
         cursor: isPanning || draggingHash ? "grabbing" : "grab",
         backgroundImage:
-          "radial-gradient(circle, rgba(60,60,70,0.10) 1px, transparent 1px)",
+          "radial-gradient(circle, var(--graph-dot-color) 1px, transparent 1px)",
         backgroundSize: "20px 20px",
       }}
       onMouseDown={handleBgMouseDown}

@@ -1,9 +1,9 @@
 @import "tailwindcss";
-
-/* Google Fonts */
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&family=JetBrains+Mono:wght@300;400;500;600&display=swap");
 
-/* Cool Gray Design Tokens */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Cool gray by day, graphite instrument panel by night. */
 @theme {
   --color-background: #eff0f0;
   --color-foreground: #1a1d1e;
@@ -17,6 +17,24 @@
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
+:root {
+  --graph-dot-color: rgba(60, 60, 70, 0.1);
+}
+
+:root.dark {
+  --color-background: #0e1011;
+  --color-foreground: #eceeec;
+  --color-muted: #171a1c;
+  --color-muted-fg: #a6acae;
+  --color-border: #292d2f;
+  --color-border-strong: #454b4e;
+  --graph-dot-color: rgba(190, 198, 200, 0.12);
+}
+
+html {
+  background: var(--color-background);
+}
+
 body {
   margin: 0;
   font-family: var(--font-body);
@@ -24,6 +42,7 @@ body {
   color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 160ms ease, color 160ms ease;
 }
 
 #root {
@@ -56,9 +75,25 @@ pre {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d0d3d5;
+  background: var(--color-border);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #adb2b5;
+  background: var(--color-border-strong);
+}
+
+::selection {
+  background: var(--color-foreground);
+  color: var(--color-background);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
