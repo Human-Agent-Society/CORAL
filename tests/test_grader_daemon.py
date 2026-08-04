@@ -272,6 +272,48 @@ def test_grader_persists_score_breakdown_in_attempt_metadata():
             sys.path.pop(0)
 
 
+def test_private_grader_omits_score_breakdown_from_attempt_metadata():
+    """Private bundles suppress daemon-, grader-, and pending-provided scores."""
+    with tempfile.TemporaryDirectory() as d:
+        repo = _init_repo_and_coral(Path(d))
+        _write_grader(
+            repo,
+            "from coral.grader.task_grader import TaskGrader\n"
+            "from coral.types import Score, ScoreBundle\n"
+            "class Grader(TaskGrader):\n"
+            "    def evaluate(self):\n"
+            "        return ScoreBundle(\n"
+            "            scores={\n"
+            "                'hidden': Score(value=0.4, name='hidden', explanation='secret', metadata={'case': 'private'}),\n"
+            "            },\n"
+            "            aggregated=0.4,\n"
+            "            is_public=False,\n"
+            "            metadata={'grader_key': 'grader_value', 'scores': {'grader': 'leak'}},\n"
+            "        )\n",
+        )
+        sys.path.insert(0, str(repo))
+        try:
+            (repo / "main.py").write_text("print('v2')\n")
+            pending = submit_eval(
+                message="Keep breakdown private",
+                agent_id="agent-1",
+                workdir=str(repo),
+                wait=False,
+            )
+            pending.metadata["scores"] = {"pending": "leak"}
+            write_attempt(repo / ".coral", pending)
+
+            process_pending_once(repo / ".coral")
+
+            finalized = read_attempt(repo / ".coral", pending.commit_hash)
+            assert finalized is not None
+            assert finalized.score == 0.4
+            assert finalized.metadata["grader_key"] == "grader_value"
+            assert "scores" not in finalized.metadata
+        finally:
+            sys.path.pop(0)
+
+
 def test_process_pending_multiple_in_submission_order():
     """Pending attempts are graded in submission (timestamp) order."""
     with tempfile.TemporaryDirectory() as d:

@@ -153,9 +153,10 @@ def get_budget_class(metadata: dict[str, Any] | None) -> str:
 class Attempt:
     """Record of a single optimization attempt by an agent.
 
-    Successful grader finalization stores the serialized ``ScoreBundle.scores``
-    mapping in ``metadata["scores"]``. This daemon-owned breakdown supplements
-    the aggregate ``score``; it does not affect selection behavior.
+    Successful public grader finalization stores the serialized
+    ``ScoreBundle.scores`` mapping in ``metadata["scores"]``. This daemon-owned
+    breakdown is omitted when ``ScoreBundle.is_public`` is false. It supplements
+    the aggregate ``score`` and does not affect selection behavior.
     """
 
     commit_hash: str
