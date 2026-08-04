@@ -68,6 +68,10 @@ grader daemon, heartbeats, and the runtime registry.
   day-to-day development lands, and `main` tracks releases. Maintainers merge
   `dev` into `main` as part of the release process — **all PRs must target
   `dev`**, never `main` directly.
+- If `main` must be synchronized back into `dev`, merge that sync PR with
+  **Create a merge commit**. Squash or rebase merging copies the file tree but
+  discards the release-tag ancestry, which can reintroduce release conflicts
+  and make hatch-vcs derive a version older than the latest tag.
 - Create a topic branch off `dev`. Suggested naming: `feat/<short-desc>`,
   `fix/<short-desc>`, `docs/<short-desc>`, `refactor/<short-desc>`.
 - Keep commits focused. Prefer several small, reviewable commits over one
@@ -94,8 +98,9 @@ grader daemon, heartbeats, and the runtime registry.
 5. Keep the PR scoped — unrelated cleanups belong in a separate PR.
 6. A maintainer will review. Expect comments; please respond and push fixups
    rather than force-pushing rewritten history while review is in progress.
-7. We typically **squash-merge** once CI is green and at least one maintainer
-   has approved.
+7. We typically **squash-merge ordinary topic PRs** once CI is green and at
+   least one maintainer has approved. Branch-history sync PRs are the exception:
+   use **Create a merge commit** so both parent histories are preserved.
 
 ## Coding guidelines
 
