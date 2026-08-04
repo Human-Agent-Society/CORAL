@@ -11,6 +11,7 @@ test('canonical pages stay on the same origin', async () => {
   const pages = [
     ['/', 'autonomous'],
     ['/docs/', 'Documentation'],
+    ['/docs/what-is-coral/', 'Open-Source Autoresearch Framework'],
     ['/blogs/', 'Blogs'],
     ['/blogs/evolve-like-coral/', 'Evolve Like Coral'],
   ];
@@ -26,6 +27,7 @@ test('public pages expose canonical and social metadata', async () => {
   const pages = [
     ['/', '/'],
     ['/docs/', '/docs/'],
+    ['/docs/what-is-coral/', '/docs/what-is-coral/'],
     ['/blogs/', '/blogs/'],
     ['/blogs/evolve-like-coral/', '/blogs/evolve-like-coral/'],
   ];
@@ -48,9 +50,23 @@ test('public pages expose canonical and social metadata', async () => {
 
 test('the homepage describes CORAL as a software application', async () => {
   const { body } = await get('/');
+  assert.match(body, /open-source autoresearch powered by autonomous coding agents/i);
   assert.match(body, /<script type="application\/ld\+json">/);
   assert.match(body, /"@type":"SoftwareApplication"/);
+  assert.match(body, /"alternateName":\["CORAL autoresearch framework"/);
+  assert.match(body, /"mainEntityOfPage":"https:\/\/coral\.compounding-intelligence\.ai\/docs\/what-is-coral\/"/);
   assert.match(body, /"codeRepository":"https:\/\/github\.com\/Human-Agent-Society\/CORAL"/);
+});
+
+test('the CORAL identity page provides explicit disambiguation and structured FAQs', async () => {
+  const { response, body } = await get('/docs/what-is-coral/');
+  assert.equal(response.status, 200);
+  assert.match(body, /CORAL is an open-source autoresearch framework powered by autonomous coding agents/i);
+  assert.match(body, /Yes and no\. Individual coding-agent processes running through CORAL/i);
+  assert.match(body, /not affiliated with Coral Protocol or CoralOS/i);
+  assert.match(body, /"@type":"AboutPage"/);
+  assert.match(body, /"@type":"FAQPage"/);
+  assert.match(body, /"name":"Is CORAL related to Coral Protocol or CoralOS\?"/);
 });
 
 test('robots and sitemap expose canonical site routes', async () => {
@@ -65,7 +81,13 @@ test('robots and sitemap expose canonical site routes', async () => {
   const sitemap = await get('/sitemap.xml');
   assert.equal(sitemap.response.status, 200);
   assert.match(sitemap.response.headers.get('content-type') ?? '', /application\/xml/);
-  for (const path of ['/', '/docs/', '/blogs/', '/blogs/evolve-like-coral/']) {
+  for (const path of [
+    '/',
+    '/docs/',
+    '/docs/what-is-coral/',
+    '/blogs/',
+    '/blogs/evolve-like-coral/',
+  ]) {
     assert.match(
       sitemap.body,
       new RegExp(`https://coral\\.compounding-intelligence\\.ai${path.replaceAll('/', '\\/')}`),
@@ -82,6 +104,7 @@ test('llms.txt provides canonical project and documentation entry points', async
   assert.match(body, /open-source autoresearch powered by autonomous coding agents/i);
   assert.match(body, /https:\/\/coral\.compounding-intelligence\.ai\/docs\/getting-started\/quickstart\//);
   assert.match(body, /https:\/\/github\.com\/Human-Agent-Society\/CORAL/);
+  assert.match(body, /not affiliated with Coral Protocol or CoralOS/i);
   assert.doesNotMatch(body, /uv tool install coral(?:\s|[`'"]|$)/);
 });
 
