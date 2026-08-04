@@ -44,12 +44,10 @@ import subprocess
 import sys
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+from coral.config import AgentConfig, SandboxConfig
 from coral.sandbox.protocol import AgentSandboxContext, AgentSandboxSpec
-
-if TYPE_CHECKING:
-    from coral.config import AgentConfig, SandboxConfig
 
 logger = logging.getLogger(__name__)
 
