@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     'autoresearch',
     'autonomous coding agents',
     'multi-agent systems',
-    'agent orchestration',
+    'coding agent infrastructure',
     'self-evolving agents',
     'Claude Code',
     'Codex',

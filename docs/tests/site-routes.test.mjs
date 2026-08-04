@@ -62,6 +62,7 @@ test('the CORAL identity page provides explicit disambiguation and structured FA
   const { response, body } = await get('/docs/what-is-coral/');
   assert.equal(response.status, 200);
   assert.match(body, /CORAL is an open-source autoresearch framework powered by autonomous coding agents/i);
+  assert.match(body, /Yes and no\. Individual coding-agent processes running through CORAL/i);
   assert.match(body, /not affiliated with Coral Protocol or CoralOS/i);
   assert.match(body, /"@type":"AboutPage"/);
   assert.match(body, /"@type":"FAQPage"/);

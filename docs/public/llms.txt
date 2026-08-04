@@ -11,7 +11,7 @@ License: Apache-2.0
 
 - Use CORAL for iterative search over code when success can be measured by a programmatic metric or an LLM rubric grader.
 - Typical tasks include algorithm and kernel optimization, benchmark solving, scientific discovery, machine-learning experiments, and other open-ended code improvement problems.
-- CORAL is not a coding model. It orchestrates coding-agent runtimes, workspaces, evaluation, shared memory, and long-running experiments.
+- CORAL is not a coding model. It runs coding-agent processes and provides their workspaces, evaluation, shared memory, and long-running experiment loop.
 
 ## Start here
 
@@ -56,4 +56,4 @@ License: Apache-2.0
 
 - CORAL is the open-source autoresearch framework maintained at `Human-Agent-Society/CORAL` and described in the paper "CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery."
 - CORAL is not affiliated with Coral Protocol or CoralOS; those are separate projects.
-- CORAL is a framework that orchestrates autonomous coding agents, not a coding model or a single agent named "Coral Agent."
+- Individual coding-agent processes running through CORAL can be called CORAL agents. The CORAL project itself is the framework around those agents, not a single coding model.

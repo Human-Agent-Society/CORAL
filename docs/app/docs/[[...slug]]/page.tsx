@@ -58,7 +58,7 @@ const coralIdentityJsonLd = {
           name: 'Is CORAL an AI agent?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'No. CORAL is an autoresearch framework that orchestrates autonomous coding-agent runtimes, including Claude Code, Codex, Cursor Agent, Kiro, and OpenCode.',
+            text: 'Yes and no. Individual coding-agent processes running through CORAL can be called CORAL agents. The CORAL project itself is an autoresearch framework around those agents, not a single AI model.',
           },
         },
         {

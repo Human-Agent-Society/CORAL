@@ -39,7 +39,7 @@ export const softwareApplicationJsonLd = {
     'autoresearch',
     'autonomous coding agents',
     'multi-agent systems',
-    'agent orchestration',
+    'coding agent infrastructure',
     'shared memory',
   ],
   offers: {
