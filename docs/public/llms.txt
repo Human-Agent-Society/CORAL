@@ -1,0 +1,52 @@
+# CORAL
+
+> CORAL is open-source autoresearch powered by autonomous coding agents. Give it a codebase and a grader, and CORAL runs long-lived agents in isolated Git worktrees, grades every committed experiment, and shares attempts, notes, and skills through persistent memory.
+
+Canonical site: https://coral.compounding-intelligence.ai/
+Source: https://github.com/Human-Agent-Society/CORAL
+Paper: https://arxiv.org/abs/2604.01658
+License: Apache-2.0
+
+## When to use CORAL
+
+- Use CORAL for iterative search over code when success can be measured by a programmatic metric or an LLM rubric grader.
+- Typical tasks include algorithm and kernel optimization, benchmark solving, scientific discovery, machine-learning experiments, and other open-ended code improvement problems.
+- CORAL is not a coding model. It orchestrates coding-agent runtimes, workspaces, evaluation, shared memory, and long-running experiments.
+
+## Start here
+
+- [Installation](https://coral.compounding-intelligence.ai/docs/getting-started/installation/): Install the `coral` CLI and its prerequisites.
+- [Quickstart](https://coral.compounding-intelligence.ai/docs/getting-started/quickstart/): Create, validate, and run a first task.
+- [Concepts](https://coral.compounding-intelligence.ai/docs/concepts/): Understand the architecture and evaluation loop.
+- [Agent runtimes](https://coral.compounding-intelligence.ai/docs/guides/agent-runtimes/): Configure Claude Code, Codex, Cursor Agent, Kiro, or OpenCode.
+- [Build a grader](https://coral.compounding-intelligence.ai/docs/guides/custom-grader/): Package deterministic evaluation logic for a task.
+- [Multi-agent runs](https://coral.compounding-intelligence.ai/docs/guides/multi-agent/): Run agents in parallel with shared knowledge or isolated islands.
+- [Harness plugin](https://coral.compounding-intelligence.ai/docs/guides/plugin/): Author and operate CORAL tasks from Claude Code or Codex.
+
+## Core model
+
+- Agents are the optimizers. Each agent edits code in an isolated Git worktree and submits commits for evaluation.
+- A task-defined grader turns each committed attempt into a score and feedback. `grader.direction` determines whether higher or lower scores are better.
+- Shared state under `.coral/public/` carries attempts, notes, skills, heartbeat state, and checkpoints across agents.
+- Hidden grader code, answer keys, and grader environments stay under `.coral/private/` and are not visible to agents in isolated runs.
+- Multi-island runs can separate search populations and migrate selected agents between islands.
+
+## Installation
+
+- Preferred installer: `curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh`
+- Direct uv install: `uv tool install git+https://github.com/Human-Agent-Society/CORAL.git`
+- The unrelated package named `coral` on PyPI is not this project; install CORAL from the GitHub source above.
+
+## Research and examples
+
+- [COLM 2026 paper](https://arxiv.org/abs/2604.01658): CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery.
+- [Research article](https://coral.compounding-intelligence.ai/blogs/evolve-like-coral/): Architecture, experiments, comparisons, and multi-agent results.
+- [Example catalogue](https://coral.compounding-intelligence.ai/docs/examples/): Ready-to-run tasks across optimization, mathematics, systems, and machine learning.
+- [Example source](https://github.com/Human-Agent-Society/CORAL/tree/main/examples): Task configurations, seeds, and packaged graders.
+- [Kernel Builder result](https://github.com/Human-Agent-Society/CORAL/blob/main/demos/kernel_builder_1103.py): Published 1,103-cycle optimized kernel artifact.
+
+## Machine-readable resources
+
+- [Sitemap](https://coral.compounding-intelligence.ai/sitemap.xml): Canonical index of the website and documentation.
+- [Latest release](https://github.com/Human-Agent-Society/CORAL/releases/latest): Current release and changelog.
+- [GitHub releases API](https://api.github.com/repos/Human-Agent-Society/CORAL/releases/latest): Machine-readable release metadata.

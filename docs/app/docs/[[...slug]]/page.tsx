@@ -10,6 +10,7 @@ import { getMDXComponents } from '@/components/mdx';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { createPageMetadata } from '@/lib/metadata';
 
 interface PageProps {
   params: Promise<{ slug?: string[] }>;
@@ -56,9 +57,11 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const params = await props.params;
   const page = source.getPage(params.slug);
   if (!page) notFound();
+  const data = page.data as unknown as MDXPageData;
 
-  return {
-    title: page.data.title,
-    description: page.data.description,
-  };
+  return createPageMetadata({
+    title: data.title,
+    description: data.description ?? 'Documentation for the CORAL autoresearch framework.',
+    path: page.url.endsWith('/') ? page.url : `${page.url}/`,
+  });
 }

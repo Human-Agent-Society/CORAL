@@ -3,7 +3,9 @@
 
 <img src="assets/logo.png" alt="CORAL logo — multi-agent autonomous coding infrastructure" width="360">
 
-## Robust, lightweight infrastructure for multi-agent self-evolution, built for autoresearch.
+# CORAL: Open-Source Autoresearch Powered by Autonomous Coding Agents
+
+**Robust, lightweight infrastructure for multi-agent self-evolution, built for autoresearch.**
 
 [![Paper](https://img.shields.io/badge/Paper-arXiv%3A2604.01658-B31B1B.svg?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2604.01658v1)
 [![Blog](https://img.shields.io/badge/Blog-CORAL-FF6B6B.svg?logo=hashnode&logoColor=white)](https://coral.compounding-intelligence.ai/blogs/)

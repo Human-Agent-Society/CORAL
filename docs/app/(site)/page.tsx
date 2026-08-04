@@ -1,5 +1,28 @@
 import Link from 'next/link';
 import { blogPosts } from '@/lib/blogs';
+import { DEFAULT_DESCRIPTION, SITE_ORIGIN } from '@/lib/metadata';
+
+const softwareApplicationJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'CORAL',
+  applicationCategory: 'DeveloperApplication',
+  operatingSystem: 'Linux, macOS',
+  description: DEFAULT_DESCRIPTION,
+  url: SITE_ORIGIN,
+  codeRepository: 'https://github.com/Human-Agent-Society/CORAL',
+  license: 'https://www.apache.org/licenses/LICENSE-2.0',
+  softwareRequirements: 'Python 3.11 or later and Git',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+  sameAs: [
+    'https://github.com/Human-Agent-Society/CORAL',
+    'https://arxiv.org/abs/2604.01658',
+  ],
+};
 
 const capabilities = [
   {
@@ -27,6 +50,10 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-1 flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
+      />
       <section className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-20 md:grid-cols-[1.35fr_0.65fr] md:py-28">
         <div className="flex flex-col items-start">
           <p className="mb-5 rounded-full border border-fd-border bg-fd-card px-3 py-1 text-sm font-medium text-fd-muted-foreground">
