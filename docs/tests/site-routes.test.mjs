@@ -22,6 +22,58 @@ test('canonical pages stay on the same origin', async () => {
   }
 });
 
+test('public pages expose canonical and social metadata', async () => {
+  const pages = [
+    ['/', '/'],
+    ['/docs/', '/docs/'],
+    ['/blogs/', '/blogs/'],
+    ['/blogs/evolve-like-coral/', '/blogs/evolve-like-coral/'],
+  ];
+
+  for (const [path, canonicalPath] of pages) {
+    const { body } = await get(path);
+    const canonical = new URL(canonicalPath, 'https://coral.compounding-intelligence.ai');
+
+    assert.match(body, /<meta name="description" content="[^"]+"/, `${path} description`);
+    assert.match(
+      body,
+      new RegExp(`<link rel="canonical" href="${canonical.toString()}"`),
+      `${path} canonical`,
+    );
+    assert.match(body, /<meta property="og:title" content="[^"]+"/, `${path} Open Graph`);
+    assert.match(body, /<meta property="og:image" content="[^"]+"/, `${path} social image`);
+    assert.match(body, /<meta name="twitter:card" content="summary_large_image"/, `${path} Twitter`);
+  }
+});
+
+test('the homepage describes CORAL as a software application', async () => {
+  const { body } = await get('/');
+  assert.match(body, /<script type="application\/ld\+json">/);
+  assert.match(body, /"@type":"SoftwareApplication"/);
+  assert.match(body, /"codeRepository":"https:\/\/github\.com\/Human-Agent-Society\/CORAL"/);
+});
+
+test('robots and sitemap expose canonical site routes', async () => {
+  const robots = await get('/robots.txt');
+  assert.equal(robots.response.status, 200);
+  assert.match(robots.body, /Allow: \//);
+  assert.match(
+    robots.body,
+    /Sitemap: https:\/\/coral\.compounding-intelligence\.ai\/sitemap\.xml/,
+  );
+
+  const sitemap = await get('/sitemap.xml');
+  assert.equal(sitemap.response.status, 200);
+  assert.match(sitemap.response.headers.get('content-type') ?? '', /application\/xml/);
+  for (const path of ['/', '/docs/', '/blogs/', '/blogs/evolve-like-coral/']) {
+    assert.match(
+      sitemap.body,
+      new RegExp(`https://coral\\.compounding-intelligence\\.ai${path.replaceAll('/', '\\/')}`),
+      path,
+    );
+  }
+});
+
 test('the article serves an asset below its canonical prefix', async () => {
   const { response } = await get(
     '/blogs/evolve-like-coral/coral_logo.png',

@@ -61,7 +61,7 @@ def _missing_context() -> str:
         "```bash\n"
         "curl -fsSL https://raw.githubusercontent.com/Human-Agent-Society/CORAL/main/install.sh | sh\n"
         "# or, with uv:\n"
-        "uv tool install coral\n"
+        "uv tool install git+https://github.com/Human-Agent-Society/CORAL.git\n"
         "```\n\n"
         "Then the `creating-a-coral-task` and `running-coral-experiments` skills apply. "
         "Docs: https://coral.compounding-intelligence.ai/docs/\n"
