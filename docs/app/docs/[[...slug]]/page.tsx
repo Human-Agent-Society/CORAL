@@ -10,7 +10,13 @@ import { getMDXComponents } from '@/components/mdx';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { createPageMetadata } from '@/lib/metadata';
+import {
+  absoluteUrl,
+  CORAL_DEFINITION,
+  CORAL_DISAMBIGUATION,
+  createPageMetadata,
+  softwareApplicationJsonLd,
+} from '@/lib/metadata';
 
 interface PageProps {
   params: Promise<{ slug?: string[] }>;
@@ -26,6 +32,45 @@ interface MDXPageData {
   full?: boolean;
 }
 
+const coralIdentityJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    softwareApplicationJsonLd,
+    {
+      '@type': 'AboutPage',
+      '@id': absoluteUrl('/docs/what-is-coral/#page'),
+      url: absoluteUrl('/docs/what-is-coral/'),
+      name: 'What Is CORAL? The Open-Source Autoresearch Framework',
+      description: CORAL_DEFINITION,
+      mainEntity: { '@id': softwareApplicationJsonLd['@id'] },
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': absoluteUrl('/docs/what-is-coral/#faq'),
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: 'What is CORAL?',
+          acceptedAnswer: { '@type': 'Answer', text: CORAL_DEFINITION },
+        },
+        {
+          '@type': 'Question',
+          name: 'Is CORAL an AI agent?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'No. CORAL is an autoresearch framework that orchestrates autonomous coding-agent runtimes, including Claude Code, Codex, Cursor Agent, Kiro, and OpenCode.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Is CORAL related to Coral Protocol or CoralOS?',
+          acceptedAnswer: { '@type': 'Answer', text: CORAL_DISAMBIGUATION },
+        },
+      ],
+    },
+  ],
+};
+
 export default async function Page(props: PageProps) {
   const params = await props.params;
   const page = source.getPage(params.slug);
@@ -33,19 +78,28 @@ export default async function Page(props: PageProps) {
 
   const data = page.data as unknown as MDXPageData;
   const MDX = data.body;
+  const isCoralIdentityPage = page.url === '/docs/what-is-coral';
 
   return (
-    <DocsPage toc={data.toc} full={data.full} tableOfContent={{ single: false }}>
-      <DocsTitle>{data.title}</DocsTitle>
-      <DocsDescription>{data.description}</DocsDescription>
-      <DocsBody>
-        <MDX
-          components={getMDXComponents({
-            a: createRelativeLink(source, page),
-          })}
+    <>
+      {isCoralIdentityPage ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(coralIdentityJsonLd) }}
         />
-      </DocsBody>
-    </DocsPage>
+      ) : null}
+      <DocsPage toc={data.toc} full={data.full} tableOfContent={{ single: false }}>
+        <DocsTitle>{data.title}</DocsTitle>
+        <DocsDescription>{data.description}</DocsDescription>
+        <DocsBody>
+          <MDX
+            components={getMDXComponents({
+              a: createRelativeLink(source, page),
+            })}
+          />
+        </DocsBody>
+      </DocsPage>
+    </>
   );
 }
 

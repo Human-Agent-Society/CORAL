@@ -1,0 +1,75 @@
+---
+title: What Is CORAL? The Open-Source Autoresearch Framework
+description: CORAL is an open-source autoresearch framework powered by autonomous coding agents, continuous grading, isolated Git worktrees, and shared memory.
+---
+
+**CORAL is an open-source autoresearch framework powered by autonomous coding agents.** It runs long-lived agents in isolated Git worktrees, continuously grades experiments, and shares knowledge through persistent memory.
+
+Give CORAL a codebase, an objective, and a grader. CORAL coordinates supported coding-agent runtimes as they propose changes, commit experiments, receive scores and feedback, and use discoveries from earlier attempts to guide the next search step.
+
+## Is CORAL an AI agent?
+
+No. CORAL is the framework that orchestrates autonomous coding agents; it is not a model or a single agent. Claude Code, Codex, Cursor Agent, Kiro, and OpenCode are examples of agent runtimes that CORAL can manage.
+
+When this documentation uses the phrase **CORAL agent**, it means a coding-agent process running inside a CORAL-managed workspace—not a separate model named “Coral Agent.”
+
+## How CORAL works
+
+1. CORAL creates an isolated Git worktree for each agent.
+2. Each agent modifies the task codebase and commits an experiment.
+3. A task-specific grader evaluates the committed attempt and returns a score and feedback.
+4. Attempts, notes, and reusable skills persist in shared memory under `.coral/public/`.
+5. Agents continue the loop, building on useful results while exploring alternatives in parallel.
+
+This setup is designed for open-ended code search: kernel and algorithm optimization, benchmark solving, machine-learning experiments, scientific discovery, and other problems whose progress can be measured by deterministic tests or an LLM rubric grader.
+
+## Is CORAL related to Coral Protocol or CoralOS?
+
+No. **The CORAL autoresearch framework is not affiliated with Coral Protocol or CoralOS; those are separate projects.**
+
+The project described here is identified by all of the following:
+
+| Identity signal | Official value |
+| --- | --- |
+| Project | CORAL open-source autoresearch framework |
+| Canonical website | [coral.compounding-intelligence.ai](https://coral.compounding-intelligence.ai/) |
+| Source repository | [Human-Agent-Society/CORAL](https://github.com/Human-Agent-Society/CORAL) |
+| Research paper | [CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery](https://arxiv.org/abs/2604.01658) |
+| License | [Apache License 2.0](https://github.com/Human-Agent-Society/CORAL/blob/main/LICENSE) |
+
+## What makes CORAL different?
+
+- **Evaluation is part of the control loop.** Agents receive task-specific scores and feedback after every submitted experiment.
+- **Agents work in isolated repositories.** Git worktrees keep concurrent ideas separate and make every evaluated attempt reproducible.
+- **Memory persists across the organization.** Agents can share attempts, notes, and skills instead of repeatedly rediscovering the same information.
+- **The agent runtime is replaceable.** CORAL supplies orchestration, grading, and shared state while supported coding agents supply the search behavior.
+- **Private evaluation stays private.** Hidden grader code and answer keys are isolated from the agents they evaluate.
+
+## Frequently asked questions
+
+### What is CORAL?
+
+CORAL is an open-source autoresearch framework powered by autonomous coding agents. It manages workspaces, evaluation, shared memory, and long-running experiment loops.
+
+### Is CORAL an AI agent?
+
+No. CORAL orchestrates coding-agent runtimes such as Claude Code and Codex. It is the framework around the agents, not an AI model itself.
+
+### Is CORAL related to Coral Protocol or CoralOS?
+
+No. The CORAL autoresearch framework, Coral Protocol, and CoralOS are separate projects.
+
+### Which agents does CORAL support?
+
+CORAL supports Claude Code, Codex, Cursor Agent, Kiro, and OpenCode. See [Agent Runtimes](/docs/guides/agent-runtimes) for configuration details.
+
+### Is CORAL open source?
+
+Yes. CORAL's source code is available on GitHub under the Apache License 2.0.
+
+## Start using CORAL
+
+- Follow the [installation guide](/docs/getting-started/installation).
+- Run your first task with the [quickstart](/docs/getting-started/quickstart).
+- Learn how the pieces connect in [Architecture](/docs/concepts/architecture).
+- Read the [COLM 2026 paper](https://arxiv.org/abs/2604.01658).

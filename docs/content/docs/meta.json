@@ -2,6 +2,7 @@
   "title": "Documentation",
   "pages": [
     "index",
+    "what-is-coral",
     "getting-started",
     "concepts",
     "guides",

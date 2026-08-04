@@ -15,6 +15,7 @@ License: Apache-2.0
 
 ## Start here
 
+- [What is CORAL?](https://coral.compounding-intelligence.ai/docs/what-is-coral/): Canonical project definition, identity, disambiguation, and frequently asked questions.
 - [Installation](https://coral.compounding-intelligence.ai/docs/getting-started/installation/): Install the `coral` CLI and its prerequisites.
 - [Quickstart](https://coral.compounding-intelligence.ai/docs/getting-started/quickstart/): Create, validate, and run a first task.
 - [Concepts](https://coral.compounding-intelligence.ai/docs/concepts/): Understand the architecture and evaluation loop.
@@ -50,3 +51,9 @@ License: Apache-2.0
 - [Sitemap](https://coral.compounding-intelligence.ai/sitemap.xml): Canonical index of the website and documentation.
 - [Latest release](https://github.com/Human-Agent-Society/CORAL/releases/latest): Current release and changelog.
 - [GitHub releases API](https://api.github.com/repos/Human-Agent-Society/CORAL/releases/latest): Machine-readable release metadata.
+
+## Disambiguation
+
+- CORAL is the open-source autoresearch framework maintained at `Human-Agent-Society/CORAL` and described in the paper "CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery."
+- CORAL is not affiliated with Coral Protocol or CoralOS; those are separate projects.
+- CORAL is a framework that orchestrates autonomous coding agents, not a coding model or a single agent named "Coral Agent."
