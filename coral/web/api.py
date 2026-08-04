@@ -207,10 +207,14 @@ async def post_steer(request: Request) -> JSONResponse:
 
 
 async def get_notes(request: Request) -> JSONResponse:
-    """GET /api/notes — return all notes."""
+    """GET /api/notes — return all notes, including raw/ source captures.
+
+    The dashboard groups by ``category`` and has a "Raw Sources" bucket, so it
+    opts into raw here; the CLI/agent-facing callers of list_notes do not.
+    """
     from coral.hub.notes import list_notes
 
-    entries = list_notes(str(_coral_dir(request)))
+    entries = list_notes(str(_coral_dir(request)), include_raw=True)
     for i, entry in enumerate(entries):
         entry["index"] = i
     return JSONResponse(entries)

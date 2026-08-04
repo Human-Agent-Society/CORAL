@@ -343,6 +343,116 @@ def test_notes_skip_index_and_raw_sources():
         assert [p.relative_to(notes_dir) for p in notes_by(d, None, "synthesizer")] == [
             Path("_synthesis") / "team-roster.md"
         ]
+
+
+def test_list_notes_include_raw_surfaces_sources_only_when_asked():
+    """include_raw=True adds raw/ captures (category 'raw') for the dashboard,
+    while the default keeps agent-facing callers seeing only authored notes."""
+    with tempfile.TemporaryDirectory() as d:
+        notes_dir = Path(d) / "public" / "notes"
+        raw_dir = notes_dir / "raw"
+        research_dir = notes_dir / "research"
+        raw_dir.mkdir(parents=True)
+        research_dir.mkdir()
+        (research_dir / "useful-idea.md").write_text(
+            "---\ncreator: agent-1\n---\n\n# Useful idea\n"
+        )
+        (raw_dir / "paper.md").write_text(
+            "---\nsource_url: http://x\nsource_type: paper\ncaptured: 2026-01-01\n---\n\n"
+            "# Wang integer hash\n\nneedle-only-in-raw\n"
+        )
+        # `_`-prefixed meta under raw/ is never a source; must stay excluded.
+        (raw_dir / "_scratch.md").write_text("# scratch\n")
+
+        # Default: raw is still excluded (CLI / search / heartbeat unchanged).
+        default = list_notes(d)
+        assert {e["relative_path"] for e in default} == {str(Path("research") / "useful-idea.md")}
+
+        # Opt-in: the raw source shows up, tagged category "raw"; the note stays.
+        with_raw = list_notes(d, include_raw=True)
+        by_path = {e["relative_path"]: e for e in with_raw}
+        assert set(by_path) == {
+            str(Path("research") / "useful-idea.md"),
+            str(Path("raw") / "paper.md"),
+        }
+        raw_entry = by_path[str(Path("raw") / "paper.md")]
+        assert raw_entry["category"] == "raw"
+        assert raw_entry["title"] == "Wang integer hash"
+        assert list(by_path).count(str(Path("raw") / "_scratch.md")) == 0
+
+
+def test_raw_source_surfaces_provenance_frontmatter():
+    """Raw sources use a source vocabulary (source_url / captured / retrieved_by).
+    Those must reach the dashboard — dropping source_url hides where a cited
+    source came from, which is the whole point of a source."""
+    with tempfile.TemporaryDirectory() as d:
+        raw_dir = Path(d) / "public" / "notes" / "raw"
+        raw_dir.mkdir(parents=True)
+        # Title only in frontmatter (no `# heading`); source vocabulary throughout.
+        (raw_dir / "jenkins.md").write_text(
+            "---\n"
+            "source_url: https://pastebin.com/raw/5ucHpK7v\n"
+            "source_type: code\n"
+            "captured: 2026-07-24\n"
+            "retrieved_by: captain-nemo\n"
+            "title: Jenkins 32-bit integer hash\n"
+            "also_confirmed_by:\n"
+            "  - https://en.wikipedia.org/wiki/Jenkins_hash_function\n"
+            "  - https://gist.github.com/lh3/59882d6b96166dfc3d8d\n"
+            "---\n\nbody text\n"
+        )
+
+        entry = next(e for e in list_notes(d, include_raw=True) if e["category"] == "raw")
+        assert entry["source_url"] == "https://pastebin.com/raw/5ucHpK7v"
+        assert entry["source_type"] == "code"
+        assert entry["date"] == "2026-07-24"  # captured -> date
+        assert entry["creator"] == "captain-nemo"  # retrieved_by -> creator
+        assert entry["title"] == "Jenkins 32-bit integer hash"  # frontmatter title
+        assert entry["also_confirmed_by"] == [
+            "https://en.wikipedia.org/wiki/Jenkins_hash_function",
+            "https://gist.github.com/lh3/59882d6b96166dfc3d8d",
+        ]
+        # Complete frontmatter passthrough — every authored field, so the
+        # dashboard can show all of it rather than a curated subset.
+        assert entry["frontmatter"] == {
+            "source_url": "https://pastebin.com/raw/5ucHpK7v",
+            "source_type": "code",
+            "captured": "2026-07-24",
+            "retrieved_by": "captain-nemo",
+            "title": "Jenkins 32-bit integer hash",
+            "also_confirmed_by": [
+                "https://en.wikipedia.org/wiki/Jenkins_hash_function",
+                "https://gist.github.com/lh3/59882d6b96166dfc3d8d",
+            ],
+        }
+
+
+def test_research_note_surfaces_full_frontmatter():
+    """A research note must expose all of its schema fields (creator/created/
+    type/confidence/based_on/tags), not just the curated trace subset."""
+    with tempfile.TemporaryDirectory() as d:
+        research_dir = Path(d) / "public" / "notes" / "research"
+        research_dir.mkdir(parents=True)
+        (research_dir / "algo.md").write_text(
+            "---\n"
+            "creator: captain-ahab\n"
+            "created: 2026-07-24\n"
+            "type: research\n"
+            "confidence: high\n"
+            "tags: [algorithm, tree-traversal]\n"
+            "based_on:\n"
+            "  - raw/frozen-machine-isa.md\n"
+            "---\n\n# Algorithm structure\n\nbody\n"
+        )
+        entry = next(e for e in list_notes(d) if e["category"] == "research")
+        assert entry["frontmatter"] == {
+            "creator": "captain-ahab",
+            "created": "2026-07-24",
+            "type": "research",
+            "confidence": "high",
+            "tags": ["algorithm", "tree-traversal"],
+            "based_on": ["raw/frozen-machine-isa.md"],
+        }
         assert notes_unattributed(d, None) == []
 
 

@@ -81,6 +81,12 @@ export interface Note {
   confidence?: ConfidenceLevel | number | string | null;
   based_on?: string;
   touched?: string[] | string;
+  // Provenance fields — present on raw/ source captures (category "raw").
+  source_url?: string;
+  source_type?: string;
+  also_confirmed_by?: string[] | string;
+  // Complete frontmatter passthrough — every field the author wrote, in order.
+  frontmatter?: Record<string, unknown>;
 }
 
 export type ConfidenceLevel = "low" | "medium" | "high";
