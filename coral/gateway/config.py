@@ -120,7 +120,7 @@ def generate_default_litellm_config(path: Path, model: str = "sonnet") -> Path:
     }
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
     logger.info(f"Generated default LiteLLM config at {path}")

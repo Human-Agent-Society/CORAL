@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +10,7 @@ import yaml
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from coral.cli._helpers import is_docker_run_alive
+from coral.cli._helpers import is_docker_run_alive, is_process_alive
 
 
 def _coral_dir(request: Request) -> Path:
@@ -22,11 +21,11 @@ def _run_is_alive(coral_dir: Path) -> bool:
     pid_file = coral_dir / "public" / "manager.pid"
     if pid_file.exists():
         try:
-            pid = int(pid_file.read_text().strip())
-            os.kill(pid, 0)
+            pid = int(pid_file.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            pid = 0
+        if is_process_alive(pid):
             return True
-        except (ProcessLookupError, PermissionError, ValueError):
-            pass
     return is_docker_run_alive(coral_dir, quiet=True)
 
 
@@ -36,7 +35,7 @@ async def get_config(request: Request) -> JSONResponse:
     if not config_path.exists():
         return JSONResponse({"error": "config.yaml not found"}, status_code=404)
 
-    with open(config_path) as f:
+    with open(config_path, encoding="utf-8") as f:
         config = yaml.safe_load(f)
     return JSONResponse(config)
 
@@ -82,14 +81,14 @@ async def get_attempt_detail(request: Request) -> JSONResponse:
     for view_root in all_view_roots(coral_dir):
         candidate = view_root / "attempts" / f"{commit_hash}.json"
         if candidate.exists():
-            return JSONResponse(json.loads(candidate.read_text()))
+            return JSONResponse(json.loads(candidate.read_text(encoding="utf-8")))
 
     # Prefix match — ambiguous across islands → 404 rather than guessing.
     matches: list[Path] = []
     for view_root in all_view_roots(coral_dir):
         matches.extend((view_root / "attempts").glob(f"{commit_hash}*.json"))
     if len(matches) == 1:
-        return JSONResponse(json.loads(matches[0].read_text()))
+        return JSONResponse(json.loads(matches[0].read_text(encoding="utf-8")))
     return JSONResponse({"error": "attempt not found"}, status_code=404)
 
 
@@ -339,7 +338,7 @@ def _direction(request: Request) -> str:
     """Read grader direction from config. Returns 'maximize' or 'minimize'."""
     config_path = _coral_dir(request) / "config.yaml"
     if config_path.exists():
-        with open(config_path) as f:
+        with open(config_path, encoding="utf-8") as f:
             config = yaml.safe_load(f) or {}
         return (config.get("grader") or {}).get("direction", "maximize")
     return "maximize"
@@ -560,11 +559,11 @@ async def get_status(request: Request) -> JSONResponse:
     manager_pid = None
     if pid_file.exists():
         try:
-            manager_pid = int(pid_file.read_text().strip())
-            os.kill(manager_pid, 0)
-            manager_alive = True
-        except (ProcessLookupError, PermissionError, ValueError):
-            pass
+            manager_pid = int(pid_file.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            manager_pid = None
+        if manager_pid is not None:
+            manager_alive = is_process_alive(manager_pid)
     is_docker = not manager_alive and is_docker_run_alive(coral_dir, quiet=True)
     if is_docker:
         manager_alive = True
@@ -594,7 +593,7 @@ async def get_status(request: Request) -> JSONResponse:
     pid_map_file = coral_dir / "public" / "agent_pids.json"
     if not is_docker and pid_map_file.exists():
         try:
-            agent_pid_map = json.loads(pid_map_file.read_text())
+            agent_pid_map = json.loads(pid_map_file.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             pass
 
@@ -604,14 +603,10 @@ async def get_status(request: Request) -> JSONResponse:
         pids_file = coral_dir / "public" / "agent.pids"
         if pids_file.exists():
             try:
-                for line in pids_file.read_text().strip().splitlines():
-                    pid = int(line.strip())
-                    try:
-                        os.kill(pid, 0)
+                for line in pids_file.read_text(encoding="utf-8").strip().splitlines():
+                    if is_process_alive(int(line.strip())):
                         any_agent_alive = True
                         break
-                    except (ProcessLookupError, PermissionError):
-                        pass
             except (ValueError, OSError):
                 pass
 
@@ -628,11 +623,7 @@ async def get_status(request: Request) -> JSONResponse:
         agent_pid = agent_pid_map.get(agent_id)
         if agent_pid:
             # Direct PID check — most reliable
-            try:
-                os.kill(agent_pid, 0)
-                status = "active"
-            except (ProcessLookupError, PermissionError):
-                status = "stopped"
+            status = "active" if is_process_alive(agent_pid) else "stopped"
         elif any_agent_alive or is_docker:
             # Container or agent.pids says something is running but no per-agent mapping
             status = "active" if age < 300 else "idle"

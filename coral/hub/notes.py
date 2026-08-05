@@ -210,7 +210,7 @@ def _parse_legacy_entries(text: str) -> list[dict[str, Any]]:
 
 def _parse_note_file(path: Path) -> dict[str, Any]:
     """Parse a single note .md file into an entry dict."""
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     meta, body = _parse_frontmatter(text)
 
     # Title: prefer a body `# heading`, then a frontmatter `title:`, then the
@@ -271,7 +271,7 @@ def _parse_raw_source_file(path: Path) -> dict[str, Any]:
     into the shared ``date`` / ``creator`` slots the dashboard already renders.
     """
     entry = _parse_note_file(path)
-    meta, _ = _parse_frontmatter(path.read_text())
+    meta, _ = _parse_frontmatter(path.read_text(encoding="utf-8"))
 
     url = _first_present(meta, ("source_url", "url"))
     if url:
@@ -302,12 +302,12 @@ def _collect_from_dir(directory: Path) -> list[dict[str, Any]]:
         entries = [_parse_note_file(f) for f in md_files]
         legacy = directory / "notes.md"
         if legacy.exists() and legacy.stat().st_size > 0:
-            entries.extend(_parse_legacy_entries(legacy.read_text()))
+            entries.extend(_parse_legacy_entries(legacy.read_text(encoding="utf-8")))
         return entries
 
     legacy = directory / "notes.md"
     if legacy.exists() and legacy.stat().st_size > 0:
-        return _parse_legacy_entries(legacy.read_text())
+        return _parse_legacy_entries(legacy.read_text(encoding="utf-8"))
 
     return []
 
@@ -508,7 +508,7 @@ def notes_by(
     matched: list[Path] = []
     for md_file in _iter_user_note_files(notes_dir):
         try:
-            text = md_file.read_text()
+            text = md_file.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
         meta, _ = _parse_frontmatter(text)
@@ -533,7 +533,7 @@ def notes_unattributed(
     missing: list[Path] = []
     for md_file in _iter_user_note_files(notes_dir):
         try:
-            text = md_file.read_text()
+            text = md_file.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
         meta, _ = _parse_frontmatter(text)

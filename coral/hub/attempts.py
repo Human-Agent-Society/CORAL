@@ -33,7 +33,7 @@ def _write_attempt_json(path: Path, attempt: Attempt) -> None:
         dir=path.parent,
     )
     try:
-        with os.fdopen(fd, "w") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(payload)
             f.flush()
             os.fsync(f.fileno())
@@ -68,7 +68,7 @@ def read_attempt(
     if not path.exists():
         return None
     try:
-        return Attempt.from_dict(json.loads(path.read_text()))
+        return Attempt.from_dict(json.loads(path.read_text(encoding="utf-8")))
     except (json.JSONDecodeError, KeyError, OSError):
         return None
 
@@ -84,7 +84,7 @@ def set_user_best(coral_dir: str | Path, commit_hash: str) -> Attempt | None:
             continue
         for path in sorted(attempts_dir.glob("*.json")):
             try:
-                attempt = Attempt.from_dict(json.loads(path.read_text()))
+                attempt = Attempt.from_dict(json.loads(path.read_text(encoding="utf-8")))
             except (json.JSONDecodeError, KeyError, OSError):
                 continue
             is_target = attempt.commit_hash == commit_hash
@@ -126,7 +126,7 @@ def archive_attempts(
             if not path.exists():
                 continue
             try:
-                attempt = Attempt.from_dict(json.loads(path.read_text()))
+                attempt = Attempt.from_dict(json.loads(path.read_text(encoding="utf-8")))
             except (json.JSONDecodeError, KeyError, OSError):
                 continue
             attempt.metadata["archived"] = True
@@ -161,12 +161,12 @@ def increment_eval_count(coral_dir: str | Path, island_id: str | int | None = No
         count = 0
         if p.exists():
             try:
-                count = int(p.read_text().strip())
+                count = int(p.read_text(encoding="utf-8").strip())
             except ValueError:
                 pass
         count += 1
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(str(count))
+        p.write_text(str(count), encoding="utf-8")
         return count
 
     global_path = _global_eval_count_path(coral_dir)
@@ -191,7 +191,7 @@ def read_eval_count(coral_dir: str | Path, island_id: str | int | None = None) -
     if not path.exists():
         return 0
     try:
-        return int(path.read_text().strip())
+        return int(path.read_text(encoding="utf-8").strip())
     except ValueError:
         return 0
 
@@ -206,7 +206,7 @@ def read_attempts(coral_dir: str | Path, island_id: str | int | None = None) -> 
     attempts = []
     for f in sorted(d.glob("*.json")):
         try:
-            data = json.loads(f.read_text())
+            data = json.loads(f.read_text(encoding="utf-8"))
             attempts.append(Attempt.from_dict(data))
         except (json.JSONDecodeError, KeyError):
             continue

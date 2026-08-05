@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
 import sys
 import threading
@@ -35,7 +36,7 @@ def _extract_claude_code_session_id(log_path: Path) -> str | None:
     (system init, assistant messages, etc.) — scanning from the end.
     """
     try:
-        lines = log_path.read_text().strip().splitlines()
+        lines = log_path.read_text(encoding="utf-8").strip().splitlines()
         # First pass: look for a "result" line (most authoritative)
         for line in reversed(lines):
             line = line.strip()
@@ -148,7 +149,11 @@ class ClaudeCodeRuntime:
     ) -> AgentHandle:
         """Start a Claude Code agent in the given worktree."""
         agent_id_file = worktree_path / ".coral_agent_id"
-        agent_id = agent_id_file.read_text().strip() if agent_id_file.exists() else "unknown"
+        agent_id = (
+            agent_id_file.read_text(encoding="utf-8").strip()
+            if agent_id_file.exists()
+            else "unknown"
+        )
 
         if log_dir is None:
             log_dir = worktree_path / ".claude" / "logs"
@@ -210,7 +215,7 @@ class ClaudeCodeRuntime:
         agent_env["VIRTUAL_ENV"] = worktree_venv
         # Prepend .venv/bin to PATH for non-login shells
         venv_bin = str(worktree_path / ".venv" / "bin")
-        agent_env["PATH"] = venv_bin + ":" + agent_env.get("PATH", "")
+        agent_env["PATH"] = venv_bin + os.pathsep + agent_env.get("PATH", "")
 
         # Route through gateway if configured
         if gateway_url:
@@ -232,7 +237,9 @@ class ClaudeCodeRuntime:
         # creds/session in the agent's home; returns Popen user=/group= kwargs.
         user_kwargs = apply_run_as_user(agent_env, run_as_user)
 
-        log_file = open(log_path, "w", buffering=1)  # line-buffered
+        log_file = open(
+            log_path, "w", buffering=1, encoding="utf-8", errors="replace"
+        )  # line-buffered
 
         # Open per-agent stderr capture under public/diagnostics/<agent_id>/agent.err
         # so stderr does not pollute the stream-json log. Falls back to STDOUT

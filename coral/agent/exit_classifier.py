@@ -70,7 +70,7 @@ def claude_code_log_has_session_error(log_path: Path) -> bool:
     the runtime classifier does not have to reach back into `manager.py`.
     """
     try:
-        content = log_path.read_text()
+        content = log_path.read_text(encoding="utf-8")
         return "No conversation found" in content
     except (OSError, UnicodeDecodeError):
         return False

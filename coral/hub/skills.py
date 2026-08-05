@@ -70,7 +70,7 @@ def _list_skills_single(coral_dir: Path, island_id: str | int | None) -> list[di
         if not skill_md.exists():
             continue
 
-        text = skill_md.read_text()
+        text = skill_md.read_text(encoding="utf-8")
         meta, body = _parse_frontmatter(text)
 
         results.append(
@@ -102,7 +102,7 @@ def read_skill(skill_dir: str | Path) -> dict[str, Any]:
     skill_dir = Path(skill_dir)
     skill_md = skill_dir / "SKILL.md"
 
-    content = skill_md.read_text() if skill_md.exists() else ""
+    content = skill_md.read_text(encoding="utf-8") if skill_md.exists() else ""
     meta, body = _parse_frontmatter(content)
 
     files = []
@@ -158,7 +158,7 @@ def skills_by(
         if not skill_md.exists():
             continue
         try:
-            text = skill_md.read_text()
+            text = skill_md.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
         meta, _ = _parse_frontmatter(text)

@@ -112,7 +112,7 @@ class SrtSandbox:
         settings_dir = ctx.coral_dir / "private" / "sandbox"
         settings_dir.mkdir(parents=True, exist_ok=True)
         settings_path = settings_dir / f"{ctx.agent_id}.json"
-        settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+        settings_path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
 
         try:
             _SRT_TMPDIR.mkdir(exist_ok=True)
@@ -224,7 +224,7 @@ def _runtime_home_paths(shared_dir_name: str) -> list[str]:
 def _worktree_island(worktree: Path) -> str | None:
     """Read a worktree's island membership from its .coral_island breadcrumb."""
     try:
-        return (worktree / ".coral_island").read_text().strip() or None
+        return (worktree / ".coral_island").read_text(encoding="utf-8").strip() or None
     except OSError:
         return None
 

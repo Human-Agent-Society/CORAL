@@ -76,7 +76,11 @@ class KiroRuntime:
         sandbox: AgentSandboxSpec | None = None,
     ) -> AgentHandle:
         agent_id_file = worktree_path / ".coral_agent_id"
-        agent_id = agent_id_file.read_text().strip() if agent_id_file.exists() else "unknown"
+        agent_id = (
+            agent_id_file.read_text(encoding="utf-8").strip()
+            if agent_id_file.exists()
+            else "unknown"
+        )
 
         if log_dir is None:
             log_dir = worktree_path / ".kiro" / "logs"
@@ -113,7 +117,7 @@ class KiroRuntime:
         # its creds in the agent's home; returns Popen user=/group= kwargs.
         user_kwargs = apply_run_as_user(agent_env, run_as_user)
 
-        log_file = open(log_path, "w", buffering=1)
+        log_file = open(log_path, "w", buffering=1, encoding="utf-8", errors="replace")
 
         # Per-agent stderr capture under public/diagnostics/<agent_id>/agent.err.
         err_path: Path | None = None

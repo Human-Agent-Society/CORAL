@@ -197,7 +197,7 @@ def submit_eval(
         parent_attempt_file = island_root(coral_dir, island_id) / "attempts" / f"{parent_hash}.json"
         if parent_attempt_file.exists():
             try:
-                parent_data = json.loads(parent_attempt_file.read_text())
+                parent_data = json.loads(parent_attempt_file.read_text(encoding="utf-8"))
                 parent_shared_state_hash = parent_data.get("shared_state_hash")
             except (json.JSONDecodeError, OSError):
                 pass

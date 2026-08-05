@@ -27,7 +27,7 @@ def generate_coral_md(
         island_id: Agent's island in multi-island mode (formats a provenance hint)
     """
     template_path = _SINGLE_TEMPLATE_PATH if single_agent else _TEMPLATE_PATH
-    template = template_path.read_text()
+    template = template_path.read_text(encoding="utf-8")
 
     # Build optional sections
     tips_section = ""

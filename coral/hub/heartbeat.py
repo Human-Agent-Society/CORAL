@@ -26,7 +26,7 @@ def _load_prompt(name: str) -> str:
     """Load a prompt template from the prompts directory."""
     prompt_file = _PROMPTS_DIR / f"{name}.md"
     if prompt_file.exists():
-        return prompt_file.read_text()
+        return prompt_file.read_text(encoding="utf-8")
     return ""
 
 
@@ -84,7 +84,7 @@ def _read_actions(path: Path) -> list[dict]:
     if not path.exists():
         return []
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         return data.get("actions", [])
     except (json.JSONDecodeError, OSError) as e:
         logger.warning(f"Failed to read heartbeat config {path.name}: {e}")

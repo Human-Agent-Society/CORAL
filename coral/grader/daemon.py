@@ -232,7 +232,7 @@ def _attempt_island_id(attempt: Attempt) -> str | None:
 
 def _read_attempt_file(path: Path) -> Attempt | None:
     try:
-        return Attempt.from_dict(json.loads(path.read_text()))
+        return Attempt.from_dict(json.loads(path.read_text(encoding="utf-8")))
     except (json.JSONDecodeError, KeyError, OSError, TypeError):
         return None
 
@@ -559,7 +559,7 @@ def _find_pending(coral_dir: Path) -> list[Attempt]:
             continue
         for p in sorted(d.glob("*.json")):
             try:
-                data = json.loads(p.read_text())
+                data = json.loads(p.read_text(encoding="utf-8"))
                 a = Attempt.from_dict(data)
             except Exception:
                 continue
@@ -663,7 +663,7 @@ def _drain_pending(
             for fut in as_completed(futures):
                 if heartbeat_file is not None:
                     try:
-                        heartbeat_file.write_text(datetime.now(UTC).isoformat())
+                        heartbeat_file.write_text(datetime.now(UTC).isoformat(), encoding="utf-8")
                     except OSError:
                         pass
                 result = fut.result()
@@ -722,7 +722,7 @@ def run_daemon(coral_dir: str | Path, stop_event: Any = None) -> None:
     )
     started_at = datetime.now(UTC).isoformat()
     heartbeat_file = coral_dir / "public" / "grader_daemon_heartbeat"
-    heartbeat_file.write_text(started_at)
+    heartbeat_file.write_text(started_at, encoding="utf-8")
 
     def _should_stop() -> bool:
         return bool(stop_event and stop_event.is_set())
@@ -737,7 +737,7 @@ def run_daemon(coral_dir: str | Path, stop_event: Any = None) -> None:
         if not pending:
             # Idle heartbeat so supervisors can tell the daemon is alive.
             try:
-                heartbeat_file.write_text(datetime.now(UTC).isoformat())
+                heartbeat_file.write_text(datetime.now(UTC).isoformat(), encoding="utf-8")
             except OSError:
                 pass
             time.sleep(_POLL_INTERVAL_SEC)

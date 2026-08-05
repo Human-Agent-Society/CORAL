@@ -26,6 +26,7 @@ from coral.cli._helpers import (
     in_docker,
     in_tmux,
     is_docker_run_alive,
+    is_process_alive,
     kill_docker_container,
     kill_orphaned_agents,
     kill_tmux_session,
@@ -355,8 +356,8 @@ def _start_in_docker(args: argparse.Namespace, config: CoralConfig) -> None:
     _run_docker_container(docker_cmd, container_name)
 
     save_docker_container_name(host_run_dir, container_name)
-    (host_run_dir / ".coral_host_repo_path").write_text(str(repo_path))
-    (host_run_dir / ".coral_host_config_dir").write_text(str(config_dir))
+    (host_run_dir / ".coral_host_repo_path").write_text(str(repo_path), encoding="utf-8")
+    (host_run_dir / ".coral_host_config_dir").write_text(str(config_dir), encoding="utf-8")
 
     # Create the "latest" symlink on the host
     latest_link = host_task_dir / "latest"
@@ -520,7 +521,7 @@ def cmd_start(args: argparse.Namespace) -> None:
     start_cmd = f"coral start -c {args.config}"
     if overrides:
         start_cmd += " " + " ".join(overrides)
-    (manager.paths.run_dir / "start_cmd.txt").write_text(start_cmd + "\n")
+    (manager.paths.run_dir / "start_cmd.txt").write_text(start_cmd + "\n", encoding="utf-8")
 
     print(f"\nRun directory: {manager.paths.run_dir}")
     print(f"Logs:          {manager.paths.coral_dir / 'public' / 'logs'}")
@@ -566,12 +567,12 @@ def _resume_in_docker(args: argparse.Namespace, config: CoralConfig, coral_dir: 
     config_dir_file = host_run_dir / ".coral_host_config_dir"
     repo_path_file = host_run_dir / ".coral_host_repo_path"
     config_dir = (
-        Path(config_dir_file.read_text().strip())
+        Path(config_dir_file.read_text(encoding="utf-8").strip())
         if config_dir_file.exists()
         else Path(config.task_dir or Path.cwd()).resolve()
     )
     repo_path = (
-        Path(repo_path_file.read_text().strip())
+        Path(repo_path_file.read_text(encoding="utf-8").strip())
         if repo_path_file.exists()
         else Path(config.workspace.repo_path).resolve()
     )
@@ -668,22 +669,13 @@ def cmd_resume(args: argparse.Namespace) -> None:
 
     pid_file = coral_dir / "public" / "manager.pid"
     if pid_file.exists():
-        pid = int(pid_file.read_text().strip())
-        try:
-            os.kill(pid, 0)
+        pid = int(pid_file.read_text(encoding="utf-8").strip())
+        if is_process_alive(pid):
             print(
                 f"Error: Manager already running (PID {pid}). Stop it first with 'coral stop'.",
                 file=sys.stderr,
             )
             sys.exit(1)
-        except PermissionError:
-            print(
-                f"Error: Manager already running (PID {pid}). Stop it first with 'coral stop'.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-        except ProcessLookupError:
-            pass
 
     from coral.workspace import reconstruct_paths
 
@@ -692,7 +684,7 @@ def cmd_resume(args: argparse.Namespace) -> None:
     # Restore task_dir so relative paths (e.g. gateway config) resolve correctly
     config_dir_file = coral_dir / "config_dir"
     if config_dir_file.exists():
-        config.task_dir = Path(config_dir_file.read_text().strip())
+        config.task_dir = Path(config_dir_file.read_text(encoding="utf-8").strip())
 
     latest_link = paths.task_dir / "latest"
     if latest_link.is_symlink():
@@ -767,7 +759,7 @@ def _stop_one(coral_dir: Path) -> None:
             kill_orphaned_agents(agent_pids_file)
             return
 
-        pid = int(pid_file.read_text().strip())
+        pid = int(pid_file.read_text(encoding="utf-8").strip())
         try:
             os.kill(pid, signal.SIGTERM)
             print(f"Sent SIGTERM to manager (PID {pid}).")
@@ -775,9 +767,7 @@ def _stop_one(coral_dir: Path) -> None:
 
             for _ in range(10):
                 time.sleep(0.5)
-                try:
-                    os.kill(pid, 0)
-                except (ProcessLookupError, PermissionError):
+                if not is_process_alive(pid):
                     print("Manager stopped.")
                     return
             print("Manager didn't stop gracefully. Force killing...")
@@ -809,7 +799,7 @@ def _current_agent_islands(run_dir: Path) -> dict[str, str]:
         if not island_file.exists():
             continue
         try:
-            island_id = island_file.read_text().strip()
+            island_id = island_file.read_text(encoding="utf-8").strip()
         except OSError:
             continue
         if island_id:
@@ -886,22 +876,20 @@ def cmd_status(args: argparse.Namespace) -> None:
     pid_file = coral_dir / "public" / "manager.pid"
     manager_alive = False
     if pid_file.exists():
-        pid = int(pid_file.read_text().strip())
-        try:
-            os.kill(pid, 0)
+        pid = int(pid_file.read_text(encoding="utf-8").strip())
+        if is_process_alive(pid):
             manager_alive = True
             print(f"Manager: RUNNING (PID {pid})")
-        except PermissionError:
-            manager_alive = True
-            print(f"Manager: RUNNING (PID {pid})")
-        except ProcessLookupError:
-            pass
 
     # Check if managed by a Docker container
     if not manager_alive and is_docker_run_alive(coral_dir):
         manager_alive = True
         docker_marker = run_dir / ".coral_docker_container"
-        container_name = docker_marker.read_text().strip() if docker_marker.exists() else "unknown"
+        container_name = (
+            docker_marker.read_text(encoding="utf-8").strip()
+            if docker_marker.exists()
+            else "unknown"
+        )
         print(f"Manager: RUNNING (Docker container {container_name})")
 
     if not manager_alive:

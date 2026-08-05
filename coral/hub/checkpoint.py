@@ -47,7 +47,7 @@ def init_checkpoint_repo(coral_dir: str, island_id: str | int | None = None) -> 
             check=True,
         )
         gitignore = root / ".gitignore"
-        gitignore.write_text("coral.lock\n")
+        gitignore.write_text("coral.lock\n", encoding="utf-8")
         subprocess.run(
             ["git", "add", "-A"],
             cwd=str(root),
@@ -84,7 +84,7 @@ def checkpoint(
     lock_path = root / ".git" / "coral.lock"
     try:
         lock_path.touch(exist_ok=True)
-        with open(lock_path) as lock_fd:
+        with open(lock_path, encoding="utf-8") as lock_fd:
             fcntl.flock(lock_fd, fcntl.LOCK_EX)
 
             subprocess.run(
