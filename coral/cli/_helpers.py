@@ -47,10 +47,10 @@ def save_tmux_session_name(save_dir: Path, session_name: str, *, owned: bool = T
                If False, coral is running inside a pre-existing session.
     """
     tmux_file = save_dir / ".coral_tmux_session"
-    tmux_file.write_text(session_name)
+    tmux_file.write_text(session_name, encoding="utf-8")
     owned_file = save_dir / ".coral_tmux_owned"
     if owned:
-        owned_file.write_text("1")
+        owned_file.write_text("1", encoding="utf-8")
     else:
         owned_file.unlink(missing_ok=True)
 
@@ -60,7 +60,7 @@ def find_tmux_session(coral_dir: Path) -> str | None:
     for search_dir in [coral_dir / "public", coral_dir.parent]:
         tmux_file = search_dir / ".coral_tmux_session"
         if tmux_file.exists():
-            session_name = tmux_file.read_text().strip()
+            session_name = tmux_file.read_text(encoding="utf-8").strip()
             if session_name:
                 result = subprocess.run(
                     ["tmux", "has-session", "-t", session_name],
@@ -86,7 +86,7 @@ def kill_tmux_session(coral_dir: Path) -> None:
     for search_dir in [coral_dir / "public", coral_dir.parent]:
         tmux_file = search_dir / ".coral_tmux_session"
         if tmux_file.exists():
-            session_name = tmux_file.read_text().strip()
+            session_name = tmux_file.read_text(encoding="utf-8").strip()
             owned = _is_tmux_owned(search_dir)
             if session_name and owned:
                 result = subprocess.run(
@@ -108,14 +108,14 @@ def kill_tmux_session(coral_dir: Path) -> None:
         import yaml
 
         try:
-            with open(config_file) as f:
+            with open(config_file, encoding="utf-8") as f:
                 cfg = yaml.safe_load(f) or {}
             task_dir = cfg.get("_task_dir")
             if task_dir:
                 task_path = Path(task_dir)
                 tmux_file = task_path / ".coral_tmux_session"
                 if tmux_file.exists():
-                    session_name = tmux_file.read_text().strip()
+                    session_name = tmux_file.read_text(encoding="utf-8").strip()
                     owned = _is_tmux_owned(task_path)
                     if session_name and owned:
                         subprocess.run(
@@ -321,7 +321,7 @@ def is_docker_run_alive(coral_dir: Path, *, quiet: bool = False) -> bool:
     run_dir = coral_dir.resolve().parent
     marker = run_dir / ".coral_docker_container"
     if marker.exists():
-        name = marker.read_text().strip()
+        name = marker.read_text(encoding="utf-8").strip()
         if name:
             return is_docker_container_running(name, quiet=quiet)
     return False
@@ -330,7 +330,7 @@ def is_docker_run_alive(coral_dir: Path, *, quiet: bool = False) -> bool:
 def save_docker_container_name(save_dir: Path, container_name: str) -> None:
     """Save the Docker container name for coral stop to find."""
     marker = save_dir / ".coral_docker_container"
-    marker.write_text(container_name)
+    marker.write_text(container_name, encoding="utf-8")
 
 
 def docker_private_volume_name(host_run_dir: Path) -> str:
@@ -352,7 +352,7 @@ def kill_docker_container(coral_dir: Path) -> None:
     for search_dir in [coral_dir / "public", coral_dir.parent]:
         marker = search_dir / ".coral_docker_container"
         if marker.exists():
-            container_name = marker.read_text().strip()
+            container_name = marker.read_text(encoding="utf-8").strip()
             if container_name:
                 stopped = (
                     subprocess.run(
@@ -388,7 +388,7 @@ def kill_ui(coral_dir: Path) -> None:
         ui_url_file.unlink(missing_ok=True)
         return
     try:
-        pid = int(ui_pid_file.read_text().strip())
+        pid = int(ui_pid_file.read_text(encoding="utf-8").strip())
         os.kill(pid, signal.SIGKILL)
         print(f"Stopped dashboard (PID {pid}).")
     except (ProcessLookupError, ValueError):
@@ -404,7 +404,7 @@ def kill_orphaned_agents(agent_pids_file: Path) -> None:
     if not agent_pids_file.exists():
         return
     killed = 0
-    for line in agent_pids_file.read_text().strip().splitlines():
+    for line in agent_pids_file.read_text(encoding="utf-8").strip().splitlines():
         try:
             pid = int(line.strip())
             os.killpg(os.getpgid(pid), signal.SIGKILL)
@@ -420,7 +420,7 @@ def read_agent_id(start: str | Path | None = None) -> str:
     """Read agent ID from the nearest .coral_agent_id breadcrumb."""
     agent_id_file = find_breadcrumb_file(".coral_agent_id", start)
     if agent_id_file is not None:
-        return agent_id_file.read_text().strip()
+        return agent_id_file.read_text(encoding="utf-8").strip()
     return "unknown"
 
 
@@ -441,7 +441,7 @@ def read_direction(coral_dir: Path) -> str:
     if config_path.exists():
         import yaml
 
-        with open(config_path) as f:
+        with open(config_path, encoding="utf-8") as f:
             config = yaml.safe_load(f) or {}
         return (config.get("grader") or {}).get("direction", "maximize")
     return "maximize"

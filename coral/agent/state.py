@@ -115,7 +115,7 @@ def write_agent_state(coral_dir: str | Path, document: AgentStateDocument) -> Pa
 
     fd, tmp_path = tempfile.mkstemp(prefix=".agent_state.", suffix=".tmp", dir=str(target.parent))
     try:
-        with os.fdopen(fd, "w") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(payload)
         os.replace(tmp_path, target)
     except Exception:
@@ -139,7 +139,7 @@ def read_agent_state(coral_dir: str | Path) -> AgentStateDocument:
     if not target.exists():
         return AgentStateDocument()
     try:
-        with open(target) as f:
+        with open(target, encoding="utf-8") as f:
             raw = json.load(f)
     except (OSError, json.JSONDecodeError):
         return AgentStateDocument()

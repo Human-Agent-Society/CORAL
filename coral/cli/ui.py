@@ -166,11 +166,13 @@ def start_ui_background(
 
     if pid_file.exists():
         try:
-            existing_pid = int(pid_file.read_text().strip())
+            existing_pid = int(pid_file.read_text(encoding="utf-8").strip())
         except (OSError, ValueError):
             existing_pid = 0
         if is_process_alive(existing_pid):
-            existing_url = url_file.read_text().strip() if url_file.exists() else "dashboard"
+            existing_url = (
+                url_file.read_text(encoding="utf-8").strip() if url_file.exists() else "dashboard"
+            )
             print(f"Dashboard already running: {existing_url}")
             if existing_url.startswith("http"):
                 webbrowser.open(existing_url)
@@ -209,7 +211,7 @@ def start_ui_background(
         "--no-open",
     ]
     log_path = public_dir / "ui.log"
-    with log_path.open("a") as log_file:
+    with log_path.open("a", encoding="utf-8") as log_file:
         process = subprocess.Popen(
             command,
             cwd=results_dir.parent,
@@ -218,8 +220,8 @@ def start_ui_background(
             start_new_session=True,
         )
 
-    pid_file.write_text(str(process.pid))
-    url_file.write_text(url + "\n")
+    pid_file.write_text(str(process.pid), encoding="utf-8")
+    url_file.write_text(url + "\n", encoding="utf-8")
 
     print(f"Dashboard:     {url}")
     webbrowser.open(url)
@@ -260,8 +262,8 @@ def cmd_ui(args: argparse.Namespace) -> None:
     url_file = coral_dir / "public" / "ui.url"
 
     pid_file.parent.mkdir(parents=True, exist_ok=True)
-    pid_file.write_text(str(os.getpid()))
-    url_file.write_text(url + "\n")
+    pid_file.write_text(str(os.getpid()), encoding="utf-8")
+    url_file.write_text(url + "\n", encoding="utf-8")
 
     if not args.no_open:
         webbrowser.open(url)

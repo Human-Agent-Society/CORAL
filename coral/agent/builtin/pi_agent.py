@@ -26,7 +26,7 @@ _PI_TOOLS = "read,bash,edit,write,grep,find,ls"
 def _extract_pi_session_id(log_path: Path) -> str | None:
     """Extract a Pi session ID from JSON output."""
     try:
-        lines = log_path.read_text().strip().splitlines()
+        lines = log_path.read_text(encoding="utf-8").strip().splitlines()
         for line in lines:
             line = line.strip()
             if not line:
@@ -118,7 +118,11 @@ class PiAgentRuntime:
     ) -> AgentHandle:
         """Start a Pi agent in the given worktree."""
         agent_id_file = worktree_path / ".coral_agent_id"
-        agent_id = agent_id_file.read_text().strip() if agent_id_file.exists() else "unknown"
+        agent_id = (
+            agent_id_file.read_text(encoding="utf-8").strip()
+            if agent_id_file.exists()
+            else "unknown"
+        )
 
         if log_dir is None:
             log_dir = worktree_path / ".pi" / "logs"
@@ -181,7 +185,7 @@ class PiAgentRuntime:
         # its creds in the agent's home; returns Popen user=/group= kwargs.
         user_kwargs = apply_run_as_user(agent_env, run_as_user)
 
-        log_file = open(log_path, "w", buffering=1)
+        log_file = open(log_path, "w", buffering=1, encoding="utf-8", errors="replace")
 
         err_path: Path | None = None
         err_file: Any = None

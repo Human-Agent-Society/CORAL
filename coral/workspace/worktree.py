@@ -136,19 +136,19 @@ def setup_git_exclude(worktree_path: Path) -> None:
     # Preserve existing entries
     existing = set()
     if exclude_path.exists():
-        existing = set(exclude_path.read_text().splitlines())
+        existing = set(exclude_path.read_text(encoding="utf-8").splitlines())
 
     missing = entries - existing
     if missing:
         exclude_path.parent.mkdir(parents=True, exist_ok=True)
-        with exclude_path.open("a") as f:
+        with exclude_path.open("a", encoding="utf-8") as f:
             for entry in sorted(missing):
                 f.write(f"{entry}\n")
 
 
 def write_agent_id(worktree_path: Path, agent_id: str) -> None:
     """Write .coral_agent_id file in the worktree."""
-    (worktree_path / ".coral_agent_id").write_text(agent_id)
+    (worktree_path / ".coral_agent_id").write_text(agent_id, encoding="utf-8")
 
 
 def write_coral_dir(worktree_path: Path, coral_dir: Path) -> None:
@@ -157,14 +157,14 @@ def write_coral_dir(worktree_path: Path, coral_dir: Path) -> None:
     Hooks and graders read this file to locate shared state (attempts, config,
     private grader data) without needing a symlink in the worktree.
     """
-    (worktree_path / ".coral_dir").write_text(str(coral_dir.resolve()))
+    (worktree_path / ".coral_dir").write_text(str(coral_dir.resolve()), encoding="utf-8")
 
 
 def get_coral_dir(worktree_path: Path) -> Path | None:
     """Read the shared .coral directory path from the .coral_dir breadcrumb file."""
     ref_file = worktree_path / ".coral_dir"
     if ref_file.exists():
-        return Path(ref_file.read_text().strip())
+        return Path(ref_file.read_text(encoding="utf-8").strip())
     return None
 
 
@@ -181,7 +181,7 @@ def grader_source_dir(coral_dir: Path) -> Path | None:
     cfg_file = coral_dir / "config_dir"
     if not cfg_file.exists():
         return None
-    grader = Path(cfg_file.read_text().strip()) / "grader"
+    grader = Path(cfg_file.read_text(encoding="utf-8").strip()) / "grader"
     return grader if grader.is_dir() else None
 
 
@@ -264,7 +264,7 @@ def setup_shared_state(
     # callers (no island_id) deliberately do NOT get this file — its absence
     # is how downstream code (submit_eval, monitor_loop) distinguishes modes.
     if island_id is not None:
-        (worktree_path / ".coral_island").write_text(str(island_id))
+        (worktree_path / ".coral_island").write_text(str(island_id), encoding="utf-8")
 
 
 # Items inside the shared dir that are agent-facing symlinks into the
@@ -346,7 +346,7 @@ def repoint_shared_state(
         except (ValueError, OSError):
             dst.symlink_to(src.resolve())
 
-    (worktree_path / ".coral_island").write_text(str(new_island_id))
+    (worktree_path / ".coral_island").write_text(str(new_island_id), encoding="utf-8")
 
 
 def apply_runtime_mounts(
@@ -528,7 +528,7 @@ def setup_claude_settings(
 
     settings_path = claude_dir / "settings.local.json"
     # Always overwrite — each agent needs its own copy
-    settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+    settings_path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
 
 
 def setup_opencode_settings(
@@ -609,7 +609,7 @@ def setup_opencode_settings(
         }
 
     settings_path = opencode_dir / "opencode.json"
-    settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+    settings_path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
 
 
 def setup_codex_settings(
@@ -654,7 +654,7 @@ def setup_codex_settings(
     config_toml = "\n".join(lines) + "\n"
 
     settings_path = codex_dir / "config.toml"
-    settings_path.write_text(config_toml)
+    settings_path.write_text(config_toml, encoding="utf-8")
 
 
 def setup_cursor_settings(
@@ -706,7 +706,7 @@ def setup_cursor_settings(
         "\n" + "\n".join(body_lines) + "\n"
     )
 
-    (rules_dir / "coral.mdc").write_text(rules_md)
+    (rules_dir / "coral.mdc").write_text(rules_md, encoding="utf-8")
 
 
 def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:

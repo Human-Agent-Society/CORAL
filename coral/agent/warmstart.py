@@ -18,7 +18,7 @@ _PROMPTS_DIR = Path(__file__).parent.parent / "hub" / "prompts"
 def _load_prompt(name: str) -> str:
     prompt_file = _PROMPTS_DIR / f"{name}.md"
     if prompt_file.exists():
-        return prompt_file.read_text()
+        return prompt_file.read_text(encoding="utf-8")
     return ""
 
 

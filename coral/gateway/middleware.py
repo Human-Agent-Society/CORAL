@@ -97,7 +97,7 @@ class CoralGatewayMiddleware:
     def _log_entry(self, entry: dict[str, Any]) -> None:
         """Append a JSONL entry to the log file."""
         try:
-            with open(self._log_path, "a") as f:
+            with open(self._log_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry, default=str) + "\n")
         except Exception as e:
             logger.warning(f"Failed to write gateway log: {e}")

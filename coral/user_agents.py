@@ -114,7 +114,7 @@ def load_store(path: Path | None = None) -> BindingStore:
     path = path or user_config_path()
     if not path.exists():
         return BindingStore(path=path)
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     if not isinstance(data, dict):
         raise ValueError(f"{path}: top-level content must be a mapping")
@@ -136,7 +136,7 @@ def save_store(store: BindingStore, path: Path | None = None) -> Path:
     if store.default:
         out["default"] = store.default
     out["agents"] = {name: b.to_dict() for name, b in store.bindings.items()}
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         yaml.dump(out, f, default_flow_style=False, sort_keys=True)
     return path
 
