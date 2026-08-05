@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from coral.venv_paths import venv_bin_dir
 import subprocess
 import sys
 import threading
@@ -207,7 +208,7 @@ class CursorAgentRuntime:
         worktree_venv = str(worktree_path / ".venv")
         agent_env["UV_PROJECT_ENVIRONMENT"] = worktree_venv
         agent_env["VIRTUAL_ENV"] = worktree_venv
-        venv_bin = str(worktree_path / ".venv" / "bin")
+        venv_bin = str(venv_bin_dir(worktree_path / ".venv"))
         agent_env["PATH"] = venv_bin + os.pathsep + agent_env.get("PATH", "")
 
         apply_sandbox_env(agent_env, sandbox)

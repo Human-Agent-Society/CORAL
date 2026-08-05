@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from coral.venv_paths import venv_python as resolve_venv_python
 import shutil
 import subprocess
 from pathlib import Path
@@ -733,7 +734,7 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
     # Force uv to create/use a venv inside this worktree, even if
     # pyproject.toml is resolved from a parent directory.
     worktree_venv = worktree_path / ".venv"
-    venv_python = worktree_venv / "bin" / "python"
+    venv_python = resolve_venv_python(worktree_venv)
     if venv_python.exists():
         logger.debug(f"Worktree venv already populated at {worktree_venv}, skipping setup commands")
         return
@@ -743,7 +744,7 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
 
     # Install coral into the worktree's venv so agents can use
     # ``uv run coral eval`` and graders can ``from coral.grader import ...``.
-    venv_python = worktree_venv / "bin" / "python"
+    venv_python = resolve_venv_python(worktree_venv)
     if venv_python.exists() and shutil.which("uv"):
         coral_root = Path(__file__).resolve().parent.parent.parent
         if (coral_root / "pyproject.toml").exists():

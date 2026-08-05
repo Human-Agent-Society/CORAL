@@ -31,6 +31,8 @@ import subprocess
 import sys
 import sysconfig
 from pathlib import Path
+
+from coral.venv_paths import venv_python
 from urllib.parse import urlparse
 
 from coral.config import GraderConfig
@@ -104,7 +106,7 @@ def grader_venv_path(coral_dir: Path) -> Path:
 
 def grader_python_path(coral_dir: Path) -> Path:
     """Path to the Python interpreter inside the grader venv."""
-    return grader_venv_path(coral_dir) / "bin" / "python"
+    return venv_python(grader_venv_path(coral_dir))
 
 
 def setup_grader_env(

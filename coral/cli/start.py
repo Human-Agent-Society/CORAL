@@ -11,6 +11,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from coral.venv_paths import venv_python as resolve_venv_python
+
 from coral.agent.state import read_agent_state
 from coral.cli._helpers import (
     docker_cmd,
@@ -57,9 +59,9 @@ def _resolved_python() -> str:
     # Look for a local .venv relative to the coral package
     coral_pkg = Path(__file__).resolve().parent.parent.parent
     for venv_name in (".venv", "venv"):
-        venv_python = coral_pkg / venv_name / "bin" / "python"
-        if venv_python.exists():
-            return str(venv_python)
+        candidate = resolve_venv_python(coral_pkg / venv_name)
+        if candidate.exists():
+            return str(candidate)
 
     # Fallback: current interpreter (absolute, but don't resolve symlinks)
     return os.path.abspath(sys.executable)
