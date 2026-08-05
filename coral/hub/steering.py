@@ -88,7 +88,7 @@ def read_pending(coral_dir: str | Path) -> list[SteeringAction]:
     actions: list[SteeringAction] = []
     for path in sorted(_steering_dir(coral_dir).glob("*.json")):
         try:
-            action = SteeringAction.from_dict(json.loads(path.read_text()))
+            action = SteeringAction.from_dict(json.loads(path.read_text(encoding="utf-8")))
         except (OSError, json.JSONDecodeError, KeyError, ValueError, TypeError):
             continue
         if action.applied_at is None:
@@ -103,7 +103,7 @@ def mark_applied(coral_dir: str | Path, action_id: str) -> bool:
     if not path.exists():
         return False
     try:
-        action = SteeringAction.from_dict(json.loads(path.read_text()))
+        action = SteeringAction.from_dict(json.loads(path.read_text(encoding="utf-8")))
     except (OSError, json.JSONDecodeError, KeyError, ValueError, TypeError):
         return False
     action.applied_at = _now()
@@ -126,7 +126,7 @@ def _now() -> str:
 def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
     fd, tmp_path = tempfile.mkstemp(prefix=f".{path.stem}.", suffix=".tmp", dir=path.parent)
     try:
-        with os.fdopen(fd, "w") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)
             f.write("\n")
             f.flush()

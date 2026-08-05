@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -12,6 +11,7 @@ from pathlib import Path
 from coral.cli._helpers import (
     find_coral_dir_and_island,
     is_docker_container_running,
+    is_process_alive,
     read_direction,
 )
 
@@ -144,7 +144,7 @@ def cmd_show(args: argparse.Namespace) -> None:
         return
     attempt_file = candidates[0]
 
-    data = json.loads(attempt_file.read_text())
+    data = json.loads(attempt_file.read_text(encoding="utf-8"))
     print(f"Commit:  {data['commit_hash']}")
     print(f"Agent:   {data['agent_id']}")
     print(f"Title:   {data['title']}")
@@ -375,16 +375,16 @@ def _collect_runs(results_dir: Path) -> list[dict]:
             # container-internal and meaningless on the host.
             docker_marker = run_dir / ".coral_docker_container"
             if docker_marker.exists():
-                container_name = docker_marker.read_text().strip()
+                container_name = docker_marker.read_text(encoding="utf-8").strip()
                 if container_name and is_docker_container_running(container_name):
                     status = "running"
             elif pid_file.exists():
                 try:
-                    manager_pid = int(pid_file.read_text().strip())
-                    os.kill(manager_pid, 0)
-                    status = "running"
-                except (ProcessLookupError, PermissionError, ValueError):
+                    manager_pid = int(pid_file.read_text(encoding="utf-8").strip())
+                except ValueError:
                     status = "stopped"
+                else:
+                    status = "running" if is_process_alive(manager_pid) else "stopped"
 
             logs_dir = coral_dir / "public" / "logs"
             agent_names: set[str] = set()
@@ -402,7 +402,7 @@ def _collect_runs(results_dir: Path) -> list[dict]:
                 try:
                     import yaml
 
-                    cfg = yaml.safe_load(config_file.read_text()) or {}
+                    cfg = yaml.safe_load(config_file.read_text(encoding="utf-8")) or {}
                     agents_cfg = cfg.get("agents", {})
                     model = agents_cfg.get("model", "")
                     runtime = agents_cfg.get("runtime", "")
@@ -428,7 +428,7 @@ def _collect_runs(results_dir: Path) -> list[dict]:
                     continue
                 for af in attempts_dir.glob("*.json"):
                     try:
-                        adata = json.loads(af.read_text())
+                        adata = json.loads(af.read_text(encoding="utf-8"))
                         attempt_count += 1
                         # `budget_class` is a derived field on Attempt
                         # (from metadata), not a top-level JSON key — go

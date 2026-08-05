@@ -451,7 +451,7 @@ class CoralConfig:
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> CoralConfig:
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         return cls.from_dict(data, base_dir=Path(path).parent)
 
@@ -491,7 +491,7 @@ class CoralConfig:
         return container
 
     def to_yaml(self, path: str | Path) -> None:
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             yaml.dump(self.to_dict(), f, default_flow_style=False, sort_keys=False)
 
     @classmethod
@@ -628,7 +628,7 @@ def _load_preset(ref: Any, base_dir: Path | None) -> dict[str, Any]:
     if not isinstance(ref, str) or not ref.strip():
         raise ValueError(f"preset must be a non-empty string, got {ref!r}")
     path = _resolve_preset_path(ref.strip(), base_dir)
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         loaded = yaml.safe_load(f) or {}
     if not isinstance(loaded, dict):
         raise ValueError(f"Preset {path} must contain a YAML mapping, got {type(loaded).__name__}")

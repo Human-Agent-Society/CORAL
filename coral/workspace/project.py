@@ -167,12 +167,12 @@ def seed_agent_role(
         return dst
 
     if source is None:
-        template = _ROLE_TEMPLATE_PATH.read_text()
+        template = _ROLE_TEMPLATE_PATH.read_text(encoding="utf-8")
         rendered = template.format(
             agent_id=agent_id,
             created_at=datetime.now().isoformat(),
         )
-        dst.write_text(rendered)
+        dst.write_text(rendered, encoding="utf-8")
         return dst
 
     src = Path(source).expanduser()
@@ -271,7 +271,7 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
     config.to_yaml(coral_dir / "config.yaml")
 
     # Save config_dir so resume can restore task_dir for relative path resolution
-    (coral_dir / "config_dir").write_text(str(effective_config_dir))
+    (coral_dir / "config_dir").write_text(str(effective_config_dir), encoding="utf-8")
 
     # Create/update "latest" symlink at task_dir/latest -> this run directory
     latest_link = task_dir / "latest"

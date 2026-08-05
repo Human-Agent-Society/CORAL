@@ -27,7 +27,7 @@ def write_auto_stop(coral_dir: str | Path, payload: dict[str, Any]) -> Path:
         dir=path.parent,
     )
     try:
-        with os.fdopen(fd, "w") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(text)
             f.flush()
             os.fsync(f.fileno())
@@ -47,7 +47,7 @@ def read_auto_stop(coral_dir: str | Path) -> dict[str, Any] | None:
     if not path.exists():
         return None
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
     return data if isinstance(data, dict) else None

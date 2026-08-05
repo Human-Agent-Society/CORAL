@@ -26,7 +26,7 @@ def find_coral_breadcrumb(start: str | Path | None = None) -> tuple[Path, Path] 
         breadcrumb = cur / ".coral_dir"
         if breadcrumb.exists():
             try:
-                coral_dir = Path(breadcrumb.read_text().strip()).resolve()
+                coral_dir = Path(breadcrumb.read_text(encoding="utf-8").strip()).resolve()
             except (OSError, ValueError):
                 coral_dir = None
             if coral_dir is not None and coral_dir.is_dir():
@@ -42,7 +42,7 @@ def read_island_breadcrumb(coral_dir: Path, breadcrumb_dir: Path) -> str | None:
     if not island_file.exists():
         return None
     try:
-        island_id = island_file.read_text().strip()
+        island_id = island_file.read_text(encoding="utf-8").strip()
     except OSError:
         return None
     if island_id and (coral_dir / "islands" / island_id).is_dir():

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
 import sys
 import threading
@@ -55,7 +56,7 @@ def _extract_cursor_session_id(log_path: Path) -> str | None:
     re-emit init), falling back to any line carrying a `session_id`.
     """
     try:
-        lines = log_path.read_text().strip().splitlines()
+        lines = log_path.read_text(encoding="utf-8").strip().splitlines()
         for line in reversed(lines):
             line = line.strip()
             if not line:
@@ -143,7 +144,11 @@ class CursorAgentRuntime:
         sandbox: AgentSandboxSpec | None = None,
     ) -> AgentHandle:
         agent_id_file = worktree_path / ".coral_agent_id"
-        agent_id = agent_id_file.read_text().strip() if agent_id_file.exists() else "unknown"
+        agent_id = (
+            agent_id_file.read_text(encoding="utf-8").strip()
+            if agent_id_file.exists()
+            else "unknown"
+        )
 
         if log_dir is None:
             log_dir = worktree_path / ".cursor" / "logs"
@@ -203,7 +208,7 @@ class CursorAgentRuntime:
         agent_env["UV_PROJECT_ENVIRONMENT"] = worktree_venv
         agent_env["VIRTUAL_ENV"] = worktree_venv
         venv_bin = str(worktree_path / ".venv" / "bin")
-        agent_env["PATH"] = venv_bin + ":" + agent_env.get("PATH", "")
+        agent_env["PATH"] = venv_bin + os.pathsep + agent_env.get("PATH", "")
 
         apply_sandbox_env(agent_env, sandbox)
 
@@ -212,7 +217,7 @@ class CursorAgentRuntime:
         # its creds in the agent's home; returns Popen user=/group= kwargs.
         user_kwargs = apply_run_as_user(agent_env, run_as_user)
 
-        log_file = open(log_path, "w", buffering=1)
+        log_file = open(log_path, "w", buffering=1, encoding="utf-8", errors="replace")
 
         err_path: Path | None = None
         err_file: Any = None

@@ -79,7 +79,8 @@ def cmd_init(args: argparse.Namespace) -> None:
         f"  runtime: claude_code         # claude_code | codex | cursor | kiro | opencode | 'pkg.module:Cls' for a custom runtime\n"
         f"\n"
         f"workspace:\n"
-        f'  repo_path: "./seed"          # relative to where you run `coral start`\n'
+        f'  repo_path: "./seed"          # relative to where you run `coral start`\n',
+        encoding="utf-8",
     )
 
     (task_path / "seed" / "solution.py").write_text(
@@ -89,7 +90,8 @@ def cmd_init(args: argparse.Namespace) -> None:
         "from stdout as the score. Replace with your real implementation.\n"
         '"""\n'
         "\n"
-        "print(0.0)\n"
+        "print(0.0)\n",
+        encoding="utf-8",
     )
 
     (task_path / "grader" / "pyproject.toml").write_text(
@@ -107,7 +109,8 @@ def cmd_init(args: argparse.Namespace) -> None:
         f'build-backend = "hatchling.build"\n'
         f"\n"
         f"[tool.hatch.build.targets.wheel]\n"
-        f'packages = ["src/{module_name}"]\n'
+        f'packages = ["src/{module_name}"]\n',
+        encoding="utf-8",
     )
 
     (grader_pkg_dir / "__init__.py").write_text(
@@ -115,7 +118,8 @@ def cmd_init(args: argparse.Namespace) -> None:
         f"\n"
         f"from .grader import Grader\n"
         f"\n"
-        f'__all__ = ["Grader"]\n'
+        f'__all__ = ["Grader"]\n',
+        encoding="utf-8",
     )
 
     (grader_pkg_dir / "grader.py").write_text(
@@ -144,7 +148,8 @@ def cmd_init(args: argparse.Namespace) -> None:
         f"        try:\n"
         f"            return float(result.stdout.strip())\n"
         f"        except ValueError:\n"
-        f'            return self.fail(f"Expected a single float on stdout, got: {{result.stdout[:80]!r}}")\n'
+        f'            return self.fail(f"Expected a single float on stdout, got: {{result.stdout[:80]!r}}")\n',
+        encoding="utf-8",
     )
 
     print(f"Created task at {task_path}/")

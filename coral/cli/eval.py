@@ -70,7 +70,7 @@ def _read_attempt_file(attempts_file: Path):
     if not attempts_file.exists():
         return None
     try:
-        return Attempt.from_dict(_json.loads(attempts_file.read_text()))
+        return Attempt.from_dict(_json.loads(attempts_file.read_text(encoding="utf-8")))
     except (_json.JSONDecodeError, KeyError, OSError):
         return None
 

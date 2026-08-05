@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
 import sys
 import threading
@@ -41,7 +42,7 @@ def _extract_codex_session_id(log_path: Path) -> str | None:
     silently starting a fresh one.
     """
     try:
-        lines = log_path.read_text().strip().splitlines()
+        lines = log_path.read_text(encoding="utf-8").strip().splitlines()
         for line in reversed(lines):
             line = line.strip()
             if not line:
@@ -116,7 +117,11 @@ class CodexRuntime:
         Resume uses `codex exec resume <session_id> "prompt"`.
         """
         agent_id_file = worktree_path / ".coral_agent_id"
-        agent_id = agent_id_file.read_text().strip() if agent_id_file.exists() else "unknown"
+        agent_id = (
+            agent_id_file.read_text(encoding="utf-8").strip()
+            if agent_id_file.exists()
+            else "unknown"
+        )
 
         if log_dir is None:
             log_dir = worktree_path / ".codex" / "logs"
@@ -174,7 +179,7 @@ class CodexRuntime:
         agent_env["VIRTUAL_ENV"] = worktree_venv
         # Prepend .venv/bin to PATH for non-login shells
         venv_bin = str(worktree_path / ".venv" / "bin")
-        agent_env["PATH"] = venv_bin + ":" + agent_env.get("PATH", "")
+        agent_env["PATH"] = venv_bin + os.pathsep + agent_env.get("PATH", "")
 
         # Route through gateway if configured
         if gateway_url:
@@ -190,7 +195,7 @@ class CodexRuntime:
         # in the agent's home; returns Popen user=/group= kwargs.
         user_kwargs = apply_run_as_user(agent_env, run_as_user)
 
-        log_file = open(log_path, "w", buffering=1)
+        log_file = open(log_path, "w", buffering=1, encoding="utf-8", errors="replace")
 
         # Per-agent stderr capture under public/diagnostics/<agent_id>/agent.err.
         err_path: Path | None = None

@@ -312,7 +312,7 @@ class AgentManager:
         pid_file = self.paths.coral_dir / "public" / "grader_daemon.pid"
         if pid_file.exists():
             try:
-                stale_pid = int(pid_file.read_text().strip())
+                stale_pid = int(pid_file.read_text(encoding="utf-8").strip())
                 os.kill(stale_pid, signal.SIGTERM)
                 logger.info(f"Killed stale grader daemon PID {stale_pid}")
             except (ValueError, ProcessLookupError, PermissionError, OSError):
@@ -336,7 +336,7 @@ class AgentManager:
         self._grader_proc = proc
         self._grader_stop_event = stop_event
         try:
-            pid_file.write_text(str(proc.pid))
+            pid_file.write_text(str(proc.pid), encoding="utf-8")
         except OSError:
             pass
         logger.info(f"Grader daemon started (PID {proc.pid})")
@@ -690,7 +690,7 @@ class AgentManager:
             shared_dir=shared_dir_name,
             island_id=island_id,
         )
-        (worktree_path / instruction_file).write_text(coral_md)
+        (worktree_path / instruction_file).write_text(coral_md, encoding="utf-8")
 
         # OS-user isolation: chown agent-facing paths to the unprivileged user
         # and lock .coral/private/ to root, then run the agent subprocess as
@@ -962,7 +962,7 @@ class AgentManager:
             island_id: str | None = None
             if island_bc.exists():
                 try:
-                    island_id = island_bc.read_text().strip() or None
+                    island_id = island_bc.read_text(encoding="utf-8").strip() or None
                 except OSError:
                     island_id = None
             # Track it so subsequent restarts can use it
@@ -1023,7 +1023,7 @@ class AgentManager:
             if sid:
                 sessions[handle.agent_id] = sid
         sessions_file = self.paths.coral_dir / "public" / "sessions.json"
-        sessions_file.write_text(json.dumps(sessions, indent=2))
+        sessions_file.write_text(json.dumps(sessions, indent=2), encoding="utf-8")
         logger.info(f"Saved {len(sessions)} session ID(s) to sessions.json")
 
     def _load_saved_sessions(self) -> dict[str, str]:
@@ -1033,7 +1033,7 @@ class AgentManager:
         sessions_file = self.paths.coral_dir / "public" / "sessions.json"
         if sessions_file.exists():
             try:
-                return json.loads(sessions_file.read_text())
+                return json.loads(sessions_file.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError) as e:
                 logger.warning(f"Failed to read sessions.json: {e}")
         return {}
@@ -1155,7 +1155,7 @@ class AgentManager:
             if path is None:
                 continue
             try:
-                data = json.loads(path.read_text())
+                data = json.loads(path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
                 # Transient read (e.g. mid-rename on some filesystems) — retry next tick.
                 continue
@@ -1187,7 +1187,7 @@ class AgentManager:
                 # When filtering, we have to read each candidate to inspect
                 # its agent_id field; cache the parse so we do not re-read.
                 try:
-                    data = json.loads(path.read_text())
+                    data = json.loads(path.read_text(encoding="utf-8"))
                 except (json.JSONDecodeError, OSError) as e:
                     logger.warning(f"Failed to read attempt {path}: {e}")
                     continue
@@ -1204,7 +1204,7 @@ class AgentManager:
             return newest_data
         if newest_path is not None:
             try:
-                return json.loads(newest_path.read_text())
+                return json.loads(newest_path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError) as e:
                 logger.warning(f"Failed to read attempt {newest_path}: {e}")
         return None
@@ -1220,7 +1220,7 @@ class AgentManager:
             counter_file = coral_dir / "public" / "eval_count"
         if counter_file.exists():
             try:
-                return int(counter_file.read_text().strip())
+                return int(counter_file.read_text(encoding="utf-8").strip())
             except ValueError:
                 pass
         return 0
@@ -2620,7 +2620,7 @@ class AgentManager:
             return
 
         pids = []
-        for line in agent_pids_file.read_text().strip().splitlines():
+        for line in agent_pids_file.read_text(encoding="utf-8").strip().splitlines():
             line = line.strip()
             if line:
                 pids.append(int(line))
@@ -2650,7 +2650,7 @@ class AgentManager:
     def _write_pid_file(self) -> None:
         if self.paths:
             pid_file = self.paths.coral_dir / "public" / "manager.pid"
-            pid_file.write_text(str(os.getpid()))
+            pid_file.write_text(str(os.getpid()), encoding="utf-8")
             # Also write agent PIDs so coral stop can kill them as fallback
             self._write_agent_pids()
 
@@ -2664,10 +2664,10 @@ class AgentManager:
                 if handle.process and handle.process.pid:
                     pids.append(str(handle.process.pid))
                     pid_map[handle.agent_id] = handle.process.pid
-            agent_pids_file.write_text("\n".join(pids))
+            agent_pids_file.write_text("\n".join(pids), encoding="utf-8")
             # Also write JSON mapping for the web UI to check process liveness
             pid_map_file = self.paths.coral_dir / "public" / "agent_pids.json"
-            pid_map_file.write_text(json.dumps(pid_map))
+            pid_map_file.write_text(json.dumps(pid_map), encoding="utf-8")
 
     def _atexit_cleanup(self) -> None:
         """Safety net: kill any surviving agent processes on interpreter exit."""
@@ -2810,7 +2810,7 @@ def _move_agent_files(
 def _attempt_file_belongs_to_agent(path: Path, agent_id: str) -> bool:
     """Return True when an attempt record file is owned by ``agent_id``."""
     try:
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
     except OSError:
         return False
     if path.suffix == ".jsonl":
@@ -2837,7 +2837,7 @@ def _stamp_attempt_file_island(path: Path, island_id: str) -> None:
     try:
         if path.suffix == ".jsonl":
             records = []
-            for line in path.read_text().splitlines():
+            for line in path.read_text(encoding="utf-8").splitlines():
                 if not line.strip():
                     continue
                 data = json.loads(line)
@@ -2847,16 +2847,18 @@ def _stamp_attempt_file_island(path: Path, island_id: str) -> None:
                 metadata["island_id"] = island_id
                 data["metadata"] = metadata
                 records.append(data)
-            path.write_text("".join(f"{json.dumps(record)}\n" for record in records))
+            path.write_text(
+                "".join(f"{json.dumps(record)}\n" for record in records), encoding="utf-8"
+            )
             return
 
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         metadata = data.get("metadata")
         if not isinstance(metadata, dict):
             metadata = {}
         metadata["island_id"] = island_id
         data["metadata"] = metadata
-        path.write_text(json.dumps(data, indent=2))
+        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
     except (json.JSONDecodeError, OSError, TypeError) as e:
         logger.warning("Failed to stamp migrated attempt %s with island %s: %s", path, island_id, e)
 
@@ -2963,7 +2965,7 @@ def _write_last_migrated_evals(coral_dir: Path, last_migrated: dict[str, int]) -
         prefix=".migration_state.", suffix=".tmp", dir=str(target.parent)
     )
     try:
-        with os.fdopen(fd, "w") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(payload)
         os.replace(tmp_path, target)
     except Exception:
@@ -2984,7 +2986,7 @@ def _read_last_migrated_evals(coral_dir: Path) -> dict[str, int]:
     """
     target = _migration_state_path(coral_dir)
     try:
-        with open(target) as f:
+        with open(target, encoding="utf-8") as f:
             raw = json.load(f)
     except (OSError, json.JSONDecodeError):
         return {}
@@ -3029,7 +3031,7 @@ def _write_arrival_note(coral_dir: Path, candidate: MigrationCandidate) -> None:
         f"`{candidate.src_island}` as island-local shared knowledge.\n"
     )
     fname = f"migration_{fname_ts}_{candidate.agent_id}.md"
-    (notes_dir / fname).write_text(body)
+    (notes_dir / fname).write_text(body, encoding="utf-8")
 
 
 def _reset_worktree_to_commit(worktree_path: Path, target_hash: str) -> None:

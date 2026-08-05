@@ -68,7 +68,7 @@ def _coral_install_origin() -> dict:
             "git+https://github.com/Human-Agent-Society/CORAL.git` or "
             "`git clone ... && uv sync`."
         )
-    return json.loads(direct_url.read_text())
+    return json.loads(direct_url.read_text(encoding="utf-8"))
 
 
 def _coral_install_command(origin: dict) -> str:
