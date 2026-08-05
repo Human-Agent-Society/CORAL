@@ -9,11 +9,9 @@ here. Imports are lazy so listing/validation never drags in backend deps.
 from __future__ import annotations
 
 import importlib
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from coral.config import SandboxConfig
-    from coral.sandbox.protocol import SandboxProvider
+from coral.config import SandboxConfig
+from coral.sandbox.protocol import SandboxProvider
 
 _BUILTIN: dict[str, str] = {
     "srt": "coral.sandbox.srt:SrtSandbox",

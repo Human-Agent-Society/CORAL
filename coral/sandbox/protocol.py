@@ -28,10 +28,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
-if TYPE_CHECKING:
-    from coral.config import AgentConfig
+from coral.config import AgentConfig
 
 
 @dataclass
