@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
 import sys
 import threading
@@ -167,7 +168,7 @@ class PiAgentRuntime:
         agent_env["UV_PROJECT_ENVIRONMENT"] = worktree_venv
         agent_env["VIRTUAL_ENV"] = worktree_venv
         venv_bin = str(worktree_path / ".venv" / "bin")
-        agent_env["PATH"] = venv_bin + ":" + agent_env.get("PATH", "")
+        agent_env["PATH"] = venv_bin + os.pathsep + agent_env.get("PATH", "")
 
         if gateway_url:
             agent_env["OPENAI_BASE_URL"] = gateway_url
