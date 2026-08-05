@@ -226,6 +226,75 @@ def in_coral_docker_session() -> bool:
     return os.environ.get("CORAL_IN_DOCKER") == "1"
 
 
+def _is_process_alive_windows(pid: int) -> bool:
+    """Windows backend for :func:`is_process_alive`.
+
+    Windows has no signal 0, so liveness has to be read off a process handle.
+    A handle stays valid after the process exits (until every reference is
+    closed), which is why the handle alone does not mean "running" — the
+    kernel object is *signalled* once the process terminates, so a zero
+    timeout wait separates a live process from an exited-but-unreaped one.
+    """
+    if sys.platform != "win32":  # pragma: no cover - narrows the type checker
+        return False
+
+    import ctypes
+    from ctypes import wintypes
+
+    error_access_denied = 5
+    synchronize = 0x00100000
+    wait_timeout = 0x00000102
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+    kernel32.WaitForSingleObject.restype = wintypes.DWORD
+    kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    handle = kernel32.OpenProcess(synchronize, False, pid)
+    if not handle:
+        # A running process owned by another user denies access; every other
+        # failure (notably ERROR_INVALID_PARAMETER for an unknown PID) is dead.
+        return ctypes.get_last_error() == error_access_denied
+    try:
+        return kernel32.WaitForSingleObject(handle, 0) == wait_timeout
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def is_process_alive(pid: int) -> bool:
+    """Check whether a PID belongs to a running process, without signalling it.
+
+    Wraps the platform differences that ``os.kill(pid, 0)`` leaks to callers:
+
+    - POSIX raises ``ProcessLookupError`` for an unknown PID and
+      ``PermissionError`` for a live process owned by another user.
+    - Windows has no signal 0 at all, so ``os.kill(pid, 0)`` raises
+      ``OSError: [WinError 87] The parameter is incorrect`` for *every* PID,
+      live or not. Callers that only catch ``ProcessLookupError`` therefore
+      crash instead of reporting a stopped run.
+
+    Non-positive PIDs are rejected: ``os.kill`` treats 0 and negatives as
+    process-group selectors, so a truncated ``manager.pid`` would otherwise
+    probe the caller's own group and report a dead run as running.
+    """
+    if pid <= 0:
+        return False
+    if sys.platform == "win32":
+        return _is_process_alive_windows(pid)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
 def is_docker_container_running(container_name: str, *, quiet: bool = False) -> bool:
     """Check if a Docker container is currently running."""
     cmd = docker_cmd_or_none() if quiet else docker_cmd()

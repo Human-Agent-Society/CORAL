@@ -26,6 +26,7 @@ from coral.cli._helpers import (
     in_docker,
     in_tmux,
     is_docker_run_alive,
+    is_process_alive,
     kill_docker_container,
     kill_orphaned_agents,
     kill_tmux_session,
@@ -669,21 +670,12 @@ def cmd_resume(args: argparse.Namespace) -> None:
     pid_file = coral_dir / "public" / "manager.pid"
     if pid_file.exists():
         pid = int(pid_file.read_text().strip())
-        try:
-            os.kill(pid, 0)
+        if is_process_alive(pid):
             print(
                 f"Error: Manager already running (PID {pid}). Stop it first with 'coral stop'.",
                 file=sys.stderr,
             )
             sys.exit(1)
-        except PermissionError:
-            print(
-                f"Error: Manager already running (PID {pid}). Stop it first with 'coral stop'.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-        except ProcessLookupError:
-            pass
 
     from coral.workspace import reconstruct_paths
 
@@ -775,9 +767,7 @@ def _stop_one(coral_dir: Path) -> None:
 
             for _ in range(10):
                 time.sleep(0.5)
-                try:
-                    os.kill(pid, 0)
-                except (ProcessLookupError, PermissionError):
+                if not is_process_alive(pid):
                     print("Manager stopped.")
                     return
             print("Manager didn't stop gracefully. Force killing...")
@@ -887,15 +877,9 @@ def cmd_status(args: argparse.Namespace) -> None:
     manager_alive = False
     if pid_file.exists():
         pid = int(pid_file.read_text().strip())
-        try:
-            os.kill(pid, 0)
+        if is_process_alive(pid):
             manager_alive = True
             print(f"Manager: RUNNING (PID {pid})")
-        except PermissionError:
-            manager_alive = True
-            print(f"Manager: RUNNING (PID {pid})")
-        except ProcessLookupError:
-            pass
 
     # Check if managed by a Docker container
     if not manager_alive and is_docker_run_alive(coral_dir):

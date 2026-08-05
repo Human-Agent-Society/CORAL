@@ -11,7 +11,7 @@ import sys
 import webbrowser
 from pathlib import Path
 
-from coral.cli._helpers import find_coral_dir
+from coral.cli._helpers import find_coral_dir, is_process_alive
 
 DEFAULT_UI_PORT = 8420
 UI_PORT_SEARCH_LIMIT = 20
@@ -167,15 +167,16 @@ def start_ui_background(
     if pid_file.exists():
         try:
             existing_pid = int(pid_file.read_text().strip())
-            os.kill(existing_pid, 0)
+        except (OSError, ValueError):
+            existing_pid = 0
+        if is_process_alive(existing_pid):
             existing_url = url_file.read_text().strip() if url_file.exists() else "dashboard"
             print(f"Dashboard already running: {existing_url}")
             if existing_url.startswith("http"):
                 webbrowser.open(existing_url)
             return
-        except (OSError, ValueError):
-            pid_file.unlink(missing_ok=True)
-            url_file.unlink(missing_ok=True)
+        pid_file.unlink(missing_ok=True)
+        url_file.unlink(missing_ok=True)
 
     if not _port_available(host, port):
         fallback_port = _find_available_port(host, port + 1)

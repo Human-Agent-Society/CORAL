@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -12,6 +11,7 @@ from pathlib import Path
 from coral.cli._helpers import (
     find_coral_dir_and_island,
     is_docker_container_running,
+    is_process_alive,
     read_direction,
 )
 
@@ -381,10 +381,10 @@ def _collect_runs(results_dir: Path) -> list[dict]:
             elif pid_file.exists():
                 try:
                     manager_pid = int(pid_file.read_text().strip())
-                    os.kill(manager_pid, 0)
-                    status = "running"
-                except (ProcessLookupError, PermissionError, ValueError):
+                except ValueError:
                     status = "stopped"
+                else:
+                    status = "running" if is_process_alive(manager_pid) else "stopped"
 
             logs_dir = coral_dir / "public" / "logs"
             agent_names: set[str] = set()
