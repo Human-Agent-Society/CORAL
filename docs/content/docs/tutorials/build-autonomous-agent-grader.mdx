@@ -32,6 +32,11 @@ coral init my-task
 This scaffolds a new task with a packaged grader, a starter `task.yaml`, and
 the directory structure needed to begin writing custom evaluation logic.
 
+Throughout this tutorial, we'll use the bundled `examples/erdos` task as a
+concrete example. It demonstrates a packaged grader, `task.yaml`
+configuration, and validation workflow using a real optimization task from the
+CORAL repository.
+
 ## Layout
 
 ```text
@@ -45,6 +50,14 @@ my-task/
         ├── __init__.py
         └── grader.py
 ```
+
+The bundled `examples/erdos` task follows this same structure:
+
+| File | Purpose |
+|------|---------|
+| `examples/erdos/task.yaml` | Configures the grader entrypoint, setup commands, timeout, and arguments. |
+| `examples/erdos/grader/src/erdos_grader/grader.py` | Implements the `TaskGrader` used during evaluation. |
+| `examples/erdos/seed/initial_program.py` | The program evaluated by the grader. |
 
 ## Package the grader
 
@@ -61,17 +74,18 @@ under `grader.setup` install this package before any evaluations are run.
 The grader configuration lives in `task.yaml`. It tells CORAL how to locate,
 install, and execute your grader during validation and task runs.
 
-A minimal configuration looks like this:
+The bundled `examples/erdos` task provides a complete packaged grader. The
+configuration below is taken from its `task.yaml`.
 
 ```yaml
 grader:
-  entrypoint: "my_task_grader.grader:Grader"
+  entrypoint: "erdos_grader.grader:Grader"
   setup:
     - "uv pip install -e ./grader"
-  timeout: 300
+  timeout: 1100
   direction: maximize
   args:
-    program_file: "solution.py"
+    program_file: "initial_program.py"
 ```
 
 ### `entrypoint`
@@ -86,7 +100,7 @@ package.module:ClassName
 For example:
 
 ```yaml
-entrypoint: "my_task_grader.grader:Grader"
+entrypoint: "erdos_grader.grader:Grader"
 ```
 
 CORAL imports this class whenever it needs to evaluate an agent submission.
@@ -110,7 +124,7 @@ it locally.
 The timeout limits how long a single evaluation can run.
 
 ```yaml
-timeout: 300
+timeout: 1100
 ```
 
 If grading exceeds this limit, CORAL stops the evaluation and records it as a
@@ -133,7 +147,7 @@ Use `args` to pass custom configuration into your grader.
 
 ```yaml
 args:
-  program_file: "solution.py"
+  program_file: "initial_program.py"
 ```
 
 These values are available through `self.args` inside your `TaskGrader`
@@ -151,6 +165,11 @@ complete reference of the available `TaskGrader` helper methods and advanced
 configuration options, see
 [Writing a Custom Grader](/docs/guides/custom-grader).
 
+The bundled `examples/erdos` task contains a complete packaged grader that
+implements this workflow. The simplified example below introduces the
+`TaskGrader` API, while the Erdős task demonstrates how those concepts are
+applied in a complete implementation.
+
 A minimal grader looks like this:
 
 ```python
@@ -162,6 +181,20 @@ class Grader(TaskGrader):
         result = self.run_program("solution.py")
         return self.score(1.0, "Evaluation completed successfully.")
 ```
+
+If you'd like to see a complete implementation, explore:
+
+- `examples/erdos/task.yaml`
+- `examples/erdos/grader/src/erdos_grader/grader.py`
+
+Together, these files show how a packaged grader is configured, executes the
+submitted program, validates its output, computes a task-specific score, and
+returns detailed feedback using `ScoreBundle`.
+
+The Erdős grader also demonstrates several commonly used `TaskGrader`
+helpers, including `self.run_program()`, `self.args`, `self.fail()`, and
+`self.score()`, making it a useful reference alongside the API
+documentation.
 
 Returning a score together with a clear explanation makes evaluation results
 easier to understand. Helpful feedback allows contributors to quickly identify
@@ -180,8 +213,8 @@ Inside `evaluate()`, you typically:
 
 ### Example evaluation flow
 
-The bundled Erdős example demonstrates a complete packaged grader that follows
-this evaluation pattern:
+The bundled `examples/erdos` task demonstrates a complete packaged grader for
+an optimization problem. Its grader follows this evaluation pattern:
 
 1. Read the target program from `self.args`.
 2. Verify that the program exists.
@@ -196,6 +229,13 @@ this evaluation pattern:
 5. Compute the final score.
 6. Return the score together with an explanation.
 
+Unlike the minimal example shown earlier, the Erdős grader performs
+task-specific validation before scoring. It verifies that the submitted
+program exists, executes within the configured timeout, checks that the
+returned values satisfy the problem constraints, computes the final score, and
+returns a `ScoreBundle` containing both the score and a human-readable
+explanation.
+
 This structure works well for most optimization and coding tasks because it
 separates execution, validation, and scoring into clear steps.
 
@@ -204,11 +244,15 @@ separates execution, validation, and scoring into clear steps.
 Before launching agents, validate the task to ensure that the grader,
 configuration, and seed solution all work together correctly.
 
-Run:
+Since this guide uses the bundled `examples/erdos` task throughout, validate it
+with:
 
 ```bash
-coral validate my-task
+coral validate examples/erdos
 ```
+
+If you're building your own task instead, replace `examples/erdos` with the
+path to your task directory.
 
 Once validation completes successfully, your packaged grader is ready to be
 used with `coral start`.
@@ -240,14 +284,14 @@ before evaluation begins.
 If task.yaml contains:
 
 ```text
-Program file not found: solution.py
+Program file not found: initial_program.py
 ```
 
 For example, if `task.yaml` contains:
 
 ```yaml
 args:
-  program_file: "solution.py"
+  program_file: "initial_program.py"
 ```
 
 make sure that file exists in the task workspace and matches the filename
@@ -264,10 +308,23 @@ For example:
 Evaluation failed:
 Traceback (most recent call last):
 ...
+```
 
 The traceback usually points to an exception in either the submitted program
 or the grader itself. Running the program independently can help isolate the
 cause before validating again.
+
+For the bundled `examples/erdos` task, you can run the seed program directly:
+
+```bash
+python -c "import sys, os; sys.path.insert(0, 'examples/erdos/seed'); import initial_program; print(initial_program.run())"
+```
+
+If the error occurs while setting up or installing the grader, rerun validation
+with verbose logging to inspect the grader setup steps:
+
+```bash
+coral validate examples/erdos --verbose
 ```
 
 ### Invalid outputs
@@ -285,6 +342,12 @@ Providing clear error messages helps contributors quickly understand what
 needs to be fixed.
 
 ### Timeouts
+
+For example:
+
+```text
+Evaluation timed out after 1100s
+```
 
 If evaluation exceeds the configured timeout, CORAL terminates the grading
 process and records the attempt as failed.
@@ -327,8 +390,9 @@ When writing a custom grader:
 
 ## Next steps
 
-Now that you've created and validated a packaged grader, you can explore more
-advanced grading patterns and the bundled example tasks:
+Now that you've created and validated a packaged grader, explore the bundled
+`examples/erdos` task to see a complete production-style implementation, then
+continue with the guides below for more advanced grading patterns:
 
 - [Writing a Custom Grader](/docs/guides/custom-grader)
 - [Task Examples](/docs/examples/tasks)
