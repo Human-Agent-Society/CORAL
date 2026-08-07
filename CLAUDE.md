@@ -124,7 +124,7 @@ coral log                                         # Top 20 by score
 coral log -n 5 --recent                           # Sort by time
 coral log --search "kernel" --agent agent-1       # Full-text + filter
 coral show <hash> [--diff]                        # Attempt details (file summary or full diff)
-coral notes [--search KW] [--read N] [--history]  # Browse / read / show checkpoint history
+coral notes [--status STATUS] [--search KW] [-n N] [--read N] [--history]  # Browse / filter / read / show checkpoint history
 coral skills [--read NAME]                        # List or read a shared skill
 coral runs [--all] [--task NAME]                  # Active runs (or all)
 
