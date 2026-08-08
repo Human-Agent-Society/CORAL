@@ -95,6 +95,14 @@ def _add_run_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--run", help="Run ID (defaults to latest)")
 
 
+def _non_empty_status(value: str) -> str:
+    """Validate and normalize a status supplied on the command line."""
+    normalized = value.strip()
+    if not normalized:
+        raise argparse.ArgumentTypeError("status must be a non-empty string")
+    return normalized
+
+
 def main() -> None:
     from coral import __version__
 
@@ -324,11 +332,18 @@ Run 'coral <command> --help' for details on any command."""
             "  coral notes                   List all notes\n"
             "  coral notes -n 5              Last 5 notes\n"
             "  coral notes --search 'idea'   Search notes\n"
+            "  coral notes --status confirmed  Filter by note status\n"
             "  coral notes --read 3          Read note #3"
         ),
         formatter_class=_CommandHelpFormatter,
     )
     p_notes.add_argument("--search", "-s", help="Search notes by keyword")
+    p_notes.add_argument(
+        "--status",
+        metavar="STATUS",
+        type=_non_empty_status,
+        help="Filter by frontmatter status (e.g. confirmed, refuted, untested)",
+    )
     p_notes.add_argument("-n", "--recent", type=int, help="Show N most recent")
     p_notes.add_argument("--read", "-r", help="Read a specific note by number or name")
     p_notes.add_argument(

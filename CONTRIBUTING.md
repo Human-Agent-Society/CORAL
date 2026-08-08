@@ -68,10 +68,14 @@ grader daemon, heartbeats, and the runtime registry.
   day-to-day development lands, and `main` tracks releases. Maintainers merge
   `dev` into `main` as part of the release process — **all PRs must target
   `dev`**, never `main` directly.
-- If `main` must be synchronized back into `dev`, merge that sync PR with
-  **Create a merge commit**. Squash or rebase merging copies the file tree but
-  discards the release-tag ancestry, which can reintroduce release conflicts
-  and make hatch-vcs derive a version older than the latest tag.
+- Promotion PRs from `dev` to `main` use **Create a merge commit**. Once one is
+  merged, the promotion workflow verifies that the promoted `dev` commit and
+  the resulting `main` commit have identical trees, then tags the `dev` commit
+  and publishes that exact source. Because the tag is in both branches'
+  ancestry, `main` does not need to be merged back into `dev` after a release.
+- Promotions default to a patch release. Apply `release:minor` or
+  `release:major` to the promotion PR to select a larger bump. Direct changes
+  on `main` are unsupported: they make the tree-equality release check fail.
 - Create a topic branch off `dev`. Suggested naming: `feat/<short-desc>`,
   `fix/<short-desc>`, `docs/<short-desc>`, `refactor/<short-desc>`.
 - Keep commits focused. Prefer several small, reviewable commits over one
@@ -99,8 +103,9 @@ grader daemon, heartbeats, and the runtime registry.
 6. A maintainer will review. Expect comments; please respond and push fixups
    rather than force-pushing rewritten history while review is in progress.
 7. We typically **squash-merge ordinary topic PRs** once CI is green and at
-   least one maintainer has approved. Branch-history sync PRs are the exception:
-   use **Create a merge commit** so both parent histories are preserved.
+   least one maintainer has approved. The `dev` to `main` release promotion is
+   the exception: use **Create a merge commit** so the workflow can verify and
+   tag the exact promoted `dev` parent.
 
 ## Coding guidelines
 

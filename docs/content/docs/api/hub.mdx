@@ -80,10 +80,10 @@ Notes are Markdown files with YAML frontmatter stored in `.coral/public/notes/`.
 
 | Function | Description |
 |----------|-------------|
-| `list_notes(coral_dir)` | List all notes (returns metadata dicts) |
+| `list_notes(coral_dir, island_id=None, *, include_raw=False, status=None)` | List notes, optionally filtered by frontmatter status |
 | `read_note(coral_dir, index)` | Read a specific note by 1-based index |
-| `search_notes(coral_dir, query)` | Search notes by keyword |
-| `get_recent_notes(coral_dir, n=5)` | Most recent N notes |
+| `search_notes(coral_dir, query, island_id=None, *, status=None)` | Search notes by keyword and optional status |
+| `get_recent_notes(coral_dir, n=5, island_id=None, *, status=None)` | Most recent N notes after optional status filtering |
 | `read_all_notes(coral_dir)` | Concatenated content of all notes |
 | `format_notes_list(entries)` | Format note entries for terminal display |
 

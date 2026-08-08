@@ -330,11 +330,28 @@ def _sort_key(entry: dict[str, Any]) -> datetime:
     return datetime.min.replace(tzinfo=UTC)
 
 
+def _filter_notes_by_status(
+    entries: list[dict[str, Any]],
+    status: str | None,
+) -> list[dict[str, Any]]:
+    """Return entries whose parsed status matches the requested value."""
+    if status is None:
+        return entries
+
+    expected = status.strip().casefold()
+    return [
+        entry
+        for entry in entries
+        if "status" in entry and str(entry["status"]).strip().casefold() == expected
+    ]
+
+
 def list_notes(
     coral_dir: str | Path,
     island_id: str | int | None = None,
     *,
     include_raw: bool = False,
+    status: str | None = None,
 ) -> list[dict[str, Any]]:
     """List all note entries from the notes directory.
 
@@ -348,12 +365,17 @@ def list_notes(
     (category ``"raw"``) for read-only display. It defaults to False so
     agent-facing consumers (``coral notes``, search, recent-note summaries)
     keep seeing only authored notes; only the dashboard opts in.
+
+    ``status`` filters on the parsed frontmatter value after trimming
+    surrounding whitespace and normalizing case. Notes without a status are
+    excluded only when this filter is active.
     """
     coral_dir = Path(coral_dir)
     if island_id is not None or not (coral_dir / "islands").exists():
-        return _list_notes_single(coral_dir, island_id, include_raw=include_raw)
+        entries = _list_notes_single(coral_dir, island_id, include_raw=include_raw)
+        return _filter_notes_by_status(entries, status)
 
-    entries: list[dict[str, Any]] = []
+    entries = []
     for view_root in all_view_roots(coral_dir):
         sub = _list_notes_single(
             coral_dir, island_id=view_root.name, clean=False, include_raw=include_raw
@@ -363,7 +385,7 @@ def list_notes(
         entries.extend(sub)
     entries.sort(key=_sort_key)
     _clean_note_entries(entries)
-    return entries
+    return _filter_notes_by_status(entries, status)
 
 
 def _list_notes_single(
@@ -425,11 +447,13 @@ def search_notes(
     coral_dir: str | Path,
     query: str,
     island_id: str | int | None = None,
+    *,
+    status: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Search notes by keyword (case-insensitive) in title and body."""
+    """Search notes by keyword and optional status."""
     query_lower = query.lower()
     results = []
-    for entry in list_notes(coral_dir, island_id=island_id):
+    for entry in list_notes(coral_dir, island_id=island_id, status=status):
         full_text = f"{entry['title']} {entry['body']}".lower()
         if query_lower in full_text:
             results.append(entry)
@@ -440,9 +464,11 @@ def get_recent_notes(
     coral_dir: str | Path,
     n: int = 5,
     island_id: str | int | None = None,
+    *,
+    status: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Return the last N notes (most recent last in file = most recent last)."""
-    entries = list_notes(coral_dir, island_id=island_id)
+    """Filter notes, then return the last N matches."""
+    entries = list_notes(coral_dir, island_id=island_id, status=status)
     return entries[-n:] if len(entries) > n else entries
 
 

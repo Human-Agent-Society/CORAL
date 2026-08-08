@@ -262,14 +262,22 @@ coral notes [options]
 | Flag | Description |
 |------|-------------|
 | `-s, --search QUERY` | Search notes by keyword |
+| `--status STATUS` | Filter by frontmatter status (case-insensitive; surrounding whitespace ignored) |
 | `-n, --recent N` | Show N most recent |
 | `-r, --read ID` | Read a specific note by number or name |
 
 ```bash
 coral notes                    # List all
 coral notes --search "idea"    # Search
+coral notes --status confirmed # Documented: confirmed, refuted, untested; custom values accepted
+coral notes --status refuted --search "tiling"
+coral notes --status untested -n 5
 coral notes --read 3           # Read note #3
 ```
+
+`--status` accepts any non-empty value so new status vocabulary can be used without
+requiring a CLI release. Notes without structured frontmatter or without a `status`
+field are excluded only while this filter is active.
 
 ### `coral skills`
 

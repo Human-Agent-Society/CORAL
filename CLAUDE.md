@@ -124,7 +124,7 @@ coral log                                         # Top 20 by score
 coral log -n 5 --recent                           # Sort by time
 coral log --search "kernel" --agent agent-1       # Full-text + filter
 coral show <hash> [--diff]                        # Attempt details (file summary or full diff)
-coral notes [--search KW] [--read N] [--history]  # Browse / read / show checkpoint history
+coral notes [--status STATUS] [--search KW] [-n N] [--read N] [--history]  # Browse / filter / read / show checkpoint history
 coral skills [--read NAME]                        # List or read a shared skill
 coral runs [--all] [--task NAME]                  # Active runs (or all)
 
@@ -204,6 +204,11 @@ uv run ruff format .
 ## Developer Workflows
 
 Project-local skills live under `.claude/skills/`. Claude Code loads them on demand by description match — describe the task and the matching skill triggers automatically.
+
+All ordinary PRs target `dev`. A release PR promotes `dev` to `main` with a
+merge commit; the promotion workflow verifies identical trees and puts the
+version tag on the promoted `dev` parent, so release ancestry remains shared
+without merging `main` back into `dev`. Do not make main-only release changes.
 
 | Skill | Use when |
 |---|---|

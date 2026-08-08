@@ -10,6 +10,8 @@ your workflow counts, it does — read on.
 
 > **TL;DR**
 > - All PRs target the `dev` branch, never `main` (see CONTRIBUTING.md).
+> - Release tags point to the promoted `dev` commit, not the `main` merge commit;
+>   do not add main-only release changes or routine main-to-dev sync PRs.
 > - A human author must read every changed line and be able to defend the design end-to-end.
 > - No drive-by mechanical PRs (lone typo fixes, single-line style nits, batch reformat across the repo).
 > - Don't open duplicate PRs against the same issue. Check first.
