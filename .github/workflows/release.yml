@@ -4,17 +4,16 @@ on:
   push:
     tags:
       - "v*"
-  # Allow other workflows (e.g. auto-release.yml) to invoke this build+release
-  # job directly. A tag pushed with the default GITHUB_TOKEN does NOT trigger
-  # the `push: tags` event above, so the scheduled auto-tagger calls us here
-  # instead of relying on the tag push to kick off a release.
+  # Allow the promotion workflow to invoke this build+release job directly.
+  # A tag pushed with the default GITHUB_TOKEN does not trigger the `push:
+  # tags` event above, so the caller passes the new tag explicitly.
   workflow_call:
     inputs:
       tag:
         description: >-
-          Tag to release. Required when called from a non-tag event (e.g. the
-          scheduled auto-tagger), where github.ref points at a branch and the
-          release action can't infer the tag on its own.
+          Tag to release. Required when called by the promotion workflow,
+          where github.ref points at a branch and the release action cannot
+          infer the tag on its own.
         type: string
         required: false
 
@@ -32,8 +31,8 @@ jobs:
           # the full history (including tags) — not a shallow clone.
           fetch-depth: 0
           # On a tag push github.ref already points at the tag; when called
-          # with an explicit tag (scheduled auto-tagger), check that tag out so
-          # hatch-vcs derives the released version rather than the branch head.
+          # with an explicit tag, check that tag out so hatch-vcs derives the
+          # released version rather than the branch head.
           ref: ${{ inputs.tag || github.ref }}
 
       - name: Install uv
