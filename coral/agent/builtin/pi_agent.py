@@ -7,7 +7,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-from coral.venv_paths import venv_bin_dir
 import subprocess
 import sys
 import threading
@@ -17,6 +16,7 @@ from typing import Any
 from coral.agent.exit_classifier import classify_by_uptime
 from coral.agent.process import open_agent_stderr_for_log_dir
 from coral.agent.runtime import AgentHandle, apply_run_as_user, write_coral_log_entry
+from coral.venv_paths import venv_bin_dir
 from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)

@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 import logging
 import os
-from coral.venv_paths import venv_python as resolve_venv_python
 import shutil
 import subprocess
 from pathlib import Path
 
+from coral.venv_paths import venv_python as resolve_venv_python
 from coral.workspace.repo import (
     _clean_env,
     run_setup_commands,

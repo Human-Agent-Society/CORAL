@@ -2,7 +2,12 @@
 
 from pathlib import Path
 
-from coral.venv_paths import venv_bin_dir, venv_bin_dir_name, venv_python, venv_python_name
+from coral.venv_paths import (
+    venv_bin_dir,
+    venv_bin_dir_name,
+    venv_python,
+    venv_python_name,
+)
 
 
 def test_posix_layout():

@@ -17,7 +17,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-from coral.venv_paths import venv_bin_dir
 import subprocess
 import sys
 import threading
@@ -34,6 +33,7 @@ from coral.agent.runtime import (
     write_coral_log_entry,
 )
 from coral.sandbox.protocol import AgentSandboxSpec
+from coral.venv_paths import venv_bin_dir
 from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)

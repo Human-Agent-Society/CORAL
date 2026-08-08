@@ -31,11 +31,10 @@ import subprocess
 import sys
 import sysconfig
 from pathlib import Path
-
-from coral.venv_paths import venv_python
 from urllib.parse import urlparse
 
 from coral.config import GraderConfig
+from coral.venv_paths import venv_python
 from coral.workspace.repo import _clean_env, run_setup_commands
 
 logger = logging.getLogger(__name__)

@@ -15,6 +15,7 @@ from coral.grader.protocol import GraderInterface
 from coral.grader.subprocess_grader import SubprocessGrader
 from coral.grader.task_grader import DEFAULT_TUNE_DESCRIPTION, TaskGrader
 from coral.types import ScoreBundle, Task
+from coral.venv_paths import venv_python as resolve_venv_python
 
 # --- Harbor grader schema tests (swebench-verified, terminal-bench) ----------
 #
@@ -344,7 +345,7 @@ def test_loader_passes_grader_config_and_args():
     """GraderConfig (incl. args) from task.yaml must reach the loaded grader."""
     with tempfile.TemporaryDirectory() as tmpdir:
         coral_dir = Path(tmpdir)
-        venv_python = coral_dir / "private" / "grader_venv" / "bin" / "python"
+        venv_python = resolve_venv_python(coral_dir / "private" / "grader_venv")
         venv_python.parent.mkdir(parents=True)
         venv_python.touch()
 
@@ -382,7 +383,7 @@ def test_loader_returns_subprocess_grader_for_entrypoint():
     with tempfile.TemporaryDirectory() as tmpdir:
         coral_dir = Path(tmpdir)
         # Pretend the grader venv exists.
-        venv_python = coral_dir / "private" / "grader_venv" / "bin" / "python"
+        venv_python = resolve_venv_python(coral_dir / "private" / "grader_venv")
         venv_python.parent.mkdir(parents=True)
         venv_python.touch()
 

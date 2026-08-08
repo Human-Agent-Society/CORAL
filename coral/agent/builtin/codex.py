@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-from coral.venv_paths import venv_bin_dir
 import subprocess
 import sys
 import threading
@@ -22,6 +21,7 @@ from coral.agent.runtime import (
     write_coral_log_entry,
 )
 from coral.sandbox.protocol import AgentSandboxSpec
+from coral.venv_paths import venv_bin_dir
 from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)
@@ -178,7 +178,7 @@ class CodexRuntime:
         # Set VIRTUAL_ENV so login shells (which reset PATH) can restore it
         # via /etc/profile.d/coral-venv.sh in Docker containers.
         agent_env["VIRTUAL_ENV"] = worktree_venv
-        # Prepend .venv/bin to PATH for non-login shells
+        # Prepend the venv executable dir (bin or Scripts) to PATH for non-login shells
         venv_bin = str(venv_bin_dir(worktree_path / ".venv"))
         agent_env["PATH"] = venv_bin + os.pathsep + agent_env.get("PATH", "")
 

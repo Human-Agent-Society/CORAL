@@ -11,8 +11,6 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from coral.venv_paths import venv_python as resolve_venv_python
-
 from coral.agent.state import read_agent_state
 from coral.cli._helpers import (
     docker_cmd,
@@ -41,6 +39,7 @@ from coral.cli._helpers import (
 )
 from coral.config import CoralConfig
 from coral.hub.auto_stop import read_auto_stop
+from coral.venv_paths import venv_python as resolve_venv_python
 from coral.workspace.project import slugify
 
 
