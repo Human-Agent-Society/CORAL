@@ -199,6 +199,7 @@ def cmd_notes(args: argparse.Namespace) -> None:
         getattr(args, "task", None),
         getattr(args, "run", None),
     )
+    status = getattr(args, "status", None)
 
     if getattr(args, "history", False):
         from coral.hub.checkpoint import checkpoint_history
@@ -230,18 +231,28 @@ def cmd_notes(args: argparse.Namespace) -> None:
         except ValueError:
             print(read_all_notes(str(coral_dir), island_id=island_id))
     elif args.search:
-        results = search_notes(str(coral_dir), args.search, island_id=island_id)
+        results = search_notes(
+            str(coral_dir),
+            args.search,
+            island_id=island_id,
+            status=status,
+        )
         if results:
             print(f"Notes matching '{args.search}':")
             print(format_notes_list(results))
         else:
             print(f"No notes matching '{args.search}'.")
     elif args.recent:
-        entries = get_recent_notes(str(coral_dir), n=args.recent, island_id=island_id)
+        entries = get_recent_notes(
+            str(coral_dir),
+            n=args.recent,
+            island_id=island_id,
+            status=status,
+        )
         print(f"Recent notes ({len(entries)}):")
         print(format_notes_list(entries))
     else:
-        entries = list_notes(str(coral_dir), island_id=island_id)
+        entries = list_notes(str(coral_dir), island_id=island_id, status=status)
         print(f"Notes ({len(entries)}):")
         print(format_notes_list(entries))
 
