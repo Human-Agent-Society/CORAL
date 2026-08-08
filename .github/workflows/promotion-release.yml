@@ -1,0 +1,80 @@
+name: Promotion Release
+
+# A dev -> main promotion creates a main-only merge commit. Tag the promoted
+# dev parent, whose tree is verified to match main, so release tags remain in
+# the ancestry of both long-lived branches without merging main back into dev.
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Promoted dev commit or ref"
+        type: string
+        default: origin/dev
+        required: true
+      promoted_ref:
+        description: "Resulting main promotion commit or ref"
+        type: string
+        default: origin/main
+        required: true
+      bump:
+        description: "Which version part to increment"
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+      force:
+        description: "Tag even if this source commit already has a release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: promotion-release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Tag promoted dev commit
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.head.ref == 'dev')
+    runs-on: ubuntu-latest
+    outputs:
+      tagged: ${{ steps.bump.outputs.tagged }}
+      version: ${{ steps.bump.outputs.version }}
+      source_sha: ${{ steps.bump.outputs.source_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify promotion and push version tag
+        id: bump
+        env:
+          BUMP: ${{ contains(github.event.pull_request.labels.*.name, 'release:major') && 'major' || contains(github.event.pull_request.labels.*.name, 'release:minor') && 'minor' || inputs.bump || 'patch' }}
+          FORCE: ${{ inputs.force || 'false' }}
+          SOURCE_REF: ${{ github.event.pull_request.head.sha || inputs.source_ref }}
+          PROMOTED_REF: ${{ github.event.pull_request.merge_commit_sha || inputs.promoted_ref }}
+        run: bash .github/scripts/tag-promoted-release.sh
+
+  release:
+    name: Build & publish
+    needs: tag
+    if: needs.tag.outputs.tagged == 'true'
+    # Build the exact promoted dev commit through the tag, rather than the
+    # metadata-only merge commit on main.
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.tag.outputs.version }}
+    permissions:
+      contents: write
