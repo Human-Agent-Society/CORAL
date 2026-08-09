@@ -39,6 +39,7 @@ from coral.cli._helpers import (
 )
 from coral.config import CoralConfig
 from coral.hub.auto_stop import read_auto_stop
+from coral.venv_paths import venv_python as resolve_venv_python
 from coral.workspace.project import slugify
 
 
@@ -57,9 +58,9 @@ def _resolved_python() -> str:
     # Look for a local .venv relative to the coral package
     coral_pkg = Path(__file__).resolve().parent.parent.parent
     for venv_name in (".venv", "venv"):
-        venv_python = coral_pkg / venv_name / "bin" / "python"
-        if venv_python.exists():
-            return str(venv_python)
+        candidate = resolve_venv_python(coral_pkg / venv_name)
+        if candidate.exists():
+            return str(candidate)
 
     # Fallback: current interpreter (absolute, but don't resolve symlinks)
     return os.path.abspath(sys.executable)

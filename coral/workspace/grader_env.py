@@ -34,6 +34,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from coral.config import GraderConfig
+from coral.venv_paths import venv_python
 from coral.workspace.repo import _clean_env, run_setup_commands
 
 logger = logging.getLogger(__name__)
@@ -104,7 +105,7 @@ def grader_venv_path(coral_dir: Path) -> Path:
 
 def grader_python_path(coral_dir: Path) -> Path:
     """Path to the Python interpreter inside the grader venv."""
-    return grader_venv_path(coral_dir) / "bin" / "python"
+    return venv_python(grader_venv_path(coral_dir))
 
 
 def setup_grader_env(
