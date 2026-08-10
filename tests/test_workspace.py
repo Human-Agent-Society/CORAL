@@ -305,12 +305,8 @@ def test_create_project_setup_runs_sequentially():
         assert result_file.read_text().strip() == "done"
 
 
-def test_setup_worktree_env_skips_when_venv_exists():
-    """Idempotent: if .venv/bin/python already exists, setup is skipped.
-
-    Avoids re-running uv sync on every interrupt-and-resume cycle, which
-    can otherwise dominate restart latency.
-    """
+def test_setup_worktree_env_runs_even_when_venv_exists():
+    """Verify setup commands run even if .venv/bin/python already exists."""
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d) / "worktree"
         worktree.mkdir()
@@ -320,11 +316,10 @@ def test_setup_worktree_env_skips_when_venv_exists():
         (venv_bin / "python").write_text("#!/bin/sh\nexit 0\n")
         (venv_bin / "python").chmod(0o755)
 
-        # If setup ran, this would create the marker file
         marker = worktree / "setup_ran.marker"
         setup_worktree_env(worktree, [f"touch {marker}"])
 
-        assert not marker.exists(), "Setup should have been skipped"
+        assert marker.exists(), "Setup commands should run even when .venv exists"
 
 
 def test_setup_worktree_env_runs_when_venv_missing():
@@ -849,10 +844,10 @@ def test_create_project_user_skills_override_builtin():
         _git_init(d)
         root = Path(d)
 
-        skill_name = "coral-workflow"
+        skill_name = "test-skill"
         skill_dir = root / "skills" / skill_name
         skill_dir.mkdir(parents=True)
-        (skill_dir / "custom.txt").write_text("user version")
+        (skill_dir / "run.sh").write_text("#!/bin/bash\necho custom")
 
         config = CoralConfig(
             task=TaskConfig(name="Test Task", description="Test task"),
@@ -862,5 +857,6 @@ def test_create_project_user_skills_override_builtin():
         )
         paths = create_project(config, config_dir=root)
 
-        dst = paths.coral_dir / "public" / "skills" / skill_name
-        assert (dst / "custom.txt").read_text() == "user version"
+        seeded = paths.coral_dir / "public" / "skills" / skill_name / "run.sh"
+        assert seeded.is_file()
+        assert "echo custom" in seeded.read_text()

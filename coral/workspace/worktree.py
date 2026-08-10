@@ -124,7 +124,6 @@ def setup_git_exclude(worktree_path: Path) -> None:
         ".coral_agent_id",
         ".coral_dir",
         ".coral_island",
-        ".coral_setup_complete",
         "CLAUDE.md",
         "AGENTS.md",
         ".claude/",
@@ -722,23 +721,11 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
 
     Each worktree gets its own isolated ``.venv`` via UV_PROJECT_ENVIRONMENT
     to prevent concurrent agents from corrupting a shared venv.
-
-    Idempotent: if the worktree's ``.venv`` is already populated (the python
-    binary exists), skip both the setup commands and the coral reinstall.
-    Deps don't change mid-run, so re-running ``uv sync`` on every
-    interrupt-and-resume cycle is wasted work. To force a re-sync, delete the
-    ``.venv`` directory before resuming.
     """
     if not setup_commands:
         return
 
-    marker_file = worktree_path / ".coral_setup_complete"
     worktree_venv = worktree_path / ".venv"
-    venv_python = resolve_venv_python(worktree_venv)
-
-    if marker_file.exists() or venv_python.exists():
-        logger.debug(f"Worktree environment already setup at {worktree_path}, skipping commands")
-        return
 
     env_override = {"UV_PROJECT_ENVIRONMENT": str(worktree_venv)}
     run_setup_commands(setup_commands, worktree_path, extra_env=env_override)
@@ -761,5 +748,3 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
             )
             if result.returncode != 0:
                 logger.warning(f"Failed to install coral in worktree: {result.stderr.strip()}")
-
-    marker_file.write_text("ok", encoding="utf-8")
