@@ -747,4 +747,6 @@ def setup_worktree_env(worktree_path: Path, setup_commands: list[str]) -> None:
                 env=env,
             )
             if result.returncode != 0:
-                logger.warning(f"Failed to install coral in worktree: {result.stderr.strip()}")
+                raise RuntimeError(
+                    f"Failed to install coral into worktree venv at {worktree_path}: {result.stderr.strip()}"
+                )
