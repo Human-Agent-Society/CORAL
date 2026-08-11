@@ -193,8 +193,7 @@ def test_heartbeat_global_flag_roundtrip():
 
 
 def test_heartbeat_plateau_options_survive_preprocess():
-    """Per-action `options` from task.yaml must reach HeartbeatAction.options.
-    """
+    """Per-action `options` from task.yaml must reach HeartbeatAction.options."""
     from coral.agent.heartbeat import parse_options
 
     data = {
