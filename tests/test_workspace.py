@@ -873,7 +873,9 @@ def test_setup_worktree_env_uv_pip_install_failure(monkeypatch):
         fake_python.parent.mkdir(parents=True)
         fake_python.touch()
 
-        monkeypatch.setattr("coral.workspace.worktree.resolve_venv_python", lambda venv: fake_python)
+        monkeypatch.setattr(
+            "coral.workspace.worktree.resolve_venv_python", lambda venv: fake_python
+        )
         monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/uv" if cmd == "uv" else None)
 
         # Mock subprocess.run to simulate a failed 'uv pip install' call

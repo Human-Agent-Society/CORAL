@@ -41,10 +41,11 @@ Ship the tests under `grader.private` (so agents can't read them — list a dir 
 import json, shutil
 from pathlib import Path
 
+
 def evaluate(self) -> float | ScoreBundle:
     tests = Path(self.private_dir) / "taskdata" / "test_hidden.py"
     dest = Path(self.codebase_path) / "test_hidden.py"
-    shutil.copy(tests, dest)   # codebase_path is force-removed after, so this is safe + temporary
+    shutil.copy(tests, dest)  # codebase_path is force-removed after, so this is safe + temporary
 
     # A tiny in-process pytest plugin counts pass/fail and prints JSON we parse back.
     out = self.run_script_json(
@@ -84,7 +85,9 @@ def evaluate(self) -> float | ScoreBundle:
         return self.fail("output incorrect — speed doesn't count until it's correct")
     baseline = float(self.args.get("baseline_seconds", 1.0))
     ratio = baseline / out["dt"]
-    return self.score(ratio, explanation=f"{ratio:.2f}× baseline ({out['dt']:.3f}s vs {baseline:.3f}s)")
+    return self.score(
+        ratio, explanation=f"{ratio:.2f}× baseline ({out['dt']:.3f}s vs {baseline:.3f}s)"
+    )
 ```
 
 The correctness gate is the important part: gate on correctness, *then* score the thing you're optimizing. Otherwise agents discover that `return 0` is very fast.
@@ -96,12 +99,13 @@ Return several named `Score`s plus one `aggregated` number. Each metric shows in
 ```python
 from coral.types import Score, ScoreBundle
 
+
 def evaluate(self) -> ScoreBundle:
     m = self.run_script_json("...emit {'acc':..,'latency_ms':..,'size_kb':..} ...")
     scores = {
-        "accuracy":   Score(value=m["acc"],            name="accuracy"),
-        "latency":    Score(value=1000.0 / m["latency_ms"], name="latency", explanation="1/sec"),
-        "compactness":Score(value=1.0 / m["size_kb"],   name="compactness"),
+        "accuracy": Score(value=m["acc"], name="accuracy"),
+        "latency": Score(value=1000.0 / m["latency_ms"], name="latency", explanation="1/sec"),
+        "compactness": Score(value=1.0 / m["size_kb"], name="compactness"),
     }
     weights = {"accuracy": 0.7, "latency": 0.2, "compactness": 0.1}
     aggregated = sum(scores[k].value * w for k, w in weights.items())
@@ -123,8 +127,9 @@ When the agent runs `coral eval --tune`, `self.tune` is `True` and the attempt *
 def describe_tune(self) -> str:
     return "Tune mode scores on a 500-example dev slice (≈10× faster); real evals use the full test set."
 
+
 def evaluate(self) -> float | ScoreBundle:
-    n = 500 if self.tune else None        # None = full set
+    n = 500 if self.tune else None  # None = full set
     acc = self._score_on(n_examples=n)
     label = "dev slice" if self.tune else "full test set"
     return self.score(acc, explanation=f"accuracy on {label}")
@@ -146,6 +151,7 @@ grader:
 
 ```python
 from pathlib import Path
+
 _TASKDATA = Path(self.private_dir) / "taskdata"
 ```
 
