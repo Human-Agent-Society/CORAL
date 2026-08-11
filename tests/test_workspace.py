@@ -305,7 +305,7 @@ def test_create_project_setup_runs_sequentially():
         assert result_file.read_text().strip() == "done"
 
 
-def test_setup_worktree_env_runs_even_when_venv_exists():
+def test_setup_worktree_env_runs_even_when_venv_exists(monkeypatch):
     """Verify setup commands run even if .venv/bin/python already exists."""
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d) / "worktree"
@@ -315,6 +315,8 @@ def test_setup_worktree_env_runs_even_when_venv_exists():
         venv_bin.mkdir(parents=True)
         (venv_bin / "python").write_text("#!/bin/sh\nexit 0\n")
         (venv_bin / "python").chmod(0o755)
+
+        monkeypatch.setattr("shutil.which", lambda cmd: None)
 
         marker = worktree / "setup_ran.marker"
         setup_worktree_env(worktree, [f"touch {marker}"])
