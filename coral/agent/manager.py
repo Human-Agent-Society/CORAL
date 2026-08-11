@@ -101,6 +101,7 @@ class AgentManager:
         verbose: bool = False,
         config_dir: Path | None = None,
     ) -> None:
+        """Initialize the AgentManager with configuration and state tracking structures."""
         self.config = config
         self.config_dir = config_dir
         # Resolve concrete per-agent specs, then (when multi-island) partition them
@@ -443,6 +444,7 @@ class AgentManager:
             print(f"[coral] Sandbox provider {sb.provider!r} active")
 
     def _stop_sandbox(self) -> None:
+        """Stop the active sandbox provider if instantiated."""
         if self._sandbox is not None:
             self._sandbox.stop()
             self._sandbox = None
@@ -560,24 +562,36 @@ class AgentManager:
         if island_id is not None:
             self._agent_island[agent_id] = island_id
 
-        # Create worktree (idempotent)
-        logger.info(f"Setting up {agent_id}...")
-        worktree_path = create_agent_worktree(
-            self.paths.repo_dir,
-            agent_id,
-            self.paths.agents_dir,
-        )
-        logger.info(f"  Worktree: {worktree_path}")
+        # Phase 1: One-time worktree provisioning.
+        # Create worktree and run workspace setup commands (uv sync, etc.)
+        # only if the readiness marker (.coral_agent_id) is not yet present.
+        worktree_path = self.paths.agents_dir / agent_id
+        already_provisioned = (worktree_path / ".coral_agent_id").exists()
 
-        # Ignore CORAL files via the repo's shared info/exclude (reset-proof)
-        setup_git_exclude(worktree_path)
+        if not already_provisioned:
+            logger.info(f"Setting up {agent_id}...")
+            worktree_path = create_agent_worktree(
+                self.paths.repo_dir,
+                agent_id,
+                self.paths.agents_dir,
+            )
+            logger.info(f"  Worktree: {worktree_path}")
 
-        # Run setup commands (uv sync, etc.) and install coral in the worktree
-        setup_worktree_env(worktree_path, self.config.workspace.setup)
+            # Ignore CORAL files via the repo's shared info/exclude (reset-proof)
+            setup_git_exclude(worktree_path)
 
-        # Write .coral_dir breadcrumb (used by workspace guard hook)
-        write_coral_dir(worktree_path, self.paths.coral_dir)
+            # Run workspace.setup (uv sync, npm ci, etc.) ONCE during initial provisioning
+            setup_worktree_env(worktree_path, self.config.workspace.setup)
 
+            # Write .coral_dir breadcrumb (used by workspace guard hook)
+            write_coral_dir(worktree_path, self.paths.coral_dir)
+
+            # Write agent ID readiness breadcrumb to mark successful provisioning
+            write_agent_id(worktree_path, agent_id)
+        else:
+            logger.info(f"Re-using existing provisioned worktree for {agent_id}: {worktree_path}")
+
+        # Phase 2: Repeatable agent launch & runtime environment setup.
         # Set up shared state directory (notes, skills, attempts symlinks, plus
         # a symlink to the grader source so the agent can read how it's scored).
         shared_dir_name = runtime.shared_dir_name
@@ -661,9 +675,6 @@ class AgentManager:
                 island_id=island_id,
             )
             logger.info(f"  Seeded heartbeat config for {agent_id}")
-
-        # Write agent ID
-        write_agent_id(worktree_path, agent_id)
 
         # Seed the agent's role description (idempotent — preserves the
         # evolved role on resume). When ``runtime_options.role_file``
@@ -1270,6 +1281,7 @@ class AgentManager:
     def _attempt_dict_for_auto_stop(
         self, attempt: Attempt | dict[str, Any] | None
     ) -> dict[str, Any]:
+        """Convert an attempt object or dictionary into a normalized auto-stop info map."""
         if attempt is None:
             return {
                 "attempt_id": None,
@@ -1292,6 +1304,7 @@ class AgentManager:
         }
 
     def _score_meets_auto_stop_threshold(self, score: float | int | None, threshold: float) -> bool:
+        """Check whether a score satisfies the auto-stop threshold given the optimization direction."""
         if score is None:
             return False
         value = float(score)
@@ -1368,6 +1381,7 @@ class AgentManager:
         attempt_info: dict[str, Any],
         real_attempt_count: int,
     ) -> dict[str, Any]:
+        """Construct a standardized dictionary detailing the auto-stop trigger reason."""
         stop_config = self.config.run.stop
         return {
             "reason": reason,
@@ -2009,10 +2023,12 @@ class AgentManager:
 
     @staticmethod
     def _migration_block_is_retriable(reason: str) -> bool:
+        """Return True if a migration block reason can be safely retried in subsequent cycles."""
         return reason == "paused"
 
     @staticmethod
     def _migration_defer_reason(reason: str) -> str:
+        """Normalize a block reason string for deferral tracking."""
         if reason.startswith("stale:"):
             return "stale"
         return reason
@@ -2257,6 +2273,7 @@ class AgentManager:
 
     @property
     def migration_config(self):
+        """Return the island migration configuration from CoralConfig."""
         return self.config.islands.migration
 
     def _swap_spec_island(self, agent_id: str, *, new_island_id: str) -> None:
@@ -2648,6 +2665,7 @@ class AgentManager:
                 pass
 
     def _write_pid_file(self) -> None:
+        """Write manager PID and agent PIDs to files under public/ for process tracking."""
         if self.paths:
             pid_file = self.paths.coral_dir / "public" / "manager.pid"
             pid_file.write_text(str(os.getpid()), encoding="utf-8")
@@ -2694,6 +2712,7 @@ class AgentManager:
         self._cleanup_pid_file()
 
     def _cleanup_pid_file(self) -> None:
+        """Clean up process ID tracking files under public/ upon manager shutdown."""
         if self.paths:
             for name in ("manager.pid", "agent.pids", "agent_pids.json"):
                 f = self.paths.coral_dir / "public" / name

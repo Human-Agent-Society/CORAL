@@ -16,6 +16,7 @@ from typing import Any
 from coral.agent.exit_classifier import classify_by_uptime
 from coral.agent.process import open_agent_stderr_for_log_dir
 from coral.agent.runtime import AgentHandle, apply_run_as_user, write_coral_log_entry
+from coral.venv_paths import venv_bin_dir
 from coral.workspace.repo import _clean_env
 
 logger = logging.getLogger(__name__)
@@ -171,7 +172,7 @@ class PiAgentRuntime:
         worktree_venv = str(worktree_path / ".venv")
         agent_env["UV_PROJECT_ENVIRONMENT"] = worktree_venv
         agent_env["VIRTUAL_ENV"] = worktree_venv
-        venv_bin = str(worktree_path / ".venv" / "bin")
+        venv_bin = str(venv_bin_dir(worktree_path / ".venv"))
         agent_env["PATH"] = venv_bin + os.pathsep + agent_env.get("PATH", "")
 
         if gateway_url:

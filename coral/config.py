@@ -690,6 +690,7 @@ def _preprocess(data: dict[str, Any]) -> dict[str, Any]:
                 "is_global": h.get("global", False),
                 "trigger": h.get("trigger", "interval"),
                 "prompt": h.get("prompt", ""),
+                "options": h.get("options", {}),
             }
             for h in heartbeat_raw
         ]

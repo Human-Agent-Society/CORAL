@@ -192,6 +192,31 @@ def test_heartbeat_global_flag_roundtrip():
     assert d["agents"]["heartbeat"][0]["global"] is True
 
 
+def test_heartbeat_plateau_options_survive_preprocess():
+    """Per-action `options` from task.yaml must reach HeartbeatAction.options."""
+    from coral.agent.heartbeat import parse_options
+
+    data = {
+        "task": {"name": "t", "description": "d"},
+        "agents": {
+            "heartbeat": [
+                {
+                    "name": "pivot",
+                    "every": 3,
+                    "trigger": "plateau",
+                    "options": {"epsilon": 0.005},
+                },
+            ]
+        },
+    }
+    config = CoralConfig.from_dict(data)
+    action = next(h for h in config.agents.heartbeat if h.name == "pivot")
+    assert action.options == {"epsilon": 0.005}
+
+    # And it must survive the validation/parse step the runner actually uses.
+    assert parse_options(action.trigger, action.options).epsilon == 0.005
+
+
 def test_run_config_defaults():
     config = CoralConfig(
         task=TaskConfig(name="t", description="d"),
