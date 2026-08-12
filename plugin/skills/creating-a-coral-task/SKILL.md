@@ -46,6 +46,7 @@ coral validate .          # bootstraps the grader venv, runs the grader on seed/
 ```python
 from coral.grader import TaskGrader
 
+
 class Grader(TaskGrader):
     def evaluate(self) -> float:
         result = self.run_program(self.args.get("program_file", "solution.py"))

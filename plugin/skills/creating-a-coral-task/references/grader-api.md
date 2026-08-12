@@ -50,17 +50,20 @@ Always run the agent's program through these — they pick the right interpreter
 ```python
 @dataclass
 class Score:
-    value: float | int | None      # None when ungradeable (timeout, crash). Convert pass/fail to a float yourself.
-    name: str                       # "correctness", "efficiency", ...
+    value: (
+        float | int | None
+    )  # None when ungradeable (timeout, crash). Convert pass/fail to a float yourself.
+    name: str  # "correctness", "efficiency", ...
     explanation: str | None = None
     metadata: dict = field(default_factory=dict)
 
+
 @dataclass
 class ScoreBundle:
-    scores: dict[str, Score]        # name -> Score
-    aggregated: float | None = None # the single number used for ranking + plateau detection
-    is_public: bool = True          # False omits the per-score breakdown from public attempts
-    feedback: str | None = None     # message the agent reads
+    scores: dict[str, Score]  # name -> Score
+    aggregated: float | None = None  # the single number used for ranking + plateau detection
+    is_public: bool = True  # False omits the per-score breakdown from public attempts
+    feedback: str | None = None  # message the agent reads
     metadata: dict = field(default_factory=dict)
 ```
 
