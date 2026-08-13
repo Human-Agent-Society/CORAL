@@ -1,0 +1,310 @@
+---
+title: How Shared Memory Improves Multi-Agent Search
+description: "Run two CORAL agents on one optimization task, then inspect the attempts, notes, skills, and leaderboard they share without sharing a writable workspace."
+---
+
+Multi-agent search is useful only when parallel workers can explore different
+ideas without losing what the others learn. CORAL separates those concerns:
+each agent edits its own Git worktree, while evaluated attempts and reusable
+knowledge live in shared state.
+
+In this tutorial, you will launch two Codex agents on CORAL's bundled
+[DNA enhancer design example](https://github.com/Human-Agent-Society/CORAL/tree/dev/examples/dna_design),
+inspect the information they share, and compare a single shared island with
+multi-island isolation.
+
+<Callout type="info">
+This tutorial demonstrates the shared-memory workflow. It does not claim that
+two agents will beat one agent in a particular budget. Scores depend on the
+model, prompts, runtime, evaluation count, and stochastic search trajectory.
+</Callout>
+
+## What you will run
+
+The example asks agents to generate valid 200-base DNA sequences while
+optimizing GC-content stability and population diversity. Its checked-in
+[task configuration](https://github.com/Human-Agent-Society/CORAL/blob/dev/examples/dna_design/task.yaml)
+includes a fallback grader that works without the optional Enformer model, so
+you can exercise the complete eval loop with a small local setup.
+
+The run has this shape:
+
+```text
+agent-1 worktree ─┐
+                  ├── shared attempts, notes, skills, and leaderboard
+agent-2 worktree ─┘
+```
+
+Both agents pursue the same scored objective. They can inspect each other's
+results and knowledge, but they cannot edit the same working copy.
+
+## Prerequisites
+
+Start from a clone of the current `dev` branch and install the development
+environment:
+
+```bash
+git clone --branch dev https://github.com/Human-Agent-Society/CORAL.git
+cd CORAL
+uv sync --extra dev
+```
+
+You also need:
+
+- Python 3.11 or newer, Git, and `uv`.
+- `tmux`, because the example launches the run in a background tmux session.
+- The Codex CLI installed and authenticated. See the official
+  [Codex authentication documentation](https://developers.openai.com/codex/auth).
+
+Confirm the local tools and login before continuing:
+
+```bash
+tmux -V
+codex --version
+codex login status
+```
+
+This tutorial uses `gpt-5.4`, the
+[current default for CORAL's Codex runtime](https://github.com/Human-Agent-Society/CORAL/blob/dev/coral/agent/registry.py).
+If that model is unavailable to your account, replace it with a Codex model
+you can use.
+
+## Validate the local grader
+
+Validate the task before starting any agents:
+
+```bash
+uv run coral validate examples/dna_design
+```
+
+`coral validate` checks the task structure, creates an isolated grader
+environment, and scores the seed solution. The command should finish with
+`Validation: OK` and a numeric score. At this point, CORAL has not launched a
+Codex agent.
+
+<Callout type="warn">
+The next command starts two autonomous Codex processes. From that point, the
+run can consume usage included in your ChatGPT plan or billable API usage,
+depending on how your Codex CLI is authenticated. Stop the run when you have
+collected enough evidence.
+</Callout>
+
+## Launch two agents in one shared island
+
+From the repository root, run:
+
+```bash
+uv run coral start -c examples/dna_design/task.yaml \
+  agents.runtime=codex \
+  agents.model=gpt-5.4 \
+  agents.count=2
+```
+
+The command-line overrides leave the checked-in `task.yaml` unchanged. Both
+the runtime and model are overridden because the example's default
+configuration uses Claude Code.
+
+CORAL creates a timestamped run under:
+
+```text
+results/dna-enhancer-design/<timestamp>/
+├── .coral/
+│   ├── public/
+│   └── private/
+├── agents/
+│   ├── agent-1/
+│   └── agent-2/
+└── repo/
+```
+
+`results/dna-enhancer-design/latest` points to the newest run. Each directory
+under `agents/` is a separate Git worktree and branch. An agent can write to
+its own worktree and read sibling worktrees, but the workspace guard prevents
+it from writing to a sibling.
+
+For Codex agents, CORAL creates `.codex/` in each worktree. Its `attempts/`,
+`notes/`, `skills/`, and other agent-facing entries are symlinks into the
+central `.coral/public/` directory. The `.coral_dir` breadcrumb lets CORAL CLI
+commands find that central directory from inside a worktree. See the
+[shared-state wiring source](https://github.com/Human-Agent-Society/CORAL/blob/dev/coral/workspace/worktree.py)
+for the exact list of shared entries.
+
+You can inspect the wiring without changing the run:
+
+```bash
+ls -la results/dna-enhancer-design/latest/agents/agent-1/.codex
+find results/dna-enhancer-design/latest/.coral/public -maxdepth 2 -type f
+```
+
+The grader environment and temporary grading checkouts live under
+`.coral/private/`. Agents cannot access that directory.
+
+## Observe the search as shared evidence accumulates
+
+Open another terminal in the repository root and check the run:
+
+```bash
+uv run coral status
+uv run coral log --recent -n 10
+```
+
+`coral status` combines agent health with the leading attempts. `coral log`
+reads the attempt records and presents them as a leaderboard. Use the agent
+filter to compare the two trajectories:
+
+```bash
+uv run coral log --agent agent-1
+uv run coral log --agent agent-2
+```
+
+After an agent calls `coral eval`, CORAL commits that agent's changes, writes
+an attempt record, and asks the grader daemon to score the commit. When the log
+shows a useful attempt, copy its commit hash and inspect its evidence:
+
+```bash
+uv run coral show <commit-hash>
+```
+
+The other agent can now see the score, grader feedback, and diff. It can adapt
+the useful idea in its own worktree, combine it with a different approach, or
+avoid a failed direction. CORAL does not automatically merge the attempt into
+the other branch, so the two agents keep independent experimental lineages.
+
+For this DNA task, useful searches include the terms in the objective:
+
+```bash
+uv run coral log --search "diversity"
+uv run coral notes --search "diversity"
+uv run coral notes -n 5
+```
+
+Notes are agent-written Markdown findings, not scored results. Read an entry by
+the number or name shown in the list:
+
+```bash
+uv run coral notes --read 3
+```
+
+The default global `consolidate` heartbeat runs after every 10 evaluations
+across the team and prompts agents to record knowledge for their peers. Notes
+may appear earlier, later, or not at all in a short run because agent behavior
+is not deterministic. Attempts remain the reliable record of every submitted
+evaluation even when no note has been written yet.
+
+Agents can also turn repeatable procedures or tools into skills. List and read
+them with:
+
+```bash
+uv run coral skills
+uv run coral skills --read <skill-name>
+```
+
+A short run may produce no new skill. That is different from a configuration
+error: skills are created when an agent identifies something reusable rather
+than for every evaluation.
+
+## Attempts, notes, skills, and the leaderboard
+
+These surfaces serve different purposes:
+
+| Surface | What it contains | How another agent uses it |
+|---------|------------------|---------------------------|
+| Attempt | A commit hash, agent ID, score, status, feedback, and lineage | Compare measured outcomes and inspect a specific diff with `coral show`. |
+| Leaderboard | A score-sorted view of attempt records | Find promising commits and compare search trajectories; it is not separate storage and does not merge branches. |
+| Note | A Markdown claim, observation, failure, or open question | Search prior reasoning before spending another evaluation; verify important claims against attempts or code. |
+| Skill | A reusable procedure or tool with a `SKILL.md` descriptor | Reuse a tested workflow instead of rebuilding the same support code. |
+
+This creates a practical collaboration loop:
+
+1. `agent-1` evaluates a diversity-maintaining strategy.
+2. The score and diff become visible to both agents as an attempt.
+3. A note can preserve why the strategy worked, failed, or needs another test.
+4. `agent-2` reads that evidence and tests a complementary change in its own
+   worktree.
+5. If either agent packages a reusable analysis tool as a skill, both agents
+   can use it in later iterations.
+
+The shared memory makes prior experiments inspectable, so agents can choose
+not to repeat them. It does not by itself prove that the final score will
+improve.
+
+## Shared memory versus multi-island isolation
+
+The run above uses the default single island. All agents share the same
+attempts, notes, skills, heartbeat state, and leaderboard.
+
+Multi-island mode deliberately splits those surfaces. For example, the
+following topology places four agents across two isolated islands:
+
+```yaml
+agents:
+  count: 4
+
+islands:
+  count: 2
+```
+
+Inside an island, agents share state with their island peers. Agents on another
+island cannot see that state from their worktrees, which lets the islands
+explore independently. From outside the agent worktrees, read-only CLI commands
+aggregate results across islands for operator inspection.
+
+Migration is enabled by default for multi-island runs. When an agent migrates,
+its role, per-agent heartbeat configuration, attempts, and eval logs move with
+it, and its worktree symlinks are repointed to the destination island. Notes
+and skills remain on the source island as local knowledge; migration does not
+turn isolated islands into one global memory pool.
+
+Use a single island when fast information reuse is the goal. Use multiple
+islands when independent exploration is worth delaying information flow. See
+[Multi-Agent Runs](/docs/guides/multi-agent) for configuration and migration
+details.
+
+## Stop the run
+
+When you have observed attempts from both agents, stop the active run:
+
+```bash
+uv run coral stop
+```
+
+Stopping terminates the manager, agents, and grader daemon. The timestamped
+run directory remains available for later inspection.
+
+## Troubleshooting
+
+### No notes or skills appear
+
+Check `coral log --recent` first. Attempts are created by evaluations, while
+notes and skills depend on what the agents decide to share. The default
+consolidation prompt does not run until 10 global evaluations.
+
+### One agent waits a long time for a score
+
+The default grader daemon processes attempts serially in FIFO order. A backlog
+can form when multiple agents submit faster than the grader can score. Use
+`coral status` and `coral log --recent` to distinguish a pending attempt from a
+stopped agent.
+
+### A CLI command finds the wrong run
+
+Read-only commands use the latest run when the task can be detected. If you
+have several tasks or runs, select this one explicitly:
+
+```bash
+uv run coral status --task dna-enhancer-design
+uv run coral log --task dna-enhancer-design --run <timestamp>
+```
+
+## Next steps
+
+- [Shared State](/docs/concepts/shared-state) explains the on-disk data model
+  and access boundaries.
+- [Eval Loop](/docs/concepts/eval-loop) describes attempt submission and the
+  grader daemon.
+- [Multi-Agent Runs](/docs/guides/multi-agent) covers mixed runtimes, islands,
+  migration, and monitoring.
+- [Agent Runtimes](/docs/guides/agent-runtimes) lists supported runtime and
+  authentication paths.
+- [CLI Reference](/docs/cli/reference) documents every inspection command used
+  in this tutorial.
