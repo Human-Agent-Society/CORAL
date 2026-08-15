@@ -123,6 +123,7 @@ If the grader needs reference files (model weights, ground-truth answers, scorin
 
 ```python
 import importlib.resources
+
 scorer_dir = str(importlib.resources.files("<task>_grader.scorers"))
 ```
 

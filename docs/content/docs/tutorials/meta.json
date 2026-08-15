@@ -1,6 +1,7 @@
 {
   "title": "Tutorials",
   "pages": [
-    "build-autonomous-agent-grader"
+    "build-autonomous-agent-grader",
+    "shared-memory-multi-agent-search"
   ]
 }

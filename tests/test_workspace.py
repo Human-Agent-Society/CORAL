@@ -305,7 +305,7 @@ def test_create_project_setup_runs_sequentially():
         assert result_file.read_text().strip() == "done"
 
 
-def test_setup_worktree_env_runs_even_when_venv_exists():
+def test_setup_worktree_env_runs_even_when_venv_exists(monkeypatch):
     """Verify setup commands run even if .venv/bin/python already exists."""
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
         worktree = Path(d) / "worktree"
@@ -315,6 +315,8 @@ def test_setup_worktree_env_runs_even_when_venv_exists():
         venv_bin.mkdir(parents=True)
         (venv_bin / "python").write_text("#!/bin/sh\nexit 0\n")
         (venv_bin / "python").chmod(0o755)
+
+        monkeypatch.setattr("shutil.which", lambda cmd: None)
 
         marker = worktree / "setup_ran.marker"
         setup_worktree_env(worktree, [f"touch {marker}"])
@@ -860,3 +862,38 @@ def test_create_project_user_skills_override_builtin():
         seeded = paths.coral_dir / "public" / "skills" / skill_name / "run.sh"
         assert seeded.is_file()
         assert "echo custom" in seeded.read_text()
+
+
+def test_setup_worktree_env_uv_pip_install_failure(monkeypatch):
+    """Verify that a non-zero exit code from uv pip install raises a RuntimeError."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        worktree = Path(d) / "worktree"
+        worktree.mkdir()
+
+        # Mock resolve_venv_python and shutil.which to pass presence checks
+        fake_python = worktree / ".venv" / "bin" / "python"
+        fake_python.parent.mkdir(parents=True)
+        fake_python.touch()
+
+        monkeypatch.setattr(
+            "coral.workspace.worktree.resolve_venv_python", lambda venv: fake_python
+        )
+        monkeypatch.setattr("shutil.which", lambda cmd: "/usr/bin/uv" if cmd == "uv" else None)
+
+        # Mock subprocess.run to simulate a failed 'uv pip install' call
+        real_run = subprocess.run
+
+        def mock_subprocess_run(cmd, *args, **kwargs):
+            if isinstance(cmd, list) and len(cmd) >= 3 and cmd[:3] == ["uv", "pip", "install"]:
+                return subprocess.CompletedProcess(
+                    args=cmd,
+                    returncode=1,
+                    stdout="",
+                    stderr="forced install failure",
+                )
+            return real_run(cmd, *args, **kwargs)
+
+        monkeypatch.setattr("subprocess.run", mock_subprocess_run)
+
+        with pytest.raises(RuntimeError, match="Failed to install coral into worktree venv"):
+            setup_worktree_env(worktree, ["echo setup"])
