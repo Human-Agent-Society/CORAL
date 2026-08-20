@@ -146,18 +146,23 @@ This project is released under the Apache 2.0 [LICENSE](LICENSE).
 
 ### Citation
 
-⭐ If you find CORAL useful, please consider giving us a Star and/or citing it in your work (Please use the official BibTeX below instead of Google Scholar’s auto-generated citation, which may truncate the author list):
+⭐ If you find CORAL useful, please consider giving us a Star and/or [citing it](https://arxiv.org/abs/2604.01658) in your work (Please use the official BibTeX below instead of Google Scholar’s auto-generated citation, which may truncate the author list):
 
 ```bibtex
-@article{qu2026coral,
+@inproceedings{qu2026coral,
   title={CORAL: Towards Autonomous Multi-Agent Evolution for Open-Ended Discovery},
   author={Qu, Ao and Zheng, Han and Zhou, Zijian and Yan, Yihao and Tang, Yihong and Ong, Shao Yong and Hong, Fenglu and Zhou, Kaichen and Jiang, Chonghe and Kong, Minwei and Zhu, Jiacheng and Jiang, Xuan and Li, Sirui and Wu, Cathy and Low, Bryan Kian Hsiang and Zhao, Jinhua and Liang, Paul Pu},
-  journal={arXiv preprint arXiv:2604.01658},
+  booktitle={Conference on Language Modeling (COLM)},
   year={2026}
 }
 ```
 
-## Star History
+### Contact Us
+
+- For technical questions and feature requests, please use [GitHub Issues](https://github.com/Human-Agent-Society/CORAL/issues).
+- For collaboration and partnerships, please contact [info@compounding-intelligence.ai](mailto:info@compounding-intelligence.ai).
+
+<!-- ## Star History
 
 <a href="https://www.star-history.com/?repos=Human-Agent-Society%2FCORAL&type=date&legend=top-left">
  <picture>
@@ -165,7 +170,7 @@ This project is released under the Apache 2.0 [LICENSE](LICENSE).
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/CORAL&type=date&legend=top-left&sealed_token=_Mr1XWVeoHdhN5RB0i4Fz-C0qC_ci1us7BViejAd73QFLQB7w_FW2o-3uWeM_nqAmLucjkLC8pNTEHRR1MVZ7LKGHYmhes0XBWUMTHuAWyJUJeYjB5XCNw" />
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Human-Agent-Society/CORAL&type=date&legend=top-left&sealed_token=_Mr1XWVeoHdhN5RB0i4Fz-C0qC_ci1us7BViejAd73QFLQB7w_FW2o-3uWeM_nqAmLucjkLC8pNTEHRR1MVZ7LKGHYmhes0XBWUMTHuAWyJUJeYjB5XCNw" />
  </picture>
-</a>
+</a> -->
 
 ### Acknowledgement
 
