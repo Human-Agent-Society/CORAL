@@ -6,6 +6,8 @@ import tempfile
 from pathlib import Path
 
 from coral.cli.validation import validate_task
+from coral.task import validation as task_validation
+from coral.task.validation import ValidationDiagnostic, ValidationReport
 
 _TASK_YAML = """\
 task:
@@ -38,6 +40,44 @@ def test_validate_rejects_missing_entrypoint():
         assert any("No grader configured" in e for e in errors)
 
 
+def test_structured_validation_report_is_serializable():
+    with tempfile.TemporaryDirectory() as d:
+        task_dir = _make_task(Path(d), "  timeout: 60")
+
+        report = task_validation.validate_task(task_dir)
+
+        assert not report.valid
+        assert report.error_messages == validate_task(task_dir)
+        assert report.to_dict() == {
+            "task_dir": str(task_dir),
+            "valid": False,
+            "diagnostics": [
+                {
+                    "code": "grader.entrypoint.missing",
+                    "message": report.error_messages[0],
+                    "path": "task.yaml",
+                    "severity": "error",
+                }
+            ],
+        }
+
+
+def test_warning_diagnostic_does_not_fail_report():
+    report = ValidationReport(
+        task_dir=Path("task"),
+        diagnostics=(
+            ValidationDiagnostic(
+                code="task.example.warning",
+                message="Example warning",
+                severity="warning",
+            ),
+        ),
+    )
+
+    assert report.valid
+    assert report.error_messages == []
+
+
 def test_validate_rejects_malformed_entrypoint():
     with tempfile.TemporaryDirectory() as d:
         task_dir = _make_task(Path(d), "  entrypoint: my_pkg.grader.Grader")
@@ -53,6 +93,17 @@ def _make_task_with_dirs(base: Path, grader_body: str, dirs: list[str]) -> Path:
     for rel in dirs:
         (task_dir / rel).mkdir(parents=True, exist_ok=True)
     return task_dir
+
+
+def test_structured_validation_reports_private_path():
+    body = '  entrypoint: "p.g:G"\n  private:\n    - "missing-data"'
+    with tempfile.TemporaryDirectory() as d:
+        task_dir = _make_task_with_dirs(Path(d), body, [])
+
+        report = task_validation.validate_task(task_dir)
+
+        assert [diagnostic.code for diagnostic in report.diagnostics] == ["grader.private.missing"]
+        assert report.diagnostics[0].path == "missing-data"
 
 
 def test_validate_accepts_private_sibling_of_grader():
