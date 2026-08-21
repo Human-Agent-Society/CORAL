@@ -8,6 +8,7 @@ import shutil
 from coral.agent.builtin.claude_code import ClaudeCodeRuntime
 from coral.agent.builtin.codex import CodexRuntime
 from coral.agent.builtin.cursor_agent import CursorAgentRuntime
+from coral.agent.builtin.deepseek_harness import DeepSeekHarnessRuntime
 from coral.agent.builtin.kiro import KiroRuntime
 from coral.agent.builtin.opencode import OpenCodeRuntime
 from coral.agent.builtin.pi_agent import PiAgentRuntime
@@ -17,6 +18,7 @@ _RUNTIMES: dict[str, type] = {
     "claude_code": ClaudeCodeRuntime,
     "codex": CodexRuntime,
     "cursor_agent": CursorAgentRuntime,
+    "dsh": DeepSeekHarnessRuntime,
     "kiro": KiroRuntime,
     "opencode": OpenCodeRuntime,
     "pi": PiAgentRuntime,
@@ -32,6 +34,9 @@ _ALIASES: dict[str, str] = {
     "kiro-cli": "kiro",
     "cursor": "cursor_agent",
     "cursor-agent": "cursor_agent",
+    "deepseek": "dsh",
+    "deepseek-harness": "dsh",
+    "deepseek_harness": "dsh",
     "pi-agent": "pi",
 }
 
@@ -40,6 +45,7 @@ _DEFAULT_MODELS: dict[str, str] = {
     "claude_code": "sonnet",
     "codex": "gpt-5.4",
     "cursor_agent": "auto",
+    "dsh": "deepseek-v4-flash",
     "kiro": "auto",
     "opencode": "openai/gpt-5",
     "pi": "zai/glm-5.1",
@@ -52,6 +58,7 @@ _RUNTIME_COMMANDS: dict[str, str] = {
     "claude_code": "claude",
     "codex": "codex",
     "cursor_agent": "cursor-agent",
+    "dsh": "dsh",
     "kiro": "kiro-cli",
     "opencode": "opencode",
     "pi": "pi",

@@ -54,7 +54,7 @@ model. No credentials are ever stored.
 
 ### `coral setup`
 
-Scan `PATH` for installed agent runtime CLIs (`claude`, `codex`,
+Scan `PATH` for installed agent runtime CLIs (`claude`, `codex`, `dsh`,
 `cursor-agent`, `opencode`, `kiro-cli`, `pi`) and, in an interactive terminal,
 launch a numbered-selection wizard to create bindings. Pick one or more
 runtimes (`1`, `1,3`, `1-3`, or `all`) and the wizard prompts for binding
@@ -89,7 +89,7 @@ coral setup agent [--name NAME] [--runtime RUNTIME] [--command PATH]
 | Flag | Description |
 |------|-------------|
 | `--name` | Binding name (e.g. `claude-opus`) |
-| `--runtime` | Runtime: `claude_code`, `codex`, `opencode`, `cursor_agent`, `kiro`, `pi`, or a `module.path:ClassName` entrypoint |
+| `--runtime` | Runtime: `claude_code`, `codex`, `dsh`, `opencode`, `cursor_agent`, `kiro`, `pi`, or a `module.path:ClassName` entrypoint |
 | `--command` | CLI binary (defaults to the runtime's command) |
 | `--model` | Default model for this binding |
 | `--role-file` | Path to a role seed `.md` file |
@@ -100,6 +100,7 @@ coral setup agent [--name NAME] [--runtime RUNTIME] [--command PATH]
 ```bash
 coral setup agent --name claude-opus --runtime claude_code --model opus
 coral setup agent --name codex-high --runtime codex --option model_reasoning_effort=high
+coral setup agent --name deepseek --runtime dsh --model deepseek-v4-flash
 ```
 
 ### `coral agents`

@@ -69,7 +69,7 @@ class GraderConfig:
 @dataclass
 class AgentConfig:
     count: int             # Number of agents (default: 1)
-    runtime: str           # "claude_code", "codex", "opencode"
+    runtime: str           # "claude_code", "codex", "dsh", "opencode", ...
     model: str             # Model name or ID (default: "sonnet")
     max_turns: int         # Max conversation turns (default: 200)
     timeout: int           # Session timeout in seconds (default: 3600)
