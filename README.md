@@ -83,9 +83,11 @@ Skills: `coral-quickstart` (install → setup → `.coral_workspace/`), `setting
 |-------|------------------|
 | [Claude Code](https://github.com/anthropics/claude-code) — default | `claude_code` |
 | [Codex](https://github.com/openai/codex) | `codex` |
+| [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) | `dsh` |
 | [Cursor Agent](https://cursor.com/docs/cli/overview) | `cursor` |
 | [Kiro](https://kiro.dev) | `kiro` |
 | [OpenCode](https://github.com/opencode-ai/opencode) | `opencode` |
+| [Pi](https://pi.dev) | `pi` |
 
 Each agent must be installed and authenticated separately. Per-runtime config — including the [LiteLLM gateway](https://coral.compounding-intelligence.ai/docs/guides/gateway) for custom models — is documented at [Agent Runtimes](https://coral.compounding-intelligence.ai/docs/guides/agent-runtimes).
 

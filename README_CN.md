@@ -90,9 +90,11 @@ codex plugin add coral@coral-marketplace
 |-------|------------------|
 | [Claude Code](https://github.com/anthropics/claude-code) —— 默认 | `claude_code` |
 | [Codex](https://github.com/openai/codex) | `codex` |
+| [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) | `dsh` |
 | [Cursor Agent](https://cursor.com/docs/cli/overview) | `cursor` |
 | [Kiro](https://kiro.dev) | `kiro` |
 | [OpenCode](https://github.com/opencode-ai/opencode) | `opencode` |
+| [Pi](https://pi.dev) | `pi` |
 
 每个 Agent 需自行安装并完成认证。各运行时的详细配置（含[ LiteLLM Gateway](https://coral.compounding-intelligence.ai/docs/guides/gateway) 自定义模型代理）见 [Agent 运行时文档](https://coral.compounding-intelligence.ai/docs/guides/agent-runtimes)。
 
@@ -136,6 +138,9 @@ uv run ruff check .
 uv run ruff format .
 ```
 
+> [!IMPORTANT]
+> **Docker 要求：**部分内置 grader（例如 SWE-bench、terminal-bench）使用 [Harbor](https://github.com/corca-ai/harbor) 在 Docker 容器中执行评估。此时 CORAL 本身**不能**运行在 Docker 中，因为不支持 Docker-in-Docker（DinD）。请直接在宿主机上运行 CORAL。
+
 ### 参与贡献
 
 欢迎社区贡献 —— bug 报告、`examples/` 下的新任务、新的 agent runtime、文档改进，都很欢迎。先看这里：
@@ -159,6 +164,16 @@ uv run ruff format .
   year={2026}
 }
 ```
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=Human-Agent-Society%2FCORAL&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/CORAL&type=date&theme=dark&legend=top-left&sealed_token=_Mr1XWVeoHdhN5RB0i4Fz-C0qC_ci1us7BViejAd73QFLQB7w_FW2o-3uWeM_nqAmLucjkLC8pNTEHRR1MVZ7LKGHYmhes0XBWUMTHuAWyJUJeYjB5XCNw" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=Human-Agent-Society/CORAL&type=date&legend=top-left&sealed_token=_Mr1XWVeoHdhN5RB0i4Fz-C0qC_ci1us7BViejAd73QFLQB7w_FW2o-3uWeM_nqAmLucjkLC8pNTEHRR1MVZ7LKGHYmhes0XBWUMTHuAWyJUJeYjB5XCNw" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=Human-Agent-Society/CORAL&type=date&legend=top-left&sealed_token=_Mr1XWVeoHdhN5RB0i4Fz-C0qC_ci1us7BViejAd73QFLQB7w_FW2o-3uWeM_nqAmLucjkLC8pNTEHRR1MVZ7LKGHYmhes0XBWUMTHuAWyJUJeYjB5XCNw" />
+ </picture>
+</a>
 
 ### 致谢
 

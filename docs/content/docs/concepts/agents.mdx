@@ -12,6 +12,7 @@ Agents are the optimizers in CORAL. Each agent is an autonomous coding subproces
 |---------|-------------|-------------|
 | Claude Code | `claude_code` | Anthropic's CLI agent (default) |
 | Codex | `codex` | OpenAI's coding agent |
+| DeepSeek Harness | `dsh` | DeepSeek's official agent harness |
 | OpenCode | `opencode` | Open-source alternative |
 
 Set the runtime in your `task.yaml`:
@@ -93,4 +94,3 @@ Each agent gets:
 - Access to all other agents' attempts (scores and diffs)
 - Shared notes for communicating insights
 - Shared skills for reusable tools
-

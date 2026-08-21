@@ -46,7 +46,7 @@ All generated routes use `MINIMAX_API_KEY`:
 
 ```yaml
 agents:
-  runtime: opencode           # or claude_code, codex (cursor and kiro use their own auth, not the gateway)
+  runtime: opencode           # or claude_code, codex, dsh (cursor and kiro use their own auth)
   model: claude/claude-opus-4-6
   gateway:
     enabled: true
@@ -54,7 +54,7 @@ agents:
     config: "./litellm_config.yaml"  # path relative to task.yaml
 ```
 
-**3. Point your agent at the gateway.** For OpenCode, set `baseURL` in `opencode.json` to `http://localhost:<port>/v1` (see [Agent Runtimes → OpenCode](/docs/guides/agent-runtimes#opencode)). For Claude Code, the gateway URL is automatically injected.
+**3. Point your agent at the gateway.** For OpenCode, set `baseURL` in `opencode.json` to `http://localhost:<port>/v1` (see [Agent Runtimes → OpenCode](/docs/guides/agent-runtimes#opencode)). For Claude Code and DeepSeek Harness, the gateway URL and per-agent key are injected automatically; DSH receives them as `DEEPSEEK_BASE_URL` and `DEEPSEEK_API_KEY`.
 
 When you run `coral start`, the gateway starts before agents are spawned, and all agent API requests are routed through it. The gateway automatically assigns each agent a unique proxy key for per-agent request tracking.
 
