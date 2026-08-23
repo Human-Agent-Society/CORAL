@@ -226,12 +226,12 @@ def validate_task(task_dir: Path) -> ValidationReport:
     return ValidationReport(task_dir, tuple(diagnostics))
 
 
-def run_validation(
+async def run_validation_async(
     task_dir: Path,
     *,
     on_event: Callable[[ValidationProgressEvent], None] | None = None,
 ) -> ValidationRunResult:
-    """Run structural checks and grade the task baseline in an isolated workspace."""
+    """Run structural checks and asynchronously grade a task baseline."""
     events: list[ValidationProgressEvent] = []
 
     def emit(stage: ValidationStage, status: ValidationProgressStatus, message: str) -> None:
@@ -372,9 +372,18 @@ def run_validation(
         target = "seed code" if seed_dir.is_dir() else "empty workspace"
         emit("baseline", "started", f"Running grader against {target}...")
         try:
-            baseline = asyncio.run(grader.grade(str(workspace), [task]))
+            baseline = await grader.grade(str(workspace), [task])
         except Exception as exc:
             return stop("baseline", "grader.baseline.failed", f"Grader crashed: {exc}")
         emit("baseline", "completed", "Baseline grading completed")
 
     return ValidationRunResult(report=report, events=tuple(events), baseline=baseline)
+
+
+def run_validation(
+    task_dir: Path,
+    *,
+    on_event: Callable[[ValidationProgressEvent], None] | None = None,
+) -> ValidationRunResult:
+    """Run validation synchronously for CLI and other non-async callers."""
+    return asyncio.run(run_validation_async(task_dir, on_event=on_event))

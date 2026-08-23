@@ -7,6 +7,7 @@ from coral.task.validation import (
     ValidationReport,
     ValidationRunResult,
     run_validation,
+    run_validation_async,
     validate_task,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     "ValidationReport",
     "ValidationRunResult",
     "run_validation",
+    "run_validation_async",
     "validate_task",
 ]

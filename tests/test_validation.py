@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import tempfile
 from pathlib import Path
 
@@ -192,6 +193,38 @@ def test_run_validation_returns_baseline_and_progress_events(tmp_path, monkeypat
     ]
 
 
+async def test_run_validation_async_runs_inside_existing_event_loop(tmp_path, monkeypatch):
+    task_dir = _make_task(tmp_path, '  entrypoint: "p.g:G"')
+
+    class FakeGrader:
+        async def grade(self, codebase_path, tasks):
+            assert asyncio.get_running_loop().is_running()
+            return ScoreBundle(
+                scores={"eval": Score(value=2.0, name="eval", explanation="async baseline")},
+                aggregated=2.0,
+            )
+
+    monkeypatch.setattr(
+        "coral.workspace.grader_env.setup_grader_env",
+        lambda coral_dir, grader_config, config_dir: None,
+    )
+    monkeypatch.setattr(
+        "coral.grader.loader.load_grader",
+        lambda config, coral_dir: FakeGrader(),
+    )
+
+    observed_events = []
+    result = await task_validation.run_validation_async(
+        task_dir,
+        on_event=observed_events.append,
+    )
+
+    assert result.successful
+    assert result.baseline.aggregated == 2.0
+    assert observed_events == list(result.events)
+    assert (result.events[-1].stage, result.events[-1].status) == ("baseline", "completed")
+
+
 def test_run_validation_returns_structured_grader_environment_failure(tmp_path, monkeypatch):
     task_dir = _make_task(tmp_path, '  entrypoint: "p.g:G"')
 
@@ -357,6 +390,7 @@ def test_task_package_exports_validation_runner_api():
     import coral.task as task_api
 
     assert task_api.run_validation is task_validation.run_validation
+    assert task_api.run_validation_async is task_validation.run_validation_async
     assert task_api.ValidationProgressEvent is task_validation.ValidationProgressEvent
     assert task_api.ValidationFailure is task_validation.ValidationFailure
     assert task_api.ValidationRunResult is task_validation.ValidationRunResult
