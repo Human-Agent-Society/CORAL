@@ -18,7 +18,7 @@ Key concepts:
 |-----------|---------|
 | `coral/types.py` | Core types: `Task`, `Score`, `ScoreBundle`, `Attempt` |
 | `coral/config.py` | OmegaConf-backed YAML configuration (`CoralConfig`, `GraderConfig`, `AgentConfig`, `GatewayConfig`, `WarmStartConfig`, `HeartbeatActionConfig`, ...) |
-| `coral/task/` | Frontend-independent task validation with structured reports and diagnostics |
+| `coral/task/` | Frontend-independent task validation with structured reports, progress events, and baseline grading |
 | `coral/agent/` | Agent lifecycle: `manager.py` (multi-agent supervisor), `runtime.py` (abstract), `state.py`, `heartbeat.py`, `exit_classifier.py`, `warmstart.py`, `process.py`, `registry.py` |
 | `coral/sandbox/` | Pluggable agent sandboxing (`agents.sandbox`): `protocol.py` (`SandboxProvider` + spec/context types), `registry.py` (name or `module:Class` entrypoint resolution), `srt.py` (built-in srt provider: OS-level FS/network enforcement + allow-all proxy) |
 | `coral/agent/builtin/` | Concrete runtimes: `claude_code`, `codex`, `cursor_agent`, `kiro`, `opencode` |

@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
+import shutil
+import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
 from coral.config import CoralConfig
+from coral.types import ScoreBundle, Task
 
 
 @dataclass(frozen=True)
@@ -52,6 +57,71 @@ class ValidationReport:
             "task_dir": str(self.task_dir),
             "valid": self.valid,
             "diagnostics": [diagnostic.to_dict() for diagnostic in self.diagnostics],
+        }
+
+
+ValidationStage = Literal[
+    "structure",
+    "workspace",
+    "grader_environment",
+    "grader_load",
+    "baseline",
+]
+ValidationProgressStatus = Literal["started", "completed", "failed"]
+
+
+@dataclass(frozen=True)
+class ValidationProgressEvent:
+    """One frontend-neutral progress update from a validation run."""
+
+    stage: ValidationStage
+    status: ValidationProgressStatus
+    message: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "stage": self.stage,
+            "status": self.status,
+            "message": self.message,
+        }
+
+
+@dataclass(frozen=True)
+class ValidationFailure:
+    """A structured failure that stopped a validation run."""
+
+    stage: ValidationStage
+    code: str
+    message: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "stage": self.stage,
+            "code": self.code,
+            "message": self.message,
+        }
+
+
+@dataclass(frozen=True)
+class ValidationRunResult:
+    """Structural diagnostics, progress, and baseline output from one run."""
+
+    report: ValidationReport
+    events: tuple[ValidationProgressEvent, ...]
+    baseline: ScoreBundle | None = None
+    failure: ValidationFailure | None = None
+
+    @property
+    def successful(self) -> bool:
+        return self.report.valid and self.failure is None and self.baseline is not None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "successful": self.successful,
+            "report": self.report.to_dict(),
+            "events": [event.to_dict() for event in self.events],
+            "baseline": self.baseline.to_dict() if self.baseline is not None else None,
+            "failure": self.failure.to_dict() if self.failure is not None else None,
         }
 
 
@@ -154,3 +224,166 @@ def validate_task(task_dir: Path) -> ValidationReport:
             )
 
     return ValidationReport(task_dir, tuple(diagnostics))
+
+
+async def run_validation_async(
+    task_dir: Path,
+    *,
+    on_event: Callable[[ValidationProgressEvent], None] | None = None,
+) -> ValidationRunResult:
+    """Run structural checks and asynchronously grade a task baseline."""
+    events: list[ValidationProgressEvent] = []
+
+    def emit(stage: ValidationStage, status: ValidationProgressStatus, message: str) -> None:
+        event = ValidationProgressEvent(stage=stage, status=status, message=message)
+        events.append(event)
+        if on_event is not None:
+            on_event(event)
+
+    emit("structure", "started", "Checking task structure")
+    try:
+        report = validate_task(task_dir)
+    except Exception as exc:
+        message = f"Failed to validate task structure: {exc}"
+        report = ValidationReport(
+            task_dir=task_dir,
+            diagnostics=(
+                ValidationDiagnostic(
+                    code="task.structure.failed",
+                    message=message,
+                ),
+            ),
+        )
+        failure = ValidationFailure(
+            stage="structure",
+            code="task.structure.failed",
+            message=message,
+        )
+        emit(failure.stage, "failed", failure.message)
+        return ValidationRunResult(report=report, events=tuple(events), failure=failure)
+
+    def stop(stage: ValidationStage, code: str, message: str) -> ValidationRunResult:
+        failure = ValidationFailure(stage=stage, code=code, message=message)
+        emit(stage, "failed", message)
+        return ValidationRunResult(report=report, events=tuple(events), failure=failure)
+
+    if not report.valid:
+        return stop(
+            "structure",
+            "task.structure.invalid",
+            "Task structure validation failed",
+        )
+    try:
+        config = CoralConfig.from_yaml(task_dir / "task.yaml")
+    except Exception as exc:
+        return stop(
+            "structure",
+            "task.config.load_failed",
+            f"Failed to load task configuration: {exc}",
+        )
+    emit("structure", "completed", "Task structure is valid")
+
+    emit("workspace", "started", "Preparing validation workspace")
+    try:
+        tempdir = tempfile.TemporaryDirectory(prefix="coral_test_eval_")
+    except Exception as exc:
+        return stop(
+            "workspace",
+            "task.workspace.failed",
+            f"Failed to prepare validation workspace: {exc}",
+        )
+
+    with tempdir as tmpdir_str:
+        tmpdir = Path(tmpdir_str)
+        workspace = tmpdir / "workspace"
+        try:
+            workspace.mkdir()
+            seed_dir = task_dir / "seed"
+            has_seed = seed_dir.is_dir() and any(seed_dir.iterdir())
+            if has_seed:
+                for item in seed_dir.iterdir():
+                    if item.name == "__pycache__":
+                        continue
+                    dst = workspace / item.name
+                    if item.is_dir():
+                        shutil.copytree(item, dst)
+                    else:
+                        shutil.copy2(item, dst)
+                workspace_message = f"Seed: copied {seed_dir.name}/ into workspace"
+            else:
+                workspace_message = (
+                    "Warning: No seed/ directory — grader will run against an empty workspace.\n"
+                    "  This is fine if your task expects agents to build from scratch."
+                )
+
+            coral_dir = tmpdir / ".coral"
+            private_dir = coral_dir / "private"
+            private_dir.mkdir(parents=True)
+
+            for private_path_str in config.grader.private:
+                src = Path(private_path_str)
+                if not src.is_absolute():
+                    src = (task_dir / src).resolve()
+                if src.exists():
+                    dst = private_dir / src.name
+                    if src.is_dir():
+                        shutil.copytree(src, dst)
+                    else:
+                        shutil.copy2(src, dst)
+        except Exception as exc:
+            return stop(
+                "workspace",
+                "task.workspace.failed",
+                f"Failed to prepare validation workspace: {exc}",
+            )
+        emit("workspace", "completed", workspace_message)
+
+        from coral.workspace.grader_env import setup_grader_env
+
+        emit(
+            "grader_environment",
+            "started",
+            "Setting up grader venv (.coral/private/grader_venv)...",
+        )
+        try:
+            setup_grader_env(coral_dir, config.grader, task_dir)
+        except Exception as exc:
+            return stop(
+                "grader_environment",
+                "grader.environment.failed",
+                f"Failed to set up grader environment: {exc}",
+            )
+        emit("grader_environment", "completed", "Grader environment is ready")
+
+        from coral.grader.loader import load_grader
+
+        emit("grader_load", "started", "Loading grader entrypoint")
+        try:
+            grader = load_grader(config, coral_dir)
+        except Exception as exc:
+            return stop("grader_load", "grader.load.failed", f"Error loading grader: {exc}")
+        emit("grader_load", "completed", "Grader entrypoint loaded")
+
+        task = Task(
+            id=config.task.name,
+            name=config.task.name,
+            description=config.task.description,
+        )
+        target = "seed code" if seed_dir.is_dir() else "empty workspace"
+        emit("baseline", "started", f"Running grader against {target}...")
+        try:
+            baseline = await grader.grade(str(workspace), [task])
+        except Exception as exc:
+            return stop("baseline", "grader.baseline.failed", f"Grader crashed: {exc}")
+        emit("baseline", "completed", "Baseline grading completed")
+
+    return ValidationRunResult(report=report, events=tuple(events), baseline=baseline)
+
+
+def run_validation(
+    task_dir: Path,
+    *,
+    on_event: Callable[[ValidationProgressEvent], None] | None = None,
+) -> ValidationRunResult:
+    """Run validation synchronously for CLI and other non-async callers."""
+    return asyncio.run(run_validation_async(task_dir, on_event=on_event))
