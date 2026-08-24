@@ -26,7 +26,7 @@ Key concepts:
 | `coral/hub/` | Shared state: `attempts.py`, `notes.py`, `skills.py`, `checkpoint.py` (git-tracked snapshots of `.coral/public/`), `heartbeat.py`, `prompts/` (built-in heartbeat prompts) |
 | `coral/hooks/` | `post_commit.py` — implements `submit_eval` (called by `coral eval`) |
 | `coral/workspace/` | Run layout: `project.py` (run dir setup), `worktree.py` (per-agent git worktrees + symlinks), `repo.py` (clone/init), `grader_env.py` (`.coral/private/grader_venv/`) |
-| `coral/template/` | `coral_md.py` + `coral.md.template` / `coral_single.md.template`; bundled `agents/` (deep-researcher, librarian) and `skills/` (deep-research, organize-files, skill-creator) seeded into every run |
+| `coral/template/` | `coral_md.py` + `coral.md.template` / `coral_single.md.template`; bundled `agents/` (deep-researcher, librarian) and `skills/` (deep-research, organize-files, skill-creator, scan-usage) seeded into every run |
 | `coral/gateway/` | Optional LiteLLM gateway (`server.py`, `middleware.py`, `config.py`) for intercepting agent model traffic |
 | `coral/web/` | Starlette web dashboard (`app.py`, `api.py`, `events.py`, `logs.py`, `static/`) |
 | `coral/cli/` | CLI package: `start.py`, `query.py`, `eval.py`, `heartbeat.py`, `agents.py` (user-level bindings), `ui.py`, `author.py`, `validation.py`, `_helpers.py` |
