@@ -15,6 +15,11 @@ agent runtimes, assignments, islands, shared state, attempt budgets, stop
 conditions, worktree lifecycle, and the dashboard. Those settings must remain
 outside Harbor's `task.toml`.
 
+CORAL should keep `task.yaml` as its existing CLI and orchestration entrypoint.
+A Harbor-backed `task.yaml` should reference exactly one local or registry
+Harbor task instead of duplicating that task's instruction, metadata,
+environment, or verifier fields.
+
 The first adapter should target Harbor task schema `1.4` and a pinned Harbor
 `v0.22.0` runtime. It should support local task directories and versioned
 registry references resolved to a recorded content digest, translate Harbor's
@@ -136,10 +141,11 @@ CORAL must not add private keys to Harbor's standard `task.toml` schema. If a
 portable task is downloaded and run with Harbor alone, its task semantics and
 verification must remain intact.
 
-### CORAL owns the optimization-run contract
+### `task.yaml` remains the CORAL optimization-run contract
 
-**Proposed:** a separate `coral.yaml` references one Harbor task and contains
-only CORAL orchestration and objective-selection state:
+**Proposed:** extend the existing `task.yaml` so it can reference one Harbor
+task while continuing to contain CORAL orchestration and objective-selection
+state:
 
 ```yaml
 task:
@@ -170,9 +176,26 @@ run:
     max_real_attempts: 100
 ```
 
-The filename and exact shape are **Proposed**, not accepted. The invariant is
-more important than the name: CORAL orchestration must not leak into
-`task.toml`, and Harbor task metadata must not be duplicated into CORAL config.
+The retained filename follows CORAL's current CLI and authoring workflow. The
+new field shape is **Proposed**, not accepted. The important compatibility rule
+is a one-of contract:
+
+- a legacy `task.yaml` contains the current inline task/grader fields and no
+  `task.source`;
+- a Harbor-backed `task.yaml` contains `task.source` and CORAL orchestration,
+  but does not duplicate `task.name`, `task.description`, `task.tips`, or
+  portable grader fields owned by the referenced Harbor task.
+
+Validation must reject mixed configurations rather than guess which definition
+wins. Keeping `task.yaml` does not create a CORAL fork of Harbor's schema:
+Harbor still owns `task.toml`, while `task.yaml` remains a separate CORAL file
+that points to it.
+
+A local `task.source` is resolved relative to the directory containing
+`task.yaml` and must identify one directory with a `task.toml`; it does not scan
+for tasks or accept a dataset implicitly. A registry source identifies one
+`org/name@tag` package before digest pinning. This keeps the selected Harbor
+task deterministic for `coral validate`, `start`, and `eval`.
 
 Persisted CORAL configs must not use a mutable registry alias such as `latest`.
 At run creation CORAL should resolve a local directory or `org/name@tag` to an
@@ -185,19 +208,19 @@ schema, task package version, and Harbor runtime version in the run metadata.
 | --- | --- | --- |
 | `task.name` | `[task].name` in `task.toml` | **Proposed.** Harbor requires stable `org/name`; migration may need an explicit organization. |
 | `task.description` | `instruction.md` plus `[task].description` | **Proposed.** Full agent-facing content goes in `instruction.md`; the TOML description stays short. |
-| `task.tips` | `instruction.md` | **Proposed.** Merge into a clearly labelled guidance section; do not duplicate it in `coral.yaml`. |
+| `task.tips` | `instruction.md` | **Proposed.** Merge into a clearly labelled guidance section; do not duplicate it in Harbor-backed `task.yaml`. |
 | `seed/` | agent-visible starting workspace | **Open.** It must never map to Harbor `solution/`. See workspace materialization below. |
 | `grader.entrypoint` | `tests/`, verifier config, or a temporary legacy bridge | **Proposed.** Canonical tasks use Harbor verification; generic `TaskGrader` remains transition-only. |
 | `grader.setup` | verifier/environment image build | **Proposed.** Convert reproducible installs into Dockerfiles or verifier images; do not execute arbitrary legacy setup implicitly. |
 | `grader.timeout` | `[verifier].timeout_sec` | **Proposed.** CORAL may impose a stricter outer infrastructure timeout but must record which layer fired. |
 | `grader.private` | Harbor `tests/`, separate verifier environment, and declared verifier-only artifacts | **Proposed.** Never copy these paths into a CORAL agent worktree. |
 | `grader.args` | task-specific Harbor metadata/config or migration code | **Open per field.** Do not dump arbitrary runtime args into `[metadata]` and call them portable. |
-| `grader.direction` | `task.reward.direction` in `coral.yaml` | **Proposed.** Preserve raw Harbor reward values; CORAL applies maximize/minimize when ranking attempts. |
+| `grader.direction` | `task.reward.direction` in `task.yaml` | **Proposed.** Preserve raw Harbor reward values; CORAL applies maximize/minimize when ranking attempts. |
 | `grader.max_pending_per_agent` | CORAL orchestration config | **Proposed.** Queue policy is not task semantics. |
 | `grader.parallel.max_workers` | CORAL orchestration config | **Proposed.** Harbor/provider concurrency is a separate adapter setting. |
 | `workspace.repo_path` and `seed/` copying | workspace materializer | **Open.** Must produce the same agent-visible Git baseline as the Harbor environment. |
 | `workspace.setup` | Harbor environment build where portable; CORAL run bootstrap otherwise | **Open.** Every command needs an owner and reproducibility rule. |
-| `agents.*`, `islands.*`, `sharing.*`, `run.*` | `coral.yaml` | **Proposed.** These stay entirely outside `task.toml`. |
+| `agents.*`, `islands.*`, `sharing.*`, `run.*` | `task.yaml` | **Proposed.** These stay entirely outside `task.toml`. |
 | `ScoreBundle.scores` | one CORAL `Score` per Harbor reward key | **Proposed.** Preserve names and numeric values exactly. |
 | `ScoreBundle.aggregated` | explicit primary reward or approved aggregation | **Proposed.** Never infer weights or average an arbitrary reward dictionary. |
 | `ScoreBundle.feedback` | sanitized verifier summary | **Proposed.** Public feedback policy still applies. |
@@ -309,7 +332,7 @@ The adapter must preserve these invariants before any bulk migration:
    Public eval logs contain an artifact manifest and approved copies, not an
    indiscriminate Harbor job directory.
 5. Registry credentials, environment secrets, and provider tokens stay in the
-   manager process and are never serialized into `coral.yaml`, attempt JSON,
+   manager process and are never serialized into `task.yaml`, attempt JSON,
    CORAL.md, or PR/test output.
 6. Task resolution is immutable for a run. A registry tag is resolved once and
    its digest is persisted before agents start.
@@ -391,7 +414,9 @@ This RFC refines, but does not reorder, the phases in Issue #225.
 
 - support a pinned local Harbor directory and a versioned registry reference
   resolved to a recorded content digest;
-- preserve legacy `task.yaml` behavior;
+- select legacy or Harbor-backed loading from the validated, mutually exclusive
+  `task.yaml` shape;
+- preserve legacy `task.yaml` behavior when `task.source` is absent;
 - persist task digest and compatibility metadata in every run;
 - add CLI diagnostics without changing default authoring output.
 
@@ -413,7 +438,8 @@ successful baseline is not enough.
 
 ### Gate E — authoring and controlled migration
 
-- `coral init` can scaffold a Harbor task and separate CORAL config;
+- `coral init` can scaffold a Harbor task plus a compatible `task.yaml` that
+  references it;
 - `coral validate`, `start`, and `eval` support the new source explicitly;
 - migration tooling produces a report and refuses ambiguous field mappings;
 - convert a small reviewed batch before any generated bulk migration;
@@ -431,7 +457,7 @@ semantics.
 
 | Decision | Recommendation | Alternative | Status |
 | --- | --- | --- | --- |
-| CORAL config filename | `coral.yaml` | keep `task.yaml` for orchestration, but that perpetuates naming ambiguity | **Open** |
+| CORAL orchestration entrypoint | keep `task.yaml` and add a Harbor-backed `task.source` mode | introduce a separate `coral.yaml` | **Proposed** following PR discussion; exact source field shape remains **Open** |
 | first Harbor runtime range | start with exact `v0.22.0` and schema `1.4`; widen only after compatibility tests | target an older release matching current wrappers | **Open**; current wrappers are not a task-loader compatibility proof |
 | local and registry references | support local paths first, then pinned `org/name@tag`; persist digest | registry-first | **Proposed** |
 | dataset references | defer until the task adapter is stable, then add an explicit dataset source and task selector | overload `task.source` with path, task, and dataset guessing | **Proposed** |
@@ -452,6 +478,11 @@ resolved or explicitly deferred every Open item needed for Gate B. Acceptance
 of this document does not claim that the adapter, migration, score parity, or
 Harbor v0.22 compatibility has been implemented.
 
+For the configuration boundary, Phase 1 acceptance additionally requires
+agreement that Harbor-backed and legacy `task.yaml` forms are mutually
+exclusive, and that a Harbor-backed form references exactly one Harbor task
+without copying portable task fields into CORAL configuration.
+
 Subsequent implementation PRs should reference Issue #225 but must not use
 `Fixes #225` until the complete migration and deprecation acceptance criteria
 are satisfied.
@@ -459,6 +490,7 @@ are satisfied.
 ## Primary references
 
 - [CORAL Issue #225](https://github.com/Human-Agent-Society/CORAL/issues/225)
+- [PR #251 configuration discussion](https://github.com/Human-Agent-Society/CORAL/pull/251#issuecomment-5392439317)
 - [Harbor task structure](https://www.harborframework.com/docs/tasks)
 - [Harbor core concepts](https://www.harborframework.com/docs/core-concepts)
 - [Harbor task publishing](https://www.harborframework.com/docs/tasks/publishing)
