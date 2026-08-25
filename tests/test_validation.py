@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -525,6 +528,88 @@ def test_cmd_validate_renders_shared_runner_result(tmp_path, monkeypatch, capsys
         "  eval: baseline ok",
         "==================================================",
     ]
+
+
+def test_validate_help_documents_json_output() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "coral.cli", "validate", "--help"],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "--json" in result.stdout
+
+
+def test_cmd_validate_json_outputs_one_machine_readable_document(tmp_path, monkeypatch, capsys):
+    task_dir = tmp_path / "task"
+    result = task_validation.ValidationRunResult(
+        report=ValidationReport(task_dir=task_dir.resolve(), diagnostics=()),
+        events=(),
+        baseline=ScoreBundle(
+            scores={"eval": Score(value=1.25, name="eval", explanation="baseline ok")},
+            aggregated=1.25,
+        ),
+    )
+
+    def fake_run_validation(path, *, on_event=None):
+        assert path == task_dir.resolve()
+        assert on_event is None
+        return result
+
+    monkeypatch.setattr(task_validation, "run_validation", fake_run_validation)
+
+    cmd_validate(argparse.Namespace(path=str(task_dir), json=True))
+
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    payload = json.loads(captured.out)
+    assert payload["successful"] is True
+    assert payload["report"] == {
+        "task_dir": str(task_dir.resolve()),
+        "valid": True,
+        "diagnostics": [],
+    }
+    assert payload["events"] == []
+    assert payload["baseline"]["aggregated"] == 1.25
+    assert payload["failure"] is None
+
+
+def test_cmd_validate_json_failure_is_structured_and_exits_nonzero(tmp_path, monkeypatch, capsys):
+    task_dir = tmp_path / "task"
+    failure = task_validation.ValidationFailure(
+        stage="baseline",
+        code="grader.baseline.failed",
+        message="Grader crashed: boom",
+    )
+    result = task_validation.ValidationRunResult(
+        report=ValidationReport(task_dir=task_dir.resolve(), diagnostics=()),
+        events=(),
+        failure=failure,
+    )
+
+    def fake_run_validation(path, *, on_event=None):
+        assert path == task_dir.resolve()
+        assert on_event is None
+        return result
+
+    monkeypatch.setattr(task_validation, "run_validation", fake_run_validation)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cmd_validate(argparse.Namespace(path=str(task_dir), json=True))
+
+    assert exc_info.value.code == 1
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    payload = json.loads(captured.out)
+    assert payload["successful"] is False
+    assert payload["baseline"] is None
+    assert payload["failure"] == {
+        "stage": "baseline",
+        "code": "grader.baseline.failed",
+        "message": "Grader crashed: boom",
+    }
 
 
 def test_cmd_validate_prints_structure_failure_without_diagnostics(tmp_path, monkeypatch, capsys):
