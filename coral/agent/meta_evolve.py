@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import shlex
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
@@ -225,4 +226,58 @@ def recommend_arm(
         arms[index],
         stats=stats,
         selection_mode="upper-confidence",
+    )
+
+
+def render_bootstrap_guidance(config: MetaEvolveConfig) -> str:
+    """Render the opt-in attribution contract for generated agent instructions."""
+    if not config.enabled:
+        return ""
+
+    arms = "\n".join(f"- `{arm.operator}` / `{arm.mutation}`" for arm in config.arms)
+    example = config.arms[0]
+    example_command = (
+        'coral eval -m "what you changed and why" '
+        f"--operator {shlex.quote(example.operator)} "
+        f"--mutation {shlex.quote(example.mutation)}"
+    )
+    return (
+        "## Meta-evolve attribution\n\n"
+        "This run tracks directional lift by configured operator/mutation arm. "
+        "Every real eval must use one of these pairs:\n\n"
+        f"{arms}\n\n"
+        "Attribute a real eval with both flags:\n\n"
+        "```bash\n"
+        f"{example_command}\n"
+        "```\n\n"
+        "Tune evals may omit attribution and never update lift statistics. "
+        "A pivot heartbeat may recommend the next arm; the recommendation is advisory.\n\n"
+    )
+
+
+def render_recommendation(
+    recommendation: MetaEvolveRecommendation,
+    *,
+    stats: MetaEvolveStats,
+) -> str:
+    """Render one auditable recommendation for a pivot heartbeat."""
+    attribution = recommendation.attribution
+    arm = recommendation.arm_summary
+    operator = recommendation.operator_summary
+    command = (
+        'coral eval -m "what you changed and why" '
+        f"--operator {shlex.quote(attribution.operator)} "
+        f"--mutation {shlex.quote(attribution.mutation)}"
+    )
+    return (
+        "## Meta-evolve recommendation\n\n"
+        f"Recommended operator: {attribution.operator}\n"
+        f"Recommended mutation: {attribution.mutation}\n"
+        f"Selection: {recommendation.selection_mode}\n"
+        f"Arm evidence: {arm.count} observation(s), mean directional lift {arm.mean_lift:+.4f}\n"
+        f"Operator evidence: {operator.count} observation(s), "
+        f"mean directional lift {operator.mean_lift:+.4f}\n"
+        f"Skipped or unattributed attempts: {stats.skipped_attempts}\n\n"
+        "This is an advisory recommendation. Attribute the next real eval with:\n\n"
+        f"```bash\n{command}\n```"
     )
