@@ -250,6 +250,8 @@ def render_bootstrap_guidance(config: MetaEvolveConfig) -> str:
         "```bash\n"
         f"{example_command}\n"
         "```\n\n"
+        "Until a pivot supplies a recommendation, use the first unobserved arm "
+        "in configuration order. "
         "Tune evals may omit attribution and never update lift statistics. "
         "A pivot heartbeat may recommend the next arm; the recommendation is advisory.\n\n"
     )

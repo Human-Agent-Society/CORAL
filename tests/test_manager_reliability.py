@@ -9,6 +9,7 @@ file.
 from __future__ import annotations
 
 import json
+import logging
 import time
 from pathlib import Path
 
@@ -535,18 +536,24 @@ def _write_two_arm_history(
             write_attempt(coral_dir, attempt)
 
 
-def test_meta_evolve_recommendation_is_added_only_for_pivot(tmp_path: Path) -> None:
+def test_meta_evolve_recommendation_precedes_pivot_and_is_logged(
+    tmp_path: Path,
+    caplog,
+) -> None:
     manager = _meta_evolve_manager(tmp_path)
     _write_two_arm_history(manager.paths.coral_dir, "agent-1")
     pivot = HeartbeatAction(name="pivot", every=1, prompt="change direction")
     reflect = HeartbeatAction(name="reflect", every=1, prompt="reflect")
+    caplog.set_level(logging.INFO)
 
-    prompt = manager._meta_evolve_prompt_for_actions("agent-1", [pivot])
+    prompt_sections = manager._heartbeat_prompts_for_actions("agent-1", [pivot])
 
-    assert "Recommended operator: prompt" in prompt
-    assert "Recommended mutation: rewrite" in prompt
-    assert "Selection: upper-confidence" in prompt
-    assert manager._meta_evolve_prompt_for_actions("agent-1", [reflect]) == ""
+    assert "Recommended operator: prompt" in prompt_sections[0]
+    assert "Recommended mutation: rewrite" in prompt_sections[0]
+    assert "Selection: upper-confidence" in prompt_sections[0]
+    assert prompt_sections[1] == "change direction"
+    assert "prompt/rewrite (upper-confidence)" in caplog.text
+    assert manager._heartbeat_prompts_for_actions("agent-1", [reflect]) == ["reflect"]
 
 
 def test_meta_evolve_recommendation_is_disabled_by_default(tmp_path: Path) -> None:
@@ -555,7 +562,7 @@ def test_meta_evolve_recommendation_is_disabled_by_default(tmp_path: Path) -> No
     manager.paths = _meta_evolve_manager(tmp_path).paths
     pivot = HeartbeatAction(name="pivot", every=1, prompt="change direction")
 
-    assert manager._meta_evolve_prompt_for_actions("agent-1", [pivot]) == ""
+    assert manager._heartbeat_prompts_for_actions("agent-1", [pivot]) == ["change direction"]
 
 
 def test_meta_evolve_reconstructs_history_across_islands(tmp_path: Path) -> None:
@@ -564,10 +571,11 @@ def test_meta_evolve_reconstructs_history_across_islands(tmp_path: Path) -> None
     _write_two_arm_history(manager.paths.coral_dir, agent_id, cross_island=True)
     pivot = HeartbeatAction(name="pivot", every=1, prompt="change direction")
 
-    prompt = manager._meta_evolve_prompt_for_actions(agent_id, [pivot])
+    prompt_sections = manager._heartbeat_prompts_for_actions(agent_id, [pivot])
 
-    assert "Recommended operator: prompt" in prompt
-    assert "Selection: upper-confidence" in prompt
+    assert "Recommended operator: prompt" in prompt_sections[0]
+    assert "Selection: upper-confidence" in prompt_sections[0]
+    assert prompt_sections[1] == "change direction"
 
 
 def test_meta_evolve_recommendation_failure_preserves_original_prompt(
@@ -584,4 +592,4 @@ def test_meta_evolve_recommendation_failure_preserves_original_prompt(
 
     monkeypatch.setattr(manager_module, "get_agent_attempts", fail_to_read)
 
-    assert manager._meta_evolve_prompt_for_actions("agent-1", [pivot]) == ""
+    assert manager._heartbeat_prompts_for_actions("agent-1", [pivot]) == ["change direction"]

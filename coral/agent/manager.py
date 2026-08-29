@@ -1491,6 +1491,13 @@ class AgentManager:
                 arms=arms,
                 exploration_weight=config.exploration_weight,
             )
+            logger.info(
+                "Meta-evolve recommendation for %s: %s/%s (%s)",
+                agent_id,
+                recommendation.attribution.operator,
+                recommendation.attribution.mutation,
+                recommendation.selection_mode,
+            )
             return render_recommendation(recommendation, stats=stats)
         except Exception as exc:
             logger.warning(
@@ -1500,15 +1507,19 @@ class AgentManager:
             )
             return ""
 
-    def _meta_evolve_prompt_for_actions(
+    def _heartbeat_prompts_for_actions(
         self,
         agent_id: str,
         actions: Sequence[Any],
-    ) -> str:
-        """Return recommendation text only when the built-in pivot action fired."""
-        if not any(action.name == "pivot" for action in actions):
-            return ""
-        return self._meta_evolve_prompt(agent_id)
+    ) -> list[str]:
+        """Order advisory meta-evolve evidence before existing action prompts."""
+        prompts: list[str] = []
+        if any(action.name == "pivot" for action in actions):
+            meta_evolve_prompt = self._meta_evolve_prompt(agent_id)
+            if meta_evolve_prompt:
+                prompts.append(meta_evolve_prompt)
+        prompts.extend(action.prompt for action in actions if action.prompt)
+        return prompts
 
     def _is_paused(self, agent_id: str) -> bool:
         """Return True if the agent is currently in PAUSED state.
@@ -2493,13 +2504,12 @@ class AgentManager:
 
                     prompts = ["\n".join(header_lines)]
                     action_names = [a.name for a in actions]
-                    prompts.extend(a.prompt for a in actions if a.prompt)
-                    meta_evolve_prompt = self._meta_evolve_prompt_for_actions(
-                        committing_agent_id,
-                        actions,
+                    prompts.extend(
+                        self._heartbeat_prompts_for_actions(
+                            committing_agent_id,
+                            actions,
+                        )
                     )
-                    if meta_evolve_prompt:
-                        prompts.append(meta_evolve_prompt)
 
                     combined_prompt = "\n\n".join(prompts)
                     names = ", ".join(action_names)

@@ -108,6 +108,7 @@ def test_generate_coral_md_enabled_meta_evolve_lists_arms_and_eval_contract():
         assert "`implementation` / `replace`" in md
         assert "--operator prompt --mutation rewrite" in md
         assert "Every real eval" in md
+        assert "first unobserved arm" in md
 
 
 def test_generate_coral_md_single_agent():
