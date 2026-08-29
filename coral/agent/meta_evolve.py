@@ -85,6 +85,8 @@ def validate_attribution(
 
 def attempt_attribution(attempt: Attempt) -> MetaEvolveAttribution | None:
     """Read valid namespaced attribution from an attempt, tolerating legacy data."""
+    if not isinstance(attempt.metadata, dict):
+        return None
     raw = attempt.metadata.get("meta_evolve")
     if not isinstance(raw, dict):
         return None
@@ -143,16 +145,17 @@ def build_stats(
         attribution = attempt_attribution(attempt)
         parent = by_hash.get(attempt.parent_hash) if attempt.parent_hash else None
         if (
-            attempt.archived
+            attribution is None
+            or attempt.archived
             or attempt.score is None
             or attempt.budget_class != BUDGET_CLASS_REAL
-            or attribution is None
             or attribution not in configured
         ):
             skipped_attempts += 1
             continue
         if (
             parent is None
+            or not isinstance(parent.metadata, dict)
             or parent.archived
             or parent.score is None
             or parent.budget_class != BUDGET_CLASS_REAL

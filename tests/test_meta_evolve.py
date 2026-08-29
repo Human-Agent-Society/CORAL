@@ -135,6 +135,13 @@ def test_attempt_attribution_ignores_missing_or_malformed_metadata(metadata):
     assert attempt_attribution(_attempt(metadata)) is None
 
 
+def test_attempt_attribution_ignores_non_mapping_attempt_metadata():
+    attempt = _attempt()
+    attempt.metadata = None  # type: ignore[assignment]
+
+    assert attempt_attribution(attempt) is None
+
+
 def test_attribution_metadata_uses_nested_namespaced_shape():
     attribution = MetaEvolveAttribution(operator="prompt", mutation="rewrite")
 
@@ -241,6 +248,22 @@ def test_build_stats_treats_zero_as_a_valid_score():
         count=1,
         mean_lift=1.0,
     )
+
+
+def test_build_stats_skips_parent_with_non_mapping_metadata():
+    parent = _attempt(commit_hash="0" * 40, score=1.0, parent_hash=None)
+    parent.metadata = None  # type: ignore[assignment]
+    current = _attempt(
+        _attribution("prompt", "rewrite"),
+        commit_hash="1" * 40,
+        score=2.0,
+        parent_hash=parent.commit_hash,
+    )
+
+    stats = build_stats([parent, current], arms=_arms(), minimize=False)
+
+    assert stats.arms[MetaEvolveAttribution("prompt", "rewrite")].count == 0
+    assert stats.skipped_attempts == 2
 
 
 @pytest.mark.parametrize(
