@@ -167,10 +167,15 @@ Run 'coral <command> --help' for details on any command."""
         "validate",
         help="Test your grader against seed code",
         description="Validate task structure and dry-run the grader against seed code.",
-        epilog="Examples:\n  coral validate my-task",
+        epilog="Examples:\n  coral validate my-task\n  coral validate my-task --json",
         formatter_class=_CommandHelpFormatter,
     )
     p_validate.add_argument("path", help="Path to the task directory")
+    p_validate.add_argument(
+        "--json",
+        action="store_true",
+        help="Output one machine-readable validation result",
+    )
     # Hidden alias: test-eval -> validate
     sub.add_parser("test-eval", help=argparse.SUPPRESS)
 

@@ -1,6 +1,6 @@
 ---
 title: Agent Runtimes
-description: Configure OpenCode, Cursor Agent, and Kiro as CORAL agent runtimes.
+description: Configure DeepSeek Harness, OpenCode, Cursor Agent, and Kiro as CORAL agent runtimes.
 ---
 
 
@@ -10,9 +10,47 @@ CORAL works with any coding agent that can run as a subprocess. Pick the runtime
 |-----------------|--------------------------------|---------------------------|
 | Claude Code     | `claude_code` (default)        | Anthropic API key         |
 | Codex           | `codex`                        | OpenAI auth               |
+| DeepSeek Harness | `dsh`                         | `DEEPSEEK_API_KEY`        |
 | OpenCode        | `opencode`                     | `opencode.json` in seed   |
 | Cursor Agent    | `cursor` (alias: `cursor_agent`) | `cursor-agent login` once |
 | Kiro            | `kiro`                         | `kiro-cli` setup          |
+
+## DeepSeek Harness
+
+Install the official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) CLI and make sure `dsh` is on `PATH`:
+
+```bash
+npm install --global @deepseek-ai/dsh
+export DEEPSEEK_API_KEY=your-key
+```
+
+Select its canonical runtime name in the task config:
+
+```yaml
+agents:
+  runtime: dsh
+  model: deepseek-v4-flash
+```
+
+CORAL invokes `dsh --profile headless <prompt>`, points `DSH_HOME` at the agent's shared `.dsh/` directory, and writes the task instructions to `AGENTS.md` at the worktree root. It emits a final Cordis overlay so `agents.model` overrides the profile default. The aliases `deepseek`, `deepseek-harness`, and `deepseek_harness` are accepted for compatibility, but new configurations should use `dsh`.
+
+When the CORAL LiteLLM gateway is enabled, `gateway_url` and `gateway_api_key` are exposed to DSH as `DEEPSEEK_BASE_URL` and `DEEPSEEK_API_KEY`. Direct runs inherit the same environment variables from the shell.
+
+Optional `runtime_options`:
+
+```yaml
+agents:
+  runtime: dsh
+  runtime_options:
+    command: /usr/local/bin/dsh       # override binary path
+    profile: headless                 # override the DSH profile
+    provider: deepseek-official       # provider for agents.model
+    patch: [./dsh.cordis.yml]         # repeatable --patch overlays
+    permission_mode: workspace-write  # DSH_PERMISSION_MODE
+    tools_mode: native                # DSH_TOOLS_MODE
+```
+
+> **Note:** The current DSH headless profile creates a fresh persisted session but does not expose its session ID or a resume argument. After a CORAL-managed restart, DSH starts a new session with a continuation prompt and recovers context from the worktree and shared `.dsh/` state.
 
 ## OpenCode
 

@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from coral.task.validation import ValidationProgressEvent
 
 
 def _module_identifier(name: str) -> str:
@@ -163,101 +168,55 @@ def cmd_init(args: argparse.Namespace) -> None:
     print("  coral start -c task.yaml  # launch agents")
 
 
+def _render_validation_progress(event: ValidationProgressEvent) -> None:
+    """Render shared validation progress with the legacy CLI wording."""
+    if event.stage == "structure" and event.status == "completed":
+        print("Validation: OK")
+    elif event.stage == "workspace" and event.status == "completed":
+        print(event.message)
+    elif event.stage == "grader_environment" and event.status == "started":
+        print(event.message)
+    elif event.stage == "baseline" and event.status == "started":
+        print(f"\n{event.message}")
+
+
 def cmd_validate(args: argparse.Namespace) -> None:
     """Test your grader against seed code.
 
     Examples:
       coral validate my-task        Dry-run the grader in my-task/
     """
-    import shutil
-    import tempfile
-
-    from coral.cli.validation import validate_task
-    from coral.config import CoralConfig
+    from coral.task.validation import run_validation
 
     task_dir = Path(args.path).resolve()
+    json_output = getattr(args, "json", False)
+    on_event = None if json_output else _render_validation_progress
+    result = run_validation(task_dir, on_event=on_event)
 
-    errors = validate_task(task_dir)
-    if errors:
-        print("Validation errors:", file=sys.stderr)
-        for err in errors:
-            print(f"  - {err}", file=sys.stderr)
-        sys.exit(1)
-    print("Validation: OK")
+    if json_output:
+        print(json.dumps(result.to_dict()))
+        if not result.successful:
+            sys.exit(1)
+        return
 
-    config = CoralConfig.from_yaml(task_dir / "task.yaml")
-
-    with tempfile.TemporaryDirectory(prefix="coral_test_eval_") as tmpdir:
-        tmpdir = Path(tmpdir)
-        workspace = tmpdir / "workspace"
-        workspace.mkdir()
-
-        seed_dir = task_dir / "seed"
-        if seed_dir.is_dir() and any(seed_dir.iterdir()):
-            for item in seed_dir.iterdir():
-                if item.name == "__pycache__":
-                    continue
-                dst = workspace / item.name
-                if item.is_dir():
-                    shutil.copytree(item, dst)
-                else:
-                    shutil.copy2(item, dst)
-            print(f"Seed: copied {seed_dir.name}/ into workspace")
+    if result.failure is not None:
+        if result.failure.stage == "structure" and result.report.error_messages:
+            print("Validation errors:", file=sys.stderr)
+            for error in result.report.error_messages:
+                print(f"  - {error}", file=sys.stderr)
+        elif result.failure.stage == "baseline":
+            print(f"\n{result.failure.message}", file=sys.stderr)
         else:
-            print("Warning: No seed/ directory — grader will run against an empty workspace.")
-            print("  This is fine if your task expects agents to build from scratch.")
+            print(result.failure.message, file=sys.stderr)
+        sys.exit(1)
 
-        coral_dir = tmpdir / ".coral"
-        private_dir = coral_dir / "private"
-        private_dir.mkdir(parents=True)
+    if result.baseline is None:
+        print("Validation failed: no baseline result", file=sys.stderr)
+        sys.exit(1)
 
-        for private_path_str in config.grader.private:
-            src = Path(private_path_str)
-            if not src.is_absolute():
-                src = (task_dir / src).resolve()
-            if src.exists():
-                dst = private_dir / src.name
-                if src.is_dir():
-                    shutil.copytree(src, dst)
-                else:
-                    shutil.copy2(src, dst)
-
-        # Bootstrap the grader's isolated venv where the entrypoint runs.
-        from coral.workspace.grader_env import setup_grader_env
-
-        print("Setting up grader venv (.coral/private/grader_venv)...")
-        setup_grader_env(coral_dir, config.grader, task_dir)
-
-        from coral.grader.loader import load_grader
-        from coral.types import Task
-
-        try:
-            grader = load_grader(config, coral_dir)
-        except Exception as e:
-            print(f"Error loading grader: {e}", file=sys.stderr)
-            sys.exit(1)
-
-        task = Task(
-            id=config.task.name,
-            name=config.task.name,
-            description=config.task.description,
-        )
-
-        print(
-            f"\nRunning grader against {'seed code' if seed_dir.is_dir() else 'empty workspace'}..."
-        )
-        import asyncio
-
-        try:
-            result = asyncio.run(grader.grade(str(workspace), [task]))
-            score = result.aggregated
-            print(f"\n{'=' * 50}")
-            print(f"Score: {score}")
-            if result.scores:
-                for name, s in result.scores.items():
-                    if s.explanation:
-                        print(f"  {name}: {s.explanation}")
-            print(f"{'=' * 50}")
-        except Exception as e:
-            print(f"\nGrader crashed: {e}", file=sys.stderr)
-            sys.exit(1)
+    print(f"\n{'=' * 50}")
+    print(f"Score: {result.baseline.aggregated}")
+    for name, score in result.baseline.scores.items():
+        if score.explanation:
+            print(f"  {name}: {score.explanation}")
+    print(f"{'=' * 50}")
