@@ -1,7 +1,7 @@
 """Tests for warm-start system: research prompts."""
 
 from coral.agent.warmstart import WarmStartRunner
-from coral.config import AgentConfig, CoralConfig, TaskConfig, WarmStartConfig
+from coral.config import AgentConfig, CoralConfig, NotesConfig, TaskConfig, WarmStartConfig
 
 
 def _make_config(
@@ -36,14 +36,22 @@ def test_enabled_property():
 def test_research_prompt_contains_shared_dir():
     runner = WarmStartRunner(_make_config(), shared_dir=".claude")
     prompt = runner.research_prompt()
-    assert ".claude/notes/" in prompt
-    assert "Do NOT" in prompt
+    assert ".claude/skills/deep-research/SKILL.md" in prompt
+    assert "Do not" in prompt
 
 
 def test_research_prompt_different_shared_dir():
     runner = WarmStartRunner(_make_config(), shared_dir=".opencode")
     prompt = runner.research_prompt()
-    assert ".opencode/notes/" in prompt
+    assert ".opencode/skills/deep-research/SKILL.md" in prompt
+
+
+def test_research_prompt_uses_configured_notes_skill():
+    config = _make_config()
+    config.agents.notes = NotesConfig(skill="project-notes")
+    prompt = WarmStartRunner(config, shared_dir=".claude").research_prompt()
+
+    assert ".claude/skills/project-notes/SKILL.md" in prompt
 
 
 # --- Main prompt tests ---

@@ -30,9 +30,7 @@ def _load_prompt(name: str) -> str:
     return ""
 
 
-# Prompt templates use {shared_dir} which is resolved at runtime to the
-# agent's shared directory (`.claude/` for Claude Code, `.codex/` for Codex,
-# `.opencode/` for OpenCode).
+# Prompt templates may use {shared_dir}, {agent_id}, and {notes_skill}.
 DEFAULT_PROMPTS: dict[str, str] = {
     "reflect": _load_prompt("reflect"),
     "consolidate": _load_prompt("consolidate"),

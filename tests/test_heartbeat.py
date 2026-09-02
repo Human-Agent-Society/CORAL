@@ -10,6 +10,18 @@ from coral.agent.heartbeat import (
     parse_options,
     streak_for_epsilon,
 )
+from coral.hub.heartbeat import DEFAULT_PROMPTS
+
+
+def test_builtin_prompts_accept_configured_notes_skill():
+    for prompt in DEFAULT_PROMPTS.values():
+        rendered = prompt.format(
+            shared_dir=".claude",
+            agent_id="agent-1",
+            notes_skill="project-notes",
+        )
+        if "notes_skill" in prompt:
+            assert ".claude/skills/project-notes/SKILL.md" in rendered
 
 
 def _make_runner(*actions: HeartbeatAction) -> HeartbeatRunner:

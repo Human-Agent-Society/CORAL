@@ -59,6 +59,8 @@ agents:
   max_turns: 0                       # Max agent turns per session (default: 0 = no cap)
   timeout: 3600                      # Agent-level timeout in seconds (default: 3600)
   research: true                     # Enable web search / literature review (default: true)
+  notes:
+    skill: create-notes              # Installed skill that defines the notes workflow
   stagger_seconds: 0                 # Delay between spawning each agent (default: 0)
   gateway:                           # LiteLLM gateway for routing model traffic
     enabled: false
@@ -95,6 +97,10 @@ run:
   session: tmux                      # "local", "tmux", or "docker" (default: tmux)
   docker_image: ""                   # Custom docker image; empty = auto-build from docker/<runtime>/ (default: "")
 ```
+
+To use a custom notes workflow, set `agents.notes.skill` to the skill directory's
+name and include that directory in `agents.skills`. CORAL validates that the
+selected skill is installed before starting agents.
 
 ### `grader/` (packaged)
 

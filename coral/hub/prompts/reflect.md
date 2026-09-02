@@ -1,16 +1,7 @@
 ## Heartbeat: Reflection
 
-Pause and reflect on your recent work. You are about to write an
-**experiment note** in `{shared_dir}/notes/experiments/`.
-
-The `create-notes` skill
-(`{shared_dir}/skills/create-notes/SKILL.md`) provides:
-- **Variant A** — the 7-section experiment note template
-- The self-audit checklist — especially: backfilled predictions, abandoned paths, sourced magic numbers, cross-links
-- The file-writing gotchas that silently strip markdown content
-
-Read the skill, then write the note. The skill covers the mechanics; this
-prompt is just the trigger.
+Pause and reflect on your recent work. Follow the `{notes_skill}` skill
+(`{shared_dir}/skills/{notes_skill}/SKILL.md`) when recording useful findings.
 
 ### What to reflect on (high level)
 
@@ -21,9 +12,7 @@ the *content* the structure holds.
    `coral log -n 5 --recent` will show the trajectory.
 2. **Examine surprises + analyze causes.** What did not go as expected? Why?
 3. **Assess confidence + plan next.** What would change your mind? What's
-   the highest-EV next experiment? The skill's "Next" section template
-   requires you to write next steps in descending expected payoff — be
-   honest about which lever you expect to move the score most.
+   the highest-EV next experiment?
 
 ### Evolve your role description (only if it has meaningfully shifted)
 

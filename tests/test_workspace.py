@@ -8,7 +8,14 @@ from pathlib import Path
 
 import pytest
 
-from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig, WorkspaceConfig
+from coral.config import (
+    AgentConfig,
+    CoralConfig,
+    GraderConfig,
+    NotesConfig,
+    TaskConfig,
+    WorkspaceConfig,
+)
 from coral.workspace import (
     apply_runtime_mounts,
     create_agent_worktree,
@@ -841,6 +848,44 @@ def test_create_project_seeds_user_skills():
         seeded = paths.coral_dir / "public" / "skills" / skill_name / "run.sh"
         assert seeded.is_file()
         assert "echo hello" in seeded.read_text()
+
+
+def test_create_project_uses_configured_notes_skill():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        _git_init(d)
+        root = Path(d)
+        skill_dir = root / "skills" / "project-notes"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: project-notes\n---\n")
+
+        config = CoralConfig(
+            task=TaskConfig(name="Test Task", description="Test task"),
+            grader=GraderConfig(),
+            agents=AgentConfig(
+                skills=["./skills/project-notes"],
+                notes=NotesConfig(skill="project-notes"),
+            ),
+            workspace=WorkspaceConfig(results_dir=str(root / "results"), repo_path=d),
+        )
+
+        paths = create_project(config, config_dir=root)
+
+        assert (paths.coral_dir / "public" / "skills" / "project-notes" / "SKILL.md").is_file()
+
+
+def test_create_project_rejects_missing_notes_skill():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as d:
+        _git_init(d)
+        root = Path(d)
+        config = CoralConfig(
+            task=TaskConfig(name="Test Task", description="Test task"),
+            grader=GraderConfig(),
+            agents=AgentConfig(notes=NotesConfig(skill="missing-notes")),
+            workspace=WorkspaceConfig(results_dir=str(root / "results"), repo_path=d),
+        )
+
+        with pytest.raises(ValueError, match="agents.notes.skill='missing-notes'"):
+            create_project(config, config_dir=root)
 
 
 def test_create_project_user_skills_override_builtin():

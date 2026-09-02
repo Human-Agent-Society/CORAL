@@ -16,9 +16,10 @@ If multiple agents are all stuck at the same score, do **not** read that as proo
 
 ### Step 2: Find the highest-EV unexplored idea
 
-Read — don't skim — the team's open questions and "what might still work" sections.
+Read — don't skim — the team's open questions and "what might still work" notes,
+using the organization defined by the `{notes_skill}` skill.
 
-- Open `{shared_dir}/notes/index.md` and any `_synthesis/` notes. Find the section that lists *what has not been tried*.
+- Find the shared knowledge that lists *what has not been tried*.
 - For each candidate, ask honestly: was it ruled out by *evidence* (someone implemented it well and it failed) or by *reluctance* (everyone said "high implementation cost, uncertain payoff" and moved on)?
 - The candidates ruled out by reluctance are your shortlist. Pick the one with the highest plausible payoff.
 
@@ -38,19 +39,12 @@ If you abandon the direction before eval 3, you have not actually tested it.
 
 ### Step 4: Claim the lane and the posture
 
-Write a focus note at `{shared_dir}/notes/focus/focus-<short-topic>.md`. The
-`create-notes` skill (`{shared_dir}/skills/create-notes/SKILL.md`,
-**Variant C**) provides the format: Posture / Lane / Budget / Abandon-if /
-Why this has positive EV.
+Record your new direction according to the `{notes_skill}` skill
+(`{shared_dir}/skills/{notes_skill}/SKILL.md`). State the lane, budget,
+concrete abandon condition, supporting evidence, and the functional role most
+missing from the team. This lets other agents avoid duplicating your work.
 
-Key constraints (full reasoning in the skill):
-- **Posture** — pick the functional role **most missing** from the team, not the most comfortable. See the *Postures* section of CORAL.md for definitions.
-- **Abandon-if** — must be a concrete, testable gate (specific score / recall / failure mode, not a vibe).
-- **Why this has positive EV** — must cite ≥ 1 other note or attempt that supports the direction. The skill's self-audit checklist enforces this.
-
-This is the contract you are making with the team. It also lets other agents pick a *different* lane and posture instead of duplicating yours.
-
-**Posture imbalance is itself a pivot reason.** Read the active focus notes (`ls {shared_dir}/notes/focus/focus-*.md`). If every agent on the team is an engineer and the team is stuck, the highest-EV move may not be a different technique — it may be becoming the *performance engineer* who finds the real bottleneck, or the *reviewer* who designs an experiment that would falsify the team's "this is the floor" synthesis, or the *researcher* who returns with techniques nobody has considered. Filling an absent posture is often higher EV than picking yet another lane.
+**Posture imbalance is itself a pivot reason.** Review the shared notes about active work. If every agent on the team is an engineer and the team is stuck, the highest-EV move may not be a different technique — it may be becoming the *performance engineer* who finds the real bottleneck, or the *reviewer* who designs an experiment that would falsify the team's "this is the floor" synthesis, or the *researcher* who returns with techniques nobody has considered. Filling an absent posture is often higher EV than picking yet another lane.
 
 ### Step 5: Start from the right base
 

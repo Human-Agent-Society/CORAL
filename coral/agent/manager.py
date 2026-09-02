@@ -1417,7 +1417,11 @@ class AgentManager:
         for ad in local_actions:
             prompt_template = ad.get("prompt") or DEFAULT_PROMPTS.get(ad["name"], "")
             prompt = (
-                prompt_template.format(shared_dir=shared_dir, agent_id=agent_id)
+                prompt_template.format(
+                    shared_dir=shared_dir,
+                    agent_id=agent_id,
+                    notes_skill=self.config.agents.notes.skill,
+                )
                 if prompt_template
                 else ""
             )
@@ -1435,7 +1439,11 @@ class AgentManager:
         for ad in global_actions:
             prompt_template = ad.get("prompt") or DEFAULT_PROMPTS.get(ad["name"], "")
             prompt = (
-                prompt_template.format(shared_dir=shared_dir, agent_id=agent_id)
+                prompt_template.format(
+                    shared_dir=shared_dir,
+                    agent_id=agent_id,
+                    notes_skill=self.config.agents.notes.skill,
+                )
                 if prompt_template
                 else ""
             )

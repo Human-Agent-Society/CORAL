@@ -27,12 +27,11 @@ Before you write any code, get oriented. Understand the problem, understand what
 4. Check recent activity: `coral log --recent`
 5. Inspect top attempts: `coral show <hash>` to see exactly what code produced the best scores.
 6. Search for prior art: `coral log --search "keywords related to your first idea"`
-7. Read notes: Start with `{shared_dir}/notes/index.md` for a map of all research and experiment notes, then read the ones relevant to your approach.
+7. Read notes: Run `coral notes`, then read the entries relevant to your approach.
 8. Check available skills: `ls {shared_dir}/skills/` — you may have built tools in previous runs that you can reuse.
-9. **Read the `deep-research` skill** (`{shared_dir}/skills/deep-research/SKILL.md`) — use it to conduct literature review and research before your first implementation attempt.
-10. **Know the `organize-files` skill** (`{shared_dir}/skills/organize-files/SKILL.md`) — use it to restructure the notes directory when it becomes cluttered. Run `bash {shared_dir}/skills/organize-files/scripts/audit.sh` to check.
-11. **Know the `create-notes` skill** (`{shared_dir}/skills/create-notes/SKILL.md`) — every note you write under `{shared_dir}/notes/` should go through it. The skill bundles `scripts/stamp.py` (frontmatter-populated skeleton per variant) and `scripts/lint.py` (self-audit checker). Use it instead of writing notes from scratch, even when a heartbeat doesn't explicitly ask for one.
-12. Check available subagents: `ls {shared_dir}/agents/` — you can spawn specialist subagents (e.g. `deep-researcher` for literature review, `librarian` for notes cleanup).
+9. **Read the `deep-research` skill** (`{shared_dir}/skills/deep-research/SKILL.md`) — use it to conduct literature review and research before your first implementation attempt. The `{notes_skill}` skill is authoritative for how and where to record its findings.
+10. **Know the `{notes_skill}` skill** (`{shared_dir}/skills/{notes_skill}/SKILL.md`) — follow it whenever you write shared notes.
+11. Check available subagents: `ls {shared_dir}/agents/` — you can spawn specialist subagents (e.g. `deep-researcher` for literature review, `librarian` for notes cleanup).
 
 Only after this orientation should you start making changes.
 
@@ -130,9 +129,7 @@ Notes about what you've discovered — things that help you (or future agents) m
 - Patterns in what scores well vs. poorly
 - Debugging tips, gotchas, or surprising behavior
 
-Write notes as individual files in `{shared_dir}/notes/` via the `create-notes` skill (`{shared_dir}/skills/create-notes/SKILL.md`). The skill is the source of truth for naming, frontmatter (including the structured-trace schema that populates the dashboard knowledge graph), and the per-variant section shape — don't write a note from scratch. Stamp a skeleton with `python {shared_dir}/skills/create-notes/scripts/stamp.py <variant>`, fill it in, and run `lint.py` on the result before considering it done.
-
-The notes schema is a living contract. You maintain and co-evolve this living notes schema as your needs emerge. Follow the schema-change workflow in `create-notes`: keep the field reference, note skeletons, and lint rules aligned, and preserve existing notes unless you deliberately document a migration.
+Write shared notes via the `{notes_skill}` skill (`{shared_dir}/skills/{notes_skill}/SKILL.md`); it is the source of truth for the notes workflow.
 
 Not every eval needs a note — only write when you genuinely have something worth recording.
 
@@ -164,7 +161,8 @@ Update an existing skill if it covers the same topic rather than creating a dupl
 
 **Spawn specialist subagents** when needed. Use the `deep-researcher` subagent to conduct literature review when you need fresh ideas or are exploring a new direction. Use the `librarian` subagent to clean up and organize notes when the knowledge base is getting cluttered. Check `{shared_dir}/agents/` for all available subagents.
 
-If the notes directory becomes hard to navigate, use the `organize-files` skill (`{shared_dir}/skills/organize-files/SKILL.md`) to restructure it.
+If the notes become hard to navigate, follow the maintenance guidance in the
+`{notes_skill}` skill or use the librarian subagent.
 
 ## Repeat
 

@@ -8,6 +8,7 @@ from coral.config import (
     AgentConfig,
     CoralConfig,
     GraderConfig,
+    NotesConfig,
     RunConfig,
     RunStopConfig,
     TaskConfig,
@@ -412,6 +413,23 @@ def test_skills_config_defaults_empty():
     data = {"task": {"name": "t", "description": "d"}}
     config = CoralConfig.from_dict(data)
     assert config.agents.skills == []
+
+
+def test_notes_skill_config_roundtrip():
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+        agents=AgentConfig(notes=NotesConfig(skill="project-notes")),
+    )
+    with tempfile.NamedTemporaryFile(suffix=".yaml", mode="w", delete=False) as f:
+        config.to_yaml(f.name)
+        restored = CoralConfig.from_yaml(f.name)
+
+    assert restored.agents.notes.skill == "project-notes"
+
+
+def test_notes_skill_defaults_to_create_notes():
+    config = CoralConfig.from_dict({"task": {"name": "t", "description": "d"}})
+    assert config.agents.notes.skill == "create-notes"
 
 
 def test_islands_defaults_single_island():

@@ -46,7 +46,11 @@ def generate_coral_md(
             "**On your first iteration and whenever you're changing direction**, "
             "invest time in deep research before planning. "
             f"Read the `deep-research` skill (`{shared_dir}/skills/deep-research/SKILL.md`) "
-            "for a structured research workflow.\n\n"
+            "for the research process and the "
+            f"`{config.agents.notes.skill}` skill "
+            f"(`{shared_dir}/skills/{config.agents.notes.skill}/SKILL.md`) for how and where "
+            "to record findings. The configured notes skill is authoritative if their "
+            "storage instructions differ.\n\n"
             "**Research steps:**\n"
             "- **Understand the problem deeply** — read the grader source at "
             f"`{shared_dir}/grader/` (the exact code that scores you — read it to "
@@ -63,13 +67,10 @@ def generate_coral_md(
             "what has been tried before. Build on what's known.\n"
             "- **Compare 2-4 candidate approaches** — document trade-offs, evidence, "
             "and implementation complexity for each.\n"
-            f"- **Track coverage** — maintain the research coverage ledger at "
-            f"`{shared_dir}/notes/research/_coverage.md` (task dimensions × "
-            "covered/partial/missing); target the gaps, don't re-cover what's done.\n"
-            f"- **Write a research summary** — save findings to `{shared_dir}/notes/research/[topic].md` "
-            f"so all agents benefit (see `{shared_dir}/skills/deep-research/references/` for "
-            f"templates), then run `{shared_dir}/skills/deep-research/scripts/check_grounding.py "
-            f"{shared_dir}/notes` to verify every finding traces to a saved source.\n\n"
+            "- **Track coverage** — identify missing research dimensions and target gaps "
+            "instead of repeating known work.\n"
+            "- **Write a research summary** — record grounded, actionable findings according "
+            "to the configured notes skill so all agents benefit.\n\n"
             "**When to research:**\n"
             "- First iteration: always. Understand the landscape before writing code.\n"
             "- After getting stuck (3+ evals without improvement): step back and "
@@ -98,6 +99,7 @@ def generate_coral_md(
         score_direction=score_direction,
         agent_id=agent_id,
         shared_dir=shared_dir,
+        notes_skill=config.agents.notes.skill,
         workflow_summary=workflow_summary,
         research_section=research_section,
         plan_step_num=step_offset,

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from coral.config import AgentConfig, CoralConfig, GraderConfig, TaskConfig
+from coral.config import AgentConfig, CoralConfig, GraderConfig, NotesConfig, TaskConfig
 from coral.template.coral_md import generate_coral_md
 
 
@@ -54,7 +54,7 @@ def test_generate_coral_md_has_required_sections():
     assert "coral log --search" in md
     assert ".claude/notes" in md
     assert ".claude/skills/" in md
-    assert "collectively maintain and co-evolve the notes schema" in md
+    assert "skills/create-notes/SKILL.md" in md
 
 
 def test_generate_coral_md_without_optional_sections():
@@ -105,7 +105,20 @@ def test_generate_coral_md_single_agent():
     assert "notes" in md.lower()
     assert "skills" in md.lower()
     assert "Record Knowledge" in md
-    assert "maintain and co-evolve this living notes schema" in md
+    assert "skills/create-notes/SKILL.md" in md
+
+
+def test_generate_coral_md_uses_configured_notes_skill():
+    config = CoralConfig(
+        task=TaskConfig(name="t", description="d"),
+        agents=AgentConfig(notes=NotesConfig(skill="project-notes")),
+    )
+
+    md = generate_coral_md(config, "agent-1")
+
+    assert ".claude/skills/project-notes/SKILL.md" in md
+    assert "stamp.py" not in md
+    assert "skills/create-notes/SKILL.md" not in md
 
 
 def test_create_notes_skill_assigns_collective_schema_stewardship():

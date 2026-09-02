@@ -113,6 +113,22 @@ class WarmStartConfig:
 
 
 @dataclass
+class NotesConfig:
+    """Shared-notes workflow exposed to agents."""
+
+    skill: str = "create-notes"
+
+    def __post_init__(self) -> None:
+        if (
+            not self.skill.strip()
+            or self.skill in {".", ".."}
+            or "/" in self.skill
+            or "\\" in self.skill
+        ):
+            raise ValueError("agents.notes.skill must be a simple, non-empty skill name")
+
+
+@dataclass
 class SandboxConfig:
     """OS-level agent sandboxing via a pluggable provider (default: ``srt``).
 
@@ -212,6 +228,7 @@ class AgentConfig:
     model: str = "sonnet"
     gateway: GatewayConfig = field(default_factory=GatewayConfig)
     warmstart: WarmStartConfig = field(default_factory=WarmStartConfig)
+    notes: NotesConfig = field(default_factory=NotesConfig)
     runtime_options: dict[str, Any] = field(default_factory=dict)
     # OS-user isolation: when set (e.g. "agent"), the agent subprocess is run as
     # this unprivileged user while the manager/grader stay root. The agent's
@@ -274,6 +291,8 @@ class AgentConfig:
         # leave nested sandbox config as a plain dict; coerce like RunConfig.stop.
         if isinstance(self.sandbox, dict):
             self.sandbox = SandboxConfig(**self.sandbox)
+        if isinstance(self.notes, dict):
+            self.notes = NotesConfig(**self.notes)
         if self.sandbox.enabled and self.isolate_user:
             raise ValueError(
                 "agents.sandbox and agents.isolate_user are mutually exclusive — "

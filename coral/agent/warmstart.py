@@ -50,7 +50,10 @@ class WarmStartRunner:
         """Return the research-phase prompt, formatted with the agent's shared dir."""
         sd = shared_dir or self.shared_dir
         if RESEARCH_PROMPT_TEMPLATE:
-            return RESEARCH_PROMPT_TEMPLATE.format(shared_dir=sd)
+            return RESEARCH_PROMPT_TEMPLATE.format(
+                shared_dir=sd,
+                notes_skill=self.config.agents.notes.skill,
+            )
         # Fallback if template file is missing
         return (
             "Research the task thoroughly using web search. "
