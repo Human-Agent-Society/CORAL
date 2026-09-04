@@ -1,10 +1,11 @@
 # Harbor task compatibility and migration RFC
 
-- **Status:** Proposed
+- **Status:** Phase 1 contract plus an implemented, bounded Gate B spike
 - **Issue:** [#225](https://github.com/Human-Agent-Society/CORAL/issues/225)
-- **Scope:** Phase 1 only — mapping, compatibility boundaries, and migration gates
-- **CORAL baseline:** `6523a8c50bd9663ecc14f2695d9a0389a0bb9d23`
-  (`dev`, 2026-08-23)
+- **Scope:** Phase 1 mapping plus a local, single-step, empty-workdir adapter;
+  later migration gates remain deferred
+- **CORAL baseline:** `88a2da15b0b3780357b473218b140403f1410a12`
+  (`dev`, 2026-08-31)
 - **Harbor baseline:** task schema `1.4`, Harbor `v0.22.0`, verified 2026-08-23
 
 ## Summary
@@ -20,19 +21,50 @@ A Harbor-backed `task.yaml` should reference exactly one local or registry
 Harbor task instead of duplicating that task's instruction, metadata,
 environment, or verifier fields.
 
-The first adapter should target Harbor task schema `1.4` and a pinned Harbor
-`v0.22.0` runtime. It should support local task directories and versioned
-registry references resolved to a recorded content digest, translate Harbor's
-numeric reward mapping into CORAL's `ScoreBundle`, and preserve CORAL's
-private/public feedback boundary. Its initial compatibility profile should be
-single-step and container-backed rather than claiming every optional schema
-1.4 capability. It should not bulk-migrate examples until representative task
-families demonstrate score, feedback, artifact, timeout, and security parity.
+The initial adapter targets Harbor task schema `1.4` and a pinned Harbor
+`v0.22.0` runtime. This PR implements one deliberately narrow profile: a local,
+single-step Linux container task whose workdir is empty at startup. Registry
+resolution, pre-populated workdir export, datasets, multi-step tasks, declared
+public artifacts, provider selection, and bulk migration remain later gates.
 
-This RFC does not implement the adapter. Several decisions remain open because
-they require a prototype against Harbor's environment API, especially how to
-materialize an agent-visible Git workspace without exposing `solution/` or
-`tests/`.
+The implemented path translates Harbor's numeric reward mapping into CORAL's
+`ScoreBundle` and preserves CORAL's private/public feedback boundary. It proves
+that a CORAL candidate can be uploaded into a fresh Harbor environment and
+verified without launching a second optimization agent. It does not claim
+that all optional schema 1.4 capabilities or the complete migration in Issue
+#225 are implemented.
+
+## Implemented Gate B spike
+
+The implementation in this PR adds the following bounded path:
+
+1. A Harbor-backed `task.yaml` uses `task.source` plus
+   `task.reward.primary`/`direction`. It rejects duplicated legacy task or
+   portable grader fields.
+2. CORAL resolves one local Harbor directory relative to `task.yaml`, requires
+   schema `1.4`, records a content digest, derives the task name and instruction,
+   and copies the complete Harbor task into `.coral/private/`.
+3. The run starts from an empty Git workspace. Harbor `solution/`, `tests/`,
+   task configuration, and verifier inputs never enter an agent worktree.
+4. Evaluation launches exact `harbor==0.22.0` under isolated Python 3.12,
+   starts a fresh Docker environment through Harbor's public `Task`/`Trial`
+   APIs, verifies that the task workdir is dedicated and empty, and uploads
+   only the candidate snapshot through a non-optimizing transfer agent.
+5. Every numeric Harbor reward becomes a named CORAL `Score`; the configured
+   primary key becomes `ScoreBundle.aggregated`, while direction remains a
+   CORAL ranking concern and does not rewrite raw reward values.
+6. Raw trial output stays under manager-only `harbor_runs/`. Agents receive
+   only reward values, compatibility metadata, and a sanitized summary under
+   `eval_logs/`.
+7. The outer timeout fires early enough to interrupt the Harbor asyncio runner
+   and give it a cleanup window before a final force-kill fallback.
+
+The spike fails closed for registry references, non-1.4 schemas, multi-step or
+Windows tasks, non-empty container workdirs, source/task symlinks, declared
+public artifacts, mixed `seed/` or external starter repositories, and missing
+or non-numeric primary rewards. CORAL's own `run.session=docker` is also
+rejected because Harbor requires host Docker rather than Docker-in-Docker.
+These are explicit capability limits, not silent partial support.
 
 ## Decision language
 
@@ -47,7 +79,7 @@ This document uses three statuses:
 
 ### CORAL today
 
-At the baseline above, CORAL has 393 `task*.yaml` or `task*.yml` files under
+At the baseline above, CORAL has 397 `task*.yaml` or `task*.yml` files under
 `examples/`.
 `CoralConfig` combines two different concerns in one YAML document:
 
@@ -177,8 +209,8 @@ run:
 ```
 
 The retained filename follows CORAL's current CLI and authoring workflow. The
-new field shape is **Proposed**, not accepted. The important compatibility rule
-is a one-of contract:
+field shape is **Implemented for the initial local profile**. The important
+compatibility rule is a one-of contract:
 
 - a legacy `task.yaml` contains the current inline task/grader fields and no
   `task.source`;
@@ -193,9 +225,10 @@ that points to it.
 
 A local `task.source` is resolved relative to the directory containing
 `task.yaml` and must identify one directory with a `task.toml`; it does not scan
-for tasks or accept a dataset implicitly. A registry source identifies one
-`org/name@tag` package before digest pinning. This keeps the selected Harbor
-task deterministic for `coral validate`, `start`, and `eval`.
+for tasks or accept a dataset implicitly. The current implementation rejects
+registry sources; Gate C reserves `org/name@tag` before digest pinning. This
+keeps the selected local Harbor task deterministic for `coral validate`,
+`start`, and `eval`.
 
 Persisted CORAL configs must not use a mutable registry alias such as `latest`.
 At run creation CORAL should resolve a local directory or `org/name@tag` to an
@@ -250,12 +283,13 @@ Harbor VerifierResult.rewards
 4. `rewards is None`, a missing primary key, task/environment build failure,
    verifier failure, and timeout produce a structured grader-error/timeout
    attempt. They do not produce a real attempt with score `0`.
-5. Public feedback contains only a bounded, task-approved verifier summary.
-   Full logs and artifacts are indexed under eval logs according to their
-   visibility policy.
+5. Public feedback contains only a bounded verifier summary. The initial
+   adapter keeps raw Harbor logs private and rejects declared public artifacts
+   until an explicit visibility/copy policy is implemented.
 6. The adapter records Harbor task digest, task version, schema version,
-   Harbor runtime version, provider, reward mapping, and relevant log/artifact
-   references in attempt metadata.
+   Harbor runtime version, reward mapping, and the sanitized summary reference
+   in attempt metadata. Provider metadata and artifact references remain
+   deferred with provider/artifact support.
 
 ## Workspace materialization and evaluation flow
 
@@ -263,25 +297,24 @@ The central incompatibility is that CORAL evolves a Git worktree while Harbor
 normally owns an agent trial inside an environment. Mapping `seed/` to
 `solution/` would expose an oracle and is rejected.
 
-**Proposed adapter boundary:**
+**Implemented initial adapter boundary:**
 
 ```text
-resolve Harbor task path/tag -> verify schema + pin digest
-                             -> materialize agent-visible workspace
-                             -> initialize CORAL repo/worktrees
+resolve local Harbor task path -> verify schema + pin digest
+                               -> create empty agent-visible workspace
+                               -> initialize CORAL repo/worktrees
 
 candidate CORAL commit -> create fresh Harbor environment
                        -> upload candidate workspace to the agent workdir
                        -> run Harbor verifier without a second optimization agent
-                       -> collect VerifierResult + declared artifacts/logs
+                       -> collect VerifierResult; retain raw logs privately
                        -> translate to ScoreBundle + Attempt
 ```
 
-Phase 2 must first prove that the pinned Harbor API can export/import the
-agent-visible workdir and run verification without launching a competing
-optimization agent. This is **Open**. The proof must use Harbor's public Python
-interfaces or a stable CLI contract; importing private modules is not an
-acceptable long-term adapter.
+This PR proves candidate import and verification without launching a competing
+optimization agent, using Harbor's public Python interfaces. Exporting a
+pre-populated Harbor workdir into CORAL remains **Open**; the implemented
+profile therefore requires Harbor's container workdir to start empty.
 
 If that contract is unavailable, the fallback choices are:
 
@@ -341,12 +374,12 @@ The adapter must preserve these invariants before any bulk migration:
 
 ## Version and compatibility policy
 
-**Proposed initial support:**
+**Implemented initial support:**
 
-- Harbor runtime: exactly `v0.22.0` for Gate B, pinned in CORAL's
-  lock/install path;
+- Harbor runtime: exactly `v0.22.0` for Gate B, pinned in the isolated runner
+  invocation;
 - Harbor task schema: exactly `1.4`;
-- registry task: immutable digest recorded, with a non-`latest` user-facing tag;
+- registry task: deferred to Gate C;
 - CORAL legacy task loader: retained during the migration window.
 
 Schema acceptance is not blanket support for every optional Harbor feature.
@@ -355,8 +388,9 @@ with an actionable validation error rather than ignore them.
 
 | Harbor v0.22 capability | Initial status |
 | --- | --- |
-| single-step `instruction.md`, environment, verifier, numeric rewards, and declared artifacts | **Proposed for Gate B** |
-| local task directory | **Proposed for Gate B** |
+| single-step `instruction.md`, empty workdir, environment, verifier, and numeric rewards | **Implemented for the bounded Gate B spike** |
+| declared public artifacts | **Deferred.** Reject rather than silently hide or publish them. |
+| local task directory | **Implemented for the bounded Gate B spike** |
 | registry task reference | **Proposed for Gate C**, after digest pinning is proven |
 | dataset reference and task selection | **Deferred.** Build on the task adapter; do not make dataset selection implicit in `task.source`. |
 | multi-step task | **Deferred.** Reject initially; a CORAL attempt is not a Harbor step, and reward/cancellation semantics need a separate mapping. |
@@ -402,13 +436,16 @@ This RFC refines, but does not reorder, the phases in Issue #225.
 - Replace obsolete Harbor repository links with current official sources.
 - Agree on the first supported Harbor runtime and schema.
 
-### Gate B — build a narrow loader/verification spike
+### Gate B — build a narrow loader/verification spike (partially implemented)
 
-- local task directory only;
-- one container-backed deterministic task;
-- no registry, no bulk migration, no CLI default change;
-- prove workspace materialization, verifier-only isolation, reward mapping,
-  timeout/error mapping, cancellation ownership, and cleanup.
+- local task directory only — **implemented**;
+- one container-backed deterministic empty-workdir task — **implemented and
+  exercised end-to-end**;
+- no registry, no bulk migration, no CLI default change — **implemented**;
+- private task staging, reward mapping, timeout/error classification, and a
+  cancellation cleanup window — **implemented**;
+- pre-populated workspace export, declared public artifacts, and the wider
+  representative parity matrix — **not yet implemented**.
 
 ### Gate C — introduce the dual loader behind an explicit task source
 
@@ -457,15 +494,15 @@ semantics.
 
 | Decision | Recommendation | Alternative | Status |
 | --- | --- | --- | --- |
-| CORAL orchestration entrypoint | keep `task.yaml` and add a Harbor-backed `task.source` mode | introduce a separate `coral.yaml` | **Proposed** following PR discussion; exact source field shape remains **Open** |
-| first Harbor runtime range | start with exact `v0.22.0` and schema `1.4`; widen only after compatibility tests | target an older release matching current wrappers | **Open**; current wrappers are not a task-loader compatibility proof |
-| local and registry references | support local paths first, then pinned `org/name@tag`; persist digest | registry-first | **Proposed** |
+| CORAL orchestration entrypoint | keep `task.yaml` and add a Harbor-backed `task.source` mode | introduce a separate `coral.yaml` | **Implemented for the local spike** |
+| first Harbor runtime range | start with exact `v0.22.0` and schema `1.4`; widen only after compatibility tests | target an older release matching current wrappers | **Implemented for the local spike** |
+| local and registry references | support local paths first, then pinned `org/name@tag`; persist digest | registry-first | **Local implemented; registry deferred** |
 | dataset references | defer until the task adapter is stable, then add an explicit dataset source and task selector | overload `task.source` with path, task, and dataset guessing | **Proposed** |
 | mutable `latest` | reject in persisted run config | resolve silently on each start | **Proposed**; silent re-resolution breaks reproducibility |
-| visible starter workspace | export Harbor agent workdir into a CORAL Git baseline, then upload candidate snapshots for verification | run CORAL agents inside Harbor environments | **Open**, requires Phase 2 API spike |
+| visible starter workspace | export Harbor agent workdir into a CORAL Git baseline, then upload candidate snapshots for verification | run CORAL agents inside Harbor environments | **Empty workdir implemented; pre-populated export remains Open** |
 | non-container tasks | keep legacy until an explicit supported provider/profile exists | native verifier path using Harbor files only | **Open**; the alternative has reduced portability |
-| multiple rewards | require a primary key and optional explicit aggregation | infer first key or average | **Proposed** |
-| minimize objectives | store raw reward; let CORAL ranking apply direction | negate reward in adapter | **Proposed** |
+| multiple rewards | require a primary key and optional explicit aggregation | infer first key or average | **Primary-key mapping implemented; aggregation deferred** |
+| minimize objectives | store raw reward; let CORAL ranking apply direction | negate reward in adapter | **Implemented** |
 | custom/rubric graders | migrate to Harbor tests/RewardKit where possible; keep a transition escape hatch | preserve `TaskGrader` indefinitely as a second canonical system | **Open** |
 | private verifier mode | prefer separate verifier environment for sensitive tasks | shared verifier with task-owned risk acceptance | **Proposed** |
 | legacy removal timeline | evidence-based dual-loader window | immediate breaking migration | **Open** |
@@ -473,10 +510,11 @@ semantics.
 
 ## Acceptance criteria for Phase 1
 
-This RFC is complete when Maintainers have reviewed the Proposed decisions and
-resolved or explicitly deferred every Open item needed for Gate B. Acceptance
-of this document does not claim that the adapter, migration, score parity, or
-Harbor v0.22 compatibility has been implemented.
+Phase 1 is complete when Maintainers have reviewed the Proposed decisions and
+resolved or explicitly deferred every Open item needed for the next supported
+profile. This PR now includes the bounded Gate B spike documented above, but
+does not claim complete migration, representative score parity, registry
+support, or compatibility with Harbor versions beyond `v0.22.0`.
 
 For the configuration boundary, Phase 1 acceptance additionally requires
 agreement that Harbor-backed and legacy `task.yaml` forms are mutually
