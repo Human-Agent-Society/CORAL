@@ -33,6 +33,7 @@ class CoralGatewayMiddleware:
         self.master_key = master_key
         self._agent_map: dict[str, AgentInfo] = {}  # proxy_key -> agent info
         self._hash_cache: dict[str, tuple[str, float]] = {}  # worktree -> (hash, timestamp)
+        self._warned_unknown_keys: set[str] = set()  # keys already warned about
 
         # Ensure log directory exists
         self.log_dir.mkdir(parents=True, exist_ok=True)
@@ -65,9 +66,21 @@ class CoralGatewayMiddleware:
         info = self._agent_map.get(token)
         if info:
             return info
-        # Key not recognized — fall back to sole agent if only one registered
+        # Key present but not recognized — fall back to sole agent if only one
+        # is registered, but warn: unlike a missing key, a mismatched key
+        # usually means a stale or misconfigured proxy key, and silently
+        # attributing the traffic would mask that.
         if len(self._agent_map) == 1:
-            return next(iter(self._agent_map.values()))
+            fallback = next(iter(self._agent_map.values()))
+            if token not in self._warned_unknown_keys:
+                self._warned_unknown_keys.add(token)
+                logger.warning(
+                    "Gateway received a bearer key that does not match any "
+                    f"registered proxy key; attributing traffic to the sole "
+                    f"registered agent '{fallback.agent_id}'. This may "
+                    "indicate a stale or misconfigured key."
+                )
+            return fallback
         return None
 
     def _get_commit_hash(self, worktree_path: Path) -> str:
