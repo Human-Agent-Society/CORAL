@@ -7,6 +7,7 @@ import logging
 import subprocess
 import time
 import uuid
+from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 # Cache commit hashes briefly to avoid hammering git on every request
 _HASH_CACHE_TTL = 2.0  # seconds
+
+# Optional callback stamping extra request headers: receives the identified
+# agent (or None) and the ASGI scope, returns header name/value byte pairs.
+HeaderProvider = Callable[["AgentInfo | None", dict[str, Any]], Iterable[tuple[bytes, bytes]]]
 
 
 class CoralGatewayMiddleware:
@@ -25,12 +30,25 @@ class CoralGatewayMiddleware:
     2. Reads the agent's current git commit hash (cached briefly)
     3. Adds X-Coral-Agent-Id and X-Coral-Session-Id headers
     4. Logs request and assembled response as linked JSONL entries
+
+    An optional ``header_provider`` callback can stamp additional request
+    headers (e.g. experiment or trace metadata) without forking the
+    middleware. It is called with the identified agent (or ``None``) and the
+    ASGI scope, and must return an iterable of ``(name, value)`` byte pairs.
+    A failing provider is logged and skipped; it never breaks the request.
     """
 
-    def __init__(self, app: Any, log_dir: Path, master_key: str) -> None:
+    def __init__(
+        self,
+        app: Any,
+        log_dir: Path,
+        master_key: str,
+        header_provider: HeaderProvider | None = None,
+    ) -> None:
         self.app = app
         self.log_dir = log_dir
         self.master_key = master_key
+        self.header_provider = header_provider
         self._agent_map: dict[str, AgentInfo] = {}  # proxy_key -> agent info
         self._hash_cache: dict[str, tuple[str, float]] = {}  # worktree -> (hash, timestamp)
 
@@ -174,6 +192,24 @@ class CoralGatewayMiddleware:
         # Add CORAL-specific headers
         new_headers.append((b"x-coral-agent-id", agent_id.encode("latin-1")))
         new_headers.append((b"x-coral-session-id", session_id.encode("latin-1")))
+
+        # Let integrations stamp extra metadata headers. Validate the pairs
+        # before extending so a misbehaving provider can't half-apply or
+        # break the request.
+        if self.header_provider is not None:
+            try:
+                extra_headers = [
+                    (bytes(name), bytes(value))
+                    for name, value in self.header_provider(agent_info, scope)
+                ]
+            except Exception:
+                logger.warning(
+                    "Gateway header_provider raised; skipping extra headers",
+                    exc_info=True,
+                )
+            else:
+                new_headers.extend(extra_headers)
+
         scope["headers"] = new_headers
 
         # Track response
