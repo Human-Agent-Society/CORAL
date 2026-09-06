@@ -42,7 +42,15 @@ export function useReplay(attempts: Attempt[]): ReplayState {
 
     if (active && playing) {
       timerRef.current = setInterval(() => {
-        setCurrentIndex((prev) => Math.min(prev + 1, chronological.length));
+        setCurrentIndex((prev) => {
+          const next = Math.min(prev + 1, chronological.length);
+          // Pause once the replay reaches the end. Doing this here (in the
+          // timer callback) instead of in a separate effect avoids a
+          // synchronous setState inside an effect body
+          // (react-hooks/set-state-in-effect).
+          if (next >= chronological.length) setPlaying(false);
+          return next;
+        });
       }, 1000 / speed);
     }
 
@@ -50,12 +58,6 @@ export function useReplay(attempts: Attempt[]): ReplayState {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [active, playing, speed, chronological.length]);
-
-  useEffect(() => {
-    if (active && playing && currentIndex >= chronological.length) {
-      setPlaying(false);
-    }
-  }, [active, playing, currentIndex, chronological.length]);
 
   const start = useCallback(() => {
     if (chronological.length === 0) return;
