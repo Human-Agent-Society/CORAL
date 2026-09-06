@@ -306,8 +306,11 @@ def _assemble_response(data: bytes) -> Any:
 
     raw = data.decode("utf-8", errors="replace")
 
-    # Check if this is an SSE stream (starts with "data: ")
-    if not raw.lstrip().startswith("data:"):
+    # Check if this is an SSE stream. OpenAI-style streams start with a
+    # "data:" field; Anthropic Messages streams start with an "event:" field
+    # (e.g. "event: message_start").
+    stripped = raw.lstrip()
+    if not (stripped.startswith("data:") or stripped.startswith("event:")):
         return _safe_parse_json(data)
 
     # Parse SSE chunks and assemble content
@@ -351,6 +354,29 @@ def _assemble_response(data: bytes) -> Any:
             status = response_obj.get("status")
             if response_obj.get("usage"):
                 usage = response_obj["usage"]
+        # Anthropic Messages API streaming format
+        elif chunk_type == "message_start":
+            message = chunk.get("message", {})
+            if not response_id and message.get("id"):
+                response_id = message["id"]
+            if not model and message.get("model"):
+                model = message["model"]
+            if isinstance(message.get("usage"), dict):
+                usage = {**(usage or {}), **message["usage"]}
+        elif chunk_type == "content_block_delta":
+            delta = chunk.get("delta", {})
+            if delta.get("type") == "text_delta":
+                text = delta.get("text", "")
+                if text:
+                    content_parts.append(text)
+        elif chunk_type == "message_delta":
+            delta = chunk.get("delta", {})
+            if delta.get("stop_reason"):
+                finish_reason = delta["stop_reason"]
+            # message_delta carries cumulative output token usage at the top
+            # level; merge it so input_tokens from message_start is kept.
+            if isinstance(chunk.get("usage"), dict):
+                usage = {**(usage or {}), **chunk["usage"]}
         # Chat Completions streaming format
         else:
             for choice in chunk.get("choices", []):
@@ -361,8 +387,8 @@ def _assemble_response(data: bytes) -> Any:
                 if choice.get("finish_reason"):
                     finish_reason = choice["finish_reason"]
 
-        if chunk.get("usage"):
-            usage = chunk["usage"]
+            if chunk.get("usage"):
+                usage = chunk["usage"]
 
     assembled: dict[str, Any] = {}
     if response_id:
