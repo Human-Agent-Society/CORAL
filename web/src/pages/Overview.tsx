@@ -214,6 +214,7 @@ export default function Overview() {
                     asc={sortAsc}
                     onClick={() => toggleSort("timestamp")}
                   />
+                  <Th label="Duration" />
                 </tr>
               </thead>
               <tbody>

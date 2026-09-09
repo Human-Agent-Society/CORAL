@@ -42,12 +42,16 @@ def test_attempt_roundtrip():
         parent_hash="def456",
         timestamp="2026-03-11T10:00:00Z",
         feedback="Good improvement",
+        started_at="2026-03-11T10:00:02Z",
+        finished_at="2026-03-11T10:00:05Z",
     )
     data = attempt.to_dict()
     restored = Attempt.from_dict(data)
     assert restored.commit_hash == "abc123"
     assert restored.score == 0.85
     assert restored.feedback == "Good improvement"
+    assert restored.started_at == "2026-03-11T10:00:02Z"
+    assert restored.finished_at == "2026-03-11T10:00:05Z"
     assert restored.shared_state_hash is None
     assert restored.parent_shared_state_hash is None
     assert "shared_state_hash" not in data  # omitted when None
@@ -89,6 +93,8 @@ def test_attempt_from_dict_without_shared_state_hash():
     attempt = Attempt.from_dict(data)
     assert attempt.shared_state_hash is None
     assert attempt.parent_shared_state_hash is None
+    assert attempt.started_at is None
+    assert attempt.finished_at is None
 
 
 # --------------------------------------------------------------------------- #
