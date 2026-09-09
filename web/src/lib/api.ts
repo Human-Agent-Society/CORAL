@@ -45,6 +45,8 @@ export interface Attempt {
   status: string;
   parent_hash: string | null;
   timestamp: string;
+  started_at?: string | null;
+  finished_at?: string | null;
   feedback: string;
 }
 
