@@ -1,6 +1,6 @@
 ---
 name: create-notes
-description: "Write a note to {shared_dir}/notes/ that future agents can actually act on. Use after every coral eval, when a heartbeat (reflect / consolidate / pivot) asks for a note, or when you discover a grader / build / runtime issue that future agents will hit. Covers 4 note variants (experiment / infra / focus / synthesis), the required frontmatter with the team-level `creator:` filter, the structured-trace schema (`type` / `claim` / `status` / `confidence` / `based_on` / `evidence` / `supersedes` / `refutes` / `touched`) that populates the dashboard knowledge graph, the self-audit checklist (backfilled predictions, abandoned paths, sourced magic numbers, cross-links), the bundled `scripts/{stamp,lint,unattributed}.py` helpers, and the shell-escaping gotchas that silently strip markdown content. Trigger this skill whenever you are about to Write a file under notes/ — even if the prompt didn't say 'write a note'."
+description: "Write a note to {shared_dir}/notes/ that future agents can actually act on. Use after every coral eval, when a heartbeat (reflect / consolidate / pivot) asks for a note, or when you discover a grader / build / runtime issue that future agents will hit. Covers the before-you-write admission check (update-vs-new placement, note-vs-skill routing, discoverability), 4 note variants (experiment / infra / focus / synthesis), the required frontmatter with the team-level `creator:` filter, the structured-trace schema (`type` / `claim` / `status` / `confidence` / `based_on` / `evidence` / `supersedes` / `refutes` / `touched`) that populates the dashboard knowledge graph, the self-audit checklist (backfilled predictions, abandoned paths, sourced magic numbers, cross-links), the bundled `scripts/{stamp,lint,unattributed}.py` helpers, and the shell-escaping gotchas that silently strip markdown content. Trigger this skill whenever you are about to Write a file under notes/ — even if the prompt didn't say 'write a note'."
 ---
 
 # Create Notes
@@ -12,6 +12,40 @@ A good note answers three questions a future agent will actually ask:
 3. **What should I do — or not do — given this?** (ordered next steps + things you tried that failed)
 
 A bad note is a wall of headings with empty bodies, or a final-design pitch with no record of the alternatives you rejected. The bad pattern shows up enough that this skill exists to prevent it.
+
+## Before You Write — Admission and Placement
+
+Notes are the team's default, cheap knowledge medium — the bar for writing
+one is low (unlike skills, a note doesn't occupy every agent's context).
+The bar that matters is *placement*: the expensive failure mode is not a
+bad note, it's the tenth near-duplicate that fragments what the team knows
+and leaves every future reader unsure which copy is authoritative.
+
+Run this check before creating any new file:
+
+1. **Does this claim already have a home?** Search first — scan
+   `notes/index.md` and run `coral notes --search <keyword>` (or grep).
+   If an existing note covers the same claim or topic:
+   - New evidence on the same claim → **update that note** (append
+     evidence, adjust `status:` / `confidence:`), don't fork it.
+   - Your result contradicts it → a new note with `refutes:` pointing at
+     it, or an `_open-questions.md` entry — never a silent parallel note.
+   - A synthesis being replaced → new file with `supersedes:` (lineage
+     stays in the graph).
+
+   Per-eval experiment notes (Variant A) are the exception: append-only by
+   design, one per eval — dedup happens later at synthesis.
+2. **Is this actually a skill?** If what you're writing is a *repeatable
+   procedure* — steps and commands another agent will re-run, not a
+   finding — route it through skill-creator and its admission gate
+   (`{shared_dir}/skills/skill-creator/references/meta-skill.md`). The
+   skill-vs-note table there decides in one glance.
+3. **Will anyone find it?** Write the title and `claim:` in the vocabulary
+   a *different* agent would search for, not your private shorthand; add
+   the `index.md` entry; link the notes you built on. The librarian
+   periodically scans agent logs for what actually gets read (scan-usage
+   skill) — notes nobody reads get archived. Discovery is designed, not
+   hoped for.
 
 ## When to Use
 
