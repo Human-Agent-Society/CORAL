@@ -7,6 +7,7 @@ pending attempt record, and optionally polls for the final score.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import subprocess
@@ -17,7 +18,9 @@ from pathlib import Path
 from coral.config import CoralConfig
 from coral.hub.attempts import (
     agent_in_grader_queue,
+    budget_lock,
     count_agent_pending,
+    count_real_attempts,
     increment_eval_count,
     read_attempt,
     read_eval_count,
@@ -182,47 +185,78 @@ def submit_eval(
                 f"(limit: {pending_limit}). {wait_hint}"
             )
 
-    # Git add + commit
-    commit_hash = _git_add_and_commit(message, str(workdir_path))
-    parent_hash = _get_parent_hash(commit_hash, str(workdir_path))
+    # Attempt-budget cap, enforced at submission rather than after the fact.
+    # The manager's auto-stop fires when the Nth attempt *finalizes*, by which
+    # point other submissions are already committed and grading, so a run can
+    # overshoot its budget by the number in flight. Refusing at the door makes
+    # the cap exact. The count and the commit happen under one run-wide lock so
+    # several agents cannot each read N-1 and each proceed.
+    budget = config.run.stop.max_real_attempts
+    if budget is not None and tune:
+        # A tune eval is real evaluator work and real feedback that no budget
+        # accounts for, and its feedback reaches every agent through notes.
+        raise RuntimeError(
+            "coral eval --tune is disabled for this run: it has a fixed attempt "
+            f"budget (run.stop.max_real_attempts={budget}), and a tune eval would "
+            "add evaluator feedback and compute that the budget does not account "
+            "for. Submit a real eval instead."
+        )
 
-    # Checkpoint shared state at submission time (captures agent's current notes/skills).
-    shared_state_hash = checkpoint(str(coral_dir), agent_id, message, island_id=island_id)
+    # The lock spans the count *and* the pending-record write: the count reads
+    # attempt files, so releasing any earlier would let a second agent count
+    # before this one becomes visible and both take the last slot.
+    with (
+        budget_lock(coral_dir, island_id=island_id)
+        if budget is not None
+        else contextlib.nullcontext()
+    ):
+        if budget is not None:
+            used = count_real_attempts(coral_dir, island_id=island_id)
+            if used >= budget:
+                raise RuntimeError(
+                    f"Attempt budget exhausted: {used}/{budget} real attempts already "
+                    "submitted for this run. No further submissions are accepted."
+                )
+        commit_hash = _git_add_and_commit(message, str(workdir_path))
+        parent_hash = _get_parent_hash(commit_hash, str(workdir_path))
 
-    # Look up parent attempt's shared state hash for provenance chain.
-    parent_shared_state_hash = None
-    if parent_hash:
-        from coral.hub._island import island_root
+        # Checkpoint shared state at submission time (captures agent's notes/skills).
+        shared_state_hash = checkpoint(str(coral_dir), agent_id, message, island_id=island_id)
 
-        parent_attempt_file = island_root(coral_dir, island_id) / "attempts" / f"{parent_hash}.json"
-        if parent_attempt_file.exists():
-            try:
-                parent_data = json.loads(parent_attempt_file.read_text(encoding="utf-8"))
-                parent_shared_state_hash = parent_data.get("shared_state_hash")
-            except (json.JSONDecodeError, OSError):
-                pass
+        # Look up parent attempt's shared state hash for provenance chain.
+        parent_shared_state_hash = None
+        if parent_hash:
+            from coral.hub._island import island_root
 
-    # Write pending record. The grader daemon will observe this and fill in
-    # score/status/feedback asynchronously.
-    metadata: dict = {}
-    if tune:
-        metadata["budget_class"] = BUDGET_CLASS_TUNE
-    if island_id is not None:
-        metadata["island_id"] = island_id
-    attempt = Attempt(
-        commit_hash=commit_hash,
-        agent_id=agent_id,
-        title=message,
-        score=None,
-        status="pending",
-        parent_hash=parent_hash,
-        timestamp=datetime.now(UTC).isoformat(),
-        feedback="",
-        shared_state_hash=shared_state_hash,
-        parent_shared_state_hash=parent_shared_state_hash,
-        metadata=metadata,
-    )
-    write_attempt(str(coral_dir), attempt, island_id=island_id)
+            parent_file = island_root(coral_dir, island_id) / "attempts" / f"{parent_hash}.json"
+            if parent_file.exists():
+                try:
+                    parent_data = json.loads(parent_file.read_text(encoding="utf-8"))
+                    parent_shared_state_hash = parent_data.get("shared_state_hash")
+                except (json.JSONDecodeError, OSError):
+                    pass
+
+        # Write pending record. The grader daemon will observe this and fill in
+        # score/status/feedback asynchronously.
+        metadata: dict = {}
+        if tune:
+            metadata["budget_class"] = BUDGET_CLASS_TUNE
+        if island_id is not None:
+            metadata["island_id"] = island_id
+        attempt = Attempt(
+            commit_hash=commit_hash,
+            agent_id=agent_id,
+            title=message,
+            score=None,
+            status="pending",
+            parent_hash=parent_hash,
+            timestamp=datetime.now(UTC).isoformat(),
+            feedback="",
+            shared_state_hash=shared_state_hash,
+            parent_shared_state_hash=parent_shared_state_hash,
+            metadata=metadata,
+        )
+        write_attempt(str(coral_dir), attempt, island_id=island_id)
 
     if not wait:
         return attempt

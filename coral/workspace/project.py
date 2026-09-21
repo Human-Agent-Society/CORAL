@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 import os
 import re
@@ -40,6 +41,48 @@ def slugify(name: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", slug)
     slug = slug.strip("-")
     return slug or "task"
+
+
+def save_run_config(config: CoralConfig, coral_dir: str | Path) -> None:
+    """Write the run config where its readers expect it.
+
+    With ``grader.hide_args`` the authoritative copy goes to
+    ``.coral/private/config.yaml`` (agent-denied) and the agent-visible
+    ``.coral/config.yaml`` carries ``grader.args: {}``; otherwise a single copy
+    at ``.coral/config.yaml``. Setup and resume both write through here, so an
+    override applied on resume reaches the daemon's copy and never re-exposes
+    the hidden arguments.
+    """
+    coral_dir = Path(coral_dir)
+    coral_dir.mkdir(parents=True, exist_ok=True)
+    if config.grader.hide_args:
+        private_dir = coral_dir / "private"
+        private_dir.mkdir(parents=True, exist_ok=True)
+        config.to_yaml(private_dir / "config.yaml")
+        redacted = copy.deepcopy(config)
+        redacted.grader.args = {}
+        redacted.to_yaml(coral_dir / "config.yaml")
+    else:
+        config.to_yaml(coral_dir / "config.yaml")
+        # A private copy left behind by an earlier hide_args run would keep
+        # winning grader_config_path with stale arguments.
+        stale = coral_dir / "private" / "config.yaml"
+        if stale.exists():
+            stale.unlink()
+
+
+def grader_config_path(coral_dir: str | Path) -> Path:
+    """The config the grader and daemon must read.
+
+    ``.coral/private/config.yaml`` when ``grader.hide_args`` put the full
+    config there, else ``.coral/config.yaml``. The agent-visible copy always
+    exists (``coral eval`` needs it) but has empty grader args under
+    hide_args, so anything that actually grades must resolve through here or
+    it will silently run with no arguments.
+    """
+    coral_dir = Path(coral_dir)
+    private = coral_dir / "private" / "config.yaml"
+    return private if private.exists() else coral_dir / "config.yaml"
 
 
 _SEED_SKILLS_DIR = Path(__file__).parent.parent / "template" / "skills"
@@ -267,8 +310,7 @@ def create_project(config: CoralConfig, config_dir: Path | None = None) -> Proje
                 list(config.agents.skills),
             )
 
-    # Save config
-    config.to_yaml(coral_dir / "config.yaml")
+    save_run_config(config, coral_dir)
 
     # Save config_dir so resume can restore task_dir for relative path resolution
     (coral_dir / "config_dir").write_text(str(effective_config_dir), encoding="utf-8")
