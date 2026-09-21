@@ -1,0 +1,21 @@
+{
+  "accepted_counts": [
+    2,
+    2,
+    2
+  ],
+  "checkpoints": [
+    8,
+    12,
+    16
+  ],
+  "complete": true,
+  "schedule_kind": "checkpoint",
+  "schedule_sha256": "827657a8ec2fc6c100ddeea2b15d5e9d765b62fd9bf8b6d9c0f0d77937236f80",
+  "source_run": "2026-09-09_184725",
+  "statuses": [
+    "published",
+    "published",
+    "published"
+  ]
+}

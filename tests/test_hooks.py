@@ -656,3 +656,156 @@ def test_submit_eval_single_island_unchanged(tmp_path):
     assert expected.exists()
     # No island_id stamped
     assert "island_id" not in (attempt.metadata or {})
+
+
+def _set_attempt_budget(repo: Path, budget: int) -> None:
+    config_path = repo / ".coral" / "config.yaml"
+    config = yaml.safe_load(config_path.read_text())
+    config.setdefault("run", {}).setdefault("stop", {})["max_real_attempts"] = budget
+    config_path.write_text(yaml.dump(config))
+
+
+def test_attempt_budget_is_enforced_at_submission_not_after_the_fact():
+    """The manager's auto-stop fires when the Nth attempt *finalizes*, by which
+    point others are already committed and grading: the 2026-09-08 run ended
+    with 26 real submissions against a 24 budget, two of them graded (0.525,
+    0.850) but killed before their scores were written back, entering no clock
+    and no analysis. A budget has to be refused at the door to be exact."""
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _setup_repo_with_config(Path(tmp))
+        _set_attempt_budget(repo, 2)
+
+        # distinct agents: the per-agent pending cap is a separate limit
+        for i in range(2):
+            (repo / "hello.py").write_text(f"print('v{i}')\n")
+            submit_eval(message=f"attempt {i}", agent_id=f"a{i}", workdir=str(repo), wait=False)
+
+        (repo / "hello.py").write_text("print('over budget')\n")
+        with pytest.raises(RuntimeError, match="Attempt budget exhausted: 2/2"):
+            submit_eval(message="one too many", agent_id="a9", workdir=str(repo), wait=False)
+
+        attempts = list((repo / ".coral" / "public" / "attempts").glob("*.json"))
+        assert len(attempts) == 2, "a refused submission must leave no attempt record"
+
+
+def test_pending_attempts_hold_budget():
+    """An attempt is agent work from the moment it is committed, scored or not
+    — counting only finalized attempts is what allowed the overshoot."""
+    from coral.hub.attempts import count_real_attempts
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _setup_repo_with_config(Path(tmp))
+        _set_attempt_budget(repo, 5)
+        (repo / "hello.py").write_text("print('x')\n")
+        submit_eval(message="pending one", agent_id="a1", workdir=str(repo), wait=False)
+
+        coral_dir = repo / ".coral"
+        assert count_real_attempts(coral_dir) == 1, "a pending attempt already holds its slot"
+
+
+def test_tune_is_refused_when_the_run_has_an_attempt_budget():
+    """A tune eval is real evaluator work and real feedback that no budget
+    accounts for. One in the 2026-09-08 run was broadcast to every agent in a
+    shared note, so the whole team acted on an evaluation that came out of
+    nobody's allowance."""
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _setup_repo_with_config(Path(tmp))
+        _set_attempt_budget(repo, 24)
+        (repo / "hello.py").write_text("print('tune')\n")
+        with pytest.raises(RuntimeError, match="--tune is disabled"):
+            submit_eval(message="sweep", agent_id="a1", workdir=str(repo), wait=False, tune=True)
+
+
+def test_tune_still_works_without_a_budget():
+    """Ordinary runs keep tune; only a fixed-budget run refuses it."""
+    from coral.types import BUDGET_CLASS_TUNE
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _setup_repo_with_config(Path(tmp))
+        (repo / "hello.py").write_text("print('tune ok')\n")
+        attempt = submit_eval(
+            message="sweep", agent_id="a1", workdir=str(repo), wait=False, tune=True
+        )
+        assert attempt.budget_class == BUDGET_CLASS_TUNE
+
+
+def _island_worktree(tmp_path: Path, coral_dir: Path, island: str, agent: str) -> Path:
+    worktree = tmp_path / f"wt_{island}_{agent}"
+    worktree.mkdir()
+    subprocess.run(["git", "init"], cwd=str(worktree), check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@t"], cwd=str(worktree), check=True, capture_output=True
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "t"], cwd=str(worktree), check=True, capture_output=True
+    )
+    subprocess.run(
+        ["git", "commit", "--allow-empty", "-m", "init"],
+        cwd=str(worktree),
+        check=True,
+        capture_output=True,
+    )
+    (worktree / ".coral_dir").write_text(str(coral_dir.resolve()))
+    (worktree / ".coral_agent_id").write_text(agent)
+    (worktree / ".coral_island").write_text(island)
+    return worktree
+
+
+def test_attempt_budget_is_run_wide_across_islands_even_under_a_race(tmp_path):
+    """max_real_attempts is a property of the run. Two islands must share one
+    count and one lock, or each island admits the whole budget."""
+    import threading
+
+    from coral.config import CoralConfig
+
+    coral_dir = tmp_path / ".coral"
+    for island in ("1", "2"):
+        (coral_dir / "islands" / island / "attempts").mkdir(parents=True)
+    cfg = CoralConfig.from_dict(
+        {
+            "task": {"name": "t", "description": "d"},
+            "islands": {"count": 2},
+            "run": {"stop": {"max_real_attempts": 3}},
+            "workspace": {
+                "results_dir": str(tmp_path / "results"),
+                "repo_path": str(tmp_path / "src"),
+            },
+        }
+    )
+    cfg.to_yaml(coral_dir / "config.yaml")
+
+    trees = [
+        _island_worktree(tmp_path, coral_dir, island, f"{island}-agent-{k}")
+        for island in ("1", "2")
+        for k in range(3)
+    ]
+    outcomes: list[str] = []
+    lock = threading.Lock()
+
+    def submit(tree: Path) -> None:
+        (tree / "f.txt").write_text(tree.name)
+        try:
+            submit_eval(
+                message=tree.name,
+                agent_id=(tree / ".coral_agent_id").read_text(),
+                workdir=str(tree),
+                wait=False,
+            )
+            result = "ok"
+        except RuntimeError as exc:
+            result = "refused" if "budget exhausted" in str(exc).lower() else f"error: {exc}"
+        with lock:
+            outcomes.append(result)
+
+    threads = [threading.Thread(target=submit, args=(t,)) for t in trees]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=60)
+
+    assert outcomes.count("ok") == 3, outcomes
+    assert outcomes.count("refused") == 3, outcomes
+    written = sum(
+        len(list((coral_dir / "islands" / i / "attempts").glob("*.json"))) for i in ("1", "2")
+    )
+    assert written == 3, "exactly the budget, summed over islands"

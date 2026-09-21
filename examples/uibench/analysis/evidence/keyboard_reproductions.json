@@ -1,0 +1,365 @@
+[
+  {
+    "agent": "captain-ahab",
+    "phase": "before",
+    "commit": "a0a2bd8e7f82c241c6d0464207ac02c2b3b260ef",
+    "tab_sequence": [
+      {
+        "tag": "BUTTON",
+        "id": "programBtn",
+        "text": "PROGRAMMA",
+        "cls": "program-btn"
+      }
+    ],
+    "activations": [
+      {
+        "control": "programBtn",
+        "enter_opened": true,
+        "escape_dismissed": false
+      }
+    ],
+    "limit": "16 Tab presses at desktop; specific controls only; Enter/Escape, not a full accessibility audit"
+  },
+  {
+    "agent": "captain-ahab",
+    "phase": "after",
+    "commit": "90fc6a541ccf5137b36368e60fab0dcbc52d3003",
+    "tab_sequence": [
+      {
+        "tag": "DIV",
+        "id": "container1",
+        "text": "NMR-26\n\u2192",
+        "cls": "container container-1"
+      },
+      {
+        "tag": "DIV",
+        "id": "container2",
+        "text": "HVN-26\n\u2192",
+        "cls": "container container-2"
+      },
+      {
+        "tag": "DIV",
+        "id": "container3",
+        "text": "LCT-26\n\u2192",
+        "cls": "container container-3"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "programBtn",
+        "text": "PROGRAMMA",
+        "cls": "program-btn"
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nROTTERDAM \u00b7 HAVEN\nNMR-26\n\u2192\nHVN-26\n\u2192\nLCT-26\n\u2192\nWAALHAVEN\nROTTERDAM\n2026\nPROGRAMMA",
+        "cls": ""
+      },
+      {
+        "tag": "DIV",
+        "id": "container1",
+        "text": "NMR-26\n\u2192",
+        "cls": "container container-1"
+      },
+      {
+        "tag": "DIV",
+        "id": "container2",
+        "text": "HVN-26\n\u2192",
+        "cls": "container container-2"
+      },
+      {
+        "tag": "DIV",
+        "id": "container3",
+        "text": "LCT-26\n\u2192",
+        "cls": "container container-3"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "programBtn",
+        "text": "PROGRAMMA",
+        "cls": "program-btn"
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nROTTERDAM \u00b7 HAVEN\nNMR-26\n\u2192\nHVN-26\n\u2192\nLCT-26\n\u2192\nWAALHAVEN\nROTTERDAM\n2026\nPROGRAMMA",
+        "cls": ""
+      },
+      {
+        "tag": "DIV",
+        "id": "container1",
+        "text": "NMR-26\n\u2192",
+        "cls": "container container-1"
+      },
+      {
+        "tag": "DIV",
+        "id": "container2",
+        "text": "HVN-26\n\u2192",
+        "cls": "container container-2"
+      },
+      {
+        "tag": "DIV",
+        "id": "container3",
+        "text": "LCT-26\n\u2192",
+        "cls": "container container-3"
+      },
+      {
+        "tag": "BUTTON",
+        "id": "programBtn",
+        "text": "PROGRAMMA",
+        "cls": "program-btn"
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nROTTERDAM \u00b7 HAVEN\nNMR-26\n\u2192\nHVN-26\n\u2192\nLCT-26\n\u2192\nWAALHAVEN\nROTTERDAM\n2026\nPROGRAMMA",
+        "cls": ""
+      },
+      {
+        "tag": "DIV",
+        "id": "container1",
+        "text": "NMR-26\n\u2192",
+        "cls": "container container-1"
+      }
+    ],
+    "activations": [
+      {
+        "control": "container1",
+        "enter_opened": true,
+        "escape_dismissed": true
+      },
+      {
+        "control": "container2",
+        "enter_opened": true,
+        "escape_dismissed": true
+      },
+      {
+        "control": "container3",
+        "enter_opened": true,
+        "escape_dismissed": true
+      },
+      {
+        "control": "programBtn",
+        "enter_opened": true,
+        "escape_dismissed": true
+      }
+    ],
+    "limit": "16 Tab presses at desktop; specific controls only; Enter/Escape, not a full accessibility audit"
+  },
+  {
+    "agent": "davy-jones",
+    "phase": "before",
+    "commit": "c8d849b614d2c7fd47b3f9307e75d86fe9aa2402",
+    "tab_sequence": [
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nVOOR\nMODERNE\nKUNST\nRUIMTE\n&\nLICHT\nROTTERDAM\n2026",
+        "cls": ""
+      }
+    ],
+    "activations": [],
+    "limit": "16 Tab presses at desktop; specific controls only; Enter/Escape, not a full accessibility audit"
+  },
+  {
+    "agent": "davy-jones",
+    "phase": "after",
+    "commit": "07d5a7ed991c1235c6cd6b5b16a4f1748c64fe75",
+    "tab_sequence": [
+      {
+        "tag": "BUTTON",
+        "id": "",
+        "text": "TENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformatie van industri\u00eble haven naar creatieve s",
+        "cls": "exhibition-card"
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nKUNST\nWAALHAVEN \u2014 ROTTERDAM\nTENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformat",
+        "cls": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "",
+        "text": "TENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformatie van industri\u00eble haven naar creatieve s",
+        "cls": "exhibition-card"
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nKUNST\nWAALHAVEN \u2014 ROTTERDAM\nTENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformat",
+        "cls": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "",
+        "text": "TENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformatie van industri\u00eble haven naar creatieve s",
+        "cls": "exhibition-card"
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nKUNST\nWAALHAVEN \u2014 ROTTERDAM\nTENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformat",
+        "cls": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "",
+        "text": "TENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformatie van industri\u00eble haven naar creatieve s",
+        "cls": "exhibition-card"
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nKUNST\nWAALHAVEN \u2014 ROTTERDAM\nTENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformat",
+        "cls": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "",
+        "text": "TENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformatie van industri\u00eble haven naar creatieve s",
+        "cls": "exhibition-card"
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nKUNST\nWAALHAVEN \u2014 ROTTERDAM\nTENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformat",
+        "cls": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "",
+        "text": "TENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformatie van industri\u00eble haven naar creatieve s",
+        "cls": "exhibition-card"
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nKUNST\nWAALHAVEN \u2014 ROTTERDAM\nTENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformat",
+        "cls": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "",
+        "text": "TENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformatie van industri\u00eble haven naar creatieve s",
+        "cls": "exhibition-card"
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nKUNST\nWAALHAVEN \u2014 ROTTERDAM\nTENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformat",
+        "cls": ""
+      },
+      {
+        "tag": "BUTTON",
+        "id": "",
+        "text": "TENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformatie van industri\u00eble haven naar creatieve s",
+        "cls": "exhibition-card"
+      },
+      {
+        "tag": "BODY",
+        "id": "",
+        "text": "RIJKS\nSTUDIO\nKUNST\nWAALHAVEN \u2014 ROTTERDAM\nTENTOONSTELLING NU\nHaven\nwerken\n\nHedendaagse kunst over Rotterdam's transformat",
+        "cls": ""
+      }
+    ],
+    "activations": [
+      {
+        "control": "exhibition-card",
+        "enter_opened": true,
+        "escape_dismissed": true
+      }
+    ],
+    "limit": "16 Tab presses at desktop; specific controls only; Enter/Escape, not a full accessibility audit"
+  }
+]

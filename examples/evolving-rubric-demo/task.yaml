@@ -1,0 +1,44 @@
+task:
+  name: "Evolving rubric demo"
+  description: |
+    Improve `answer.md`, a short technical note on how software should be evaluated.
+    Keep it under 400 words. The grader scores a small rubric; read the feedback
+    after each `coral eval` and address what it names.
+  tips: |
+    - Run `coral eval -m "what changed"` after every meaningful edit.
+
+grader:
+  entrypoint: demo_grader.evolving:EvolvingDemoGrader
+  setup:
+    - uv pip install -e ./grader
+  timeout: 60
+  direction: maximize
+  hide_args: true
+  args:
+    evaluator_model: none
+    criteria:
+      - name: "Has Title"
+        weight: 1.0
+        description: "The note opens with a markdown title. requires: # "
+      - name: "Names Sources"
+        weight: 1.0
+        description: "The note names its sources. requires: sources"
+      - name: "Mentions Evaluation"
+        weight: 1.0
+        description: "The note is about evaluation. requires: evaluat"
+    evolution:
+      mode: static
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: haiku
+  max_turns: 60
+
+workspace:
+  repo_path: ./seed
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 6

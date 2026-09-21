@@ -1,0 +1,1422 @@
+[
+ {
+  "run_id": "fellowship-adaptive-r1",
+  "task": "fellowship",
+  "arm": "adaptive",
+  "agents": [
+   "captain-ahab",
+   "captain-nemo",
+   "davy-jones",
+   "jack-sparrow"
+  ],
+  "checkpoints": [
+   {
+    "written_at": "2026-09-09T23:29:46.897139+00:00",
+    "finalized_attempts": 9,
+    "rubric_version_before": 1,
+    "status": "published",
+    "detail": {
+     "mode": "adaptive",
+     "scored_attempts": 9,
+     "gate_open": true,
+     "aggregate_variance": 0.00015555555555555583,
+     "per_criterion_entropy": {
+      "Build Smoothness": -0.0,
+      "Implementation Quality": 0.9182958340544896,
+      "Instruction Following": 0.9182958340544896,
+      "Visual Quality": -0.0,
+      "Interaction Experience": -0.0
+     },
+     "mean_entropy": 0.36731833362179583,
+     "thresholds": {
+      "all_pass_threshold": 0.8,
+      "plateau_epsilon": 0.001,
+      "saturation_entropy_threshold": 0.1,
+      "warmup_attempts": 8,
+      "cooldown_attempts": 6,
+      "max_updates": 3,
+      "max_criteria": 11,
+      "window": 3
+     },
+     "trigger_verdicts": {
+      "all_pass": {
+       "fired": null,
+       "detail": "'Implementation Quality' = 0.750 < 0.8 in da574d38e1a2552c1727fdd0fa4bda0e8715746e"
+      },
+      "plateau": {
+       "fired": "plateau",
+       "detail": "aggregate variance 0.000156 < 0.001 across 3 v1 observations"
+      },
+      "information_saturation": {
+       "fired": null,
+       "detail": "mean entropy 0.3673 >= 0.1"
+      }
+     },
+     "selected_trigger": "checkpoint_8",
+     "selected_detail": "checkpoint 1/3 reached: 8 real attempts (have 9)",
+     "checkpoint_index": 0,
+     "checkpoint_value": 8,
+     "published": true,
+     "accepted_count": 2,
+     "accepted_criteria": [
+      {
+       "name": "Simulated State Durability",
+       "description": "State that the brief requires to be tracked over time \u2014 most centrally the per-recommender pending/received lifecycle looked up by application ID, plus submission status and reviewer scores \u2014 must be stored as real persisted state and remain stable and self-consistent. The same application ID must yield the same statuses across repeated lookups, page reloads, and between the applicant-facing view and the reviewer dashboard. Statuses that are recomputed at render time from randomness, from a hash of the ID, or that are hardcoded in markup and never updated, score low even when the badges look correct in a single screenshot. Simulated arrival of recommendations is acceptable and expected, but the simulation must write to durable state (and, if it advances over time, do so through an observable transition) rather than being re-rolled on every render.",
+       "cited_evidence": "Reading the staged sources shows three materially different treatments that the scores flatten. In da574d38's index.html the ID status lookup computes `const received = Math.random() > 0.5;` inside the per-recommender render loop, so the identical application ID reports different pending/received badges on every lookup. In 835afed9 the applicant confirmation page carries a literal `<span class=\"status-badge status-pending\">Pending</span>` in index.html that is never updated, while reviewer.js independently derives a received count from a hash of `submission.id` \u2014 so the two views can disagree about the same application, which matches the evaluator's report that ID-keyed status tracking was not really findable in the UI. Only c954f12a assigns status once at submit and persists it with a `receivedAt` timestamp, giving stable state that the reviewer filters read back correctly. The current rubric misses this: da574d38's Instruction Following rationale credits the status page ('accepts application ID input, provides feedback') without checking that a second lookup returns the same answer, and Interaction Experience scored the three attempts 0.75/0.70/0.70 \u2014 treating durable and re-randomized status as equivalent. I would rank c954f12a's approach clearly above the other two here, and no criterion registers that.",
+       "cited_source_id": "attempts/835afed9aadfbc957adcf4f7a03508099fb69896/feedback.md",
+       "quote": "the recommendation status tracking (pending/received indicators using application ID) isn't visible in the UI I explored"
+      },
+      {
+       "name": "Simulated Dependency Traversability",
+       "description": "Gates that sit on simulated external dependencies \u2014 file uploads for resume and case sample, email dispatch, generated links \u2014 must be satisfiable through ordinary in-browser interaction so the downstream states the brief requires (submit, confirmation page with receipt ID, downloadable copy, recommender status view) are actually reachable. This rewards validation that keys off the simulated upload's recorded outcome and an upload control that is genuinely operable (a reachable file input or a labelled drag/drop or simulate-attachment affordance), and penalizes gates that demand artifacts the page cannot obtain, controls that are present in the DOM but not clickable or focusable, and non-deterministic failure injection placed on the happy path with no reliable retry-to-success. Validation strictness itself is not penalized: enforcing word counts and required links is expected. What is penalized is a required screen being unreachable because a simulated dependency cannot be cleared.",
+       "cited_evidence": "All three attempts hit a defect in this chain, with sharply different consequences. da574d38 gated Next on real upload state and the flow dead-ended before submission. 835afed9's script.js gates on a real `event.target.files[0]` and additionally injects `const shouldFail = Math.random() < 0.2;` on every upload attempt, so the happy path can fail spuriously; its confirmation page with receipt ID and downloadable copy went unreached. c954f12a's file inputs were present with correct ARIA labels but not interactable, yet its flow still reached the confirmation page. The rubric attributes this same defect inconsistently \u2014 da574d38 lost points under Instruction Following, Implementation Quality, and Interaction Experience for it; 835afed9 mainly under Instruction Following; c954f12a under Implementation Quality and Interaction Experience \u2014 which is why the difference between 'blocked at step 2' and 'reached confirmation' does not show up cleanly in any score. Isolating traversability makes that ranking-relevant difference explicit instead of diluted across three broad criteria.",
+       "cited_source_id": "attempts/da574d38e1a2552c1727fdd0fa4bda0e8715746e/artifact_evidence/evaluation/evaluation.json",
+       "quote": "validation blocks progression even with simulated data, suggesting the validation is tightly coupled to actual file upload state rather than allowing mock/test scenarios"
+      }
+     ],
+     "proposer_compute": {
+      "duration_api_ms": 140948,
+      "duration_ms": 139843,
+      "num_turns": 11,
+      "session_id": "9041db62-5a8a-4f0e-a125-de9d1445cbdb",
+      "subtype": "success",
+      "total_cost_usd": 0.9407860000000001,
+      "usage": {
+       "input_tokens": 12,
+       "cache_creation_input_tokens": 47328,
+       "cache_read_input_tokens": 394460,
+       "output_tokens": 10277,
+       "output_tokens_details": {
+        "thinking_tokens": 5755
+       },
+       "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+       },
+       "service_tier": "standard",
+       "cache_creation": {
+        "ephemeral_1h_input_tokens": 47328,
+        "ephemeral_5m_input_tokens": 0
+       },
+       "inference_geo": "not_available",
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 3839,
+         "cache_read_input_tokens": 80790,
+         "cache_creation_input_tokens": 4574,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 4574
+         },
+         "type": "message"
+        }
+       ],
+       "speed": "standard"
+      }
+     },
+     "published_version": 2,
+     "triggering_attempt": "835afed9aadfbc957adcf4f7a03508099fb69896",
+     "triggering_agent": "captain-ahab"
+    },
+    "proposer_context": "coral-proposer-v2-yr4xpbp0",
+    "proposed": [
+     {
+      "name": "Simulated State Durability",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "attempts/835afed9aadfbc957adcf4f7a03508099fb69896/feedback.md"
+     },
+     {
+      "name": "Simulated Dependency Traversability",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "attempts/da574d38e1a2552c1727fdd0fa4bda0e8715746e/artifact_evidence/evaluation/evaluation.json"
+     }
+    ],
+    "published": [
+     "Simulated Dependency Traversability",
+     "Simulated State Durability"
+    ],
+    "not_published": [],
+    "staged_attempts": 3,
+    "proposer_notes_text": "The recurring theme the current rubric handles well is visual genericness \u2014 all three attempts scored 0.65 on Visual Quality with near-identical critiques, so that dimension is already doing its job and needs no new criterion. What the rubric does not represent is the integrity of the simulated backend the brief invites. Two distinct problems showed up in the staged code. First, simulated asynchronous state is not real state: da574d38 re-rolls `Math.random() > 0.5` per render inside the ID status lookup, and 835afed9 hardcodes 'Pending' in the applicant confirmation markup while its reviewer view derives a different answer from a hash of the ID, so the same application reports contradictory recommender status depending on where and when you look. c954f12a persists status at submit with a timestamp and is genuinely better, but the Interaction Experience scores (0.75/0.70/0.70) treat all three as the same. Second, gates on simulated uploads made required terminal screens unreachable in two of three attempts \u2014 835afed9 even injects a 20% random upload failure onto the happy path \u2014 and the rubric charged that cost to three different criteria in three different proportions, so the gap between 'reached the confirmation page' and 'blocked at step 2' never surfaces as a clean signal. Both proposals isolate subdimensions currently averaged into Instruction Following and Interaction Experience, are checkable by repeating a lookup or walking the flow, and are agnostic to file layout, st"
+   },
+   {
+    "written_at": "2026-09-09T23:47:42.523891+00:00",
+    "finalized_attempts": 13,
+    "rubric_version_before": 2,
+    "status": "published",
+    "detail": {
+     "mode": "adaptive",
+     "scored_attempts": 13,
+     "gate_open": true,
+     "aggregate_variance": 0.0014058956916099751,
+     "per_criterion_entropy": {
+      "Build Smoothness": -0.0,
+      "Implementation Quality": 0.9182958340544896,
+      "Instruction Following": 0.9182958340544896,
+      "Visual Quality": 0.9182958340544896,
+      "Interaction Experience": -0.0,
+      "Simulated State Durability": -0.0,
+      "Simulated Dependency Traversability": -0.0
+     },
+     "mean_entropy": 0.3935553574519241,
+     "thresholds": {
+      "all_pass_threshold": 0.8,
+      "plateau_epsilon": 0.001,
+      "saturation_entropy_threshold": 0.1,
+      "warmup_attempts": 8,
+      "cooldown_attempts": 6,
+      "max_updates": 3,
+      "max_criteria": 11,
+      "window": 3
+     },
+     "trigger_verdicts": {
+      "all_pass": {
+       "fired": null,
+       "detail": "'Implementation Quality' = 0.700 < 0.8 in b018f61746a0b6222c06d9cd4813b7734a47bc55"
+      },
+      "plateau": {
+       "fired": null,
+       "detail": "variance 0.001406 >= 0.001"
+      },
+      "information_saturation": {
+       "fired": null,
+       "detail": "mean entropy 0.3936 >= 0.1"
+      }
+     },
+     "selected_trigger": "checkpoint_12",
+     "selected_detail": "checkpoint 2/3 reached: 12 real attempts (have 13)",
+     "checkpoint_index": 1,
+     "checkpoint_value": 12,
+     "published": true,
+     "accepted_count": 2,
+     "accepted_criteria": [
+      {
+       "name": "Draft Continuity Round-Trip",
+       "description": "The brief's no-account promise rests on a draft that survives leaving and coming back, so an unsubmitted application must actually resume. Returning to the entry point (reload, new tab, or navigating home and re-entering) must restore the in-progress answers, the step position, and either the recorded upload state or an explicit note of what must be re-attached \u2014 not silently drop the applicant back to an empty form. The portability pair must round-trip through operable controls: an export affordance reachable while the application is still in progress (not only a post-submission receipt) produces a file, and the import affordance actually opens a file picker, accepts that file, and repopulates the form with a visible confirmation or a clear error when the file is invalid. Score high when a tester can export mid-draft, clear or reload, import, and see the same answers back. Score low when import is present in the DOM but not operable, when it accepts a file and nothing changes, when export only exists after submission, or when the autosaved draft is not restored on return. Any file shape (JSON, text, encoded blob) is acceptable; what matters is that export and import are inverses of each other.",
+       "cited_evidence": "Attempt de0737 both failed to expose a mid-draft export ('the draft export function is conflated with the final receipt download rather than being a separate mid-application feature') and had a non-operable Import Draft control, yet scored 0.90 on Instruction Following \u2014 identical to attempt b018f6, which the same evaluator credited with 'functional export/import draft buttons' and 'Export Draft generates downloadable JSON'. Two attempts that differ materially on the brief's central no-login continuity mechanism receive the same score because the existing criteria average draft portability in with a dozen other checked-off requirements, and Simulated Dependency Traversability explicitly waves it off as not blocking the primary path. No existing criterion asks whether an exported draft can be imported back.",
+       "cited_source_id": "attempts/de0737fda03d64b8073e90f7f64abfa3db7d677b/feedback.md",
+       "quote": "The only minor gap is that the 'Import Draft' feature on the home screen does not demonstrate a functional file-input flow (clicking it does not open a file chooser), so the 'continue on another device' workflow is not fully operable, but this does not block the primary submission path."
+      },
+      {
+       "name": "Validation Signal Fidelity",
+       "description": "Where the brief requires validation (word counts, required links, required uploads), the feedback the applicant reads must agree with the rule that actually gates progression. Live indicators \u2014 word counters, required-field markers, upload confirmations, per-step completeness cues \u2014 must be computed by the same logic the gate uses, so a counter reading inside the allowed range never coexists with a block, and a block never occurs without an accompanying message naming the failing field and the shortfall. Error text must update or clear as soon as the condition is met rather than persisting from an earlier keystroke, and a field that is filled must not still read as missing. Score high when the counter, the error text, and the Continue/Submit behaviour move together and a tester can always tell from the page alone what still stands between them and the next step. Score low when the displayed count disagrees with the validator's count, when stale errors remain after the input satisfies the rule, when a rule is announced in helper text but never enforced, or when a block occurs with no message identifying the cause. This judges the agreement between announced and enforced rules, not how strict the rules are.",
+       "cited_evidence": "The same class of defect recurs across attempts but is treated as cosmetic. In b018f6 the gate's message contradicted the live counter and a 331-word field still read 'This field is required'; in 1f844eb the evaluator recorded that 'word counting appeared slightly off during testing (reported 248-249 words when the text should have exceeded 250), suggesting the counter may not perfectly align with validation logic'; in de0737 the counter updated live but 'provides immediate feedback without blocking progression', i.e. the announced range is not the enforced one. All three were absorbed as minor deductions inside Interaction Experience (0.80, 0.90, 0.85), which rewarded the presence of feedback rather than its truthfulness. For a portal whose stated purpose is 'to reduce applicant friction', a counter that disagrees with the gate is the single thing most likely to strand an applicant, and nothing in the current rubric distinguishes an implementation whose signals are trustworthy from one whose signals merely exist.",
+       "cited_source_id": "attempts/b018f61746a0b6222c06d9cd4813b7734a47bc55/feedback.md",
+       "quote": "Minor deduction: validation error messages occasionally persist even after the condition is met\u2014screenshot 05-essay-validation-error.png shows stale 'current: 292' message when word count had already reached 295, and the second essay shows 'This field is required' after 331 words were entered."
+      }
+     ],
+     "proposer_compute": {
+      "duration_api_ms": 97817,
+      "duration_ms": 96623,
+      "num_turns": 6,
+      "session_id": "8b5c5aa5-d119-46f5-bcee-1f8bf1f67087",
+      "subtype": "success",
+      "total_cost_usd": 0.7446345000000001,
+      "usage": {
+       "input_tokens": 8,
+       "cache_creation_input_tokens": 42787,
+       "cache_read_input_tokens": 259807,
+       "output_tokens": 6798,
+       "output_tokens_details": {
+        "thinking_tokens": 3406
+       },
+       "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+       },
+       "service_tier": "standard",
+       "cache_creation": {
+        "ephemeral_1h_input_tokens": 42787,
+        "ephemeral_5m_input_tokens": 0
+       },
+       "inference_geo": "not_available",
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 3265,
+         "cache_read_input_tokens": 79148,
+         "cache_creation_input_tokens": 1675,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1675
+         },
+         "type": "message"
+        }
+       ],
+       "speed": "standard"
+      }
+     },
+     "published_version": 3,
+     "triggering_attempt": "de0737fda03d64b8073e90f7f64abfa3db7d677b",
+     "triggering_agent": "davy-jones"
+    },
+    "proposer_context": "coral-proposer-v3-yjpchoj5",
+    "proposed": [
+     {
+      "name": "Draft Continuity Round-Trip",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "attempts/de0737fda03d64b8073e90f7f64abfa3db7d677b/feedback.md"
+     },
+     {
+      "name": "Validation Signal Fidelity",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "attempts/b018f61746a0b6222c06d9cd4813b7734a47bc55/feedback.md"
+     }
+    ],
+    "published": [
+     "Draft Continuity Round-Trip",
+     "Validation Signal Fidelity"
+    ],
+    "not_published": [],
+    "staged_attempts": 3,
+    "proposer_notes_text": "The dominant defect across all three attempts \u2014 recommender status re-rolled with Math.random() at render time \u2014 is already precisely covered by Simulated State Durability, which correctly drove scores to 0.20-0.30, so I did not re-propose it. I also declined to propose a 'visual distinctiveness' criterion despite all three critiques calling the designs generic: Visual Quality already penalizes that (0.75/0.75/0.80 with explicit 'competently generic' language), and the staged agent notes show a live attempt to game exactly that dimension with a single gradient badge, so a new criterion there would reward the trick rather than the quality. What remains genuinely unrepresented are two things the evaluators observed but scored as footnotes. First, draft export/import: attempt de0737 had no mid-draft export at all and an inoperable import control, yet tied attempt b018f6 (which had both working) at 0.90 Instruction Following \u2014 the brief's entire no-account premise depends on that round-trip and no criterion tests it end to end. Second, validation signal fidelity: in two separate attempts the live word counter and the gate disagreed (stale 'current: 292' at 295 words; 'This field is required' at 331 words; counters reading 248-249 for text past 250), and in a third the announced range was never enforced at all. Both proposals are strategy-neutral, checkable by ordinary in-browser interaction, and complement rather than overlap the traversability criterion, which explicitly decline"
+   },
+   {
+    "written_at": "2026-09-10T00:11:02.061923+00:00",
+    "finalized_attempts": 17,
+    "rubric_version_before": 3,
+    "status": "published",
+    "detail": {
+     "mode": "adaptive",
+     "scored_attempts": 17,
+     "gate_open": true,
+     "aggregate_variance": 0.0038340192043895757,
+     "per_criterion_entropy": {
+      "Build Smoothness": -0.0,
+      "Implementation Quality": 0.9182958340544896,
+      "Instruction Following": 0.9182958340544896,
+      "Visual Quality": 0.9182958340544896,
+      "Interaction Experience": 0.9182958340544896,
+      "Simulated State Durability": -0.0,
+      "Simulated Dependency Traversability": 0.9182958340544896,
+      "Draft Continuity Round-Trip": 0.9182958340544896,
+      "Validation Signal Fidelity": 0.9182958340544896
+     },
+     "mean_entropy": 0.7142300931534918,
+     "thresholds": {
+      "all_pass_threshold": 0.8,
+      "plateau_epsilon": 0.001,
+      "saturation_entropy_threshold": 0.1,
+      "warmup_attempts": 8,
+      "cooldown_attempts": 6,
+      "max_updates": 3,
+      "max_criteria": 11,
+      "window": 3
+     },
+     "trigger_verdicts": {
+      "all_pass": {
+       "fired": null,
+       "detail": "'Implementation Quality' = 0.750 < 0.8 in c47ab791f0f5f05014c756cd02e9d5d0da74a4a4"
+      },
+      "plateau": {
+       "fired": null,
+       "detail": "variance 0.003834 >= 0.001"
+      },
+      "information_saturation": {
+       "fired": null,
+       "detail": "mean entropy 0.7142 >= 0.1"
+      }
+     },
+     "selected_trigger": "checkpoint_16",
+     "selected_detail": "checkpoint 3/3 reached: 16 real attempts (have 17)",
+     "checkpoint_index": 2,
+     "checkpoint_value": 16,
+     "published": true,
+     "accepted_count": 2,
+     "accepted_criteria": [
+      {
+       "name": "Reviewer Adjudication Sufficiency",
+       "description": "The brief's reviewer dashboard exists to aid fair review, so it must function as a working review tool and not merely as a table that proves submissions exist. A reviewer must be able to (a) open a submission and read the substantive material the fellowship is judged on \u2014 the long-form essay answers, the required links, the names of the uploaded resume and case sample, and the recommender roster with its pending/received status \u2014 through an in-page surface (modal, drawer, detail route, expanded row; any shape is fine); (b) record the two rubric scores against dimensions that are named and anchored to a stated scale, so a reviewer can tell what each score measures; and (c) see those scores, and any status the workflow advances through, reflected back on the submission after they are entered. Filters offered on status must actually change the visible set rather than sit inert. Score high when a tester can pick a submission, read the essays that justify a score, enter both scores against labelled dimensions, and see the row update. Score low when the detail affordance omits the very content being scored (e.g. a dump of contact fields only), when the two scores are generic unlabelled slots such as 'Score 1' and 'Score 2' that name no evaluative dimension, when entered scores leave the row or submission status unchanged, or when filter controls do not narrow the list. This judges whether review is possible and legible, not how elaborate the dashboard looks.",
+       "cited_evidence": "The evaluator of 3194558e recorded that its reviewer surface shows full application details for scoring; screenshot 16-review-modal.png confirms the modal renders the applicant's background, LinkedIn link, and the Essay 1 body text, and its dashboard columns are headed 'Product Score' and 'Leadership Score'. Attempt 8ece83d2 is materially worse on the same dimension: its dashboard headers are 'Score 1' and 'Score 2' (index.html lines 263-264), and its View action builds a string of ID, name, email, LinkedIn, current role and recommender names and passes it to alert() (script.js lines 617-639) \u2014 the essays are never shown, so a reviewer scores an application they cannot read. Screenshot 20-reviewer-scores-entered.png shows 8 and 7 entered against those unnamed dimensions with the row status still 'Pending'. Yet 8ece83d2 scored HIGHER on Instruction Following (0.95 vs 0.85) and higher overall (0.817 vs 0.722). No current criterion registers this: Simulated State Durability asks only that reviewer scores persist, and Instruction Following credited the mere presence of 'a two-score rubric (1-10 spinbuttons)'. A rubric that ranks the unreadable dashboard above the readable one is inverting the quality difference a reviewer would actually feel.",
+       "cited_source_id": "attempts/3194558eabc3cfadc2acff348fd8de1d0262cfdb/feedback.md",
+       "quote": "The reviewer dashboard modal displays full application details and allows score entry."
+      },
+      {
+       "name": "Purpose-Built Design Voice",
+       "description": "Beyond the generic craft dimensions (alignment, spacing, contrast, responsive behaviour) that Visual Quality already covers, the portal should read as designed for this specific institution and process rather than assembled from stock form-template parts. Evidence of a deliberate voice includes a colour and typographic system that is chosen rather than defaulted and used consistently across applicant and reviewer surfaces; considered treatment of the moments that are particular to this product \u2014 the no-draft empty state, the multi-step progress indicator, the autosave/draft-found affordance, the receipt/confirmation, the reviewer roster; and framing copy that situates the applicant in a selective fellowship. The 'formal and organized' vibe is the constraint, not an excuse: distinctiveness must be expressed through restraint, hierarchy, and detail, so decoration that fights the formal register (novelty fonts, saturated gradients, emoji standing in for iconography) scores no better than blandness. Score high when a viewer could tell from a single screen that this is a considered fellowship intake portal rather than a default card-and-input layout. Score low when the artifact is competent but interchangeable \u2014 a centred white card, a stock stepper, an unstyled table \u2014 with nothing that could not be lifted unchanged into any other form product.",
+       "cited_evidence": "All three attempts were docked for the identical reason, and none of the seed criteria names it. 8ece83d2 (Visual Quality 0.70) was called 'generic and templated ... stock patterns that could belong to any similar portal'; 3194558e (0.75) 'competent but generic \u2014 nothing distinctive marks this as specifically a product leadership fellowship'; c47ab791 (0.80) 'competent and polished but not distinctive \u2014 it could serve any similar application portal without customization'. Two of the three overall critiques list adding a distinctive design element as a top-two fix. The current Visual Quality description enumerates only 'Layout, hierarchy, typography, color, spacing, consistency, and responsive behavior' \u2014 every one of which these attempts satisfied, per the same rationales. So evaluators are consistently enforcing a standard the announced rubric never states, costing 0.20-0.30 on every attempt while giving generators no signal that it is being measured. Isolating it makes the enforced standard visible and separates 'tidy' from 'considered', which currently collapse into one number.",
+       "cited_source_id": "attempts/8ece83d2169d6676a1ddc1cb3c31060e2fb0b581/feedback.md",
+       "quote": "There's no custom branding, distinctive visual treatment, or design choices that feel specific to a selective product leadership fellowship"
+      }
+     ],
+     "proposer_compute": {
+      "duration_api_ms": 249051,
+      "duration_ms": 248030,
+      "num_turns": 21,
+      "session_id": "a1c22a00-4864-444e-9934-3376c22ba371",
+      "subtype": "success",
+      "total_cost_usd": 1.710113,
+      "usage": {
+       "input_tokens": 28,
+       "cache_creation_input_tokens": 67730,
+       "cache_read_input_tokens": 1205146,
+       "output_tokens": 16431,
+       "output_tokens_details": {
+        "thinking_tokens": 9058
+       },
+       "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+       },
+       "service_tier": "standard",
+       "cache_creation": {
+        "ephemeral_1h_input_tokens": 67730,
+        "ephemeral_5m_input_tokens": 0
+       },
+       "inference_geo": "not_available",
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 3216,
+         "cache_read_input_tokens": 102644,
+         "cache_creation_input_tokens": 3122,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 3122
+         },
+         "type": "message"
+        }
+       ],
+       "speed": "standard"
+      }
+     },
+     "published_version": 4,
+     "triggering_attempt": "3194558eabc3cfadc2acff348fd8de1d0262cfdb",
+     "triggering_agent": "jack-sparrow"
+    },
+    "proposer_context": "coral-proposer-v4-vf739dws",
+    "proposed": [
+     {
+      "name": "Reviewer Adjudication Sufficiency",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "attempts/3194558eabc3cfadc2acff348fd8de1d0262cfdb/feedback.md"
+     },
+     {
+      "name": "Purpose-Built Design Voice",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "attempts/8ece83d2169d6676a1ddc1cb3c31060e2fb0b581/feedback.md"
+     }
+    ],
+    "published": [
+     "Purpose-Built Design Voice",
+     "Reviewer Adjudication Sufficiency"
+    ],
+    "not_published": [],
+    "staged_attempts": 3,
+    "proposer_notes_text": "The rubric has grown a deep applicant-side spine \u2014 draft round-trip, validation fidelity, upload traversability, state durability \u2014 but the reviewer half of the brief is represented only obliquely, as 'reviewer scores' inside Simulated State Durability. That gap produced a concrete rank inversion in this batch: 8ece83d2's reviewer cannot read the essays they are scoring (View is an alert() of contact fields, script.js:617-639) and scores two unnamed slots labelled 'Score 1'/'Score 2' (index.html:263-264), while 3194558e's reviewer gets a modal with the full essay text and columns named 'Product Score'/'Leadership Score' \u2014 and 8ece83d2 nonetheless scored higher on Instruction Following (0.95 vs 0.85) and overall (0.817 vs 0.722). Reviewer Adjudication Sufficiency is the proposal I hold with most confidence; it is behaviourally checkable and strategy-neutral. The second proposal is softer but empirically the single most repeated evaluator complaint in this bundle: all three attempts lost 0.20-0.30 of Visual Quality for genericness, a standard nowhere present in Visual Quality's stated scope, so generators are being penalized against an unannounced rule. I considered and rejected two other candidates: post-submission entry-point semantics (3194558e drops a submitted applicant back into an editable draft, screenshot 18-back-to-portal.png) recurred in only one attempt and the evaluator recorded it as a positive rather than a defect; and derived-UI rehydration after import (c47ab79"
+   }
+  ]
+ },
+ {
+  "run_id": "fellowship-yoked-r1",
+  "task": "fellowship",
+  "arm": "yoked",
+  "agents": [
+   "captain-ahab",
+   "captain-nemo",
+   "davy-jones",
+   "jack-sparrow"
+  ],
+  "checkpoints": [
+   {
+    "written_at": "2026-09-10T02:21:39.784366+00:00",
+    "finalized_attempts": 8,
+    "rubric_version_before": 1,
+    "status": "published",
+    "detail": {
+     "mode": "yoked",
+     "scored_attempts": 8,
+     "source_run": "2026-09-09_184725",
+     "schedule_sha256": "827657a8ec2fc6c100ddeea2b15d5e9d765b62fd9bf8b6d9c0f0d77937236f80",
+     "replay_detail": "checkpoint 1/3 reached: 8 real attempts (have 8)",
+     "checkpoint_index": 0,
+     "checkpoint_value": 8,
+     "required_count": 2,
+     "published": true,
+     "accepted_count": 2,
+     "accepted_criteria": [
+      {
+       "name": "Draft Continuity and Portability",
+       "description": "Evaluate whether the portal preserves and transfers an in-progress application without accounts. A strong result shows a clear empty state when no draft exists, saves entered work locally without an explicit save action so that reloading or returning later restores the prior answers and step position, and offers a working export-a-draft-file action plus an import action that accepts a previously exported file and repopulates the application with its contents. Credit round-trip fidelity (exported then re-imported data returns intact, including multi-step answers and recommender entries), sensible handling of a missing, malformed, or incompatible import file, and visible indication that work has been saved. Penalize autosave that silently loses data, export that produces an unusable or empty file, or import that is advertised but non-functional. Local simulation of file download/upload is acceptable.",
+       "cited_evidence": "",
+       "cited_source_id": "brief",
+       "quote": "show an empty state if no draft exists and autosave locally, with an option to export/import a draft file to continue on another device"
+      },
+      {
+       "name": "Recommender Request Lifecycle",
+       "description": "Evaluate whether recommender handling works as a stateful pipeline rather than as inert form fields. A strong result lets the applicant enter recommender names and emails inside the application form (with basic email validation and add/remove support), triggers the simulated sending of requests automatically as a consequence of pressing Submit rather than through a separate manual send button, and then surfaces per-recommender status such as pending versus received that is tied to the application's identifier so a returning applicant can look up progress. Credit consistency between the status shown and the underlying stored state, plus a plausible simulated path by which a request moves from pending to received. Penalize recommender data that is collected but never acted on, status that is hardcoded or unrelated to the submitted application, or status that cannot be retrieved after leaving the confirmation screen.",
+       "cited_evidence": "",
+       "cited_source_id": "brief",
+       "quote": "the portal displays pending/received status using the application ID"
+      }
+     ],
+     "proposer_compute": {
+      "duration_api_ms": 40967,
+      "duration_ms": 40195,
+      "num_turns": 4,
+      "session_id": "c178d146-f56b-4396-8bad-d9033e5712c0",
+      "subtype": "success",
+      "total_cost_usd": 0.561697,
+      "usage": {
+       "input_tokens": 6,
+       "cache_creation_input_tokens": 44195,
+       "cache_read_input_tokens": 86628,
+       "output_tokens": 2975,
+       "output_tokens_details": {
+        "thinking_tokens": 1153
+       },
+       "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+       },
+       "service_tier": "standard",
+       "cache_creation": {
+        "ephemeral_1h_input_tokens": 44195,
+        "ephemeral_5m_input_tokens": 0
+       },
+       "inference_geo": "not_available",
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 2626,
+         "cache_read_input_tokens": 43610,
+         "cache_creation_input_tokens": 585,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 585
+         },
+         "type": "message"
+        }
+       ],
+       "speed": "standard"
+      }
+     },
+     "published_version": 2
+    },
+    "proposer_context": "coral-proposer-v2-kifb3hdv",
+    "proposed": [
+     {
+      "name": "Draft Continuity and Portability",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "brief"
+     },
+     {
+      "name": "Recommender Request Lifecycle",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "brief"
+     }
+    ],
+    "published": [
+     "Draft Continuity and Portability",
+     "Recommender Request Lifecycle"
+    ],
+    "not_published": [],
+    "staged_attempts": 0,
+    "proposer_notes_text": "The seed rubric is entirely generic: build health, code quality, broad instruction following, visuals, and general interaction. The brief, however, specifies two concrete stateful mechanisms that a generic rubric collapses into 'Instruction Following' and would otherwise be scored only as a checkbox. First, the no-account premise forces draft state to live locally, and the brief explicitly demands an empty state, autosave, and an export/import file path for cross-device continuation \u2014 a round-trip behavior that is easy to stub and hard to actually get right, and that no seed criterion isolates. Second, the recommender flow is a cross-entity pipeline: data captured in the form, dispatch triggered as a side effect of Submit, and per-recommender status retrievable via the application ID. That is distinct from ordinary form validation or general 'controls communicate state,' because it requires persisted state that outlives the submission screen and is keyed to an identifier. I deliberately did not propose criteria for the reviewer dashboard, upload retry, or receipt generation: those are also in the brief, but they sit more comfortably inside Interaction Experience and Instruction Following, and I was capped at two. Both proposals are behavior-level and strategy-neutral, since the brief permits local simulation of downloads and email delivery."
+   },
+   {
+    "written_at": "2026-09-10T02:40:31.293364+00:00",
+    "finalized_attempts": 12,
+    "rubric_version_before": 2,
+    "status": "published",
+    "detail": {
+     "mode": "yoked",
+     "scored_attempts": 12,
+     "source_run": "2026-09-09_184725",
+     "schedule_sha256": "827657a8ec2fc6c100ddeea2b15d5e9d765b62fd9bf8b6d9c0f0d77937236f80",
+     "replay_detail": "checkpoint 2/3 reached: 12 real attempts (have 12)",
+     "checkpoint_index": 1,
+     "checkpoint_value": 12,
+     "required_count": 2,
+     "published": true,
+     "accepted_count": 2,
+     "accepted_criteria": [
+      {
+       "name": "Form Validation and Upload Failure Recovery",
+       "description": "Evaluate whether the multi-step application enforces its stated input rules and handles file attachment failure gracefully. A strong result validates the specific rule types named in the brief: word-count limits on long-form written responses (with a live or on-submit count and a clear indication of the allowed range) and required link fields that reject malformed or missing URLs. Validation should block or clearly flag progression past a step with invalid or missing required input, attach messages to the offending field rather than only showing a generic banner, and clear errors once corrected. Separately, the portal must accept file attachments for both a resume and a case sample, and must model at least one failure path: a failed upload surfaces a specific, human-readable error (not a silent no-op or raw exception) and offers an explicit retry or re-select action that can succeed on a subsequent attempt. Credit per-file state that is visible (selected/uploading/failed/succeeded) and persists sensibly across steps. Penalize validation that is decorative (messages shown but submission still proceeds), word-count or link rules that are claimed but not enforced, upload controls with no error or retry affordance, or a failure path that leaves the file stuck in an unrecoverable state. Simulated upload behavior is acceptable so long as the failure and retry cycle is genuinely exercised.",
+       "cited_evidence": "",
+       "cited_source_id": "brief",
+       "quote": "multi\u2011step application with validation (word counts, required links) and file uploads for resume and case sample; failed uploads show clear errors and retry options"
+      },
+      {
+       "name": "Reviewer Dashboard Filtering and Scoring State",
+       "description": "Evaluate whether the internal reviewer surface is a functioning, stateful workflow distinct from the applicant flow rather than a static table. A strong result provides a separately reachable reviewer view (a distinct route, mode, or role toggle \u2014 no login is required or expected) that lists actual submissions produced by the applicant flow, not hardcoded placeholder rows, so a newly submitted application appears there. It offers working status filters that visibly narrow the list and handle the empty-result case, and it implements a rubric with exactly two distinct scores per submission, each independently settable with a defined scale, persisted so that scores survive navigating away and returning and remain associated with the correct submission. Credit reviewer state that is coherent alongside applicant state (for example, scoring or advancing a submission updates the status used by the filters), and credit presentation that supports fair review such as consistent score display, aggregate or combined scoring shown transparently, and a readable side-by-side of application content. Penalize a dashboard that renders only mock data, filters that do not actually filter, a single score or an unbounded free-text score in place of the required two, or scores that are lost on reload or bleed across submissions.",
+       "cited_evidence": "",
+       "cited_source_id": "brief",
+       "quote": "A reviewer dashboard (separate internal role) lists submissions with filters by status and a two\u2011score rubric."
+      }
+     ],
+     "proposer_compute": {
+      "duration_api_ms": 38771,
+      "duration_ms": 37744,
+      "num_turns": 4,
+      "session_id": "5d7f846b-f07f-458d-877b-35d58d05f39a",
+      "subtype": "success",
+      "total_cost_usd": 0.2012835,
+      "usage": {
+       "input_tokens": 6,
+       "cache_creation_input_tokens": 6701,
+       "cache_read_input_tokens": 125741,
+       "output_tokens": 2759,
+       "output_tokens_details": {
+        "thinking_tokens": 487
+       },
+       "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+       },
+       "service_tier": "standard",
+       "cache_creation": {
+        "ephemeral_1h_input_tokens": 6701,
+        "ephemeral_5m_input_tokens": 0
+       },
+       "inference_geo": "not_available",
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 2407,
+         "cache_read_input_tokens": 44151,
+         "cache_creation_input_tokens": 586,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 586
+         },
+         "type": "message"
+        }
+       ],
+       "speed": "standard"
+      }
+     },
+     "published_version": 3
+    },
+    "proposer_context": "coral-proposer-v3-rvpy5z2e",
+    "proposed": [
+     {
+      "name": "Form Validation and Upload Failure Recovery",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "brief"
+     },
+     {
+      "name": "Reviewer Dashboard Filtering and Scoring State",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "brief"
+     }
+    ],
+    "published": [
+     "Form Validation and Upload Failure Recovery",
+     "Reviewer Dashboard Filtering and Scoring State"
+    ],
+    "not_published": [],
+    "staged_attempts": 0,
+    "proposer_notes_text": "The brief decomposes into three applicant screens plus a reviewer surface. The two already-added criteria cover Screen 1 (draft autosave, export/import portability) and the Screen 3 recommender pipeline, leaving Screen 2 and the reviewer dashboard as the largest uncovered requirement clusters \u2014 both currently collapsed inside the broad seed criteria for Interaction Experience and Instruction Following. The first proposal isolates Screen 2's two explicit, checkable subdimensions: the named validation rules (word counts, required links) and the named failure path for file uploads (clear errors plus retry), which the brief calls out specifically enough that a solution silently omitting either is verifiably incomplete. The second isolates the reviewer role, which the Constraints line elevates to a hard requirement ('stateful reviewer workflow') and which has three concrete, observable sub-requirements: separate reachability, working status filters, and exactly two persisted scores. Both are written to be strategy-neutral \u2014 they judge observable behavior (does the filter narrow the list, does a retry succeed, does a score survive reload) rather than any particular storage mechanism, framework, or UI arrangement, and both explicitly accept local simulation per the brief's allowance. I considered a third criterion covering the confirmation page, receipt ID, and downloadable copy, but capped at two I judged these the higher-value gaps; the receipt requirement is at least adjacent to "
+   },
+   {
+    "written_at": "2026-09-10T02:59:51.790223+00:00",
+    "finalized_attempts": 17,
+    "rubric_version_before": 3,
+    "status": "published",
+    "detail": {
+     "mode": "yoked",
+     "scored_attempts": 17,
+     "source_run": "2026-09-09_184725",
+     "schedule_sha256": "827657a8ec2fc6c100ddeea2b15d5e9d765b62fd9bf8b6d9c0f0d77937236f80",
+     "replay_detail": "checkpoint 3/3 reached: 16 real attempts (have 17)",
+     "checkpoint_index": 2,
+     "checkpoint_value": 16,
+     "required_count": 2,
+     "published": true,
+     "accepted_count": 2,
+     "accepted_criteria": [
+      {
+       "name": "Submission Confirmation, Receipt ID, and Downloadable Copy",
+       "description": "Evaluate what happens at the moment of final submission. A strong result transitions the applicant to a distinct confirmation screen (not merely a toast or an inline banner) that presents a receipt/application identifier which is non-empty, plausibly unique per submission, and stable \u2014 the same ID is shown on return rather than regenerated on each render \u2014 and is the same identifier used to look up recommender status. The confirmation should summarize what was submitted (at minimum the applicant's identity, the attached files, and the recommenders) so the applicant can verify the record. It must also offer a working downloadable copy of the submission: activating it produces an actual artifact (file download, generated document, or a clearly-labelled realistic local simulation) whose contents reflect the applicant's real submitted answers rather than placeholder text, and the affordance should be reachable both immediately after submitting and, ideally, when returning later with the receipt ID. Credit clear indication that the application is now final/locked and cannot be silently edited as if it were still a draft, and credit graceful handling of a submission attempt that cannot complete. Penalize a confirmation step that is skipped entirely, a receipt ID that is cosmetic or duplicated across submissions, a download control that is inert or yields an empty/generic file, and a confirmation page that loses the receipt on reload.",
+       "cited_evidence": "",
+       "cited_source_id": "brief",
+       "quote": "final submissions generate a confirmation page with a receipt ID and a downloadable copy"
+      },
+      {
+       "name": "Deadline-Bounded Draft Access",
+       "description": "Evaluate whether the portal treats the fellowship deadline as a real, enforced boundary on draft editing rather than as decorative copy. A strong result surfaces a concrete deadline to the applicant (an explicit date/time, and ideally remaining-time context) consistently wherever it is relevant \u2014 the start screen, the multi-step form, and any returning-draft view \u2014 and permits resuming and editing the locally saved draft freely while the deadline is in the future. Once the deadline has passed, the behavior should change coherently: further editing and submission of that draft are prevented or clearly blocked with an explanatory message, and the applicant is not left able to submit into a closed window through an unguarded path (for example, a direct step navigation or a stale button). Credit a single source of truth for the deadline that both the applicant flow and any status/reviewer surfaces agree on, and credit sensible treatment of already-submitted applications versus still-open drafts. Penalize a deadline that is mentioned in text but never checked, contradictory deadline values in different places, no way for a reviewer of the artifact to observe the closed state, or a hard lockout that destroys the applicant's saved work or blocks access to an already-completed submission's receipt.",
+       "cited_evidence": "",
+       "cited_source_id": "brief",
+       "quote": "Applicants can revisit the draft locally until the deadline"
+      }
+     ],
+     "proposer_compute": {
+      "duration_api_ms": 39940,
+      "duration_ms": 38843,
+      "num_turns": 3,
+      "session_id": "990be730-a3a4-4938-8b41-3de2dcfcba8d",
+      "subtype": "success",
+      "total_cost_usd": 0.20651350000000002,
+      "usage": {
+       "input_tokens": 6,
+       "cache_creation_input_tokens": 7156,
+       "cache_read_input_tokens": 127027,
+       "output_tokens": 2737,
+       "output_tokens_details": {
+        "thinking_tokens": 715
+       },
+       "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+       },
+       "service_tier": "standard",
+       "cache_creation": {
+        "ephemeral_1h_input_tokens": 7156,
+        "ephemeral_5m_input_tokens": 0
+       },
+       "inference_geo": "not_available",
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 2527,
+         "cache_read_input_tokens": 44608,
+         "cache_creation_input_tokens": 584,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 584
+         },
+         "type": "message"
+        }
+       ],
+       "speed": "standard"
+      }
+     },
+     "published_version": 4
+    },
+    "proposer_context": "coral-proposer-v4-r1lamisv",
+    "proposed": [
+     {
+      "name": "Submission Confirmation, Receipt ID, and Downloadable Copy",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "brief"
+     },
+     {
+      "name": "Deadline-Bounded Draft Access",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "brief"
+     }
+    ],
+    "published": [
+     "Deadline-Bounded Draft Access",
+     "Submission Confirmation, Receipt ID, and Downloadable Copy"
+    ],
+    "not_published": [],
+    "staged_attempts": 0,
+    "proposer_notes_text": "The four already-added criteria cover draft persistence/portability, the recommender pipeline, validation plus upload failure recovery, and the reviewer dashboard. Reading the brief for what remains, two explicit requirements are still uncovered by anything narrower than the broad seed criteria. First, the terminal state of the applicant flow: the brief demands a confirmation page carrying a receipt ID and a downloadable copy \u2014 this is a concrete, checkable artifact distinct from the recommender-status criterion (which touches the application ID only as a lookup key) and from the draft-continuity criterion (which concerns export/import of in-progress work, not a post-submission receipt). Second, the deadline: the brief bounds local draft revisitation with 'until the deadline', which implies a stated deadline and a behavioral change once it passes; nothing in the existing rubric examines whether that boundary exists or is enforced. Both criteria are phrased around observable behavior and outcomes rather than any particular implementation, so they apply equally to a vanilla-JS localStorage build, a framework SPA, or any other valid approach, and both explicitly accept realistic local simulation as the brief permits. I deliberately did not propose anything about the 'no login' constraint or the formal/organized vibe, since those are squarely inside the Instruction Following and Visual Quality seeds and would duplicate rather than isolate."
+   }
+  ]
+ },
+ {
+  "run_id": "museum-adaptive-r1",
+  "task": "museum",
+  "arm": "adaptive",
+  "agents": [
+   "captain-ahab",
+   "captain-nemo",
+   "davy-jones",
+   "jack-sparrow"
+  ],
+  "checkpoints": [
+   {
+    "written_at": "2026-09-10T22:22:20.078879+00:00",
+    "finalized_attempts": 9,
+    "rubric_version_before": 1,
+    "status": "published",
+    "detail": {
+     "mode": "adaptive",
+     "scored_attempts": 9,
+     "gate_open": true,
+     "aggregate_variance": 0.0068222222222222165,
+     "per_criterion_entropy": {
+      "Build Smoothness": -0.0,
+      "Implementation Quality": 0.9182958340544896,
+      "Instruction Following": 0.9182958340544896,
+      "Visual Quality": 0.9182958340544896,
+      "Interaction Experience": 1.584962500721156
+     },
+     "mean_entropy": 0.8679700005769249,
+     "thresholds": {
+      "all_pass_threshold": 0.8,
+      "plateau_epsilon": 0.001,
+      "saturation_entropy_threshold": 0.1,
+      "warmup_attempts": 8,
+      "cooldown_attempts": 6,
+      "max_updates": 3,
+      "max_criteria": 11,
+      "window": 3
+     },
+     "trigger_verdicts": {
+      "all_pass": {
+       "fired": null,
+       "detail": "'Implementation Quality' = 0.700 < 0.8 in 0081d8fd13874f3c18a57eea18733f982f40f87f"
+      },
+      "plateau": {
+       "fired": null,
+       "detail": "variance 0.006822 >= 0.001"
+      },
+      "information_saturation": {
+       "fired": null,
+       "detail": "mean entropy 0.8680 >= 0.1"
+      }
+     },
+     "selected_trigger": "checkpoint_8",
+     "selected_detail": "checkpoint 1/3 reached: 8 real attempts (have 9)",
+     "checkpoint_index": 0,
+     "checkpoint_value": 8,
+     "published": true,
+     "accepted_count": 2,
+     "accepted_criteria": [
+      {
+       "name": "Identity Specificity",
+       "description": "Judges whether the artifact's formal decisions \u2014 typography, color, composition, imagery, motion, structure \u2014 are traceable to this particular institution and place (a Dutch contemporary art museum in Rotterdam) rather than being an interchangeable template. Score high when the visual system reads as designed for this museum: at least one committed formal idea that the content and the setting motivate, carried consistently through the piece, such that removing the name would still leave the identity legible. Score low when the design is competent but generic \u2014 a stock layout plus the museum's name, or an off-the-shelf reference (De Stijl palette, glitch effect) applied as decoration without connecting to the museum's stated character. This is scored independently of craft: clean type, generous spacing, and working breakpoints earn credit under Visual Quality, not here.",
+       "cited_evidence": "All three attempts were praised for craft and penalized for genericness inside the single Visual Quality score, which collapses two independent subdimensions and produces noisy, hard-to-act-on numbers: 0081 got 0.50 despite 'Layout is coherent... Spacing is intentional'; bb57 got 0.55 despite 'Typography is clean... Responsive behavior is solid'; 0075 got 0.70 with the same combination of solid craft and 'the design lacks distinctiveness: this could be any contemporary museum website.' The 0.15 spread between 0075 and bb57 does not correspond to any real difference in either craft (all three are equally polished) or specificity (all three are equally interchangeable) \u2014 it is an averaging artifact. Separating the two makes the ranking legible: a rougher artifact with a committed, place-motivated form would currently score the same as a polished template, and the graders' own overall critiques identify specificity, not polish, as the actual bottleneck ('Pivot. This direction has already reached its ceiling').",
+       "cited_source_id": "attempts/0081d8fd13874f3c18a57eea18733f982f40f87f/artifact_evidence/evaluation/evaluation.json",
+       "quote": "It doesn't feel custom-made for this specific museum; swap the text and it could serve any similar institution."
+      },
+      {
+       "name": "Affordance Integrity",
+       "description": "Judges whether every element that presents itself as interactive or navigable actually resolves. Links and anchors must reach a target that exists in the document; buttons and cards styled with hover, cursor, or lift affordances must produce content or a state change; menus and labelled destinations must lead somewhere real. Score high when the set of implied affordances and the set of working affordances coincide \u2014 including a deliberately static piece that makes no false promises. Score low for links to non-existent anchor targets, hover-styled elements that do nothing when clicked, or navigation that advertises destinations the artifact does not contain. This is about honesty of the surface, not the quantity or ambition of interaction.",
+       "cited_evidence": "The defect recurs and the current Interaction Experience criterion scores it inconsistently. 0075 was marked down to 0.65 for hover-styled cards that lead nowhere. bb57 is worse on this exact axis \u2014 its footer and visit menus link to #openingstijden, #tickets, #bereikbaarheid, #groepen, #pers, #vacatures, #contact and #privacy, none of which exist as ids in the document (only #bezoek, #tentoonstellingen, #collectie do), so eight advertised destinations are inert \u2014 yet it scored 0.85 and the grader recorded 'No broken functionality discovered' after testing only the working nav link. So the attempt with eight dead links outranked the attempt whose only sin was implying clickability, because Interaction Experience is averaging affordance correctness together with interaction ambition. Isolating it produces a check that is cheap to verify and that currently mis-ranks two of three attempts.",
+       "cited_source_id": "attempts/0075ce01cd861c666877935f07545dc316b7b677/feedback.md",
+       "quote": "Exhibition cards hover but aren't clickable\u2014a visitor would expect to click them to learn more about exhibitions, but they're dead ends."
+      }
+     ],
+     "proposer_compute": {
+      "duration_api_ms": 134418,
+      "duration_ms": 133044,
+      "num_turns": 11,
+      "session_id": "6cc15316-6426-4819-a583-5827148ab8cb",
+      "subtype": "success",
+      "total_cost_usd": 1.3615079999999997,
+      "usage": {
+       "input_tokens": 14,
+       "cache_creation_input_tokens": 90029,
+       "cache_read_input_tokens": 449944,
+       "output_tokens": 9013,
+       "output_tokens_details": {
+        "thinking_tokens": 4923
+       },
+       "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+       },
+       "service_tier": "standard",
+       "cache_creation": {
+        "ephemeral_1h_input_tokens": 90029,
+        "ephemeral_5m_input_tokens": 0
+       },
+       "inference_geo": "not_available",
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 2871,
+         "cache_read_input_tokens": 87749,
+         "cache_creation_input_tokens": 2280,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 2280
+         },
+         "type": "message"
+        }
+       ],
+       "speed": "standard"
+      }
+     },
+     "published_version": 2,
+     "triggering_attempt": "bb57d87fbb4afbe05a2362c0ec3efec2358bc09d",
+     "triggering_agent": "captain-nemo"
+    },
+    "proposer_context": "coral-proposer-v2-lki9isw6",
+    "proposed": [
+     {
+      "name": "Identity Specificity",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "attempts/0081d8fd13874f3c18a57eea18733f982f40f87f/artifact_evidence/evaluation/evaluation.json"
+     },
+     {
+      "name": "Affordance Integrity",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "attempts/0075ce01cd861c666877935f07545dc316b7b677/feedback.md"
+     }
+    ],
+    "published": [
+     "Affordance Integrity",
+     "Identity Specificity"
+    ],
+    "not_published": [],
+    "staged_attempts": 3,
+    "proposer_notes_text": "All three attempts are technically clean (0.90\u20130.95 Build Smoothness, 0.70\u20130.85 Implementation Quality) and differ almost entirely in dimensions the seed rubric averages rather than separates. The dominant recurring finding is that craft polish and identity specificity are independent and are being summed into one Visual Quality number: every attempt earned explicit praise for typography, spacing, and responsive behavior in the same rationale that scored it 0.50\u20130.70 for being an interchangeable template, so the resulting spread tracks neither quality. Splitting specificity out gives a rank that reflects the graders' own stated bottleneck and lets craft be credited on its own terms. The second finding is a concrete, verifiable defect the rubric demonstrably missed: bb57's footer and visit navigation point at eight anchors that do not exist in the document, and it still received 0.85 and 'No broken functionality discovered' on Interaction Experience \u2014 higher than 0075, whose comparable but milder sin (hover affordances on non-clickable cards) was penalized to 0.65. Affordance Integrity isolates that check without rewarding sheer interaction volume, so a committed poster form stays scoreable. I did not propose anything about visitor-information depth (hours, tickets, collection), because penalizing that would conflict with the brief's explicit permission to build a poster or a single interaction, and the graders already handle it inconsistently for that same reason."
+   },
+   {
+    "written_at": "2026-09-10T22:32:56.529695+00:00",
+    "finalized_attempts": 13,
+    "rubric_version_before": 2,
+    "status": "published",
+    "detail": {
+     "mode": "adaptive",
+     "scored_attempts": 13,
+     "gate_open": true,
+     "aggregate_variance": 1.1337868480725366e-05,
+     "per_criterion_entropy": {
+      "Build Smoothness": -0.0,
+      "Implementation Quality": -0.0,
+      "Instruction Following": -0.0,
+      "Visual Quality": -0.0,
+      "Interaction Experience": -0.0,
+      "Identity Specificity": 1.584962500721156,
+      "Affordance Integrity": 0.9182958340544896
+     },
+     "mean_entropy": 0.35760833353937793,
+     "thresholds": {
+      "all_pass_threshold": 0.8,
+      "plateau_epsilon": 0.001,
+      "saturation_entropy_threshold": 0.1,
+      "warmup_attempts": 8,
+      "cooldown_attempts": 6,
+      "max_updates": 3,
+      "max_criteria": 11,
+      "window": 3
+     },
+     "trigger_verdicts": {
+      "all_pass": {
+       "fired": null,
+       "detail": "'Identity Specificity' = 0.350 < 0.8 in 62ce71f7689c08dfca2acf5ecf2199a4a14d2ca0"
+      },
+      "plateau": {
+       "fired": "plateau",
+       "detail": "aggregate variance 0.000011 < 0.001 across 3 v2 observations"
+      },
+      "information_saturation": {
+       "fired": null,
+       "detail": "mean entropy 0.3576 >= 0.1"
+      }
+     },
+     "selected_trigger": "checkpoint_12",
+     "selected_detail": "checkpoint 2/3 reached: 12 real attempts (have 13)",
+     "checkpoint_index": 1,
+     "checkpoint_value": 12,
+     "published": true,
+     "accepted_count": 2,
+     "accepted_criteria": [
+      {
+       "name": "Content Legibility Under Viewport Constraint",
+       "description": "Judges whether all content the artifact commits to showing stays fully readable across the tested viewport range \u2014 nothing clipped mid-word, truncated at a container edge, or overlapped by another element \u2014 and whether content that cannot fit is made reachable (scroll, pagination, reflow, progressive disclosure) rather than silently cut off. Score high when a narrow or short viewport yields the same complete information as a wide one, whether the piece achieves that by flowing/scrolling or by a fixed-viewport composition that genuinely reflows its type and boxes to fit. Score low when a locked-height composition (e.g. 100vh with hidden overflow) hides text that exists in the document: sentences cut off, labels colliding with headings, or trailing metadata pushed out of view. This concerns whether the content survives the layout, not whether the layout is attractive \u2014 proportion, rhythm and breakpoint taste earn credit under Visual Quality.",
+       "cited_evidence": "The evaluator credited attempt 346fcc7e's mobile behavior as unbroken and scored Visual Quality 0.85, but its own 375px screenshot (07-scratch__08-mobile-view.png) shows the locked 100vh grid clipping content: the tagline ends at \"in het hart van Rotterdam's\" with \"havendistrict\" cut off, the collection block's \"SINDS 2018\" line is sliced in half, and the \"BEZOEK\" and \"COLLECTIE\" container labels collide with the headings beneath them \u2014 all of which render correctly at tablet width (06-scratch__07-tablet-view.png). Attempt 62ce71f7, whose flow layout scrolls, loses no content at any width. The two attempts finished at the same 0.850 overall and near-identical Visual Quality, so the rubric currently treats 'reflows and keeps all content' and 'reflows and eats some of its own copy' as equivalent.",
+       "cited_source_id": "attempts/346fcc7ebfbc4e9a3ffd3ec042f5ed7d2ae84a87/feedback.md",
+       "quote": "Responsive breakpoint at 768px stacks containers vertically on mobile without breaking."
+      },
+      {
+       "name": "Keyboard Operability of the Interaction Model",
+       "description": "Judges whether the interactions the artifact does offer can be driven without a pointer. Every trigger that opens, changes, or reveals content should be reachable in tab order and activatable by Enter/Space, should show a discernible focus state, and any overlay or revealed state should be dismissable from the keyboard. Score high when the keyboard path matches the mouse path, or when a deliberately non-interactive piece offers no interactions to strand. Score low when the whole interaction model hangs off click handlers on non-focusable elements, so a keyboard user can see the affordance but never reach it, or can open a full-screen overlay but not close it. This is about whether the interactions are reachable, not how many there are or how polished their transitions look.",
+       "cited_evidence": "Attempt e400dd1b earned the highest Interaction Experience score of the three (0.90), justified entirely in pointer terms \u2014 hover, cursor, click-anywhere-to-close. Its four full-screen overlays are opened by click listeners bound to bare <div> blocks with no tabindex, role, or key handling, and closed only by an overlay click; there is no Escape handler at all, so a keyboard user can neither open nor dismiss any of them. Attempts 346fcc7e and 62ce71f7 both wire an Escape handler, and the evaluator noted 346fcc7e's as a plus but filed it under Implementation Quality rather than interaction. The result is that the least keyboard-operable of the three attempts scored highest on the criterion nominally covering how its controls operate, so this dimension is currently averaged away instead of ranked.",
+       "cited_source_id": "attempts/e400dd1b828a14c20eb0722ed39fb5f50b72dc2f/feedback.md",
+       "quote": "Hover states on clickable elements (cursor: pointer on blocks and Programma button) signal interactivity."
+      }
+     ],
+     "proposer_compute": {
+      "duration_api_ms": 115693,
+      "duration_ms": 114563,
+      "num_turns": 13,
+      "session_id": "43452a8a-8b9a-4a46-9cc5-817e63d2b9ba",
+      "subtype": "success",
+      "total_cost_usd": 1.0042265000000001,
+      "usage": {
+       "input_tokens": 14,
+       "cache_creation_input_tokens": 54162,
+       "cache_read_input_tokens": 518269,
+       "output_tokens": 7584,
+       "output_tokens_details": {
+        "thinking_tokens": 3039
+       },
+       "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+       },
+       "service_tier": "standard",
+       "cache_creation": {
+        "ephemeral_1h_input_tokens": 54162,
+        "ephemeral_5m_input_tokens": 0
+       },
+       "inference_geo": "not_available",
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 2778,
+         "cache_read_input_tokens": 92173,
+         "cache_creation_input_tokens": 872,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 872
+         },
+         "type": "message"
+        }
+       ],
+       "speed": "standard"
+      }
+     },
+     "published_version": 3,
+     "triggering_attempt": "e400dd1b828a14c20eb0722ed39fb5f50b72dc2f",
+     "triggering_agent": "captain-ahab"
+    },
+    "proposer_context": "coral-proposer-v3-nx59jl1b",
+    "proposed": [
+     {
+      "name": "Content Legibility Under Viewport Constraint",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "attempts/346fcc7ebfbc4e9a3ffd3ec042f5ed7d2ae84a87/feedback.md"
+     },
+     {
+      "name": "Keyboard Operability of the Interaction Model",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "attempts/e400dd1b828a14c20eb0722ed39fb5f50b72dc2f/feedback.md"
+     }
+    ],
+    "published": [
+     "Content Legibility Under Viewport Constraint",
+     "Keyboard Operability of the Interaction Model"
+    ],
+    "not_published": [],
+    "staged_attempts": 3,
+    "proposer_notes_text": "Reading the three staged artifacts against their evaluations, two consequential differences fall between the existing criteria. First, both fixed-viewport pieces (346fcc7e, e400dd1b) set body overflow:hidden on a 100vh grid; at 375px this costs 346fcc7e actual content \u2014 a truncated tagline, a half-cut 'SINDS 2018' line, and label/heading collisions \u2014 while the evaluator described the same breakpoint as stacking 'without breaking' and scored Visual Quality 0.85, the same neighborhood as the flow-layout attempt that loses nothing. Visual Quality currently bundles 'responsive behavior' with typography, color and spacing, so losing content and merely looking cramped land in the same number; separating containment makes the difference rankable, and it is form-neutral since a poster can hold all its content and a scrolling page can still clip. Second, Interaction Experience is being scored purely through a mouse: e400dd1b's overlays are click-only listeners on non-focusable divs with no Escape handler, yet it scored 0.90 \u2014 above the two attempts that do handle Escape \u2014 and Affordance Integrity gave it a perfect 1.00 because affordances resolve to *a* pointer, not to any input. Both proposals isolate a subdimension already nominally inside a seed criterion but demonstrably not driving its score. I considered but rejected a criterion about editorial/content depth (all three carry comparable Dutch museum copy, so there is no observed spread) and one about artwork representation, since"
+   },
+   {
+    "written_at": "2026-09-10T22:46:10.098844+00:00",
+    "finalized_attempts": 17,
+    "rubric_version_before": 3,
+    "status": "published",
+    "detail": {
+     "mode": "adaptive",
+     "scored_attempts": 17,
+     "gate_open": true,
+     "aggregate_variance": 0.0016941015089163224,
+     "per_criterion_entropy": {
+      "Build Smoothness": -0.0,
+      "Implementation Quality": -0.0,
+      "Instruction Following": -0.0,
+      "Visual Quality": -0.0,
+      "Interaction Experience": 0.9182958340544896,
+      "Identity Specificity": -0.0,
+      "Affordance Integrity": -0.0,
+      "Content Legibility Under Viewport Constraint": 0.9182958340544896,
+      "Keyboard Operability of the Interaction Model": 0.9182958340544896
+     },
+     "mean_entropy": 0.3060986113514965,
+     "thresholds": {
+      "all_pass_threshold": 0.8,
+      "plateau_epsilon": 0.001,
+      "saturation_entropy_threshold": 0.1,
+      "warmup_attempts": 8,
+      "cooldown_attempts": 6,
+      "max_updates": 3,
+      "max_criteria": 11,
+      "window": 3
+     },
+     "trigger_verdicts": {
+      "all_pass": {
+       "fired": null,
+       "detail": "'Interaction Experience' = 0.750 < 0.8 in 3d14974f8c783f740783959ce54e0f00caa73acf"
+      },
+      "plateau": {
+       "fired": null,
+       "detail": "variance 0.001694 >= 0.001"
+      },
+      "information_saturation": {
+       "fired": null,
+       "detail": "mean entropy 0.3061 >= 0.1"
+      }
+     },
+     "selected_trigger": "checkpoint_16",
+     "selected_detail": "checkpoint 3/3 reached: 16 real attempts (have 17)",
+     "checkpoint_index": 2,
+     "checkpoint_value": 16,
+     "published": true,
+     "accepted_count": 2,
+     "accepted_criteria": [
+      {
+       "name": "Curatorial Presence of the Art",
+       "description": "Judges whether the artifact gives the museum's actual subject \u2014 artworks, artists, curatorial thinking \u2014 real presence, rather than only branding the institution and its city. Score high when a visitor comes away knowing something concrete about what is on show: named or clearly characterised artists/works, exhibition premises described in the language of contemporary art practice, or visual/motional treatment that stands in for the work itself (imagery, generative marks, projected type). This can be satisfied in any form the brief permits \u2014 a poster can foreground one work and its maker; a spatial piece can render the art; a multi-section site can enumerate a programme. Score low when the piece is an identity system wrapped around empty vessels: exhibitions reduced to codes, colour blocks or one-line teasers with no artists, no described works, and no sense of what a visitor would actually see, so the artifact reads as a place-brand rather than as an art museum. This is about whether the art is present in the content, not whether the design is place-specific (that is Identity Specificity) or attractive (Visual Quality).",
+       "cited_evidence": "The evaluator noticed this on a0a2bd but could only register it as a 'minor deduction' inside Identity Specificity, which is explicitly scored on formal decisions, so the attempt still received 0.95 there and 1.00 on Instruction Following. Comparing artifacts: a0a2bd's three exhibitions are container codes (NMR-26, HVN-26, LCT-26) whose overlays give a three-line blurb each and name no artist at all, while d7597 names Rineke Dijkstra, Aernout Mik and Studio Drift, attributes each exhibition, and describes a 5.000-work collection with a research-appointment route. That is a large, rankable difference in what a visitor learns about the art, and the current scores treat the two as equivalent (Identity Specificity 0.95 vs 0.95; Instruction Following 1.00 vs 0.95).",
+       "cited_source_id": "attempts/a0a2bd8e7f82c241c6d0464207ac02c2b3b260ef/feedback.md",
+       "quote": "Minor deduction: the visual system is so complete that it leaves little room for the 'modern art' half of the brief to show through \u2014 it reads more as industrial archive than contemporary art venue, which may or may not be intentional."
+      },
+      {
+       "name": "Coherence of Stated Institutional Facts",
+       "description": "Judges whether the concrete particulars the artifact asserts about the museum hold together. Wherever a fact appears more than once or is implied twice \u2014 street address and district, opening hours, admission prices, exhibition dates and venues, counts such as 'three now showing', contact details \u2014 the instances should agree, and the setting the design and naming claim should match the location the content states. Score high when every asserted particular lines up, including the case of a deliberately sparse piece that asserts few facts and keeps those few consistent. Score low when the artifact contradicts itself: a headline location that no listed venue or address corresponds to, an identity that brands the institution for one district while the visit information places it in another, a summary count that does not match the items enumerated, or hours/prices that differ between surfaces. This concerns whether the stated content is internally trustworthy, not how much content there is or how it is styled.",
+       "cited_evidence": "The evaluator credited the presence of dates/locations (Instruction Following 1.00) without checking that they cohere. In a0a2bd's artifact the standing label reads WAALHAVEN / ROTTERDAM and the programme overlay calls the shows 'Drie gelijktijdige tentoonstellingen in Rotterdam's havengebied', yet the three exhibition venues given are WILHELMINAKADE 123, ZUIDPLEIN 142 and KOP VAN ZUID, and no museum address is ever stated \u2014 a visitor cannot tell where to go. The same defect recurs in 3d14974, whose logo 'Rijksstudio RDM' (praised by that evaluator as docklands identity work) sits over visit information placing the museum at Museumpark 1, 3015 CB. By contrast d7597 keeps WAALHAVEN\u201328, Waalhavenweg 28, 3089 JH, the tram line and the email consistent across header, footer and modal. The current rubric averages this into broad Instruction Following scores and cannot separate the trustworthy content from the contradictory content.",
+       "cited_source_id": "attempts/a0a2bd8e7f82c241c6d0464207ac02c2b3b260ef/feedback.md",
+       "quote": "features three exhibitions with dates/locations, includes program information and visiting details"
+      }
+     ],
+     "proposer_compute": {
+      "duration_api_ms": 164894,
+      "duration_ms": 163766,
+      "num_turns": 10,
+      "session_id": "999c5bf2-60db-41f3-9f75-c56b1fe7fca2",
+      "subtype": "success",
+      "total_cost_usd": 1.1670985,
+      "usage": {
+       "input_tokens": 16,
+       "cache_creation_input_tokens": 57429,
+       "cache_read_input_tokens": 624569,
+       "output_tokens": 10571,
+       "output_tokens_details": {
+        "thinking_tokens": 6424
+       },
+       "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+       },
+       "service_tier": "standard",
+       "cache_creation": {
+        "ephemeral_1h_input_tokens": 57429,
+        "ephemeral_5m_input_tokens": 0
+       },
+       "inference_geo": "not_available",
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 3144,
+         "cache_read_input_tokens": 95184,
+         "cache_creation_input_tokens": 1128,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1128
+         },
+         "type": "message"
+        }
+       ],
+       "speed": "standard"
+      }
+     },
+     "published_version": 4,
+     "triggering_attempt": "a0a2bd8e7f82c241c6d0464207ac02c2b3b260ef",
+     "triggering_agent": "captain-ahab"
+    },
+    "proposer_context": "coral-proposer-v4-xne4s36m",
+    "proposed": [
+     {
+      "name": "Curatorial Presence of the Art",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "attempts/a0a2bd8e7f82c241c6d0464207ac02c2b3b260ef/feedback.md"
+     },
+     {
+      "name": "Coherence of Stated Institutional Facts",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "attempts/a0a2bd8e7f82c241c6d0464207ac02c2b3b260ef/feedback.md"
+     }
+    ],
+    "published": [
+     "Coherence of Stated Institutional Facts",
+     "Curatorial Presence of the Art"
+    ],
+    "not_published": [],
+    "staged_attempts": 3,
+    "proposer_notes_text": "All three attempts converged on the same Rotterdam harbour/shipping-container concept and were scored near-identically on the formal criteria, so the interesting differences now sit in the content rather than the craft. Two of those differences are consequential and unrepresented. First, the amount of actual art in an art museum's site varies hugely \u2014 d7597 names real Dutch artists and describes works and a collection, a0a2bd offers only container codes and three-line blurbs with no artists \u2014 yet Identity Specificity is explicitly restricted to formal decisions (typography, colour, composition, imagery, motion, structure) and rewarded a0a2bd 0.95 while its own evaluator noted the piece 'reads more as industrial archive than contemporary art venue'. Second, the asserted facts contradict themselves in two of three attempts: a0a2bd labels the museum WAALHAVEN yet places all three exhibitions at Wilhelminakade, Zuidplein and Kop van Zuid with no museum address at all, and 3d14974 brands itself 'Rijksstudio RDM' (docklands) while stating Museumpark 1 as its address. Both criteria are checkable from rendered text alone, apply to any form the brief permits including a single poster, and reward what a careful museum designer would do rather than any specific layout. I considered proposing something about the duplicate byte-identical index-industrial.html left in a0a2bd's deliverable and about the entry view's lack of information scent, but the first is a single-instance hygiene issue"
+   }
+  ]
+ },
+ {
+  "run_id": "museum-yoked-r1",
+  "task": "museum",
+  "arm": "yoked",
+  "agents": [
+   "captain-ahab",
+   "captain-nemo",
+   "davy-jones",
+   "jack-sparrow"
+  ],
+  "checkpoints": [
+   {
+    "written_at": "2026-09-11T02:33:51.046616+00:00",
+    "finalized_attempts": 8,
+    "rubric_version_before": 1,
+    "status": "published",
+    "detail": {
+     "mode": "yoked",
+     "scored_attempts": 8,
+     "source_run": "2026-09-10_180109",
+     "schedule_sha256": "827657a8ec2fc6c100ddeea2b15d5e9d765b62fd9bf8b6d9c0f0d77937236f80",
+     "replay_detail": "checkpoint 1/3 reached: 8 real attempts (have 8)",
+     "checkpoint_index": 0,
+     "checkpoint_value": 8,
+     "required_count": 2,
+     "published": true,
+     "accepted_count": 2,
+     "accepted_criteria": [
+      {
+       "name": "Institutional Identity Coherence",
+       "description": "Whatever form the artifact takes (poster, spatial experience, single interaction, or conventional site), its choices read as a deliberate, unified identity for a single museum rather than as unrelated effects. Judge whether the naming/wordmark treatment, typographic system, color and material language, imagery or graphic motifs, and tone of copy reinforce one another and stay consistent across every screen, section, or state the artifact presents. Higher scores for a recognizable through-line that a visitor could attribute to this institution; lower scores for generic template styling, mixed unrelated visual idioms, or decoration that serves no stated institutional character.",
+       "cited_evidence": "",
+       "cited_source_id": "brief",
+       "quote": "anything that serves the museum's identity."
+      },
+      {
+       "name": "Dutch Contemporary-Art Institutional Specificity",
+       "description": "Assesses whether the artifact's content is grounded in the specific institution described \u2014 a contemporary art museum in the Netherlands, in Rotterdam \u2014 rather than being interchangeable filler. Look for the museum name used correctly and consistently, content appropriate to contemporary (not historical or general-purpose) art, and concrete Dutch/Rotterdam grounding such as plausible Dutch-language usage, address or wayfinding, hours/admission conventions, or local references. Any Dutch text used should be plausible and not garbled. Credit specificity and internal consistency of invented details; penalize unfilled placeholders, lorem ipsum, a mismatched or misspelled museum name, or content that could belong to any museum anywhere.",
+       "cited_evidence": "",
+       "cited_source_id": "brief",
+       "quote": "a Dutch contemporary art museum"
+      }
+     ],
+     "proposer_compute": {
+      "duration_api_ms": 32088,
+      "duration_ms": 31331,
+      "num_turns": 3,
+      "session_id": "f7b5349f-6f75-4ee5-8af4-e304f2d187b2",
+      "subtype": "success",
+      "total_cost_usd": 0.544411,
+      "usage": {
+       "input_tokens": 6,
+       "cache_creation_input_tokens": 44074,
+       "cache_read_input_tokens": 87362,
+       "output_tokens": 2326,
+       "output_tokens_details": {
+        "thinking_tokens": 726
+       },
+       "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+       },
+       "service_tier": "standard",
+       "cache_creation": {
+        "ephemeral_1h_input_tokens": 44074,
+        "ephemeral_5m_input_tokens": 0
+       },
+       "inference_geo": "not_available",
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 2110,
+         "cache_read_input_tokens": 43795,
+         "cache_creation_input_tokens": 279,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 279
+         },
+         "type": "message"
+        }
+       ],
+       "speed": "standard"
+      }
+     },
+     "published_version": 2
+    },
+    "proposer_context": "coral-proposer-v2-5rpswsaa",
+    "proposed": [
+     {
+      "name": "Institutional Identity Coherence",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "brief"
+     },
+     {
+      "name": "Dutch Contemporary-Art Institutional Specificity",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "brief"
+     }
+    ],
+    "published": [
+     "Dutch Contemporary-Art Institutional Specificity",
+     "Institutional Identity Coherence"
+    ],
+    "not_published": [],
+    "staged_attempts": 0,
+    "proposer_notes_text": "The brief is short and almost entirely open-ended, so there are only two substantive requirements the seed rubric leaves under-specified. First, the freedom-of-form sentence is not unconditional: it explicitly ties the chosen form to serving the museum's identity. The seed's 'Visual Quality' measures craft (hierarchy, typography, spacing, responsiveness) and 'Instruction Following' measures compliance in aggregate, but neither isolates whether the aesthetic decisions add up to a coherent identity for one institution \u2014 a polished but generic page could score well on both while failing this. Second, the brief names a very particular subject: a contemporary art museum, Dutch, in Rotterdam, with a specific name. Nothing in the seed rubric rewards actually grounding the content in that institution versus shipping interchangeable museum boilerplate or placeholder text. Both criteria are format-agnostic: a poster, a spatial scroll experience, a single interaction, and a conventional multi-section site can each be judged on identity coherence and on institutional specificity. I deliberately did not propose a criterion about the index.html entry point, since that is adequately absorbed by the existing Build Smoothness criterion, nor any criterion about hypothetical failure modes not anchored in the brief's wording."
+   },
+   {
+    "written_at": "2026-09-11T02:42:45.032407+00:00",
+    "finalized_attempts": 12,
+    "rubric_version_before": 2,
+    "status": "published",
+    "detail": {
+     "mode": "yoked",
+     "scored_attempts": 12,
+     "source_run": "2026-09-10_180109",
+     "schedule_sha256": "827657a8ec2fc6c100ddeea2b15d5e9d765b62fd9bf8b6d9c0f0d77937236f80",
+     "replay_detail": "checkpoint 2/3 reached: 12 real attempts (have 12)",
+     "checkpoint_index": 1,
+     "checkpoint_value": 12,
+     "required_count": 2,
+     "published": true,
+     "accepted_count": 2,
+     "accepted_criteria": [
+      {
+       "name": "Entry-Point Self-Sufficiency",
+       "description": "The repository presents a working index.html at its root that is the complete way in to the experience. Opening that single file should deliver the intended artifact: local assets resolve (no broken image, font, script, or stylesheet references, no 404s or missing-file console errors), any dependencies are either vendored or loaded from stable sources with a graceful fallback, and nothing essential is stranded in a sibling page that index.html never links to. If the project uses a build or dev server, the committed index.html must still be the documented entry and must not be a placeholder or a stub that renders blank or unstyled. Higher scores when the visitor's first load is the finished piece; lower scores for an entry file that requires undocumented steps, depends on assets absent from the repo, or shows only a fragment of the work.",
+       "cited_evidence": "",
+       "cited_source_id": "brief",
+       "quote": "Entry point: index.html in the repo."
+      },
+      {
+       "name": "Commitment to a Chosen Form",
+       "description": "The brief grants formal freedom but conditions it: whatever form is chosen must actually serve the museum. Judge whether the artifact commits to one legible form \u2014 poster, spatial experience, single interaction, conventional site, or something else \u2014 and executes it to that form's own standard, rather than hedging between forms or defaulting to an unresolved scaffold. Indicators of a strong result: the form is immediately readable from the first screen; its central device (the composition, the movement through space, the one interaction) is developed rather than gestured at; scale, pacing, and the amount of content are proportionate to the form chosen; and secondary material supports the central device instead of competing with it. Indicators of a weak result: a stated ambition the artifact does not deliver, an interaction or spatial conceit that ends after one beat, sections that clearly belong to a different format bolted on, or empty scaffolding where the form's payload should be. Judge fitness to the form the submission itself chose \u2014 do not privilege any one form over another.",
+       "cited_evidence": "",
+       "cited_source_id": "brief",
+       "quote": "anything that serves the museum's identity"
+      }
+     ],
+     "proposer_compute": {
+      "duration_api_ms": 37848,
+      "duration_ms": 36821,
+      "num_turns": 4,
+      "session_id": "564eeae3-9c01-4acb-97ca-3cb0ea477d0a",
+      "subtype": "success",
+      "total_cost_usd": 0.18498599999999998,
+      "usage": {
+       "input_tokens": 6,
+       "cache_creation_input_tokens": 5862,
+       "cache_read_input_tokens": 127386,
+       "output_tokens": 2421,
+       "output_tokens_details": {
+        "thinking_tokens": 622
+       },
+       "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+       },
+       "service_tier": "standard",
+       "cache_creation": {
+        "ephemeral_1h_input_tokens": 5862,
+        "ephemeral_5m_input_tokens": 0
+       },
+       "inference_geo": "not_available",
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 2070,
+         "cache_read_input_tokens": 44467,
+         "cache_creation_input_tokens": 278,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 278
+         },
+         "type": "message"
+        }
+       ],
+       "speed": "standard"
+      }
+     },
+     "published_version": 3
+    },
+    "proposer_context": "coral-proposer-v3-7ce23lky",
+    "proposed": [
+     {
+      "name": "Entry-Point Self-Sufficiency",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "brief"
+     },
+     {
+      "name": "Commitment to a Chosen Form",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "brief"
+     }
+    ],
+    "published": [
+     "Commitment to a Chosen Form",
+     "Entry-Point Self-Sufficiency"
+    ],
+    "not_published": [],
+    "staged_attempts": 0,
+    "proposer_notes_text": "The brief is short, and two of its requirements are not yet isolated in the rubric. First, the delivery constraint: 'Entry point: index.html in the repo.' The seed's Build Smoothness speaks to a generic 'standard command' launch; for a hand-authored static piece the real risk surface is different \u2014 a root index.html that renders complete with all local assets resolving, no undocumented steps, and no fragment of the work stranded in an unlinked file. That is a concrete, checkable subdimension of delivery rather than a speculative one. Second, the brief's formal freedom is explicitly conditional: it lists a poster, a spatial experience, a single interaction, then says 'anything that serves the museum's identity.' The already-added Institutional Identity Coherence criterion covers the visual and tonal through-line, and the Dutch specificity criterion covers content grounding, but neither asks whether the submission commits to and fully realizes a form. I wrote that criterion to be form-neutral \u2014 it judges execution against the form the submission itself chose, so a poster is not penalized for lacking navigation and a spatial experience is not penalized for lacking a poster's stillness. I considered a third criterion around 'website' as a medium, but that would collapse into either the entry-point criterion or the form criterion, so I stopped at two."
+   },
+   {
+    "written_at": "2026-09-11T02:56:11.576237+00:00",
+    "finalized_attempts": 17,
+    "rubric_version_before": 3,
+    "status": "abstained",
+    "detail": {
+     "mode": "yoked",
+     "scored_attempts": 17,
+     "source_run": "2026-09-10_180109",
+     "schedule_sha256": "827657a8ec2fc6c100ddeea2b15d5e9d765b62fd9bf8b6d9c0f0d77937236f80",
+     "replay_detail": "checkpoint 3/3 reached: 16 real attempts (have 17)",
+     "checkpoint_index": 2,
+     "checkpoint_value": 16,
+     "required_count": 2,
+     "published": false,
+     "accepted_count": 0,
+     "proposer_compute": {
+      "duration_api_ms": 76430,
+      "duration_ms": 75421,
+      "num_turns": 3,
+      "session_id": "30d109da-60f5-4524-8872-d5c62afd81d7",
+      "subtype": "success",
+      "total_cost_usd": 0.258287,
+      "usage": {
+       "input_tokens": 6,
+       "cache_creation_input_tokens": 6270,
+       "cache_read_input_tokens": 128390,
+       "output_tokens": 5153,
+       "output_tokens_details": {
+        "thinking_tokens": 3543
+       },
+       "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+       },
+       "service_tier": "standard",
+       "cache_creation": {
+        "ephemeral_1h_input_tokens": 6270,
+        "ephemeral_5m_input_tokens": 0
+       },
+       "inference_geo": "not_available",
+       "iterations": [
+        {
+         "input_tokens": 2,
+         "output_tokens": 4923,
+         "cache_read_input_tokens": 44875,
+         "cache_creation_input_tokens": 278,
+         "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 278
+         },
+         "type": "message"
+        }
+       ],
+       "speed": "standard"
+      }
+     }
+    },
+    "proposer_context": "coral-proposer-v4-9dnjkv2v",
+    "proposed": [
+     {
+      "name": "Web-Native Accessible Delivery",
+      "feasible": true,
+      "applies_to_different_solution_strategies": true,
+      "cited_source_id": "brief"
+     }
+    ],
+    "published": [],
+    "not_published": [
+     "Web-Native Accessible Delivery"
+    ],
+    "staged_attempts": 0,
+    "proposer_notes_text": "The brief is four short lines, and the existing rubric already covers most of what it states: the museum's identity and its consistency (Institutional Identity Coherence), the Dutch/Rotterdam/contemporary-art grounding and the exact institution name (Dutch Contemporary-Art Institutional Specificity), the 'Entry point: index.html in the repo' requirement (Entry-Point Self-Sufficiency), and the conditional formal freedom of 'The form is yours' (Commitment to a Chosen Form). The one requirement still under-covered is the noun in the first instruction: the deliverable is a *website*. The seed criteria treat the web only as a visual and interaction surface \u2014 Visual Quality speaks to layout and responsive behavior, Interaction Experience to controls and state, Build Smoothness to fatal errors \u2014 but nothing in the rubric asks whether the artifact works as a web document for a visitor who is not using a mouse and a full-sighted default browser session. That is a real subdimension of 'create a website' rather than a speculative failure mode, and it is form-neutral: a poster, a scroll-driven spatial piece, and a single interaction all still resolve to markup that either carries real text, keyboard-operable affordances, alternatives, contrast, and motion safety, or does not. I deliberately scoped the criterion to the delivery substrate so it does not re-litigate aesthetic ambition, and I declined a second proposal \u2014 candidates around 'serves the museum's identity' and around presenting "
+   }
+  ]
+ }
+]

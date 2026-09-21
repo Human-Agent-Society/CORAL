@@ -1,0 +1,7 @@
+Create a website for a Dutch contemporary art museum, the
+"Rijksstudio voor Moderne Kunst" in Rotterdam.
+
+**The form is yours.** A poster, a spatial experience, a single
+interaction — anything that serves the museum's identity.
+
+Entry point: index.html in the repo.

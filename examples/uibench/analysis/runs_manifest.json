@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "frozen_at": "2026-09-17",
+  "purpose": "Inputs of record for the completed six-run mechanism study, run under protocol 1. Retained as historical case studies and never pooled with protocol 2 runs: under protocol 1 the grader classified a score against the agent's best across all rubric versions, so adding a criterion could report unchanged work to the agent as a regression. That label is agent-facing. New runs belong in their own study manifest.",
+  "runs": [
+    {
+      "run_id": "fellowship-adaptive-r1",
+      "output_key": "fellowship_adaptive",
+      "task_id": "fellowship",
+      "task_family": "specified-frontend",
+      "specification_density": "high",
+      "arm": "adaptive",
+      "replicate": 1,
+      "run_dir": "ui-bench-6-fellowship-intake-portal/2026-09-09_184725",
+      "protocol_version": 1
+    },
+    {
+      "run_id": "fellowship-yoked-r1",
+      "output_key": "fellowship_yoked",
+      "task_id": "fellowship",
+      "task_family": "specified-frontend",
+      "specification_density": "high",
+      "arm": "yoked",
+      "replicate": 1,
+      "run_dir": "ui-bench-6-fellowship-intake-portal/2026-09-09_214517",
+      "protocol_version": 1
+    },
+    {
+      "run_id": "fellowship-static-r1",
+      "output_key": "fellowship_static",
+      "task_id": "fellowship",
+      "task_family": "specified-frontend",
+      "specification_density": "high",
+      "arm": "static",
+      "replicate": 1,
+      "run_dir": "ui-bench-6-fellowship-intake-portal/2026-09-10_151127",
+      "protocol_version": 1
+    },
+    {
+      "run_id": "museum-adaptive-r1",
+      "output_key": "museum_adaptive",
+      "task_id": "museum",
+      "task_family": "open-ended-frontend",
+      "specification_density": "low",
+      "arm": "adaptive",
+      "replicate": 1,
+      "run_dir": "rijksstudio-voor-moderne-kunst/2026-09-10_180109",
+      "protocol_version": 1
+    },
+    {
+      "run_id": "museum-yoked-r1",
+      "output_key": "museum_yoked",
+      "task_id": "museum",
+      "task_family": "open-ended-frontend",
+      "specification_density": "low",
+      "arm": "yoked",
+      "replicate": 1,
+      "run_dir": "rijksstudio-voor-moderne-kunst/2026-09-10_221604",
+      "protocol_version": 1
+    },
+    {
+      "run_id": "museum-static-r1",
+      "output_key": "museum_static",
+      "task_id": "museum",
+      "task_family": "open-ended-frontend",
+      "specification_density": "low",
+      "arm": "static",
+      "replicate": 1,
+      "run_dir": "rijksstudio-voor-moderne-kunst/2026-09-11_094535",
+      "protocol_version": 1
+    }
+  ],
+  "protocol_version": 1,
+  "status": "historical"
+}

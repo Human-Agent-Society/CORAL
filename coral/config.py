@@ -55,6 +55,23 @@ class GraderConfig:
     # Default 1: an agent can only enqueue a fresh attempt once the prior one
     # is graded, which prevents runaway pending floods when the grader is slow.
     max_pending_per_agent: int = 1
+    # Keep `args` out of the agent-visible `.coral/config.yaml`. The full
+    # config is written to `.coral/private/config.yaml` (which the daemon and
+    # the grader read); the copy at `.coral/config.yaml`, which `coral eval`
+    # needs and which agents can therefore always reach, gets `args: {}`.
+    #
+    # `.coral/private/` is the only path agent runtimes are denied, but the run
+    # config is not under it, and it cannot be moved: `submit_eval` reads it
+    # from inside the agent's own process, so denying it breaks `coral eval` —
+    # under OS sandboxing too, since srt reads are allow-beats-deny and the
+    # provider must allow-list it for exactly that reason.
+    #
+    # Needed whenever grader args are part of what is being measured: a hidden
+    # rubric, a controlled comparison whose arm is named in the args, any task
+    # whose scoring parameters would change agent behaviour if known (agents
+    # will read criterion weights and evolution settings out of this file and
+    # plan around them).
+    hide_args: bool = False
     parallel: ParallelGraderConfig = field(default_factory=ParallelGraderConfig)
 
     def __post_init__(self) -> None:

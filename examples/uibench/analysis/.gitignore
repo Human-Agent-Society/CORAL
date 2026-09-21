@@ -1,0 +1,6 @@
+# regenerated from the archived run directories; see README.md
+/raw/
+/out/
+/ledger.json
+/seed_trajectories.json
+__pycache__/

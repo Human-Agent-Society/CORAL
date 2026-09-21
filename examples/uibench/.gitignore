@@ -1,0 +1,3 @@
+# fetched by make_task.py at the pinned dataset revision, never committed
+.cache/
+__pycache__/

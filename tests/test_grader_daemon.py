@@ -1070,3 +1070,55 @@ def test_append_eval_logs_hint_unknown_runtime_falls_back_to_claude():
 
     assert ".claude/eval_logs/h1/" in out
     assert "feedback" in out  # original preserved
+
+
+# --------------------------------------------------------------------------- #
+# Status is comparable only within one rubric version                         #
+# --------------------------------------------------------------------------- #
+
+
+def _scored(coral_dir: Path, agent: str, commit: str, score: float, version=None) -> None:
+    write_attempt(
+        coral_dir,
+        Attempt(
+            commit_hash=commit,
+            agent_id=agent,
+            title="m",
+            parent_hash=None,
+            timestamp=datetime.now(UTC).isoformat(),
+            score=score,
+            status="improved",
+            metadata={"rubric_version_scored": version} if version is not None else {},
+        ),
+    )
+
+
+def _status(coral_dir: Path, score: float, version=None, commit: str = "new") -> str:
+    from coral.grader.daemon import _compute_status
+
+    return _compute_status(score, "a1", commit, coral_dir, minimize=False, rubric_version=version)
+
+
+def test_status_does_not_compare_scores_across_rubric_versions(tmp_path):
+    """A stricter rubric must not report unchanged work as a regression."""
+    (tmp_path / "public" / "attempts").mkdir(parents=True)
+    _scored(tmp_path, "a1", "c1", 0.90, version=1)
+    _scored(tmp_path, "a1", "c2", 0.95, version=1)
+    # v2 adds a criterion; the same artifact now aggregates lower.
+    assert _status(tmp_path, 0.70, version=2) == "baseline"
+    # Once v2 has a baseline, comparison resumes inside v2.
+    _scored(tmp_path, "a1", "c3", 0.70, version=2)
+    assert _status(tmp_path, 0.75, version=2) == "improved"
+    assert _status(tmp_path, 0.65, version=2) == "regressed"
+    assert _status(tmp_path, 0.70, version=2) == "baseline"
+    # The old version's high scores never re-enter the comparison.
+    assert _status(tmp_path, 0.80, version=2) == "improved"
+
+
+def test_status_is_unchanged_for_tasks_without_an_evolving_rubric(tmp_path):
+    (tmp_path / "public" / "attempts").mkdir(parents=True)
+    assert _status(tmp_path, 0.5) == "improved"  # first attempt ever
+    _scored(tmp_path, "a1", "c1", 0.5)
+    assert _status(tmp_path, 0.6) == "improved"
+    assert _status(tmp_path, 0.5) == "baseline"
+    assert _status(tmp_path, 0.4) == "regressed"

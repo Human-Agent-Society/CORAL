@@ -1,0 +1,92 @@
+task:
+  name: "Frontend: Dutch art museum"
+  description: |
+    Create a website for a Dutch contemporary art museum, the
+    "Rijksstudio voor Moderne Kunst" in Rotterdam.
+
+    The form is yours. A poster, a spatial experience, a single
+    interaction — anything that serves the museum's identity.
+    Entry point: index.html in the repo.
+
+    You will be scored on four criteria by an evaluator agent that browses
+    the live page with a browser, the same way a visitor would:
+
+    - Design Quality (weight 3.0) — does it feel like a coherent whole?
+    - Originality (weight 3.0) — custom decisions, or template/AI-default patterns?
+    - Craft (weight 0.5) — typography, spacing, color, contrast execution.
+    - Functionality (weight 0.25) — is it usable independent of aesthetics?
+
+    Design Quality and Originality are weighted 6x more than Craft and
+    Functionality combined. A daring design with rough edges beats a
+    polished generic one every time.
+  tips: |
+    - You have the `frontend-design` skill available. Use it before writing
+      any code — it forces a design-plan-then-self-critique pass, which is
+      the single biggest lever on your score.
+    - After each eval, decide: refine or pivot.
+      - **Refine:** scores trending up, evaluator endorsing the direction.
+        Edit the existing files.
+      - **Pivot:** the work is generic or in a plateau the evaluator
+        won't move past. A pivot means a fundamentally different page,
+        not a CSS rewrite. Run `coral checkout <first-commit-hash>` to
+        reset to the empty placeholder first, then build from scratch.
+        Find the placeholder via `coral log --recent | tail -1`.
+    - If after 3 attempts your Design Quality hasn't moved ±0.05, pivot.
+    - Identical scores across attempts mean your changes aren't visible to
+      the evaluator. Make a bigger move.
+
+grader:
+  entrypoint: agentic_evaluator.grader:AgenticEvaluator
+  setup:
+    - uv pip install -e ./grader
+  timeout: 1500
+  direction: maximize
+  args:
+    evaluator_model: sonnet
+    evaluator_max_turns: 40
+    serve_port: 0
+    # Each eval gets a fresh evaluator agent. With persistence enabled the
+    # evaluator anchors on prior scores and the loop ceilings (observed in
+    # a pilot: nine consecutive identical score tuples across different pages).
+    session_persistent: false
+    evaluation_instructions: |
+      The page is at {url}. Navigate it however it asks to be navigated.
+      Take screenshots. Test interactions if there are any. Then score
+      each criterion with concrete evidence cited.
+    criteria:
+      - name: "Design Quality"
+        weight: 3.0
+        description: |
+          Does the design feel like a coherent whole rather than a
+          collection of parts?
+      - name: "Originality"
+        weight: 3.0
+        description: |
+          Is there evidence of custom decisions, or is this template
+          layouts, library defaults, and AI-generated patterns?
+      - name: "Craft"
+        weight: 0.5
+        description: |
+          Technical execution: typography hierarchy, spacing consistency,
+          color harmony, contrast ratios.
+      - name: "Functionality"
+        weight: 0.25
+        description: |
+          Usability independent of aesthetics.
+
+agents:
+  count: 1
+  runtime: claude_code
+  model: opus
+  max_turns: 400
+  research: false  # no web search / literature-review step — this is a design task,
+                    # not a research one, and the default deep-research skill/subagent
+                    # burned a full session on an unrelated, errored tool call.
+  skills:
+    - "./skills/frontend-design"
+
+workspace:
+  repo_path: ./examples/frontend-eval/seed
+
+run:
+  session: local

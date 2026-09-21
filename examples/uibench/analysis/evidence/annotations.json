@@ -1,0 +1,745 @@
+{
+ "annotator": "Single researcher: the analyst, who built the evaluation harness, read every evaluator feedback text, knows which arm produced each artifact, and has seen the external pairwise and dimension results. No second reviewer was available for this pass. No agreement statistics are presented. Each judgement carries a `basis` so it can be checked against ledger.json and the run records rather than taken on trust.",
+ "reads_from": "ledger.json (mechanical fields), checkpoints.json, the criterion descriptions and cited_evidence verbatim, and the five seed criteria in raw/*_adaptive.json versions/v1",
+ "categories": {
+  "output_specific_diagnosis": {
+   "specific": "cited_evidence names at least one identified attempt and a concrete observed defect in it (a line of code, a screenshot, a recorded evaluator finding), i.e. the proposer diagnosed something that happened.",
+   "pattern": "cited_evidence names a recurring evaluator complaint across attempts but not a concrete defect the proposer itself located; the criterion generalises the evaluator's own language.",
+   "none": "no artifact evidence -- the criterion is derived from the brief text alone. All trajectory_blind criteria are `none` by construction."
+  },
+  "broad_seed_overlap": {
+   "degree": "none | partial (isolates a subdimension the seed names only implicitly) | substantial (the seed criterion's own text already asks for this) | near-duplicate (the seed criterion already measures exactly this)",
+   "seeds": [
+    "Build Smoothness",
+    "Implementation Quality",
+    "Instruction Following",
+    "Visual Quality",
+    "Interaction Experience"
+   ]
+  },
+  "cross_artifact_distinction": {
+   "rule": "mechanical, from ledger.json cross_artifact.all.spread over every artifact scored under the criterion: strong >= 0.60, moderate 0.30-0.59, weak < 0.30. The category says whether the criterion separated artifacts at all; it says nothing about whether the separation was correct -- that is what the behaviour checks are for, on the three properties they cover."
+  },
+  "opportunity_for_response": {
+   "rule": "mechanical, from ledger.json eligible commits after each agent's own first receipt, summed over four agents: adequate >= 8 (about two or more commits per agent), limited 4-7, minimal <= 3. A v4 criterion published after 16-17 attempts left each agent roughly one commit; that is a property of the checkpoint schedule, not of the criterion."
+  },
+  "attributed_response": "count of eligible commits whose message names the criterion (full name or `criterion N`). This is evidence that an agent attributed a change to the criterion; its absence is not evidence that no response occurred -- agents rarely name criteria."
+ },
+ "criteria": [
+  {
+   "run_id": "fellowship-adaptive-r1",
+   "task": "fellowship",
+   "arm": "adaptive",
+   "version": 2,
+   "name": "Simulated State Durability",
+   "output_specific_diagnosis": "specific",
+   "diagnosis_basis": "Cites da574d38's `const received = Math.random() > 0.5;` inside the per-recommender render loop -- a located defect producing different statuses per lookup -- and contrasts 835afed9's treatment. This is the proposer finding a bug, not paraphrasing the evaluator.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Implementation Quality",
+     "Interaction Experience"
+    ],
+    "degree": "partial",
+    "basis": "Implementation Quality asks for a coherent state-management approach and Interaction Experience for controls that communicate state; neither says persisted status must be the same across reads. The criterion isolates an observable consequence the seeds only imply."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.8,
+    "distinct_values": 9,
+    "category": "strong"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 10,
+    "category": "adequate"
+   },
+   "attributed_response": {
+    "commits_naming_it": 1
+   },
+   "anomalies": [
+    "A peer note (davy-jones, mtime 23:39:30) relayed this criterion and the two others from captain-nemo's feedback before three named agents' pending attempts were scored -- receipt for those agents preceded their own first scored attempt under v2."
+   ],
+   "behaviour_check": "P1 state durability tests exactly this property on the terminal artifacts."
+  },
+  {
+   "run_id": "fellowship-adaptive-r1",
+   "task": "fellowship",
+   "arm": "adaptive",
+   "version": 2,
+   "name": "Simulated Dependency Traversability",
+   "output_specific_diagnosis": "specific",
+   "diagnosis_basis": "Cites da574d38 dead-ending before submission because Next was gated on real upload state, and 835afed9's `const shouldFail = Math.random() < 0.2;` making the happy path fail spuriously. Located defects with stated consequences.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Interaction Experience",
+     "Instruction Following"
+    ],
+    "degree": "partial",
+    "basis": "Interaction Experience's 'permit recovery' and the brief's 'failed uploads show clear errors and retry options' cover the retry half; 'downstream states must be reachable through simulated dependencies' is a sharper, testable statement the seeds do not make."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.65,
+    "distinct_values": 7,
+    "category": "strong"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 10,
+    "category": "adequate"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [],
+   "behaviour_check": "Kept in the observational ledger as a procedure-sensitive case per the plan (upload traversability); not an executable check in this pass."
+  },
+  {
+   "run_id": "fellowship-adaptive-r1",
+   "task": "fellowship",
+   "arm": "adaptive",
+   "version": 3,
+   "name": "Draft Continuity Round-Trip",
+   "output_specific_diagnosis": "specific",
+   "diagnosis_basis": "Cites de0737 scoring 0.90 on Instruction Following with a non-operable Import Draft control and no mid-draft export, identical to b018f6 which the same evaluator credited with a functional pair -- a located scoring inversion with the attempts named.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Instruction Following"
+    ],
+    "degree": "partial",
+    "basis": "The brief clause is a requirement Instruction Following already checks for presence; the criterion adds round-trip fidelity through operable controls, which the cited inversion shows the seed did not check."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.95,
+    "distinct_values": 7,
+    "category": "strong"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 7,
+    "category": "limited"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [],
+   "behaviour_check": "P2 draft preservation tests reload and export/import round trip on the terminal artifacts."
+  },
+  {
+   "run_id": "fellowship-adaptive-r1",
+   "task": "fellowship",
+   "arm": "adaptive",
+   "version": 3,
+   "name": "Validation Signal Fidelity",
+   "output_specific_diagnosis": "specific",
+   "diagnosis_basis": "Cites b018f6's gate message contradicting the live counter (a 331-word field still reading 'This field is required') and 1f844eb's counter under-reporting by one or two words, with the evaluator's own 'minor deduction' language quoted as the thing being corrected.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Interaction Experience"
+    ],
+    "degree": "partial",
+    "basis": "'Prevent avoidable errors' and 'communicate state' are in the seed; 'the indicator must be computed by the same logic as the gate' is a specific mechanism the seed does not name."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.7,
+    "distinct_values": 7,
+    "category": "strong"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 7,
+    "category": "limited"
+   },
+   "attributed_response": {
+    "commits_naming_it": 1
+   },
+   "anomalies": [],
+   "behaviour_check": "Candidate for the executable collection (validation fidelity); not measured in this pass."
+  },
+  {
+   "run_id": "fellowship-adaptive-r1",
+   "task": "fellowship",
+   "arm": "adaptive",
+   "version": 4,
+   "name": "Reviewer Adjudication Sufficiency",
+   "output_specific_diagnosis": "specific",
+   "diagnosis_basis": "Cites 8ece83d2's View action building an alert() string with no essay text (script.js lines 617-639) and headers 'Score 1'/'Score 2', versus 3194558e's modal rendering essays -- and that 8ece83d2 nonetheless scored higher on Instruction Following. Located defect plus located scoring inversion.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Instruction Following"
+    ],
+    "degree": "partial",
+    "basis": "The brief requires a reviewer dashboard with a two-score rubric; the seed credited its presence. 'A reviewer can read what they are scoring' is the subdimension the cited inversion shows was collapsed."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.65,
+    "distinct_values": 4,
+    "category": "strong"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 3,
+    "category": "minimal"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "Published after 17 attempts; four agents had three commits between them afterwards. Whatever its merit, it could not have changed much."
+   ],
+   "behaviour_check": "Candidate (reviewer sufficiency); the plan's trap -- crediting an undocumented route -- is why P1 only takes a reviewer read through a visible control."
+  },
+  {
+   "run_id": "fellowship-adaptive-r1",
+   "task": "fellowship",
+   "arm": "adaptive",
+   "version": 4,
+   "name": "Purpose-Built Design Voice",
+   "output_specific_diagnosis": "pattern",
+   "diagnosis_basis": "cited_evidence is three evaluator quotes saying the same thing ('generic and templated', 'competent but generic', 'competent...') across three attempts. The proposer generalised a recurring evaluator complaint; it did not locate a defect. The description opens by conceding Visual Quality 'already covers' the craft dimensions.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Visual Quality"
+    ],
+    "degree": "substantial",
+    "basis": "Visual Quality asks for 'a polished client-facing result'; the evaluator was already docking artifacts for genericness under it, per the cited quotes. The new criterion re-asks the question the seed was already answering."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.2,
+    "distinct_values": 3,
+    "category": "weak"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 3,
+    "category": "minimal"
+   },
+   "attributed_response": {
+    "commits_naming_it": 2
+   },
+   "anomalies": [
+    "Weak distinction (three values, 0.5-0.7) combined with the highest attribution rate of the adaptive fellowship set: agents named it in two of three eligible commits. It was salient to agents and barely separated artifacts.",
+    "Kept in the observational ledger as an overlap negative case per the plan (design voice)."
+   ]
+  },
+  {
+   "run_id": "fellowship-yoked-r1",
+   "task": "fellowship",
+   "arm": "yoked",
+   "version": 2,
+   "name": "Draft Continuity and Portability",
+   "output_specific_diagnosis": "none",
+   "diagnosis_basis": "trajectory_blind; cited source is the brief; quote is the brief clause on empty state, autosave, export/import.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Instruction Following"
+    ],
+    "degree": "substantial",
+    "basis": "The description is the brief clause expanded into a checklist. Instruction Following already scores satisfaction of the brief's explicit scenario; this restates one sentence of it at length."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.55,
+    "distinct_values": 9,
+    "category": "moderate"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 10,
+    "category": "adequate"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "Same target as adaptive's Draft Continuity Round-Trip, reached from the brief rather than from a scoring inversion. The two arms converged on this subdimension independently."
+   ],
+   "behaviour_check": "P2 draft preservation."
+  },
+  {
+   "run_id": "fellowship-yoked-r1",
+   "task": "fellowship",
+   "arm": "yoked",
+   "version": 2,
+   "name": "Recommender Request Lifecycle",
+   "output_specific_diagnosis": "none",
+   "diagnosis_basis": "trajectory_blind; quote is 'the portal displays pending/received status using the application ID'.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Instruction Following"
+    ],
+    "degree": "substantial",
+    "basis": "Brief clause expanded. The one addition beyond the brief -- 'status tied to the identifier so a returning applicant can look up progress' -- is the same durability property adaptive reached by finding Math.random() in a render loop."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.6,
+    "distinct_values": 8,
+    "category": "strong"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 10,
+    "category": "adequate"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "Overlaps adaptive's Simulated State Durability on the lookup-consistency requirement, without the diagnosis."
+   ],
+   "behaviour_check": "P1 state durability covers the lookup-consistency half."
+  },
+  {
+   "run_id": "fellowship-yoked-r1",
+   "task": "fellowship",
+   "arm": "yoked",
+   "version": 3,
+   "name": "Form Validation and Upload Failure Recovery",
+   "output_specific_diagnosis": "none",
+   "diagnosis_basis": "trajectory_blind; quote is the brief's validation-and-uploads sentence.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Instruction Following",
+     "Interaction Experience"
+    ],
+    "degree": "substantial",
+    "basis": "Two brief clauses combined into one criterion; both are things Instruction Following checks for and Interaction Experience's 'permit recovery' already covers the retry half."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.8,
+    "distinct_values": 9,
+    "category": "strong"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 7,
+    "category": "limited"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "Strong spread despite substantial overlap: the artifacts genuinely differed on this, and the seed had been flattening it."
+   ]
+  },
+  {
+   "run_id": "fellowship-yoked-r1",
+   "task": "fellowship",
+   "arm": "yoked",
+   "version": 3,
+   "name": "Reviewer Dashboard Filtering and Scoring State",
+   "output_specific_diagnosis": "none",
+   "diagnosis_basis": "trajectory_blind; quote is the brief's reviewer-dashboard sentence.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Instruction Following"
+    ],
+    "degree": "substantial",
+    "basis": "Brief clause expanded into a feature checklist (reachable view, real submissions, working filters, two persisted scores)."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.3,
+    "distinct_values": 7,
+    "category": "moderate"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 7,
+    "category": "limited"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "Same surface as adaptive's Reviewer Adjudication Sufficiency, but asks whether the dashboard has features rather than whether a reviewer can read what they score. The adaptive wording came from a located inversion; this one from the brief."
+   ]
+  },
+  {
+   "run_id": "fellowship-yoked-r1",
+   "task": "fellowship",
+   "arm": "yoked",
+   "version": 4,
+   "name": "Submission Confirmation, Receipt ID, and Downloadable Copy",
+   "output_specific_diagnosis": "none",
+   "diagnosis_basis": "trajectory_blind; quote is the brief's confirmation sentence.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Instruction Following"
+    ],
+    "degree": "substantial",
+    "basis": "Brief clause expanded; presence of a confirmation page with a receipt ID is exactly what Instruction Following was already crediting."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.25,
+    "distinct_values": 4,
+    "category": "weak"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 3,
+    "category": "minimal"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "Weak distinction: every artifact already had a confirmation screen by attempt 17; the criterion arrived after the thing it measured had converged."
+   ]
+  },
+  {
+   "run_id": "fellowship-yoked-r1",
+   "task": "fellowship",
+   "arm": "yoked",
+   "version": 4,
+   "name": "Deadline-Bounded Draft Access",
+   "output_specific_diagnosis": "none",
+   "diagnosis_basis": "trajectory_blind; quote is 'Applicants can revisit the draft locally until the deadline'. The brief names no deadline date.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Instruction Following"
+    ],
+    "degree": "substantial",
+    "basis": "One brief clause, expanded into surfacing a concrete date and enforcing it. The brief gives no date, so any date is invented."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.85,
+    "distinct_values": 3,
+    "category": "strong"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 3,
+    "category": "minimal"
+   },
+   "attributed_response": {
+    "commits_naming_it": 2
+   },
+   "anomalies": [
+    "Two of the four agents (captain-nemo f569af4, jack-sparrow d03ce74) implemented enforcement in their single remaining commit, each citing 'Criterion 11' by number, and each chose a deadline already months in the past (2026-01-15, 2026-03-15 against a run date of 2026-09-09). Both terminal artifacts render only 'Applications Closed'. captain-nemo's commit message cites jack-sparrow's implementation, so the pattern propagated between agents.",
+    "The evaluator scored captain-nemo's locked-out artifact 0.85 on this criterion, describing the closed screen accurately as the thing being credited. The criterion was satisfied literally; nothing in the eleven-criterion rubric penalised satisfying it destructively.",
+    "Highest attribution rate in the whole ledger (2 of 3 eligible commits name it by number) and the only criterion whose satisfaction removed the artifact's function. The three distinct values (0.0, 0.15, 0.85) are the two agents who did not implement it and the two who did.",
+    "This is the pre-specified sensitivity set in the external evaluation (exclusions.json)."
+   ]
+  },
+  {
+   "run_id": "museum-adaptive-r1",
+   "task": "museum",
+   "arm": "adaptive",
+   "version": 2,
+   "name": "Identity Specificity",
+   "output_specific_diagnosis": "pattern",
+   "diagnosis_basis": "cited_evidence is three attempts each praised for craft and docked for genericness inside one Visual Quality number (0.50, 0.55, 0.70 with the evaluator's own contradictory phrases quoted). The proposer's claim is that the seed collapses two subdimensions -- an argument about the score, not a located defect in an artifact.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Visual Quality"
+    ],
+    "degree": "substantial",
+    "basis": "The evaluator was already penalising genericness under Visual Quality, per the quotes. The criterion separates that penalty out; it does not ask for anything the evaluator was not already looking for."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.8,
+    "distinct_values": 9,
+    "category": "strong"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 10,
+    "category": "adequate"
+   },
+   "attributed_response": {
+    "commits_naming_it": 2
+   },
+   "anomalies": [
+    "Strong spread for a substantially-overlapping criterion: once isolated, the subdimension separated artifacts widely (0.2 to 1.0). That is consistent with the proposer's collapse argument being right."
+   ]
+  },
+  {
+   "run_id": "museum-adaptive-r1",
+   "task": "museum",
+   "arm": "adaptive",
+   "version": 2,
+   "name": "Affordance Integrity",
+   "output_specific_diagnosis": "specific",
+   "diagnosis_basis": "Cites bb57's footer and visit menus linking to eight anchors (#openingstijden, #tickets, ...) none of which exist as ids in the document, and 0075's hover-styled cards leading nowhere, with the inconsistent Interaction Experience scores quoted. Located defects.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Interaction Experience"
+    ],
+    "degree": "partial",
+    "basis": "'Controls operate predictably' is in the seed; 'the set of implied affordances and the set of working affordances coincide' -- including crediting a deliberately static piece -- is a sharper, testable formulation the seed does not make."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.35,
+    "distinct_values": 4,
+    "category": "moderate"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 10,
+    "category": "adequate"
+   },
+   "attributed_response": {
+    "commits_naming_it": 3
+   },
+   "anomalies": [
+    "Highest raw attribution count in the ledger (3 commits). The deterministic objective endpoint's dead-anchor count is the mechanical version of this criterion and found zero dead anchors on every terminal museum artifact -- consistent with agents having responded."
+   ],
+   "behaviour_check": "Candidate (affordance integrity); the objective endpoint's dead_anchors field already measures the anchor half. Not an executable check in this pass; the plan flags the trap of asserting a subjective affordance as ground truth."
+  },
+  {
+   "run_id": "museum-adaptive-r1",
+   "task": "museum",
+   "arm": "adaptive",
+   "version": 3,
+   "name": "Content Legibility Under Viewport Constraint",
+   "output_specific_diagnosis": "specific",
+   "diagnosis_basis": "Cites 346fcc7e's own 375px screenshot (07-scratch__08-mobile-view.png) showing the locked 100vh grid clipping 'havendistrict' mid-word and slicing 'SINDS 2018', against an evaluator who scored Visual Quality 0.85 and called mobile 'unbroken'. A located defect the evaluator's own evidence contradicts.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Visual Quality"
+    ],
+    "degree": "partial",
+    "basis": "'Responsive behavior' is a word in the seed; 'content that cannot fit must be made reachable, not silently cut off' is the subdimension the cited case shows was being passed."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.6,
+    "distinct_values": 6,
+    "category": "strong"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 6,
+    "category": "limited"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "The objective endpoint's mobile-overflow measurement is the mechanical cousin; one museum yoked artifact still shows 51-69px of mobile overflow on the terminal artifacts."
+   ]
+  },
+  {
+   "run_id": "museum-adaptive-r1",
+   "task": "museum",
+   "arm": "adaptive",
+   "version": 3,
+   "name": "Keyboard Operability of the Interaction Model",
+   "output_specific_diagnosis": "specific",
+   "diagnosis_basis": "Cites e400dd1b's four full-screen overlays bound to bare <div> click listeners with no tabindex, role, key handling, or Escape handler, against an Interaction Experience score of 0.90 justified 'entirely in pointer terms'. Located defect, mechanism named.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Interaction Experience"
+    ],
+    "degree": "partial",
+    "basis": "Nothing in the seed mentions input modality. This is the least-overlapping adaptive criterion in either task, and it explicitly credits a non-interactive piece rather than penalising it."
+   },
+   "cross_artifact_distinction": {
+    "spread": 1.0,
+    "distinct_values": 6,
+    "category": "strong"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 6,
+    "category": "limited"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "Full-range spread (0.0 to 1.0): the criterion sorted artifacts from completely keyboard-inoperable to fully operable."
+   ],
+   "behaviour_check": "P3 keyboard operability tests exactly this on the terminal artifacts, with not-applicable for pieces that offer no interaction, as the criterion's own text requires."
+  },
+  {
+   "run_id": "museum-adaptive-r1",
+   "task": "museum",
+   "arm": "adaptive",
+   "version": 4,
+   "name": "Curatorial Presence of the Art",
+   "output_specific_diagnosis": "specific",
+   "diagnosis_basis": "Cites a0a2bd's exhibitions being container codes (NMR-26, HVN-26, LCT-26) with three-line blurbs and no named artist or work, against 0.95 on Identity Specificity and 1.00 on Instruction Following. Located absence, with the criteria that let it through named.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Instruction Following"
+    ],
+    "degree": "partial",
+    "basis": "The brief says 'contemporary art museum'; the seed credited the museum framing. 'A visitor should learn something concrete about what is on show' is a substantive reading the seed did not enforce."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.7,
+    "distinct_values": 6,
+    "category": "strong"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 2,
+    "category": "minimal"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "Published after 17 attempts with two commits remaining across four agents. It described the artifacts; it could not have shaped them."
+   ]
+  },
+  {
+   "run_id": "museum-adaptive-r1",
+   "task": "museum",
+   "arm": "adaptive",
+   "version": 4,
+   "name": "Coherence of Stated Institutional Facts",
+   "output_specific_diagnosis": "specific",
+   "diagnosis_basis": "Cites a0a2bd labelling itself WAALHAVEN / ROTTERDAM while listing venues at addresses in a different part of the city, with Instruction Following 1.00 credited for 'features three exhibitions with dates/locations'. Located inconsistency.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Instruction Following"
+    ],
+    "degree": "partial",
+    "basis": "Presence of facts was credited; consistency between them was not checked. Narrow but distinct."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.3,
+    "distinct_values": 2,
+    "category": "moderate"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 2,
+    "category": "minimal"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "Only two distinct values ever assigned (0.7, 1.0). Narrow criterion, narrow separation, no time to respond."
+   ]
+  },
+  {
+   "run_id": "museum-yoked-r1",
+   "task": "museum",
+   "arm": "yoked",
+   "version": 2,
+   "name": "Institutional Identity Coherence",
+   "output_specific_diagnosis": "none",
+   "diagnosis_basis": "trajectory_blind; quote is 'anything that serves the museum's identity'.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Visual Quality"
+    ],
+    "degree": "substantial",
+    "basis": "'Consistency' is a word in Visual Quality's own text; the criterion asks whether the visual system is unified, which the seed was already scoring."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.4,
+    "distinct_values": 6,
+    "category": "moderate"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 5,
+    "category": "limited"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "Same territory as adaptive's Identity Specificity (both arms went to identity first) but asks for coherence rather than specificity-to-place, and separated artifacts half as widely (0.4 vs 0.8)."
+   ]
+  },
+  {
+   "run_id": "museum-yoked-r1",
+   "task": "museum",
+   "arm": "yoked",
+   "version": 2,
+   "name": "Dutch Contemporary-Art Institutional Specificity",
+   "output_specific_diagnosis": "none",
+   "diagnosis_basis": "trajectory_blind; quote is 'a Dutch contemporary art museum'.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Instruction Following"
+    ],
+    "degree": "substantial",
+    "basis": "Correct museum name, Rotterdam grounding, contemporary-not-historical framing: these are the brief's stated facts, which Instruction Following already checks."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.15,
+    "distinct_values": 4,
+    "category": "weak"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 5,
+    "category": "limited"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "Every artifact scored 0.85-1.00: all of them named the museum and the city, which the deterministic requirements check also found. The criterion measured something already at ceiling."
+   ]
+  },
+  {
+   "run_id": "museum-yoked-r1",
+   "task": "museum",
+   "arm": "yoked",
+   "version": 3,
+   "name": "Entry-Point Self-Sufficiency",
+   "output_specific_diagnosis": "none",
+   "diagnosis_basis": "trajectory_blind; quote is 'Entry point: index.html in the repo.'",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Build Smoothness"
+    ],
+    "degree": "near-duplicate",
+    "basis": "Build Smoothness: 'installs, launches, and renders through the standard command without fatal build, runtime, or console errors.' Entry-Point Self-Sufficiency: index.html opens, assets resolve, no 404s or console errors. These are the same measurement with a longer description."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.05,
+    "distinct_values": 2,
+    "category": "weak"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 3,
+    "category": "minimal"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": [
+    "Spread 0.05 across every artifact ever scored under it (values 0.95 and 1.00). It distinguished nothing, and the seed it duplicates was already at ceiling. This is the clearest instance in the ledger of a brief-only proposer running out of brief."
+   ]
+  },
+  {
+   "run_id": "museum-yoked-r1",
+   "task": "museum",
+   "arm": "yoked",
+   "version": 3,
+   "name": "Commitment to a Chosen Form",
+   "output_specific_diagnosis": "none",
+   "diagnosis_basis": "trajectory_blind; quote is 'anything that serves the museum's identity'.",
+   "broad_seed_overlap": {
+    "seeds": [
+     "Visual Quality",
+     "Instruction Following"
+    ],
+    "degree": "partial",
+    "basis": "The brief's 'the form is yours' invites a form; asking whether the chosen form is executed to its own standard rather than hedged is a reading neither seed states. The least-overlapping yoked criterion in either task."
+   },
+   "cross_artifact_distinction": {
+    "spread": 0.4,
+    "distinct_values": 6,
+    "category": "moderate"
+   },
+   "opportunity_for_response": {
+    "eligible_commits_total": 3,
+    "category": "minimal"
+   },
+   "attributed_response": {
+    "commits_naming_it": 0
+   },
+   "anomalies": []
+  }
+ ],
+ "checkpoint_not_published": [
+  {
+   "task": "museum",
+   "arm": "yoked",
+   "checkpoint": 3,
+   "after_attempts": 17,
+   "status": "abstained -- and, under the yoke's own rule, a replay failure that voids the pair for this publication",
+   "proposed": [
+    "Web-Native Accessible Delivery"
+   ],
+   "required": 2,
+   "basis": "trigger_decisions: required_count 2, accepted_count 0, status abstained. grader.py records a replay failure whenever the blind proposer's count differs from the schedule ('this pair is void'); replay_failures.jsonl exists in the run. The proposer's own note says the four-line brief was 'already covered' by the criteria in force. The adaptive arm published two criteria at this checkpoint (Curatorial Presence, Coherence of Stated Facts); the yoked arm published none, so from attempt 17 the two museum rubrics differ in size (11 vs 9) as well as content.",
+   "consequence": "Museum yoked is a complete yoke for publications 1 and 2 and not for publication 3. The external evaluation's museum adaptive:yoked contrast (adaptive 9, yoked 4) was computed on this pair; the yoke was voided at publication 3 and that must be stated alongside it. Fellowship yoked replayed all three publications and has no replay_failures.jsonl."
+  }
+ ],
+ "cross_cutting": [
+  "Every adaptive criterion except two is `specific`: the proposer located a defect or a scoring inversion in a named attempt. The two exceptions (Purpose-Built Design Voice, Identity Specificity) generalise a recurring evaluator complaint about genericness and are the two adaptive criteria with `substantial` seed overlap.",
+  "Every yoked criterion is `none` by construction and nine of ten published criteria substantially overlap or nearly duplicate a seed. Commitment to a Chosen Form is partial. An unpublished checkpoint is not an exception within published criteria.",
+  "Cross-artifact distinction does not track overlap. Identity Specificity (substantial overlap) has spread 0.8; Entry-Point Self-Sufficiency (near-duplicate) has 0.05; Purpose-Built Design Voice (substantial) has 0.2. Whether a subdimension separates artifacts once isolated is an empirical question the overlap judgement does not answer.",
+  "Opportunity for response is set by the schedule, not the criterion: v2 criteria had 10 eligible commits, v3 had 6-7, v4 had 2-3. Every v4 criterion in every arm was published with about one commit per agent remaining. Any v4 criterion's effect on the artifacts is bounded by that.",
+  "Attribution is rare and concentrated: 11 naming commits across 22 criteria, 7 of them on three criteria (Affordance Integrity 3, Purpose-Built Design Voice 2, Deadline-Bounded Draft Access 2). The two v4 criteria that were named are the two with the least time to act on them, which suggests agents name a criterion when a single targeted commit is all they can do.",
+  "Feedback writing establishes availability, not certain reading or exposure bounds. Legacy receipt keys describe timing scenarios. A peer note relayed v2 criteria within 79 seconds of feedback, substantiating that event only. Earlier rubric access and later reading are possible."
+ ],
+ "identity": "run_id + task + arm + version + name, shared with intervention_identity.py. run_id is required: two repetitions of one arm can publish the same criterion name, and a key without it would let one annotation stand in for both."
+}

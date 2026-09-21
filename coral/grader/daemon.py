@@ -11,7 +11,9 @@ Design invariants:
   just configuration; safety is the operator's call — most graders are NOT
   concurrency-safe (Docker port conflicts, GPU contention, shared scratch
   dirs, etc.).
-- Writes are atomic via hub.attempts.write_attempt (tmp + rename).
+- Writes are atomic via hub.attempts.write_attempt (tmp + rename), and
+  finalization goes through hub.attempts.finalize_attempt, which refuses to
+  overwrite an outcome another grader already recorded.
 - Daemon is idempotent: re-seeing an already-scored attempt is a no-op.
 """
 
@@ -33,9 +35,11 @@ from typing import Any
 from coral.config import CoralConfig
 from coral.grader.loader import load_grader
 from coral.hub.attempts import (
+    claim_attempt,
+    finalize_attempt,
     get_agent_attempts,
     increment_eval_count,
-    write_attempt,
+    read_attempt,
 )
 from coral.types import (
     BUDGET_CLASS_GRADER_ERROR,
@@ -43,6 +47,7 @@ from coral.types import (
     Task,
     get_budget_class,
 )
+from coral.workspace.project import grader_config_path
 
 logger = logging.getLogger(__name__)
 
@@ -196,6 +201,11 @@ def _remove_worktree(repo_dir: Path, dest: Path) -> None:
 # --------------------------------------------------------------------------- #
 
 
+def _rubric_version_of(attempt: Attempt) -> Any:
+    """The rubric version an attempt was scored under, or None if unversioned."""
+    return (attempt.metadata or {}).get("rubric_version_scored")
+
+
 def _compute_status(
     score: float | None,
     agent_id: str,
@@ -203,19 +213,37 @@ def _compute_status(
     coral_dir: Path,
     minimize: bool,
     island_id: str | None = None,
+    rubric_version: Any = None,
 ) -> str:
-    """Compare `score` to this agent's previous best to classify the attempt."""
+    """Classify `score` against this agent's previous best under the same rubric.
+
+    Scores from different rubric versions are not comparable. Adding a
+    criterion can lower an aggregate on unchanged work, so comparing across
+    versions reports a stricter evaluation as a regression by the agent. The
+    comparison is therefore confined to attempts scored under
+    ``rubric_version``, and the first score under a new version establishes
+    that version's baseline rather than being ranked against the old one.
+
+    Tasks with no evolving rubric record no version. Every attempt then has
+    version None, they all compare against each other, and behaviour is
+    exactly as before.
+    """
     if score is None:
         return "crashed"
 
     prev_attempts = get_agent_attempts(str(coral_dir), agent_id, island_id=island_id)
-    prev_scores = [
-        a.score for a in prev_attempts if a.score is not None and a.commit_hash != commit_hash
-    ]
-    if not prev_scores:
+    scored = [a for a in prev_attempts if a.score is not None and a.commit_hash != commit_hash]
+    if not scored:
+        # Nothing to compare against at all: the agent's first scored attempt.
         return "improved"
 
-    prev_best = min(prev_scores) if minimize else max(prev_scores)
+    same_rubric = [a.score for a in scored if _rubric_version_of(a) == rubric_version]
+    if not same_rubric:
+        # Prior work exists, but none of it was judged by this rubric. This
+        # score is the first under the new version and sets its baseline.
+        return "baseline"
+
+    prev_best = min(same_rubric) if minimize else max(same_rubric)
     if (minimize and score < prev_best) or (not minimize and score > prev_best):
         return "improved"
     if score == prev_best:
@@ -411,9 +439,32 @@ def _grade_one(
     config_path: Path,
     coral_dir: Path,
     config: CoralConfig,
-) -> Attempt:
-    """Grade a single pending attempt and return the finalized Attempt record."""
+) -> Attempt | None:
+    """Grade a single pending attempt and return the finalized Attempt record.
+
+    Runs under a per-attempt claim held for the whole grade, so the grader that
+    writes the evolution event is the same one that finalizes the attempt
+    record. Returns None when another grader already owns this attempt.
+    """
     grading_island_id = _attempt_island_id(attempt)
+    with claim_attempt(coral_dir, attempt.commit_hash, island_id=grading_island_id) as owned:
+        if not owned:
+            logger.warning(
+                "Skipping %s: another grader holds the claim. Two daemons on one run dir?",
+                attempt.commit_hash[:12],
+            )
+            return None
+        return _grade_one_claimed(attempt, config_path, coral_dir, config, grading_island_id)
+
+
+def _grade_one_claimed(
+    attempt: Attempt,
+    config_path: Path,
+    coral_dir: Path,
+    config: CoralConfig,
+    grading_island_id: str | None,
+) -> Attempt:
+    """The body of a grade. Caller must hold this attempt's claim."""
     # Task.metadata is the canonical channel for surfacing per-attempt context
     # to the user's grader (read via TaskGrader.tune / .budget_class).
     # Final budget_class may flip to "grader_error" below.
@@ -490,6 +541,7 @@ def _grade_one(
             coral_dir,
             minimize,
             island_id=final_island_id,
+            rubric_version=metadata.get("rubric_version_scored"),
         )
 
     # Append the per-attempt eval_logs path so the agent can always find
@@ -527,7 +579,19 @@ def _grade_one(
         parent_shared_state_hash=base_attempt.parent_shared_state_hash,
         metadata=metadata,
     )
-    write_attempt(str(coral_dir), finalized, island_id=final_island_id)
+    if not finalize_attempt(str(coral_dir), finalized, island_id=final_island_id):
+        # Someone already recorded a terminal outcome for this commit. Keep
+        # theirs; ours is a duplicate grade. This should not happen with a
+        # single daemon, so surface it loudly rather than losing it silently.
+        logger.error(
+            "Duplicate grade for %s discarded: a terminal record already exists "
+            "(status=%s score=%s). Check for a second grader daemon on this run.",
+            attempt.commit_hash[:12],
+            status,
+            f"{score:.6f}" if score is not None else "None",
+        )
+        existing = read_attempt(str(coral_dir), attempt.commit_hash, island_id=final_island_id)
+        return existing or finalized
     with _eval_count_lock:
         count = increment_eval_count(coral_dir, island_id=final_island_id)
     logger.info(
@@ -591,39 +655,59 @@ def _safe_grade_one(
         logger.exception("Unhandled error grading %s; marking crashed", attempt.commit_hash[:12])
         try:
             grading_island_id = _attempt_island_id(attempt)
-            current_attempt, final_island_id = _current_attempt_location(
-                coral_dir,
-                attempt.commit_hash,
-                fallback_island_id=grading_island_id,
-            )
-            base_attempt = current_attempt or attempt
-            _move_eval_logs_to_current_island(
-                coral_dir,
-                attempt.commit_hash,
-                from_island_id=grading_island_id,
-                to_island_id=final_island_id,
-            )
-            metadata = dict(base_attempt.metadata or {})
-            if final_island_id is not None:
-                metadata["island_id"] = final_island_id
-            metadata["budget_class"] = BUDGET_CLASS_GRADER_ERROR
-            crashed = Attempt(
-                commit_hash=base_attempt.commit_hash,
-                agent_id=base_attempt.agent_id,
-                title=base_attempt.title,
-                score=None,
-                status="crashed",
-                parent_hash=base_attempt.parent_hash,
-                timestamp=base_attempt.timestamp,
-                feedback="Grader daemon hit an unexpected error; see logs.",
-                shared_state_hash=base_attempt.shared_state_hash,
-                parent_shared_state_hash=base_attempt.parent_shared_state_hash,
-                metadata=metadata,
-            )
-            write_attempt(str(coral_dir), crashed, island_id=final_island_id)
-            with _eval_count_lock:
-                increment_eval_count(coral_dir, island_id=final_island_id)
-            return crashed
+            # The claim from _grade_one is released by the time we reach here,
+            # so retake it and hold it across the crash record. Without it a
+            # competing grader could interleave its own result between our read
+            # of the current record and our write of the crash.
+            with claim_attempt(
+                coral_dir, attempt.commit_hash, island_id=grading_island_id
+            ) as owned:
+                if not owned:
+                    logger.warning(
+                        "Not recording a crash for %s: another grader holds the claim.",
+                        attempt.commit_hash[:12],
+                    )
+                    return None
+                current_attempt, final_island_id = _current_attempt_location(
+                    coral_dir,
+                    attempt.commit_hash,
+                    fallback_island_id=grading_island_id,
+                )
+                base_attempt = current_attempt or attempt
+                _move_eval_logs_to_current_island(
+                    coral_dir,
+                    attempt.commit_hash,
+                    from_island_id=grading_island_id,
+                    to_island_id=final_island_id,
+                )
+                metadata = dict(base_attempt.metadata or {})
+                if final_island_id is not None:
+                    metadata["island_id"] = final_island_id
+                metadata["budget_class"] = BUDGET_CLASS_GRADER_ERROR
+                crashed = Attempt(
+                    commit_hash=base_attempt.commit_hash,
+                    agent_id=base_attempt.agent_id,
+                    title=base_attempt.title,
+                    score=None,
+                    status="crashed",
+                    parent_hash=base_attempt.parent_hash,
+                    timestamp=base_attempt.timestamp,
+                    feedback="Grader daemon hit an unexpected error; see logs.",
+                    shared_state_hash=base_attempt.shared_state_hash,
+                    parent_shared_state_hash=base_attempt.parent_shared_state_hash,
+                    metadata=metadata,
+                )
+                if not finalize_attempt(str(coral_dir), crashed, island_id=final_island_id):
+                    logger.error(
+                        "Crash record for %s discarded: a terminal record already exists.",
+                        attempt.commit_hash[:12],
+                    )
+                    return read_attempt(
+                        str(coral_dir), attempt.commit_hash, island_id=final_island_id
+                    )
+                with _eval_count_lock:
+                    increment_eval_count(coral_dir, island_id=final_island_id)
+                return crashed
         except Exception:
             logger.exception("Failed to record crash for %s", attempt.commit_hash[:12])
             return None
@@ -688,7 +772,7 @@ def process_pending_once(coral_dir: str | Path) -> list[Attempt]:
     separate daemon process is overkill. Shares code with the main loop.
     """
     coral_dir = Path(coral_dir).resolve()
-    config_path = coral_dir / "config.yaml"
+    config_path = grader_config_path(coral_dir)
     config = CoralConfig.from_yaml(config_path)
     return _drain_pending(
         _find_pending(coral_dir),
@@ -708,7 +792,7 @@ def run_daemon(coral_dir: str | Path, stop_event: Any = None) -> None:
     grader exposes module-level caches.
     """
     coral_dir = Path(coral_dir).resolve()
-    config_path = coral_dir / "config.yaml"
+    config_path = grader_config_path(coral_dir)
     if not config_path.exists():
         raise FileNotFoundError(f"No config.yaml at {config_path}")
 

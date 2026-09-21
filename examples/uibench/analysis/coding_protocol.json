@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "frozen_at": "2026-09-17",
+  "unit": "one published criterion, with per-agent response labels",
+  "rules": {
+    "output_specific_diagnosis": {
+      "allowed": ["specific", "pattern", "none", "insufficient_evidence"],
+      "specific": "Evidence identifies a concrete observed defect or scoring mismatch in at least one named artifact.",
+      "pattern": "Evidence generalizes repeated evaluator language but does not locate a concrete artifact defect.",
+      "none": "Criterion follows from the task brief or seed rubric without artifact evidence.",
+      "insufficient_evidence": "The supplied evidence cannot support one of the above labels."
+    },
+    "seed_overlap": {
+      "allowed": ["none", "partial", "substantial", "near-duplicate", "insufficient_evidence"],
+      "rule": "Judge semantic coverage by the frozen seed descriptions, not criterion names."
+    },
+    "agent_response": {
+      "allowed": ["targeted", "possibly_targeted", "unrelated", "no_post_delivery_commit", "delivery_unverified", "insufficient_evidence"],
+      "targeted": "The post-delivery patch changes the mechanism named by the intervention and the rationale is supported by the diff.",
+      "possibly_targeted": "The patch is consistent with the intervention but an equally plausible unrelated explanation remains.",
+      "unrelated": "The patch does not address the named mechanism.",
+      "delivery_unverified": "No logged context insertion exists; availability alone is not coded as exposure."
+    }
+  },
+  "blinding": "Reviewer packets omit arm, run id, online score changes, and external quality outcomes. Criterion wording and evidence remain because they are the object being coded.",
+  "adjudication": "Keep both independent labels, report raw agreement and Cohen's kappa by axis, then store a separate adjudicated file. Never overwrite reviewer files."
+}

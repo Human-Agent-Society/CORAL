@@ -40,7 +40,7 @@ from coral.cli._helpers import (
 from coral.config import CoralConfig
 from coral.hub.auto_stop import read_auto_stop
 from coral.venv_paths import venv_python as resolve_venv_python
-from coral.workspace.project import slugify
+from coral.workspace.project import grader_config_path, save_run_config, slugify
 
 
 def _resolved_python() -> str:
@@ -639,7 +639,10 @@ def cmd_resume(args: argparse.Namespace) -> None:
     if coral_dir is None:
         return
 
-    config_path = coral_dir / "config.yaml"
+    # The authoritative copy: .coral/private/config.yaml under grader.hide_args,
+    # else .coral/config.yaml. Reading the redacted public copy would resume the
+    # run with no grader arguments.
+    config_path = grader_config_path(coral_dir)
     if not config_path.exists():
         print(f"Error: No config.yaml found in {coral_dir}", file=sys.stderr)
         sys.exit(1)
@@ -648,8 +651,9 @@ def cmd_resume(args: argparse.Namespace) -> None:
     overrides = getattr(args, "overrides", [])
     if overrides:
         config = CoralConfig.merge_dotlist(config, overrides)
-        # Persist overrides so eval hooks (which re-read config.yaml) see them
-        config.to_yaml(config_path)
+        # Persist overrides for the eval hooks and the daemon, keeping hidden
+        # grader args in the private copy only.
+        save_run_config(config, coral_dir)
 
     if config.run.session == "docker" and not in_docker():
         if not has_docker():
