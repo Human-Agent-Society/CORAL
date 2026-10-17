@@ -15,6 +15,7 @@ from coral.agent.exit_classifier import classify_by_uptime
 from coral.agent.process import open_agent_stderr_for_log_dir
 from coral.agent.runtime import (
     AgentHandle,
+    apply_gateway_override,
     apply_run_as_user,
     apply_sandbox,
     apply_sandbox_env,
@@ -154,7 +155,7 @@ class DeepSeekHarnessRuntime:
         if tools_mode:
             agent_env["DSH_TOOLS_MODE"] = str(tools_mode)
         if gateway_url:
-            agent_env["DEEPSEEK_BASE_URL"] = gateway_url
+            apply_gateway_override(agent_env, "DEEPSEEK_BASE_URL", gateway_url, agent_id=agent_id, runtime_logger=logger)
         if gateway_api_key:
             agent_env["DEEPSEEK_API_KEY"] = gateway_api_key
 

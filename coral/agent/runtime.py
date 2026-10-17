@@ -229,6 +229,24 @@ class AgentHandle:
             pass
 
 
+def apply_gateway_override(
+    env: dict[str, str],
+    var_name: str,
+    gateway_url: str | None,
+    agent_id: str | None = None,
+    runtime_logger: logging.Logger | None = None,
+) -> None:
+    """Assign gateway_url to an env var, warning if an inherited URL is overridden."""
+    if not gateway_url:
+        return
+    previous = env.get(var_name)
+    if previous and previous != gateway_url:
+        agent_label = f"Agent {agent_id}" if agent_id else "Agent"
+        msg = f"{agent_label}: overriding inherited {var_name} ({previous}) with gateway {gateway_url}"
+        (runtime_logger or logger).warning(msg)
+    env[var_name] = gateway_url
+
+
 def write_coral_log_entry(
     log_file: IO[str],
     prompt: str,
