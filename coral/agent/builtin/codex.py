@@ -185,7 +185,9 @@ class CodexRuntime:
 
         # Route through gateway if configured
         if gateway_url:
-            apply_gateway_override(agent_env, "OPENAI_BASE_URL", gateway_url, agent_id=agent_id, runtime_logger=logger)
+            apply_gateway_override(
+                agent_env, "OPENAI_BASE_URL", gateway_url, agent_id=agent_id, runtime_logger=logger
+            )
             logger.info(f"Codex agent {agent_id}: routing via gateway at {gateway_url}")
         if gateway_api_key:
             agent_env["OPENAI_API_KEY"] = gateway_api_key

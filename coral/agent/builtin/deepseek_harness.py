@@ -112,7 +112,7 @@ class DeepSeekHarnessRuntime:
         profile = str(opts.get("profile") or "headless")
         cmd = [command, "--profile", profile]
         patches = opts.get("patch")
-        if isinstance(patches, (str, Path)):
+        if isinstance(patches, str | Path):
             patches = [patches]
         if isinstance(patches, list):
             for patch in patches:
@@ -155,7 +155,13 @@ class DeepSeekHarnessRuntime:
         if tools_mode:
             agent_env["DSH_TOOLS_MODE"] = str(tools_mode)
         if gateway_url:
-            apply_gateway_override(agent_env, "DEEPSEEK_BASE_URL", gateway_url, agent_id=agent_id, runtime_logger=logger)
+            apply_gateway_override(
+                agent_env,
+                "DEEPSEEK_BASE_URL",
+                gateway_url,
+                agent_id=agent_id,
+                runtime_logger=logger,
+            )
         if gateway_api_key:
             agent_env["DEEPSEEK_API_KEY"] = gateway_api_key
 
