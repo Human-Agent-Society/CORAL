@@ -26,6 +26,7 @@ import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -414,6 +415,7 @@ def _grade_one(
 ) -> Attempt:
     """Grade a single pending attempt and return the finalized Attempt record."""
     grading_island_id = _attempt_island_id(attempt)
+    started_at = attempt.started_at or datetime.now(UTC).isoformat()
     # Task.metadata is the canonical channel for surfacing per-attempt context
     # to the user's grader (read via TaskGrader.tune / .budget_class).
     # Final budget_class may flip to "grader_error" below.
@@ -526,6 +528,8 @@ def _grade_one(
         shared_state_hash=base_attempt.shared_state_hash,
         parent_shared_state_hash=base_attempt.parent_shared_state_hash,
         metadata=metadata,
+        started_at=started_at,
+        finished_at=datetime.now(UTC).isoformat(),
     )
     write_attempt(str(coral_dir), finalized, island_id=final_island_id)
     with _eval_count_lock:
@@ -585,6 +589,10 @@ def _safe_grade_one(
     Returns the finalized Attempt, or None if even the crash-record write
     failed.
     """
+    attempt = replace(
+        attempt,
+        started_at=attempt.started_at or datetime.now(UTC).isoformat(),
+    )
     try:
         return _grade_one(attempt, config_path, coral_dir, config)
     except Exception:
@@ -619,6 +627,8 @@ def _safe_grade_one(
                 shared_state_hash=base_attempt.shared_state_hash,
                 parent_shared_state_hash=base_attempt.parent_shared_state_hash,
                 metadata=metadata,
+                started_at=base_attempt.started_at or attempt.started_at,
+                finished_at=datetime.now(UTC).isoformat(),
             )
             write_attempt(str(coral_dir), crashed, island_id=final_island_id)
             with _eval_count_lock:

@@ -173,6 +173,9 @@ def test_process_pending_once_grades_pending():
             assert finalized[0].score == 0.42
             assert finalized[0].status == "improved"
             assert finalized[0].commit_hash == pending.commit_hash
+            assert finalized[0].started_at is not None
+            assert finalized[0].finished_at is not None
+            assert finalized[0].started_at <= finalized[0].finished_at
             assert finalized[0].metadata["scores"] == {
                 "eval": {"value": 0.42, "name": "eval", "explanation": None, "metadata": {}}
             }

@@ -170,6 +170,8 @@ class Attempt:
     shared_state_hash: str | None = None
     parent_shared_state_hash: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    started_at: str | None = None
+    finished_at: str | None = None
 
     @property
     def budget_class(self) -> str:
@@ -196,6 +198,10 @@ class Attempt:
             d["shared_state_hash"] = self.shared_state_hash
         if self.parent_shared_state_hash is not None:
             d["parent_shared_state_hash"] = self.parent_shared_state_hash
+        if self.started_at is not None:
+            d["started_at"] = self.started_at
+        if self.finished_at is not None:
+            d["finished_at"] = self.finished_at
         if self.metadata:
             d["metadata"] = self.metadata
         return d
@@ -214,4 +220,6 @@ class Attempt:
             shared_state_hash=data.get("shared_state_hash"),
             parent_shared_state_hash=data.get("parent_shared_state_hash"),
             metadata=data.get("metadata", {}),
+            started_at=data.get("started_at"),
+            finished_at=data.get("finished_at"),
         )

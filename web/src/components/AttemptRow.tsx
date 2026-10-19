@@ -10,6 +10,7 @@ interface Props {
 }
 
 export default function AttemptRow({ attempt: a, rank, expanded, onToggle, highlight }: Props) {
+  const duration = formatAttemptDuration(a);
   return (
     <>
       <tr
@@ -29,11 +30,14 @@ export default function AttemptRow({ attempt: a, rank, expanded, onToggle, highl
         <td className="py-2.5 px-3 font-mono text-xs text-muted-fg whitespace-nowrap">
           {formatTime(a.timestamp)}
         </td>
+        <td className="py-2.5 px-3 font-mono text-xs text-muted-fg whitespace-nowrap">
+          {duration}
+        </td>
       </tr>
 
       {expanded && (
         <tr>
-          <td colSpan={5} className="bg-muted border-b border-border">
+          <td colSpan={6} className="bg-muted border-b border-border">
             <div className="px-6 py-4">
               {/* Title */}
               {a.title && (
@@ -59,6 +63,9 @@ export default function AttemptRow({ attempt: a, rank, expanded, onToggle, highl
                 </Field>
                 <Field label="Status">
                   <StatusBadge status={a.status} />
+                </Field>
+                <Field label="Duration">
+                  <span className="font-mono text-[13px]">{duration}</span>
                 </Field>
                 <Field label="Commit">
                   <span className="font-mono text-[13px]">{a.commit_hash}</span>
@@ -89,6 +96,18 @@ export default function AttemptRow({ attempt: a, rank, expanded, onToggle, highl
       )}
     </>
   );
+}
+
+function formatAttemptDuration(attempt: Attempt): string {
+  if (!attempt.started_at || !attempt.finished_at) return "—";
+  const start = Date.parse(attempt.started_at);
+  const end = Date.parse(attempt.finished_at);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return "—";
+  return formatDuration(Math.max(0, end - start));
+}
+
+function formatDuration(milliseconds: number): string {
+  return `${Math.floor(milliseconds / 1000)}s`;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
