@@ -487,6 +487,13 @@ def setup_claude_settings(
     deny_rules: list[str] = [
         "Bash(git *)",
         f"Read(/{private_pattern})",
+        # The run config carries grader internals the task author did not
+        # choose to surface — thresholds, criterion banks, evolution settings.
+        # In a controlled comparison it also names which arm this run is, so
+        # reading it would tell an agent what condition it is in. The grader
+        # *source* is surfaced deliberately (see grader_source_dir above); its
+        # configuration is not.
+        f"Read(/{coral_dir.resolve()}/config.yaml)",
         # Tools that block on human approval — there is no human in the
         # loop in CORAL. Leaving them enabled causes the agent to stall
         # indefinitely waiting for a reply that never comes. Planning
@@ -558,6 +565,7 @@ def setup_opencode_settings(
     opencode_dir.mkdir(exist_ok=True)
 
     private_pattern = str(coral_dir.resolve() / "private") + "/**"
+    config_path = str(coral_dir.resolve() / "config.yaml")
     state_root_pattern = str(island_root(coral_dir, island_id).resolve()) + "/**"
 
     # Grant the grader source as an allowed external dir so the
@@ -576,6 +584,9 @@ def setup_opencode_settings(
             "external_directory": external_allow,
             "read": {
                 private_pattern: "deny",
+                # Grader internals and, in a controlled comparison, the arm
+                # this run belongs to. See the claude_code settings above.
+                config_path: "deny",
             },
             "bash": {
                 private_pattern: "deny",
@@ -691,6 +702,7 @@ def setup_cursor_settings(
         '- Use `coral eval -m "<short description>"` to stage, commit, and grade your work — never bare `git commit`.',
         "- Read the full task brief in `AGENTS.md` at the workspace root.",
         f"- Do not read or modify anything under `{private_dir}/` (grader internals, answer keys).",
+        f"- Do not read `{coral_dir.resolve()}/config.yaml` (grader configuration).",
         "- Share findings through `.cursor/notes/` and reusable tools through `.cursor/skills/` so other agents benefit.",
     ]
     if not research:

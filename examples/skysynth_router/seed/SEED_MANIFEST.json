@@ -1,0 +1,22 @@
+{
+  "README.md": "0958c033fd05ee7accbf30a62f773c7b7b27cbfcdbd93d5c26da49faef84fb22",
+  "data/predictions_train.json": "60b1910bd09a6729902b48be731052aa5529665abf776efefc694689e382e3df",
+  "data/trace_merged_train.jsonl": "35e6e13d994c4a2278aa7dc367e9cda137fed3f58de42f1351bff77ddcb9d0f0",
+  "evaluator/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "evaluator/router_interface.py": "ae4d8456254acba6900bf3de736a5776a6755ec2de18910f4705c6acc61b5b06",
+  "solution.py": "7df02ea1df8205f6c319a62bc5a65b7b248cb9413521cca8604229caa156d9ea",
+  "task/LICENSE.upstream": "d7830a145285bd62b4290381f64feae143e18364fd519ad590b6dbbe87702c54",
+  "task/cards/tenantA.card.yaml": "133b9792c7d5bfed1b9062eeac2c2dce6f9b0f156604b987237d50d75de4bd7b",
+  "task/cards/tenantB.card.yaml": "8bfc97503a2381fdb617eb7c9e255df17c4d189672ea8ebddf99afd9b2b9da8d",
+  "task/env_card.yaml": "04a63812f54082abdd2dc4b4d4c865d0bb27cb0719315325cdfbb917ec0135c4",
+  "task/fleet_flagship.json": "1d6dd04c5e6a3cadc7e4165be870e09274f7572601660fb486c4e5d2de4413d0",
+  "task/generic_policy.py": "2228ce4992095d04f64e8f24002add5bebd622ba469c0f83d446e1dc7fa71831",
+  "task/reference_router.py": "932b8c79362767c0ce63acd9255d60cfc012e51eadf9af9597b47cb49f82ff88",
+  "task/task.md": "3866f70b470fc0881afe75a855e39b74dba09597bf5f9e10466a9a64726a696f",
+  "tools/replay_pair.py": "5a7d85846d2501afbd3e76e69c54d3274381614d117ff4843ba2f4b77955b971",
+  "tools/upstream_replay/evaluator/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "tools/upstream_replay/evaluator/benchmark/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "tools/upstream_replay/evaluator/benchmark/replay.py": "bc44239aace17032cb541d3b0ed2c686b931b395ff3fe499ed6b5704fcf84a87",
+  "tools/upstream_replay/evaluator/benchmark/replay_tenants.py": "fea8979ca81c61a28c7821c96d1a94fa688ddd1a72afbd8e0307aa7f64535bc2",
+  "tools/upstream_replay/evaluator/router_interface.py": "ae4d8456254acba6900bf3de736a5776a6755ec2de18910f4705c6acc61b5b06"
+}

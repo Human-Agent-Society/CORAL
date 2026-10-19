@@ -1,0 +1,31 @@
+# Workload card (measured from the frozen build; train/val only, test row count only)
+tenant: "B"
+label: "batch reasoning"
+tasks: ["hle", "livecodebench", "livemathbench"]
+model_requested: "deepseek-r1-0528"
+slo: {"latency_ms": 600000}
+downgrade_ok: true
+rows: {train: 1940, val: 693, test: 701}
+arrivals:
+  train: {n: 1940, span_sec: 2528.5, mean_rps: 0.767, peak_rps_10s: 6.6}
+  val: {n: 693, span_sec: 756.4, mean_rps: 0.916, peak_rps_10s: 5.0}
+prompt_tokens_p50_p90_p99: [284, 745, 1464]
+output_tokens_p50_p90_p99: [2648, 8072, 13036]
+tasks_train_share:
+  hle: 0.656
+  livecodebench: 0.306
+  livemathbench: 0.038
+# per-model measured mean score / mean cost per request, TRAIN split
+models_train:
+  claude-sonnet-4: {mean_score: 0.2330, mean_cost_usd: 0.011950}
+  deepseek-r1-0528: {mean_score: 0.3861, mean_cost_usd: 0.031700}
+  deepseek-v3-0324: {mean_score: 0.2526, mean_cost_usd: 0.001039}
+  deepseek-v3.1-terminus: {mean_score: 0.2912, mean_cost_usd: 0.001717}
+  gemini-2.5-flash: {mean_score: 0.2655, mean_cost_usd: 0.023769}
+  gemini-2.5-pro: {mean_score: 0.4021, mean_cost_usd: 0.128246}
+  glm-4.6: {mean_score: 0.3237, mean_cost_usd: 0.032353}
+  gpt-5: {mean_score: 0.4691, mean_cost_usd: 0.059675}
+  intern-s1: {mean_score: 0.2387, mean_cost_usd: 0.005570}
+  kimi-k2-0905: {mean_score: 0.2814, mean_cost_usd: 0.002036}
+  qwen3-235b-a22b-2507: {mean_score: 0.2851, mean_cost_usd: 0.001732}
+  qwen3-235b-a22b-thinking-2507: {mean_score: 0.3124, mean_cost_usd: 0.009921}

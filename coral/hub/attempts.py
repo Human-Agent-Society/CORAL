@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
 from coral.hub._island import island_root
-from coral.types import Attempt
+from coral.types import BUDGET_CLASS_REAL, Attempt
 
 
 def _attempts_dir(coral_dir: str | Path, island_id: str | int | None = None) -> Path:
@@ -56,6 +59,121 @@ def write_attempt(
     path = _attempts_dir(coral_dir, island_id) / f"{attempt.commit_hash}.json"
     _write_attempt_json(path, attempt)
     return path
+
+
+#: Statuses that mean "a grader has already decided this attempt's outcome".
+#: Anything not in this set (currently only "pending") is still up for grabs.
+_NON_TERMINAL_STATUSES = frozenset({"pending"})
+
+
+def is_terminal_status(status: str | None) -> bool:
+    """True once a grader has written a final outcome for an attempt."""
+    return status is not None and status not in _NON_TERMINAL_STATUSES
+
+
+@contextmanager
+def claim_attempt(
+    coral_dir: str | Path,
+    commit_hash: str,
+    island_id: str | int | None = None,
+) -> Iterator[bool]:
+    """Take exclusive ownership of grading one attempt. Yields False if taken.
+
+    First-write-wins on each file separately is not enough. The event ledger
+    and the attempt record are two files with two locks, so two graders can
+    each win one:
+
+        grader A writes event 0.9      (wins the event)
+        grader B writes event 0.2      (refused — 0.9 kept)
+        grader B finalizes 0.2         (wins the attempt)
+        grader A finalizes 0.9         (refused)
+        -> event says 0.9, attempt says 0.2
+
+    Every rubric decision reads the ledger while every reported score reads the
+    attempt record, so that run's analysis and its scores describe different
+    evaluations. Per-file guards cannot fix it: the two winners are decided
+    independently. One claim, held from before the evaluation starts until
+    after both writes land, is what makes them the same grader.
+
+    Non-blocking on purpose. A second grader that cannot get the claim is a
+    duplicate and should skip the attempt, not queue behind a grade that takes
+    minutes and whose result it would then be forbidden to write.
+    """
+    path = _attempts_dir(coral_dir, island_id) / f"{commit_hash}.grading.lock"
+    with open(path, "a+") as f:
+        try:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            yield False
+            return
+        try:
+            yield True
+        finally:
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def budget_lock(
+    coral_dir: str | Path,
+    island_id: str | int | None = None,
+) -> Iterator[None]:
+    """Serialize the read-budget-then-submit sequence across every agent of the run.
+
+    Blocking, unlike ``claim_attempt``: a caller that cannot get this lock is
+    not a duplicate to be skipped, it is the next submission in line, and the
+    wait is the length of one git commit. The lock is run-wide whatever island
+    the caller is on, because ``run.stop.max_real_attempts`` is a run-wide cap:
+    an island-local lock would let each island admit the full budget.
+    ``island_id`` is accepted for call-site symmetry and ignored.
+    """
+    path = Path(coral_dir) / ".budget.lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a+") as f:
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+
+def finalize_attempt(
+    coral_dir: str | Path,
+    attempt: Attempt,
+    island_id: str | int | None = None,
+) -> bool:
+    """Write a terminal attempt record, but only if none exists yet.
+
+    Finalization is monotonic: the first grader to record an outcome for a
+    commit owns that record permanently. A second finalization — two daemons
+    on one run dir, a resumed daemon racing a lingering one, a retry after a
+    partial stop — is refused rather than silently overwriting a real score.
+
+    Without this, `_grade_one` would happily replace a finished score with a
+    later crash record, and the overwrite would leave no trace: attempt files
+    are rewritten in place, so the lost result is unrecoverable and, worse,
+    invisible. Refusing instead makes duplicate grading a logged anomaly.
+
+    The check and the write are performed under an exclusive lock on a
+    sidecar file, so two processes cannot both observe "still pending" and
+    both proceed. Returns True if this call wrote the record, False if an
+    earlier terminal record was already present and was left untouched.
+    """
+    path = _attempts_dir(coral_dir, island_id) / f"{attempt.commit_hash}.json"
+    lock_path = path.with_suffix(".json.lock")
+    with open(lock_path, "a+") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        try:
+            if path.exists():
+                try:
+                    existing = json.loads(path.read_text(encoding="utf-8"))
+                except (json.JSONDecodeError, OSError):
+                    existing = {}
+                if is_terminal_status(existing.get("status")):
+                    return False
+            _write_attempt_json(path, attempt)
+            return True
+        finally:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
 
 
 def read_attempt(
@@ -335,6 +453,40 @@ def count_agent_pending(
     return sum(
         1 for a in attempts if a.agent_id == agent_id and a.status == "pending" and a.score is None
     )
+
+
+def count_real_attempts(
+    coral_dir: str | Path,
+    attempts: list[Attempt] | None = None,
+    island_id: str | int | None = None,
+) -> int:
+    """Every real attempt already charged against the run's budget, run-wide.
+
+    Counts pending submissions as well as finalized ones: a budget caps how much
+    agent work the run contains, and an attempt is agent work from the moment it
+    is committed, whether or not a score ever comes back for it. In a multi-island
+    run the count spans every island, since the cap is a property of the run.
+    Archived attempts (``coral resume --from`` soft-deletes them) and tune
+    submissions (refused outright on a capped run) are excluded.
+
+    ``attempts`` overrides the on-disk read; ``island_id`` is accepted for call-site
+    symmetry and ignored for the count.
+    """
+    if attempts is None:
+        attempts = _all_island_attempts(coral_dir)
+    return sum(1 for a in attempts if a.budget_class == BUDGET_CLASS_REAL and not a.archived)
+
+
+def _all_island_attempts(coral_dir: str | Path) -> list[Attempt]:
+    """Attempts across the whole run: the single-island layout or every island."""
+    coral_dir = Path(coral_dir)
+    islands_dir = coral_dir / "islands"
+    if not islands_dir.exists():
+        return read_attempts(coral_dir)
+    out: list[Attempt] = []
+    for island in sorted(p for p in islands_dir.iterdir() if p.is_dir()):
+        out.extend(read_attempts(coral_dir, island_id=island.name))
+    return out
 
 
 def get_recent(

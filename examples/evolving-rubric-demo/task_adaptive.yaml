@@ -1,0 +1,51 @@
+task:
+  name: "Evolving rubric demo"
+  description: |
+    Improve `answer.md`, a short technical note on how software should be evaluated.
+    Keep it under 400 words. The grader scores a small rubric; read the feedback
+    after each `coral eval` and address what it names.
+  tips: |
+    - Run `coral eval -m "what changed"` after every meaningful edit.
+
+grader:
+  entrypoint: demo_grader.evolving:EvolvingDemoGrader
+  setup:
+    - uv pip install -e ./grader
+  timeout: 60
+  direction: maximize
+  hide_args: true
+  args:
+    evaluator_model: none
+    criteria:
+      - name: "Has Title"
+        weight: 1.0
+        description: "The note opens with a markdown title. requires: # "
+      - name: "Names Sources"
+        weight: 1.0
+        description: "The note names its sources. requires: sources"
+      - name: "Mentions Evaluation"
+        weight: 1.0
+        description: "The note is about evaluation. requires: evaluat"
+    evolution:
+      mode: adaptive
+      checkpoints: [2, 4]
+      max_criteria: 6
+      max_new_criteria_per_round: 1
+      window: 2
+      latest_publication_attempt: 5
+      # the scripted proposer; remove this line and set proposer_model to use a model
+      proposer_command: ["python3", "{task_dir}/grader/src/demo_grader/scripted_proposer.py"]
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: haiku
+  max_turns: 60
+
+workspace:
+  repo_path: ./seed
+
+run:
+  session: local
+  stop:
+    max_real_attempts: 6

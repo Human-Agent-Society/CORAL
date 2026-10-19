@@ -1,0 +1,624 @@
+{
+  "fleet": [
+    "claude-sonnet-4",
+    "deepseek-r1-0528",
+    "deepseek-v3-0324",
+    "deepseek-v3.1-terminus",
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "glm-4.6",
+    "gpt-5",
+    "intern-s1",
+    "kimi-k2-0905",
+    "qwen3-235b-a22b-2507",
+    "qwen3-235b-a22b-thinking-2507"
+  ],
+  "partitions": 25,
+  "tax_mean": 0.0002,
+  "tax_max": 0.0006,
+  "GO": false,
+  "top5": [
+    {
+      "A": [
+        "gpqa",
+        "hle",
+        "livemathbench"
+      ],
+      "B": [
+        "livecodebench",
+        "simpleqa",
+        "tau2"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.002,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        10.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "livemathbench",
+        "simpleqa"
+      ],
+      "B": [
+        "hle",
+        "livecodebench",
+        "tau2"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.0011,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        10.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "hle",
+        "simpleqa"
+      ],
+      "B": [
+        "livecodebench",
+        "livemathbench",
+        "tau2"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.0007,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        10.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "livemathbench"
+      ],
+      "B": [
+        "hle",
+        "livecodebench",
+        "simpleqa",
+        "tau2"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.0204,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        10.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "hle"
+      ],
+      "B": [
+        "livecodebench",
+        "livemathbench",
+        "simpleqa",
+        "tau2"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.0021,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        10.0,
+        3.0
+      ]
+    }
+  ],
+  "all": [
+    {
+      "A": [
+        "gpqa",
+        "hle",
+        "livemathbench"
+      ],
+      "B": [
+        "livecodebench",
+        "simpleqa",
+        "tau2"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.002,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        10.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "livemathbench",
+        "simpleqa"
+      ],
+      "B": [
+        "hle",
+        "livecodebench",
+        "tau2"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.0011,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        10.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "hle",
+        "simpleqa"
+      ],
+      "B": [
+        "livecodebench",
+        "livemathbench",
+        "tau2"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.0007,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        10.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "livemathbench"
+      ],
+      "B": [
+        "hle",
+        "livecodebench",
+        "simpleqa",
+        "tau2"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.0204,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        10.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "hle"
+      ],
+      "B": [
+        "livecodebench",
+        "livemathbench",
+        "simpleqa",
+        "tau2"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.0021,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        10.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "simpleqa"
+      ],
+      "B": [
+        "hle",
+        "livecodebench",
+        "livemathbench",
+        "tau2"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.0011,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        10.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "livecodebench",
+        "tau2"
+      ],
+      "B": [
+        "gpqa",
+        "hle",
+        "livemathbench",
+        "simpleqa"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.0,
+      "taxB": 0.0007,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        10.0
+      ]
+    },
+    {
+      "A": [
+        "livemathbench",
+        "simpleqa"
+      ],
+      "B": [
+        "gpqa",
+        "hle",
+        "livecodebench",
+        "tau2"
+      ],
+      "tax": 0.0006,
+      "taxA": 0.0011,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        300.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "livecodebench",
+        "livemathbench"
+      ],
+      "B": [
+        "hle",
+        "simpleqa",
+        "tau2"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "hle",
+        "livecodebench"
+      ],
+      "B": [
+        "livemathbench",
+        "simpleqa",
+        "tau2"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "livecodebench",
+        "simpleqa"
+      ],
+      "B": [
+        "hle",
+        "livemathbench",
+        "tau2"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "livecodebench",
+        "tau2"
+      ],
+      "B": [
+        "hle",
+        "livemathbench",
+        "simpleqa"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "livemathbench",
+        "tau2"
+      ],
+      "B": [
+        "hle",
+        "livecodebench",
+        "simpleqa"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        1.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "hle",
+        "tau2"
+      ],
+      "B": [
+        "livecodebench",
+        "livemathbench",
+        "simpleqa"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "simpleqa",
+        "tau2"
+      ],
+      "B": [
+        "hle",
+        "livecodebench",
+        "livemathbench"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "livecodebench"
+      ],
+      "B": [
+        "hle",
+        "livemathbench",
+        "simpleqa",
+        "tau2"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "gpqa",
+        "tau2"
+      ],
+      "B": [
+        "hle",
+        "livecodebench",
+        "livemathbench",
+        "simpleqa"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        1.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "livecodebench",
+        "livemathbench"
+      ],
+      "B": [
+        "gpqa",
+        "hle",
+        "simpleqa",
+        "tau2"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "hle",
+        "livecodebench"
+      ],
+      "B": [
+        "gpqa",
+        "livemathbench",
+        "simpleqa",
+        "tau2"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "livecodebench",
+        "simpleqa"
+      ],
+      "B": [
+        "gpqa",
+        "hle",
+        "livemathbench",
+        "tau2"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "hle",
+        "livemathbench"
+      ],
+      "B": [
+        "gpqa",
+        "livecodebench",
+        "simpleqa",
+        "tau2"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "livemathbench",
+        "tau2"
+      ],
+      "B": [
+        "gpqa",
+        "hle",
+        "livecodebench",
+        "simpleqa"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        1.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "hle",
+        "simpleqa"
+      ],
+      "B": [
+        "gpqa",
+        "livecodebench",
+        "livemathbench",
+        "tau2"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "hle",
+        "tau2"
+      ],
+      "B": [
+        "gpqa",
+        "livecodebench",
+        "livemathbench",
+        "simpleqa"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    },
+    {
+      "A": [
+        "simpleqa",
+        "tau2"
+      ],
+      "B": [
+        "gpqa",
+        "hle",
+        "livecodebench",
+        "livemathbench"
+      ],
+      "tax": 0.0,
+      "taxA": 0.0,
+      "taxB": 0.0,
+      "glam": 3.0,
+      "slams": [
+        3.0,
+        3.0
+      ]
+    }
+  ]
+}

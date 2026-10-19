@@ -20,9 +20,18 @@ def _clean_env() -> dict[str, str]:
     Also strips VS Code Remote SSH IPC variables — these reference
     session-specific Unix sockets that may no longer exist after a
     reconnect/restart, causing ENOENT errors in Node.js subprocesses.
+
+    Also strips CLAUDECODE — set when the parent process spawning this one
+    (e.g. `coral start`/`coral validate` run via a Claude Code subagent, or
+    an evaluator/judge grader spawning its own `claude` subprocess) is
+    itself a Claude Code session. Without stripping it, the child `claude`
+    refuses to start ("cannot be launched inside another Claude Code
+    session") even though it's a legitimate, isolated CORAL-managed agent,
+    not a literal nested interactive session.
     """
     env = os.environ.copy()
     env.pop("VIRTUAL_ENV", None)
+    env.pop("CLAUDECODE", None)
     for key in list(env):
         if key.startswith("VSCODE_"):
             env.pop(key)

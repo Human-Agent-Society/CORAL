@@ -68,6 +68,7 @@ from coral.hub.heartbeat import (
     write_agent_heartbeat,
     write_global_heartbeat,
 )
+from coral.hub.interventions import append_intervention_event
 from coral.hub.steering import ContinueFromAction, mark_applied, read_pending
 from coral.template.coral_md import generate_coral_md
 from coral.types import BUDGET_CLASS_REAL, Attempt, get_budget_class
@@ -549,8 +550,17 @@ class AgentManager:
         prompt: str | None = None,
         prompt_source: str | None = None,
         max_turns: int | None = None,
+        intervention_meta: dict[str, Any] | None = None,
     ) -> AgentHandle:
-        """Set up a single agent and start it."""
+        """Set up a single agent and start it.
+
+        Every prompt this method hands to a runtime is recorded as one
+        intervention event (``coral.hub.interventions``). This is the single
+        choke point for prompt dispatch, so an absent record means no prompt
+        was dispatched, never that a call site forgot to report. Callers supply
+        ``intervention_meta`` only to enrich the record; they never decide
+        whether one is written.
+        """
         if self.paths is None:
             raise RuntimeError("run paths are not initialized; start_all() has not run")
 
@@ -738,6 +748,11 @@ class AgentManager:
         )
         # Record fresh process start time for the exit-classifier uptime check.
         self._started_at[agent_id] = time.time()
+        # Measurement only, and only after the runtime process was started with the prompt.
+        if prompt:
+            self._record_prompt_dispatch(
+                agent_id, prompt, prompt_source or "start", intervention_meta
+            )
         return handle
 
     def _apply_user_isolation(
@@ -778,6 +793,7 @@ class AgentManager:
         idx: int,
         prompt: str | None = None,
         prompt_source: str | None = None,
+        intervention_meta: dict[str, Any] | None = None,
     ) -> AgentHandle:
         """Restart a dead agent, resuming its session with optional feedback prompt."""
         old_handle = self.handles[idx]
@@ -810,6 +826,7 @@ class AgentManager:
             resume_session_id=session_id,
             prompt=prompt,
             prompt_source=prompt_source or "restart",
+            intervention_meta=intervention_meta,
         )
 
     def _interrupt_and_resume(
@@ -818,6 +835,7 @@ class AgentManager:
         prompt: str,
         prompt_source: str | None = None,
         pre_restart_ops: Sequence[Callable[[str], None]] = (),
+        intervention_meta: dict[str, Any] | None = None,
     ) -> AgentHandle:
         """Interrupt a running agent and resume with a feedback prompt.
 
@@ -854,8 +872,38 @@ class AgentManager:
             island_id=island_id,
             resume_session_id=session_id,
             prompt=prompt,
-            prompt_source=prompt_source,
+            prompt_source=prompt_source or "interrupt-resume",
+            intervention_meta=intervention_meta,
         )
+
+    def _record_prompt_dispatch(
+        self,
+        agent_id: str,
+        content: str,
+        prompt_source: str,
+        meta: dict[str, Any] | None = None,
+    ) -> None:
+        """Best-effort record that a prompt was dispatched to this agent's runtime.
+
+        Called from ``_setup_and_start_agent`` only. An empty payload is not
+        an insertion and is dropped without a log entry, so an absent prompt
+        never appears as a failed measurement.
+        """
+        if not content:
+            return
+        try:
+            append_intervention_event(
+                self.paths.coral_dir,
+                {
+                    "agent_id": agent_id,
+                    "channel": "agent_context",
+                    "prompt_source": prompt_source,
+                    "content": content,
+                    **(meta or {}),
+                },
+            )
+        except Exception:  # noqa: BLE001 -- measurement must not alter the run
+            logger.exception("Failed to record prompt dispatch for %s", agent_id)
 
     def resume_all(
         self,
@@ -1007,11 +1055,22 @@ class AgentManager:
                 if steering_action.id and steering_action.id in applied_actions:
                     mark_applied(paths.coral_dir, steering_action.id)
 
+            if steering_action is not None:
+                resume_source = "resume:steering"
+            elif instruction:
+                resume_source = "resume:instruction"
+            else:
+                resume_source = "resume:fresh-start" if not session_id else "resume"
+
             handle = self._setup_and_start_agent(
                 agent_id,
                 island_id=island_id,
                 resume_session_id=session_id,
                 prompt=prompt,
+                prompt_source=resume_source,
+                intervention_meta=(
+                    {"steering_action_id": steering_action.id} if steering_action else None
+                ),
             )
             handles.append(handle)
 
@@ -1708,6 +1767,27 @@ class AgentManager:
         ]
         if feedback:
             lines.append(f"Feedback: {feedback}")
+
+        if attempt.get("status") == "crashed":
+            # No reflection block after an evaluator failure. The usual
+            # "decide: refine or pivot / what have you ruled out" framing
+            # invites the agent to explain a result that does not exist, and
+            # the only material it has to explain is its own last change --
+            # so it concludes the change caused the failure and retreats to
+            # cosmetic edits. Say what happened, say it is not about the
+            # submission, and stop talking.
+            lines.extend(
+                [
+                    "",
+                    "This was an evaluator failure, not a result. Nothing about your "
+                    "submission caused it and nothing can be inferred from it. Do not "
+                    "revise the artifact, revert it, or record any conclusion about it "
+                    "in your notes. Resubmit when you are ready, or continue the work "
+                    "you had already planned.",
+                ]
+            )
+            return "\n".join(lines)
+
         lines.extend(
             [
                 "",
@@ -2466,6 +2546,13 @@ class AgentManager:
                         committing_idx,
                         combined_prompt,
                         prompt_source=f"heartbeat:{names}",
+                        intervention_meta={
+                            "attempt_id": attempt_data.get("commit_hash"),
+                            "action_names": action_names,
+                            "rubric_version_scored": (
+                                (attempt_data.get("metadata") or {}).get("rubric_version_scored")
+                            ),
+                        },
                     )
                     self._write_agent_pids()
 
@@ -2499,7 +2586,19 @@ class AgentManager:
                         if self.verbose:
                             print(f"[coral] {agent_id} resuming after pause cooldown")
                         self.handles[i] = self._restart_agent(
-                            i, prompt=prompt, prompt_source="post-pause"
+                            i,
+                            prompt=prompt,
+                            prompt_source="post-pause",
+                            intervention_meta=(
+                                {
+                                    "attempt_id": latest.get("commit_hash"),
+                                    "rubric_version_scored": (
+                                        (latest.get("metadata") or {}).get("rubric_version_scored")
+                                    ),
+                                }
+                                if latest
+                                else None
+                            ),
                         )
                         self._write_agent_pids()
                         continue
@@ -2538,7 +2637,20 @@ class AgentManager:
                             f"[coral] {agent_id} exited "
                             f"(code: {exit_code}, {classification}), resuming..."
                         )
-                    self.handles[i] = self._restart_agent(i, prompt=prompt)
+                    self.handles[i] = self._restart_agent(
+                        i,
+                        prompt=prompt,
+                        intervention_meta=(
+                            {
+                                "attempt_id": latest.get("commit_hash"),
+                                "rubric_version_scored": (
+                                    (latest.get("metadata") or {}).get("rubric_version_scored")
+                                ),
+                            }
+                            if latest
+                            else None
+                        ),
+                    )
                     self._write_agent_pids()
 
             # Check for stalled agents (alive but no output for > timeout).

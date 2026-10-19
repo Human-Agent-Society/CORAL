@@ -1,0 +1,31 @@
+# Workload card (measured from the frozen build; train/val only, test row count only)
+tenant: "A"
+label: "interactive analyst"
+tasks: ["simpleqa", "gpqa", "tau2"]
+model_requested: "gpt-5"
+slo: {"ttft_ms": 2500}
+downgrade_ok: true
+rows: {train: 2899, val: 972, test: 931}
+arrivals:
+  train: {n: 2899, span_sec: 3083.5, mean_rps: 0.940, peak_rps_10s: 7.7}
+  val: {n: 972, span_sec: 1351.9, mean_rps: 0.719, peak_rps_10s: 6.3}
+prompt_tokens_p50_p90_p99: [28, 81, 190648]
+output_tokens_p50_p90_p99: [370, 934, 5632]
+tasks_train_share:
+  simpleqa: 0.901
+  gpqa: 0.043
+  tau2: 0.056
+# per-model measured mean score / mean cost per request, TRAIN split
+models_train:
+  claude-sonnet-4: {mean_score: 0.1959, mean_cost_usd: 0.022990}
+  deepseek-r1-0528: {mean_score: 0.2904, mean_cost_usd: 0.009222}
+  deepseek-v3-0324: {mean_score: 0.2749, mean_cost_usd: 0.001701}
+  deepseek-v3.1-terminus: {mean_score: 0.2787, mean_cost_usd: 0.003649}
+  gemini-2.5-flash: {mean_score: 0.3139, mean_cost_usd: 0.001912}
+  gemini-2.5-pro: {mean_score: 0.5478, mean_cost_usd: 0.019739}
+  glm-4.6: {mean_score: 0.2939, mean_cost_usd: 0.012194}
+  gpt-5: {mean_score: 0.4950, mean_cost_usd: 0.026094}
+  intern-s1: {mean_score: 0.1766, mean_cost_usd: 0.003571}
+  kimi-k2-0905: {mean_score: 0.3149, mean_cost_usd: 0.005812}
+  qwen3-235b-a22b-2507: {mean_score: 0.5254, mean_cost_usd: 0.002288}
+  qwen3-235b-a22b-thinking-2507: {mean_score: 0.4912, mean_cost_usd: 0.008748}

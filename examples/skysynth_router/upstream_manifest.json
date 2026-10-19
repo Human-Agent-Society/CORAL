@@ -1,0 +1,87 @@
+{
+  "dataset": {
+    "archive": "bench-release.tar.gz",
+    "archive_sha256": "b79f8cde1a6f029c2efa663a3a3b6f7748defb22341fe59f328cebef6648c8f1",
+    "repo": "NPULH/LLMRouterBench",
+    "repo_type": "dataset",
+    "revision": "0e5af1b84bf73437a01a1849c0f1d2468baa93fc"
+  },
+  "generated_traces": {
+    "trace_merged_test.jsonl": {
+      "rows": 1632,
+      "sha256": "7882709436dcf3241e7041c96fc56c5dbc9c55e9c9b25f5c7dcc57ad31f294f4"
+    },
+    "trace_merged_train.jsonl": {
+      "rows": 4839,
+      "sha256": "35e6e13d994c4a2278aa7dc367e9cda137fed3f58de42f1351bff77ddcb9d0f0"
+    },
+    "trace_merged_val.jsonl": {
+      "rows": 1665,
+      "sha256": "33ffc1f453a4c996d6cb5506d4daba4bbbddb487851700b548dfd5f00f89f593"
+    },
+    "trace_tenantA_test.jsonl": {
+      "rows": 931,
+      "sha256": "f4739c7ae5f5bfc9cb316d67b63208bb96d18efa8a68b686884b48c79613f3b6"
+    },
+    "trace_tenantA_train.jsonl": {
+      "rows": 2899,
+      "sha256": "0b8cceecc9fef82c5a857e0ec8c9ffef9e5523568790a32d5af697025ae035a0"
+    },
+    "trace_tenantA_val.jsonl": {
+      "rows": 972,
+      "sha256": "ce5504c8b07eba26e1ba7fc6ac8b9612df1ba555154c70e6e750cd8b3eb91ad6"
+    },
+    "trace_tenantB_test.jsonl": {
+      "rows": 701,
+      "sha256": "5c8d289de2a6ce990a52dede35e5b50aa9a3285628077408040d804ade802e8b"
+    },
+    "trace_tenantB_train.jsonl": {
+      "rows": 1940,
+      "sha256": "e5f4160154d633841aa5f94563e93f6a0a634e5c6c53d0de59ebc14090dd9870"
+    },
+    "trace_tenantB_val.jsonl": {
+      "rows": 693,
+      "sha256": "8b11b4e3018b12abc911b5aadb30fe85d8c6f42b17aa628056842118b9e769b5"
+    }
+  },
+  "notes": [
+    "upstream/ is byte-identical to the pinned revision; adaptations are in grader/ and seed/.",
+    "Traces are hashed, not vendored: val and test carry ground-truth quality labels.",
+    "Regenerated manifests and workload cards were compared to the committed upstream copies before vendoring and were identical."
+  ],
+  "schema": 1,
+  "upstream": {
+    "license": "Apache-2.0",
+    "repo": "https://github.com/skydiscover-ai/skydiscover",
+    "revision": "0d932b690670a7e544388ad362e9876c8bd256a0",
+    "task_path": "skydiscover/synthesize/examples/llm-router"
+  },
+  "vendored_at": "2026-09-19T14:01:04.546396+00:00",
+  "vendored_files": {
+    ".gitignore": "4fdf4347ecb8ad45771ea30904703658589656a62e2e0ad98a6c228374588d0e",
+    "LICENSE": "d7830a145285bd62b4290381f64feae143e18364fd519ad590b6dbbe87702c54",
+    "README.md": "901ec082fd337d43e2d010de70e8f55bc4b3a226cb6e162dd894e12656177db6",
+    "evaluator/benchmark/artifacts/generic_heads.npz": "e29f65f003b23d3fbbc0500b1902c755dc2bd66a5ac06b2647c87bc4dfbaaf6f",
+    "evaluator/benchmark/artifacts/generic_predictions.json": "5980ac97fc4009c9ede3f4a95a174aeca3fd133b6a1c45f4db6598448bb96bed",
+    "evaluator/benchmark/baseline/generic_baseline_results.json": "4234b963c115c1678997c9360d404ecbcca2e1d7be553378fb4c5a3d8a17c42d",
+    "evaluator/benchmark/baseline/train_generic.py": "ca0bac13b06027f450ad747b1c95cafb25287b7d0bd5c54f9af0a77786cdd565",
+    "evaluator/benchmark/data/cards/tenantA.card.yaml": "133b9792c7d5bfed1b9062eeac2c2dce6f9b0f156604b987237d50d75de4bd7b",
+    "evaluator/benchmark/data/cards/tenantB.card.yaml": "8bfc97503a2381fdb617eb7c9e255df17c4d189672ea8ebddf99afd9b2b9da8d",
+    "evaluator/benchmark/data/fleet_flagship.json": "1d6dd04c5e6a3cadc7e4165be870e09274f7572601660fb486c4e5d2de4413d0",
+    "evaluator/benchmark/data/make_env_card.py": "d744b77ec069671f1310d15e29667b229215bf55409f53e54fdd2b518be25a18",
+    "evaluator/benchmark/data/make_tenant_traces.py": "1ec37c0f08784da20ba7f750653f8a2804511c316fdc17eb65175bd77fce7a68",
+    "evaluator/benchmark/data/manifests/tenantA_test.manifest.json": "873b2b8f7583d8d7a95c982fdedd0ed0afe7c36b8b86919c81e280c5ac2763db",
+    "evaluator/benchmark/data/manifests/tenantA_train.manifest.json": "518a8a4546e9cd7d005ec700edb4c4532fa058ff508229cd211dbb9c8318d046",
+    "evaluator/benchmark/data/manifests/tenantA_val.manifest.json": "9fe008f6ffd3828c370c8157469423c021c704b7402b656b52fff68fefc4f420",
+    "evaluator/benchmark/data/manifests/tenantB_test.manifest.json": "886643d23a7bd019ad01a862de07346a3d7e933991999a91b2561a3a8521f172",
+    "evaluator/benchmark/data/manifests/tenantB_train.manifest.json": "6bb2c810597d41bf550fc464c167aa90e703fcc04b0e59107517cc16e41f4d58",
+    "evaluator/benchmark/data/manifests/tenantB_val.manifest.json": "d103bfffe0ca753b1f80f555bb5c7dafd0f56ea315f0531316f5cec2e7cb0c7c",
+    "evaluator/benchmark/env_card.yaml": "04a63812f54082abdd2dc4b4d4c865d0bb27cb0719315325cdfbb917ec0135c4",
+    "evaluator/benchmark/replay.py": "bc44239aace17032cb541d3b0ed2c686b931b395ff3fe499ed6b5704fcf84a87",
+    "evaluator/benchmark/replay_tenants.py": "fea8979ca81c61a28c7821c96d1a94fa688ddd1a72afbd8e0307aa7f64535bc2",
+    "evaluator/generic_policy.py": "2228ce4992095d04f64e8f24002add5bebd622ba469c0f83d446e1dc7fa71831",
+    "evaluator/reference_router.py": "932b8c79362767c0ce63acd9255d60cfc012e51eadf9af9597b47cb49f82ff88",
+    "evaluator/router_interface.py": "3fa2c2eb4699fd089bae5e1bff9183132b31dead468d8116655437734c300a40",
+    "task.md": "3866f70b470fc0881afe75a855e39b74dba09597bf5f9e10466a9a64726a696f"
+  }
+}
