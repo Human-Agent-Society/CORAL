@@ -15,6 +15,7 @@ from coral.agent.exit_classifier import classify_by_uptime
 from coral.agent.process import open_agent_stderr_for_log_dir
 from coral.agent.runtime import (
     AgentHandle,
+    apply_gateway_override,
     apply_run_as_user,
     apply_sandbox,
     apply_sandbox_env,
@@ -184,7 +185,9 @@ class CodexRuntime:
 
         # Route through gateway if configured
         if gateway_url:
-            agent_env["OPENAI_BASE_URL"] = gateway_url
+            apply_gateway_override(
+                agent_env, "OPENAI_BASE_URL", gateway_url, agent_id=agent_id, runtime_logger=logger
+            )
             logger.info(f"Codex agent {agent_id}: routing via gateway at {gateway_url}")
         if gateway_api_key:
             agent_env["OPENAI_API_KEY"] = gateway_api_key
