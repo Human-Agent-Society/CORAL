@@ -31,16 +31,20 @@ Each entry in `model_list` defines a model the gateway will serve. The `model_na
 
 ### MiniMax routes
 
-The generated configuration supports `MiniMax-M3` and `MiniMax-M2.7`. Each model ID includes both global and China OpenAI-compatible routes. Use the corresponding `-anthropic` alias for Anthropic-compatible routes. The Anthropic base URLs end in `/anthropic`; LiteLLM appends `/v1/messages` when it sends the request.
+For new MiniMax configurations, use `MiniMax-M3.1-Flash`; `MiniMax-M3` is also available. Set `agents.model` to the chosen model and leave `agents.gateway.config` unset to generate its routes. Each model ID includes both global and China OpenAI-compatible routes. Use the corresponding `-anthropic` alias for Anthropic-compatible routes. The Anthropic base URLs end in `/anthropic`; LiteLLM appends `/v1/messages` when it sends the request.
 
 All generated routes use `MINIMAX_API_KEY`:
 
 | Alias | Protocol | Regions |
 |-------|----------|---------|
+| `MiniMax-M3.1-Flash` | OpenAI-compatible | global, China |
+| `MiniMax-M3.1-Flash-anthropic` | Anthropic-compatible | global, China |
 | `MiniMax-M3` | OpenAI-compatible | global, China |
 | `MiniMax-M3-anthropic` | Anthropic-compatible | global, China |
-| `MiniMax-M2.7` | OpenAI-compatible | global, China |
-| `MiniMax-M2.7-anthropic` | Anthropic-compatible | global, China |
+
+Existing config files are never regenerated. Explicit `MiniMax-M2.7` selections (including the `-anthropic` alias) retain their legacy routes; custom routes remain in your own LiteLLM config. To opt into Flash, change `agents.model` and start a new run or update your custom gateway config.
+
+Flash uses adaptive thinking and defaults to maximum effort when these settings are omitted. It does not accept disabled thinking, effort `none`, `service_tier`, or `reasoning_split: false`. When customizing routes, use `reasoning_effort` for OpenAI-compatible requests and `output_config.effort` for Anthropic-compatible requests. See the MiniMax [OpenAI-compatible](https://platform.minimax.io/docs/api-reference/text-openai-api) and [Anthropic-compatible](https://platform.minimax.io/docs/api-reference/text-anthropic-api) references.
 
 **2. Enable the gateway in your task config:**
 

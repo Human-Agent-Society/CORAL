@@ -17,7 +17,7 @@ _MINIMAX_ANTHROPIC_ENDPOINTS = {
     "global_en": "https://api.minimax.io/anthropic",
     "cn_zh": "https://api.minimaxi.com/anthropic",
 }
-_MINIMAX_MODEL_IDS = ("MiniMax-M3", "MiniMax-M2.7")
+_MINIMAX_MODEL_IDS = ("MiniMax-M3.1-Flash", "MiniMax-M3")
 
 
 def _minimax_model_entries(model_id: str) -> list[dict]:
@@ -110,7 +110,13 @@ def generate_default_litellm_config(path: Path, model: str = "sonnet") -> Path:
         logger.info(f"LiteLLM config already exists at {path}, skipping generation")
         return path
 
-    model_list = _MODEL_MAP.get(model, _MODEL_MAP["sonnet"])
+    model_id = model.removesuffix("-anthropic")
+    if model_id == "MiniMax-M2.7":
+        # Keep explicitly configured legacy models out of the current catalog.
+        model_list = _minimax_model_entries(model_id)
+    else:
+        model_key = model_id if model_id in _MINIMAX_MODEL_IDS else model
+        model_list = _MODEL_MAP.get(model_key, _MODEL_MAP["sonnet"])
 
     config = {
         "model_list": model_list,
