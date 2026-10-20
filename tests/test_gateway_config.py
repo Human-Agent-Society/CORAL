@@ -100,6 +100,7 @@ def test_manager_generates_selected_gateway_routes(tmp_path, monkeypatch, model_
     ],
 )
 @pytest.mark.parametrize("route_index", range(4))
+@pytest.mark.asyncio(loop_scope="module")
 async def test_generated_routes_reach_real_litellm_http_transport(
     tmp_path, monkeypatch, model_id, effort, saved, route_index
 ):
