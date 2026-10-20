@@ -100,7 +100,7 @@ def test_manager_generates_selected_gateway_routes(tmp_path, monkeypatch, model_
     ],
 )
 @pytest.mark.parametrize("route_index", range(4))
-def test_generated_routes_reach_real_litellm_http_transport(
+async def test_generated_routes_reach_real_litellm_http_transport(
     tmp_path, monkeypatch, model_id, effort, saved, route_index
 ):
     # Import only after disabling LiteLLM's remote cost-map refresh. All inference
@@ -157,7 +157,11 @@ def test_generated_routes_reach_real_litellm_http_transport(
             }
         return httpx.Response(200, json=response, request=request)
 
+    async def send_async(client, request, **kwargs):
+        return send(client, request, **kwargs)
+
     monkeypatch.setattr(httpx.Client, "send", send)
+    monkeypatch.setattr(httpx.AsyncClient, "send", send_async)
     extra_body = {}
     if effort:
         extra_body["thinking"] = {"type": "adaptive"}
@@ -168,23 +172,38 @@ def test_generated_routes_reach_real_litellm_http_transport(
     image = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6bH8AAAAASUVORK5CYII="
     messages = [{"role": "user", "content": "Hello"}]
     if effort:
-        messages[0]["content"] = [
-            {"type": "text", "text": "Hello"},
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image}"}},
-        ]
+        image_block = (
+            {
+                "type": "image",
+                "source": {"type": "base64", "media_type": "image/png", "data": image},
+            }
+            if anthropic
+            else {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image}"}}
+        )
+        messages[0]["content"] = [{"type": "text", "text": "Hello"}, image_block]
     router = litellm.Router(model_list=[route], num_retries=0)
     try:
-        response = router.completion(
-            model=route["model_name"],
-            messages=messages,
-            max_tokens=4096,
-            extra_body=extra_body,
-            drop_params=config["litellm_settings"]["drop_params"],
-        )
+        if anthropic:
+            # The proxy's /v1/messages route uses this native API. Sending these
+            # options through chat/completions would drop Anthropic-only fields.
+            response = await router.aanthropic_messages(
+                model=route["model_name"], messages=messages, max_tokens=4096, **extra_body
+            )
+            if hasattr(response, "model_dump"):
+                response = response.model_dump()
+            assert response["content"][0]["text"] == "OK"
+        else:
+            response = await router.acompletion(
+                model=route["model_name"],
+                messages=messages,
+                max_tokens=4096,
+                extra_body=extra_body,
+                drop_params=config["litellm_settings"]["drop_params"],
+            )
+            assert response.choices[0].message.content == "OK"
     finally:
         router.reset()
 
-    assert response.choices[0].message.content == "OK"
     assert len(captured) == 1
     request = captured[0]
     suffix = "/v1/messages" if anthropic else "/chat/completions"

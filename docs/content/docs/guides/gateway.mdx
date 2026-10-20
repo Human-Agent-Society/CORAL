@@ -44,7 +44,7 @@ All generated routes use `MINIMAX_API_KEY`:
 
 Existing config files are never regenerated. Explicit `MiniMax-M2.7` selections (including the `-anthropic` alias) retain their legacy routes; custom routes remain in your own LiteLLM config. To opt into Flash, change `agents.model` and start a new run or update your custom gateway config.
 
-Flash uses adaptive thinking and defaults to maximum effort when these settings are omitted. It does not accept disabled thinking, effort `none`, `service_tier`, or `reasoning_split: false`. When customizing routes, use `reasoning_effort` for OpenAI-compatible requests and `output_config.effort` for Anthropic-compatible requests. See the MiniMax [OpenAI-compatible](https://platform.minimax.io/docs/api-reference/text-openai-api) and [Anthropic-compatible](https://platform.minimax.io/docs/api-reference/text-anthropic-api) references.
+Flash uses adaptive thinking and defaults to maximum effort when these settings are omitted. It does not accept disabled thinking, effort `none`, `service_tier`, or `reasoning_split: false`. When customizing requests, use `reasoning_effort` with the OpenAI-compatible `/v1/chat/completions` endpoint and `output_config.effort` with the Anthropic-compatible `/v1/messages` endpoint. Send Anthropic-native options through `/v1/messages`; the pinned LiteLLM chat-completions adapter does not forward them. See the MiniMax [OpenAI-compatible](https://platform.minimax.io/docs/api-reference/text-openai-api) and [Anthropic-compatible](https://platform.minimax.io/docs/api-reference/text-anthropic-api) references.
 
 **2. Enable the gateway in your task config:**
 
