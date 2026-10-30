@@ -235,24 +235,28 @@ def _worktree_reads(
     """Agent worktrees this agent may read.
 
     Reading (not writing) siblings' trees is part of the shared-knowledge
-    design, so single-island runs grant the whole ``agents/`` dir — which
-    also covers agents spawned later. Multi-island runs stop at the island
-    boundary: islands evolve independently and exchange work only through
-    migration, so a cross-island read would defeat the diversity the
-    partition exists to create. The island-mate roster comes from the
-    manager (``ctx.sibling_worktrees`` — correct even before those
-    worktrees exist on disk; srt rules are plain path patterns); without
-    one, membership falls back to each worktree's ``.coral_island``
-    breadcrumb. Either way the grant is rebuilt at every agent (re)start —
-    migration updates the roster before restarting the migrant, and
-    bystanders pick up the new boundary at their own next restart.
+    design. Each worktree is granted by its own path, never through the
+    ``agents/`` dir: on Linux srt mounts read grants read-only after the
+    write grants, so a grant on ``agents/`` would turn this agent's own
+    worktree read-only. Multi-island runs stop at the island boundary:
+    islands evolve independently and exchange work only through migration,
+    so a cross-island read would defeat the diversity the partition exists
+    to create. The roster comes from the manager (``ctx.sibling_worktrees``
+    — every agent in a single-island run, island-mates otherwise; correct
+    even before those worktrees exist on disk, since srt rules are plain
+    path patterns). Without one, single-island runs read every worktree on
+    disk and multi-island runs fall back to each worktree's
+    ``.coral_island`` breadcrumb. Either way the grant is rebuilt at every
+    agent (re)start — migration updates the roster before restarting the
+    migrant, and bystanders pick up the new boundary at their own next
+    restart.
     """
     agents_dir = worktree_path.parent
-    if not (coral_dir / "islands").exists():
-        return [str(agents_dir.resolve())]
     reads = {str(worktree_path.resolve())}
     if sibling_worktrees:
         reads.update(str(p.resolve()) for p in sibling_worktrees)
+    elif not (coral_dir / "islands").exists():
+        reads.update(str(p.resolve()) for p in agents_dir.iterdir() if p.is_dir())
     else:
         own = _worktree_island(worktree_path)
         for sibling in agents_dir.iterdir() if own is not None else ():
@@ -262,18 +266,19 @@ def _worktree_reads(
 
 
 def _run_dir_reads(
-    worktree_path: Path, coral_dir: Path, repo_dir: Path, sibling_worktrees: list[Path]
+    worktree_path: Path, coral_dir: Path, sibling_worktrees: list[Path]
 ) -> list[str]:
     """Run-dir paths this agent may read.
 
     Enumerated per-child instead of granting the run dir wholesale because
     srt's read rules are allow-beats-deny: an ``allowRead`` on any ancestor
     of ``.coral/private/`` would resurrect it. Other runs are simply never
-    allowed back.
+    allowed back. The run repo itself is not granted: worktree git ops only
+    need its ``.git``, which is under allowWrite (and so readable), and a
+    read grant on the repo would mount that ``.git`` read-only on Linux.
     """
     reads = [
         *_worktree_reads(worktree_path, coral_dir, sibling_worktrees),
-        str(repo_dir.resolve()),  # run repo (worktree git ops read its .git)
         str((coral_dir / "public").resolve()),
         str((coral_dir / "islands").resolve()),  # multi-island shared state
         str((coral_dir / ".git").resolve()),  # checkpoint history (coral notes --history)
@@ -394,7 +399,7 @@ def build_srt_settings(
             # must still hide it.
             "denyRead": [str(Path.home()), private_dir, *cfg.deny_read],
             "allowRead": [
-                *_run_dir_reads(worktree_path, coral_dir, repo_dir, sibling_worktrees or []),
+                *_run_dir_reads(worktree_path, coral_dir, sibling_worktrees or []),
                 *_coral_install_reads(),
                 *home_paths,
                 *cfg.allow_read,

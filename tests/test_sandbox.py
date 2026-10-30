@@ -158,7 +158,13 @@ def _paths(tmp_path: Path) -> dict[str, Path | str]:
 
 def test_build_settings_reads_confined_to_run(tmp_path):
     paths = _paths(tmp_path)
-    settings = build_srt_settings(SandboxConfig(enabled=True), proxy_port=12345, **paths)
+    sibling = tmp_path / "agents" / "agent-2"
+    settings = build_srt_settings(
+        SandboxConfig(enabled=True),
+        proxy_port=12345,
+        sibling_worktrees=[paths["worktree_path"], sibling],
+        **paths,
+    )
 
     fs = settings["filesystem"]
     private = str((tmp_path / ".coral" / "private").resolve())
@@ -166,10 +172,9 @@ def test_build_settings_reads_confined_to_run(tmp_path):
     assert str(Path.home()) in fs["denyRead"]
     assert private in fs["denyRead"]
     allow_read = fs["allowRead"]
-    # The agents/ parent grants every worktree — reading siblings' trees is
+    # Every worktree on the roster is readable — reading siblings' trees is
     # part of the shared-knowledge design; writes stay own-worktree-only.
-    assert str((tmp_path / "agents").resolve()) in allow_read
-    assert str((tmp_path / "repo").resolve()) in allow_read
+    assert str(sibling.resolve()) in allow_read
     assert str((tmp_path / ".coral" / "public").resolve()) in allow_read
     assert str(Path.home() / ".claude") in allow_read
     assert str(Path.home() / ".claude.json") in allow_read
@@ -192,6 +197,41 @@ def test_build_settings_writes(tmp_path):
     # Home is NOT writable wholesale — only the toolchain dotdirs.
     assert str(Path.home()) not in fs["allowWrite"]
     assert str(Path.home() / ".claude") in fs["allowWrite"]
+
+
+def _read_grants_covering_writes(fs: dict) -> list[tuple[str, str]]:
+    return [
+        (r, w)
+        for r in fs["allowRead"]
+        for w in fs["allowWrite"]
+        if r != w and w.startswith(r.rstrip("/") + "/")
+    ]
+
+
+def test_build_settings_no_read_grant_covers_a_write_path(tmp_path):
+    """On Linux srt mounts allowRead read-only after allowWrite, so a read
+    grant on an ancestor of a write path turns that write path read-only
+    (bwrap then refuses to start: "Can't create file at <worktree>/.gitconfig:
+    Read-only file system")."""
+    paths = _paths(tmp_path)
+    sibling = tmp_path / "agents" / "agent-2"
+    sibling.mkdir()
+    for roster in ([paths["worktree_path"], sibling], []):
+        fs = build_srt_settings(
+            SandboxConfig(enabled=True), proxy_port=1, sibling_worktrees=roster, **paths
+        )["filesystem"]
+        assert _read_grants_covering_writes(fs) == []
+
+
+def test_build_settings_single_island_without_roster_reads_existing_siblings(tmp_path):
+    paths = _paths(tmp_path)
+    sibling = tmp_path / "agents" / "agent-2"
+    sibling.mkdir()
+    allow_read = build_srt_settings(SandboxConfig(enabled=True), proxy_port=1, **paths)[
+        "filesystem"
+    ]["allowRead"]
+    assert str(sibling.resolve()) in allow_read
+    assert str((tmp_path / "agents").resolve()) not in allow_read
 
 
 def test_build_settings_grader_source_readable(tmp_path):
