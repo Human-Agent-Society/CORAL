@@ -242,6 +242,7 @@ def test_terminal_bench_parse_job_result_zero_completed_returns_zero():
 
 def test_erdos_min_overlap_grader_rejects_lower_reported_bound():
     """math/erdos_min_overlap grader must reject reported c5_bound lower than recomputed C5 (#287)."""
+    pytest.importorskip("numpy")
     mod = _erdos_min_overlap_module()
     with tempfile.TemporaryDirectory() as tmpdir:
         prog = Path(tmpdir) / "prog.py"
@@ -260,6 +261,7 @@ def test_erdos_min_overlap_grader_rejects_lower_reported_bound():
 
 def test_erdos_min_overlap_grader_scores_computed_c5():
     """math/erdos_min_overlap grader must score computed_c5 rather than reported bound (#287)."""
+    pytest.importorskip("numpy")
     mod = _erdos_min_overlap_module()
     with tempfile.TemporaryDirectory() as tmpdir:
         prog = Path(tmpdir) / "prog.py"
@@ -279,6 +281,7 @@ def test_erdos_min_overlap_grader_scores_computed_c5():
 
 def test_erdos_grader_rejects_lower_reported_bound():
     """erdos grader must reject reported c5_bound lower than recomputed C5 (#287)."""
+    pytest.importorskip("numpy")
     mod = _erdos_module()
     with tempfile.TemporaryDirectory() as tmpdir:
         prog = Path(tmpdir) / "prog.py"
@@ -295,6 +298,7 @@ def test_erdos_grader_rejects_lower_reported_bound():
 
 def test_erdos_grader_scores_computed_c5():
     """erdos grader must score computed_c5 rather than reported bound (#287)."""
+    pytest.importorskip("numpy")
     mod = _erdos_module()
     with tempfile.TemporaryDirectory() as tmpdir:
         prog = Path(tmpdir) / "prog.py"
