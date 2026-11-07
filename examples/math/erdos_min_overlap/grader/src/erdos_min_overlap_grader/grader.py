@@ -106,20 +106,26 @@ def _run_evaluation(program_path: str, timeout: int, python_cmd: list[str]) -> d
         correlation = np.correlate(h, j, mode="full") * dx
         computed_c5 = np.max(correlation)
 
+        # Reject reported bounds below the recomputed one to prevent bound shaving
+        if float(c5_bound) < computed_c5 - 1e-9:
+            print(json.dumps({{"error": f"Reported c5_bound ({{c5_bound:.6f}}) is lower than recomputed C5 ({{computed_c5:.6f}})"}}))
+            sys.exit(0)
+
         # Verify consistency
         if not np.isclose(computed_c5, float(c5_bound), atol=1e-4):
             print(json.dumps({{"error": f"C5 mismatch: reported {{c5_bound:.6f}}, computed {{computed_c5:.6f}}"}}))
             sys.exit(0)
 
-        score = BENCHMARK / float(c5_bound)
+        score = BENCHMARK / float(computed_c5)
         print(json.dumps({{
-            "c5_bound": float(c5_bound),
+            "c5_bound": float(computed_c5),
             "combined_score": score,
             "n_points": int(n_points),
             "eval_time": eval_time,
         }}))
     """)
     import subprocess
+
     result = subprocess.run(
         [*python_cmd, "-c", script],
         capture_output=True,
@@ -130,9 +136,7 @@ def _run_evaluation(program_path: str, timeout: int, python_cmd: list[str]) -> d
         raise RuntimeError(result.stderr.strip()[-2000:])
     stdout = result.stdout.strip()
     if not stdout:
-        raise RuntimeError(
-            f"Script produced no output.\nstderr: {result.stderr.strip()[-1000:]}"
-        )
+        raise RuntimeError(f"Script produced no output.\nstderr: {result.stderr.strip()[-1000:]}")
     try:
         return json.loads(stdout)
     except json.JSONDecodeError:
