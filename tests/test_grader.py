@@ -47,6 +47,14 @@ def _terminal_bench_grader():
     return _import_grader("terminal-bench", "terminal_bench_grader.grader").Grader
 
 
+def _erdos_min_overlap_module():
+    return _import_grader("math/erdos_min_overlap", "erdos_min_overlap_grader.grader")
+
+
+def _erdos_module():
+    return _import_grader("erdos", "erdos_grader.grader")
+
+
 def _make_swebench_result(n_completed: int = 5, n_passed: int = 2) -> dict:
     """Build a synthetic harbor v0.13 job result.json payload (swebench shape)."""
     return {
@@ -230,6 +238,77 @@ def test_terminal_bench_parse_job_result_zero_completed_returns_zero():
 
     assert pass_rate == 0.0
     assert "No trials completed" in feedback
+
+
+def test_erdos_min_overlap_grader_rejects_lower_reported_bound():
+    """math/erdos_min_overlap grader must reject reported c5_bound lower than recomputed C5 (#287)."""
+    mod = _erdos_min_overlap_module()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        prog = Path(tmpdir) / "prog.py"
+        prog.write_text(
+            "import numpy as np\n"
+            "def run():\n"
+            "    n_points = 200\n"
+            "    h = np.full(n_points, 0.5)\n"
+            "    # True computed C5 for h=0.5 is 0.5. Shave 0.9e-4 off the bound:\n"
+            "    return h.tolist(), 0.5 - 0.9e-4, n_points\n"
+        )
+        res = mod._run_evaluation(str(prog), timeout=10, python_cmd=[sys.executable])
+        assert "error" in res, f"Expected grader to reject shaved bound, but got: {res}"
+        assert "lower than recomputed C5" in res["error"]
+
+
+def test_erdos_min_overlap_grader_scores_computed_c5():
+    """math/erdos_min_overlap grader must score computed_c5 rather than reported bound (#287)."""
+    mod = _erdos_min_overlap_module()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        prog = Path(tmpdir) / "prog.py"
+        prog.write_text(
+            "import numpy as np\n"
+            "def run():\n"
+            "    n_points = 200\n"
+            "    h = np.full(n_points, 0.5)\n"
+            "    # Reported bound is slightly higher (conservative) within tolerance:\n"
+            "    return h.tolist(), 0.5 + 5e-5, n_points\n"
+        )
+        res = mod._run_evaluation(str(prog), timeout=10, python_cmd=[sys.executable])
+        assert "error" not in res
+        assert res["c5_bound"] == pytest.approx(0.5)
+        assert res["combined_score"] == pytest.approx(mod.BENCHMARK / 0.5)
+
+
+def test_erdos_grader_rejects_lower_reported_bound():
+    """erdos grader must reject reported c5_bound lower than recomputed C5 (#287)."""
+    mod = _erdos_module()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        prog = Path(tmpdir) / "prog.py"
+        prog.write_text(
+            "import numpy as np\n"
+            "def run():\n"
+            "    n_points = 200\n"
+            "    h = np.full(n_points, 0.5)\n"
+            "    return h.tolist(), 0.5 - 0.9e-4, n_points\n"
+        )
+        with pytest.raises(RuntimeError, match="lower than recomputed C5"):
+            mod._run_evaluation(str(prog), timeout=10, python_cmd=[sys.executable])
+
+
+def test_erdos_grader_scores_computed_c5():
+    """erdos grader must score computed_c5 rather than reported bound (#287)."""
+    mod = _erdos_module()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        prog = Path(tmpdir) / "prog.py"
+        prog.write_text(
+            "import numpy as np\n"
+            "def run():\n"
+            "    n_points = 200\n"
+            "    h = np.full(n_points, 0.5)\n"
+            "    return h.tolist(), 0.5 + 5e-5, n_points\n"
+        )
+        res = mod._run_evaluation(str(prog), timeout=10, python_cmd=[sys.executable])
+        assert "error" not in res
+        assert res["c5_bound"] == pytest.approx(0.5)
+        assert res["combined_score"] == pytest.approx(mod.BENCHMARK / 0.5)
 
 
 def test_function_grader_sync():
